@@ -7,9 +7,9 @@ ENTITY_FILES = axi4_master_address_channel_controller.vhd \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
-	../../../../Dummy_Plug/tools/MakeComponentPackage.rb --verbose \
+	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK AXI4 LIBRARY DESCRIPTION' \
-            --version 0.0.6 \
+            --version 0.0.7 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package AXI4_COMPONENTS \
