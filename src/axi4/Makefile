@@ -1,0 +1,20 @@
+ENTITY_FILES = axi4_master_address_channel_controller.vhd \
+               axi4_master_read_interface.vhd             \
+               axi4_master_write_interface.vhd            \
+               axi4_register_write_interface.vhd          \
+               axi4_register_read_interface.vhd           \
+               axi4_register_interface.vhd                \
+               ${ENDLIST}
+
+components.vhd : ${ENTITY_FILES}
+	../../../../Dummy_Plug/tools/MakeComponentPackage.rb --verbose \
+            --brief   'PIPEWORK AXI4 LIBRARY DESCRIPTION' \
+            --version 0.0.6 \
+            --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
+            --library PIPEWORK \
+            --package AXI4_COMPONENTS \
+            --output  axi4_components.vhd \
+            ${ENTITY_FILES}
+
+clean:
+	-rm axi4_components.vhd
