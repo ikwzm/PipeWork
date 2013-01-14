@@ -6,7 +6,7 @@ ENTITY_FILES = pump_count_up_register.vhd              \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
-	../../../../Dummy_Plug/tools/MakeComponentPackage.rb --verbose \
+	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION' \
             --version 0.0.2 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
