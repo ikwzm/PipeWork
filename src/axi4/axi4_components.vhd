@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 0.0.7                                                           --
---!     @date    2013/01/14                                                      --
+--!     @date    2013/01/15                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -284,6 +284,7 @@ component AXI4_MASTER_READ_INTERFACE
         REQ_PROT        : in    AXI4_APROT_TYPE;
         REQ_QOS         : in    AXI4_AQOS_TYPE;
         REQ_REGION      : in    AXI4_AREGION_TYPE;
+        REQ_BUF_PTR     : in    std_logic_vector(BUF_PTR_BITS     -1 downto 0);
         REQ_FIRST       : in    std_logic;
         REQ_LAST        : in    std_logic;
         REQ_SPECULATIVE : in    std_logic;
@@ -493,6 +494,7 @@ component AXI4_MASTER_WRITE_INTERFACE
         REQ_PROT        : in    AXI4_APROT_TYPE;
         REQ_QOS         : in    AXI4_AQOS_TYPE;
         REQ_REGION      : in    AXI4_AREGION_TYPE;
+        REQ_BUF_PTR     : in    std_logic_vector(BUF_PTR_BITS     -1 downto 0);
         REQ_FIRST       : in    std_logic;
         REQ_LAST        : in    std_logic;
         REQ_SPECULATIVE : in    std_logic;
