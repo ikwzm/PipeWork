@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 0.0.8
---!     @date    2013/1/15
+--!     @version 0.0.9
+--!     @date    2013/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -56,12 +56,23 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
                           integer range 1 to AXI4_ID_MAX_WIDTH;
-        REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
-                          --! REQ_SIZE信号のビット数を指定する.
-                          integer := 32;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
+        REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
+                          --! REQ_SIZE信号のビット数を指定する.
+                          integer := 32;
+        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+                          --! REQ_SIZE信号を有効にするかどうかを指定する.
+                          --! * REQ_SIZE_ENABLE=0で無効.
+                          --! * REQ_SIZE_ENABLE>0で有効.
+                          integer :=  1;
+        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+                          --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
+                          --! にするかどうかを指定する.
+                          --! * FLOW_ENABLE=0で無効.
+                          --! * FLOW_ENABLE>0で有効.
+                          integer := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
                           integer := 32;
@@ -192,26 +203,28 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         -- 変更してはならない.
         ---------------------------------------------------------------------------
         XFER_SIZE_SEL   : --! @brief Max Transfer Size Select Signal.
-                          --! 一回の転送サイズの最大バイト数を指定する.
-                          --! XFER_MAX_SIZE=XFER_MIN_SIZEの場合は、この信号は無視さ
-                          --! れる.
-                          in    std_logic_vector(XFER_MAX_SIZE downto XFER_MIN_SIZE);
+                          --! 一回の転送サイズの最大バイト数を指定する.  
+                          --! * XFER_MAX_SIZE=XFER_MIN_SIZEの場合は、この信号は無視
+                          --!   される.
+                          in    std_logic_vector(XFER_MAX_SIZE downto XFER_MIN_SIZE)
+                          := (others => '1');
         REQ_ADDR        : --! @brief Request Address.
                           --! 転送開始アドレスを指定する.
                           in    std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
         REQ_SIZE        : --! @brief Request Transfer Size.
                           --! 転送したいバイト数を指定する.
-                          --! ただしこの値が後述の XFER_SIZE_SEL 信号で示される最大
-                          --! 転送バイト数および FLOW_SIZE 信号で示される転送バイト
-                          --! 数を越える場合は、そちらの方が優先される.
+                          --! * REQ_SIZE_ENABLE=0の場合は、この信号は無視される.
+                          --! * この値が後述の XFER_SIZE_SEL 信号で示される最大転送
+                          --!   バイト数および FLOW_SIZE 信号で示される転送バイト数
+                          --!   を越える場合は、そちらの方が優先される.
                           in    std_logic_vector(REQ_SIZE_BITS    -1 downto 0);
         REQ_ID          : --! @brief Request ID.
-                          --! AWID および WID の値を指定する.
+                          --! AWID および WID の値を指定する.  
                           in    std_logic_vector(AXI4_ID_WIDTH    -1 downto 0);
         REQ_BURST       : --! @brief Request Burst type.
-                          --! バーストタイプを指定する.
-                          --! このモジュールでは AXI4_ABURST_INCR と AXI4_ABURST_FIXED
-                          --! のみをサポートしている.
+                          --! バーストタイプを指定する.  
+                          --! * このモジュールでは AXI4_ABURST_INCR と AXI4_ABURST_FIXED
+                          --!   のみをサポートしている.
                           in    AXI4_ABURST_TYPE;
         REQ_LOCK        : --! @brief Request Lock type.
                           --! AWLOCK の値を指定する.
@@ -229,23 +242,23 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! AWREGION の値を指定する.
                           in    AXI4_AREGION_TYPE;
         REQ_BUF_PTR     : --! @brief Request Read Buffer Pointer.
-                          --! リードバッファの先頭ポインタの値を指定する.
-                          --! リードバッファのこのポインタの位置からデータを読み込
-                          --! んで、WDATAに出力する.
+                          --! リードバッファの先頭ポインタの値を指定する.  
+                          --! * リードバッファのこのポインタの位置からデータを読み
+                          --!   込んで、WDATAに出力する.
                           in    std_logic_vector(BUF_PTR_BITS     -1 downto 0);
         REQ_FIRST       : --! @brief Request First Transaction.
-                          --! 最初のトランザクションであることを示す.
-                          --! REQ_FIRST=1の場合、内部状態を初期化してからトランザク
-                          --! ションを開始する.
+                          --! 最初のトランザクションであることを示す.  
+                          --! * REQ_FIRST=1の場合、内部状態を初期化してからトランザ
+                          --!   クションを開始する.
                           in    std_logic;
         REQ_LAST        : --! @brief Request Last Transaction.
                           --! 最後のトランザクションであることを示す.
-                          --! REQ_LAST=1の場合、Acknowledge を返す際に、すべてのト
-                          --! ランザクションが終了していると、ACK_LAST 信号をアサー
-                          --! トする.
-                          --! REQ_LAST=0の場合、Acknowledge を返す際に、すべてのト
-                          --! ランザクションが終了していると、ACK_NEXT 信号をアサー
-                          --! トする.
+                          --! * REQ_LAST=1の場合、Acknowledge を返す際に、すべての
+                          --!   トランザクションが終了していると、ACK_LAST 信号をア
+                          --!   サートする.
+                          --! * REQ_LAST=0の場合、Acknowledge を返す際に、すべての
+                          --!   トランザクションが終了していると、ACK_NEXT 信号をア
+                          --!   サートする.
                           in    std_logic;
         REQ_SPECULATIVE : --! @brief Request Speculative Mode.
                           --! Acknowledge を返すタイミングを投機モードで行うかどう
@@ -254,17 +267,17 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         REQ_SAFETY      : --! @brief Request Safety Mode.
                           --! Acknowledge を返すタイミングを安全モードで行うかどう
                           --! かを指定する.
-                          --! REQ_SAFETY=1の場合、スレーブから Write Response が帰っ
-                          --! てきた時点で Acknowledge を返す.
-                          --! REQ_SAFETY=0の場合、スレーブに最後のデータを出力した
-                          --! 時点で Acknowledge を返す. 応答を待たないので、エラー
-                          --! が発生しても分からない.
+                          --! * REQ_SAFETY=1の場合、スレーブから Write Response が
+                          --!   帰ってきた時点で Acknowledge を返す.
+                          --! * REQ_SAFETY=0の場合、スレーブに最後のデータを出力し
+                          --!   た時点で Acknowledge を返す. 応答を待たないので、
+                          --!   エラーが発生しても分からない.
                           in    std_logic;
         REQ_VAL         : --! @brief Request Valid Signal.
                           --! 上記の各種リクエスト信号が有効であることを示す.
-                          --! この信号のアサートでもってトランザクションを開始する.
-                          --! 一度この信号をアサートすると Acknowledge を返すまで、
-                          --! この信号はアサートされなくてはならない.
+                          --! * この信号のアサートでもってトランザクションを開始する.
+                          --! * 一度この信号をアサートすると Acknowledge を返すまで、
+                          --!   この信号はアサートされなくてはならない.
                           in    std_logic;
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
@@ -275,15 +288,16 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         ACK_VAL         : --! @brief Acknowledge Valid Signal.
                           --! 上記の Command Request の応答信号.
                           --! 下記の 各種 Acknowledge 信号が有効である事を示す.
-                          --! この信号のアサートでもって、Command Request が受け付
-                          --! けられたことを示す. ただし、あくまでも Request が受け
-                          --! 付けられただけであって、必ずしもトランザクションが完
-                          --! 了したわけではないことに注意.
-                          --! この信号は Request につき１クロックだけアサートされる.
-                          --! この信号がアサートされたら、アプリケーション側は速や
-                          --! かに REQ_VAL 信号をネゲートして Request を取り下げるか、
-                          --! REQ_VALをアサートしたままの場合は次の Request 情報を
-                          --! 用意しておかなければならない.
+                          --! * この信号のアサートでもって、Command Request が受け
+                          --!   付けられたことを示す. ただし、あくまでも Request が
+                          --!   受け付けられただけであって、必ずしもトランザクショ
+                          --!   ンが完了したわけではないことに注意.
+                          --! * この信号は Request につき１クロックだけアサートされ
+                          --!   る.
+                          --! * この信号がアサートされたら、アプリケーション側は速
+                          --!   やかに REQ_VAL 信号をネゲートして Request を取り下
+                          --!   げるか、REQ_VALをアサートしたままで次の Request 情
+                          --!   報を用意しておかなければならない.
                           out   std_logic;
         ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
@@ -318,10 +332,10 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         ---------------------------------------------------------------------------
         -- Flow Control Signals.
         ---------------------------------------------------------------------------
-        FLOW_PAUSE      : in    std_logic;
-        FLOW_STOP       : in    std_logic;
-        FLOW_LAST       : in    std_logic;
-        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS        -1 downto 0);
+        FLOW_PAUSE      : in    std_logic := '0';
+        FLOW_STOP       : in    std_logic := '0';
+        FLOW_LAST       : in    std_logic := '1';
+        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
         ---------------------------------------------------------------------------
         -- Reserve Size Signals.
         ---------------------------------------------------------------------------
@@ -462,8 +476,10 @@ begin
         generic map (
             DATA_SIZE       => AXI4_DATA_SIZE    ,
             ADDR_BITS       => AXI4_ADDR_WIDTH   ,
-            REQ_SIZE_BITS   => REQ_SIZE_BITS     ,
             SIZE_BITS       => SIZE_BITS         ,
+            REQ_SIZE_BITS   => REQ_SIZE_BITS     ,
+            REQ_SIZE_ENABLE => REQ_SIZE_ENABLE   ,
+            FLOW_ENABLE     => FLOW_ENABLE       ,
             XFER_MIN_SIZE   => XFER_MIN_SIZE     ,
             XFER_MAX_SIZE   => XFER_MAX_SIZE     
         )

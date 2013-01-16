@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 0.0.7
---!     @date    2013/1/13
+--!     @version 0.0.9
+--!     @date    2013/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -52,12 +52,26 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         ADDR_BITS       : --! @brief ADDRESS BITS :
                           --! アドレス信号のビット数を指定する.
                           integer := 32;
-        REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS :
-                          --! REQ_SIZE信号のビット数を指定する.
-                          integer := 32;
-        SIZE_BITS       : --! @brief REQUEST SIZE BITS :
+        SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種SIZE信号のビット数を指定する.
                           integer := 32;
+        REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS :
+                          --! REQ_SIZE信号のビット数を指定する.
+                          --! * REQ_SIZE信号が無効(REQ_SIZE_ENABLE=0)の場合でもエラ
+                          --!   ーが発生しないように、REQ_SIZE_BITS>0にしておかなけ
+                          --!   ればならない.
+                          integer := 32;
+        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+                          --! REQ_SIZE信号を有効にするかどうかを指定する.
+                          --! * REQ_SIZE_ENABLE=0で無効.
+                          --! * REQ_SIZE_ENABLE>0で有効.
+                          integer :=  1;
+        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+                          --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
+                          --! にするかどうかを指定する.
+                          --! * FLOW_ENABLE=0で無効.
+                          --! * FLOW_ENABLE>0で有効.
+                          integer := 1;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
                           integer := 4;
@@ -106,14 +120,14 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         ---------------------------------------------------------------------------
         -- Flow Control Signals.
         ---------------------------------------------------------------------------
-        FLOW_PAUSE      : in    std_logic;
-        FLOW_STOP       : in    std_logic;
-        FLOW_LAST       : in    std_logic;
-        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS    -1 downto 0);
+        FLOW_PAUSE      : in    std_logic := '0';
+        FLOW_STOP       : in    std_logic := '0';
+        FLOW_LAST       : in    std_logic := '1';
+        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS    -1 downto 0) := (others => '1');
         ---------------------------------------------------------------------------
         -- Transfer Size Select Signals.
         ---------------------------------------------------------------------------
-        XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE   downto XFER_MIN_SIZE);
+        XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE   downto XFER_MIN_SIZE) := (others => '1');
         ---------------------------------------------------------------------------
         -- Transfer Request Signals.
         ---------------------------------------------------------------------------
@@ -163,6 +177,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     signal   req_xfer_start     : std_logic;
     signal   req_xfer_none      : std_logic;
     signal   req_xfer_stop      : std_logic;
+    signal   req_xfer_pause     : std_logic;
     signal   req_xfer_valid     : std_logic;
     signal   req_xfer_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
     signal   req_xfer_last      : std_logic;
@@ -202,19 +217,23 @@ begin
     -------------------------------------------------------------------------------
     -- req_xfer_stop : 転送中止要求.
     -------------------------------------------------------------------------------
-    req_xfer_stop  <= '1' when (FLOW_STOP     = '1') else '0';
+    req_xfer_stop  <= '1' when (FLOW_STOP     = '1' and FLOW_ENABLE /= 0) else '0';
     -------------------------------------------------------------------------------
-    -- req_xfer_stop : 転送無効要求.
+    -- req_xfer_pause: 転送中断要求.
+    -------------------------------------------------------------------------------
+    req_xfer_pause <= '1' when (FLOW_PAUSE    = '1' and FLOW_ENABLE /= 0) else '0';
+    -------------------------------------------------------------------------------
+    -- req_xfer_none : 転送無効要求.
     -------------------------------------------------------------------------------
     req_xfer_none  <= '1' when (req_xfer_stop = '0'  and
                                 req_size_none = '1') else '0';
     -------------------------------------------------------------------------------
     -- req_xfer_start: 転送開始要求.
     -------------------------------------------------------------------------------
-    req_xfer_start <= '1' when (req_xfer_stop = '0' and
-                                req_xfer_none = '0' and 
-                                FLOW_PAUSE    = '0' and
-                                XFER_REQ_RDY  = '1') else '0';
+    req_xfer_start <= '1' when (req_xfer_stop  = '0' and
+                                req_xfer_none  = '0' and 
+                                req_xfer_pause = '0' and
+                                XFER_REQ_RDY   = '1') else '0';
     -------------------------------------------------------------------------------
     -- ステートマシン
     -------------------------------------------------------------------------------
@@ -282,37 +301,69 @@ begin
     -- req_size_none : REQ_SIZEの値が0であることを示すフラグ.
     -- req_size_last : REQ_SIZEによる最後の転送要求であることを示すフラグ.
     -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_GEN: CHOPPER
-        generic map (
-            BURST       => 1                     ,              
-            MIN_PIECE   => XFER_MIN_SIZE         ,
-            MAX_PIECE   => XFER_MAX_SIZE         ,
-            MAX_SIZE    => SIZE_BITS+1           ,
-            ADDR_BITS   => REQ_ADDR'length       ,
-            SIZE_BITS   => REQ_SIZE'length       ,
-            COUNT_BITS  => 1                     ,
-            PSIZE_BITS  => max_xfer_size'length  ,
-            GEN_VALID   => 0
-        )
-        port map (
-            CLK         => CLK                   , -- In  :
-            RST         => RST                   , -- In  :
-            CLR         => CLR                   , -- In  :
-            ADDR        => REQ_ADDR              , -- In  :
-            SIZE        => REQ_SIZE              , -- In  :
-            SEL         => XFER_SIZE_SEL         , -- In  :
-            LOAD        => max_xfer_load         , -- In  :
-            CHOP        => max_xfer_chop         , -- In  :
-            COUNT       => open                  , -- Out :
-            NONE        => req_size_none         , -- Out : 
-            LAST        => req_size_last         , -- Out : 
-            NEXT_NONE   => open                  , -- Out :
-            NEXT_LAST   => open                  , -- Out :
-            PSIZE       => max_xfer_size         , -- Out :
-            NEXT_PSIZE  => open                  , -- Out :
-            VALID       => open                  , -- Out :
-            NEXT_VALID  => open                    -- Out :
-        );
+    -- REQ_SIZE_ENABLE /= 0 の場合は CHOPPER を使って上記の信号を生成する.
+    -------------------------------------------------------------------------------
+    MAX_XFER_SIZE_1: if (REQ_SIZE_ENABLE /= 0) generate
+        GEN: CHOPPER
+            generic map (
+                BURST       => 1                     ,              
+                MIN_PIECE   => XFER_MIN_SIZE         ,
+                MAX_PIECE   => XFER_MAX_SIZE         ,
+                MAX_SIZE    => SIZE_BITS+1           ,
+                ADDR_BITS   => REQ_ADDR'length       ,
+                SIZE_BITS   => REQ_SIZE'length       ,
+                COUNT_BITS  => 1                     ,
+                PSIZE_BITS  => max_xfer_size'length  ,
+                GEN_VALID   => 0
+            )
+            port map (
+                CLK         => CLK                   , -- In  :
+                RST         => RST                   , -- In  :
+                CLR         => CLR                   , -- In  :
+                ADDR        => REQ_ADDR              , -- In  :
+                SIZE        => REQ_SIZE              , -- In  :
+                SEL         => XFER_SIZE_SEL         , -- In  :
+                LOAD        => max_xfer_load         , -- In  :
+                CHOP        => max_xfer_chop         , -- In  :
+                COUNT       => open                  , -- Out :
+                NONE        => req_size_none         , -- Out : 
+                LAST        => req_size_last         , -- Out : 
+                NEXT_NONE   => open                  , -- Out :
+                NEXT_LAST   => open                  , -- Out :
+                PSIZE       => max_xfer_size         , -- Out :
+                NEXT_PSIZE  => open                  , -- Out :
+                VALID       => open                  , -- Out :
+                NEXT_VALID  => open                    -- Out :
+            );
+    end generate;
+    -------------------------------------------------------------------------------
+    -- REQ_SIZE_ENABLE = 0 かつ XFER_MAX_SIZE <= XFER_MIN_SIZEの場合は固定値.
+    -------------------------------------------------------------------------------
+    MAX_XFER_SIZE_GEN_2: if (REQ_SIZE_ENABLE = 0 and XFER_MAX_SIZE <= XFER_MIN_SIZE) generate
+        req_size_none <= '0';
+        req_size_last <= '1';
+        max_xfer_size <= std_logic_vector(to_unsigned(2**XFER_MAX_SIZE, max_xfer_size'length));
+    end generate;
+    -------------------------------------------------------------------------------
+    -- REQ_SIZE_ENABLE = 0 かつ XFER_MAX_SIZE > XFER_MIN_SIZEの場合はXFER_SIZE_SEL
+    -- から生成する.
+    -------------------------------------------------------------------------------
+    MAX_XFER_SIZE_GEN_3: if (REQ_SIZE_ENABLE = 0 and XFER_MAX_SIZE >  XFER_MIN_SIZE) generate
+        req_size_none <= '0';
+        req_size_last <= '1';
+        process (XFER_SIZE_SEL)
+            variable max_xfer_bytes : integer range 2**XFER_MIN_SIZE to 2**XFER_MAX_SIZE;
+        begin
+            max_xfer_bytes := 2**XFER_MIN_SIZE;
+            for i in XFER_MAX_SIZE to XFER_MIN_SIZE loop
+                if (XFER_SIZE_SEL(i) = '1') then
+                    max_xfer_bytes := 2**i;
+                    exit;
+                end if;
+            end loop;
+            max_xfer_size <= std_logic_vector(to_unsigned(max_xfer_bytes, max_xfer_size'length));
+        end process;
+    end generate;
     -------------------------------------------------------------------------------
     -- req_xfer_size : 実際の転送要求サイズ.
     -- req_xfer_last : 最後の転送要求かつREQ_LAST='1'であることを示すフラグ.
@@ -327,23 +378,31 @@ begin
         variable u_last_address  : unsigned(XFER_MAX_SIZE downto 0);
         variable u_burst_length  : unsigned(XFER_MAX_SIZE downto DATA_SIZE);
     begin
-        u_flow_size     := to_01(unsigned(FLOW_SIZE    ), '0');
-        u_xfer_max_size := to_01(unsigned(max_xfer_size), '0');
-        if    (u_flow_size < u_xfer_max_size) then
-            u_xfer_req_size := RESIZE(u_flow_size    , u_xfer_req_size'length);
-            req_xfer_last   <= FLOW_LAST;
-            req_xfer_next   <= '0';
-            req_xfer_end    <= FLOW_LAST;
-        elsif (u_flow_size = u_xfer_max_size) then
-            u_xfer_req_size := RESIZE(u_xfer_max_size, u_xfer_req_size'length);
-            req_xfer_last   <= FLOW_LAST or (req_size_last and     REQ_LAST);
-            req_xfer_next   <= '0'       or (req_size_last and not REQ_LAST);
-            req_xfer_end    <= FLOW_LAST or (req_size_last                 );
+        if (FLOW_ENABLE /= 0) then
+            u_flow_size     := to_01(unsigned(FLOW_SIZE    ), '0');
+            u_xfer_max_size := to_01(unsigned(max_xfer_size), '0');
+            if    (u_flow_size < u_xfer_max_size) then
+                u_xfer_req_size := RESIZE(u_flow_size    , u_xfer_req_size'length);
+                req_xfer_last   <= FLOW_LAST;
+                req_xfer_next   <= '0';
+                req_xfer_end    <= FLOW_LAST;
+            elsif (u_flow_size = u_xfer_max_size) then
+                u_xfer_req_size := RESIZE(u_xfer_max_size, u_xfer_req_size'length);
+                req_xfer_last   <= FLOW_LAST or (req_size_last and     REQ_LAST);
+                req_xfer_next   <= '0'       or (req_size_last and not REQ_LAST);
+                req_xfer_end    <= FLOW_LAST or (req_size_last                 );
+            else
+                u_xfer_req_size := RESIZE(u_xfer_max_size, u_xfer_req_size'length);
+                req_xfer_last   <= '0'       or (req_size_last and     REQ_LAST);
+                req_xfer_next   <= '0'       or (req_size_last and not REQ_LAST);
+                req_xfer_end    <= '0'       or (req_size_last                 );
+            end if;
         else
-            u_xfer_req_size := RESIZE(u_xfer_max_size, u_xfer_req_size'length);
-            req_xfer_last   <= '0'       or (req_size_last and     REQ_LAST);
-            req_xfer_next   <= '0'       or (req_size_last and not REQ_LAST);
-            req_xfer_end    <= '0'       or (req_size_last                 );
+                u_xfer_max_size := to_01(unsigned(max_xfer_size), '0');
+                u_xfer_req_size := RESIZE(u_xfer_max_size, u_xfer_req_size'length);
+                req_xfer_last   <= '0'       or (req_size_last and     REQ_LAST);
+                req_xfer_next   <= '0'       or (req_size_last and not REQ_LAST);
+                req_xfer_end    <= '0'       or (req_size_last                 );
         end if;
         for i in u_start_address'range loop
             if (i < DATA_SIZE) then
