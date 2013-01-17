@@ -20,8 +20,8 @@ COMPONENTS = components                             \
              pump_count_up_register                 \
              pump_count_down_register               \
              pump_control_register                  \
-             pump_in_valve                          \
-             pump_out_valve                         \
+             pump_intake_valve                      \
+             pump_outlet_valve                      \
              axi4_types                             \
              axi4_components                        \
              axi4_master_address_channel_controller \
@@ -87,10 +87,10 @@ pump_count_down_register.o               : $(SRC_PATH)/pump/pump_count_down_regi
 pump_control_register.o                  : $(SRC_PATH)/pump/pump_control_register.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pump_in_valve.o                          : $(SRC_PATH)/pump/pump_in_valve.vhd
+pump_intake_valve.o                      : $(SRC_PATH)/pump/pump_intake_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pump_out_valve.o                         : $(SRC_PATH)/pump/pump_out_valve.vhd
+pump_outlet_valve.o                      : $(SRC_PATH)/pump/pump_outlet_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 axi4_types.o                             : $(SRC_PATH)/axi4/axi4_types.vhd

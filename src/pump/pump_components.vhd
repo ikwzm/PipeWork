@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 0.0.2                                                           --
---!     @date    2013/01/14                                                      --
+--!     @version 1.0.4                                                           --
+--!     @date    2013/01/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -311,9 +311,9 @@ component PUMP_CONTROL_REGISTER
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PUMP_IN_VALVE                                                         --
+--! @brief PUMP_INTAKE_VALVE                                                     --
 -----------------------------------------------------------------------------------
-component PUMP_IN_VALVE
+component PUMP_INTAKE_VALVE
     generic (
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
@@ -373,9 +373,9 @@ component PUMP_IN_VALVE
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PUMP_OUT_VALVE                                                        --
+--! @brief PUMP_OUTLET_VALVE                                                     --
 -----------------------------------------------------------------------------------
-component PUMP_OUT_VALVE
+component PUMP_OUTLET_VALVE
     generic (
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
