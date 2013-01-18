@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 0.0.9                                                           --
---!     @date    2013/01/17                                                      --
+--!     @version 0.0.10                                                          --
+--!     @date    2013/01/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -51,7 +51,10 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
-        DATA_SIZE       : --! @brief AXI4 DATA SIZE :
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          integer := 1;
+        DATA_SIZE       : --! @brief DATA SIZE :
                           --! データバスのバイト数を"２のべき乗値"で指定する.
                           integer := 6;
         ADDR_BITS       : --! @brief ADDRESS BITS :
@@ -66,16 +69,16 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
                           --!   ーが発生しないように、REQ_SIZE_BITS>0にしておかなけ
                           --!   ればならない.
                           integer := 32;
-        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+        REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
-                          --! * REQ_SIZE_ENABLE=0で無効.
-                          --! * REQ_SIZE_ENABLE>0で有効.
+                          --! * REQ_SIZE_VALID=0で無効.
+                          --! * REQ_SIZE_VALID>0で有効.
                           integer :=  1;
-        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+        FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
-                          --! * FLOW_ENABLE=0で無効.
-                          --! * FLOW_ENABLE>0で有効.
+                          --! * FLOW_VALID=0で無効.
+                          --! * FLOW_VALID>0で有効.
                           integer := 1;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
@@ -110,12 +113,12 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         REQ_LAST        : in    std_logic;
         REQ_SPECULATIVE : in    std_logic;
         REQ_SAFETY      : in    std_logic;
-        REQ_VAL         : in    std_logic;
+        REQ_VAL         : in    std_logic_vector(VAL_BITS     -1 downto 0);
         REQ_RDY         : out   std_logic;
         ---------------------------------------------------------------------------
         -- Command Acknowledge Signals.
         ---------------------------------------------------------------------------
-        ACK_VAL         : out   std_logic;
+        ACK_VAL         : out   std_logic_vector(VAL_BITS     -1 downto 0);
         ACK_NEXT        : out   std_logic;
         ACK_LAST        : out   std_logic;
         ACK_ERROR       : out   std_logic;
@@ -138,6 +141,7 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         ---------------------------------------------------------------------------
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS    -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE   downto 0);
+        XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS     -1 downto 0);
         XFER_REQ_FIRST  : out   std_logic;
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
@@ -176,22 +180,25 @@ component AXI4_MASTER_READ_INTERFACE
                           --! AXI4 アドレスチャネルおよびリードデータチャネルの
                           --! ID信号のビット幅.
                           integer range 1 to AXI4_ID_MAX_WIDTH;
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          integer := 1;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
                           integer := 32;
-        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+        REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
-                          --! * REQ_SIZE_ENABLE=0で無効.
-                          --! * REQ_SIZE_ENABLE>0で有効.
+                          --! * REQ_SIZE_VALID=0で無効.
+                          --! * REQ_SIZE_VALID>0で有効.
                           integer :=  1;
-        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+        FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
-                          --! * FLOW_ENABLE=0で無効.
-                          --! * FLOW_ENABLE>0で有効.
+                          --! * FLOW_VALID=0で無効.
+                          --! * FLOW_VALID>0で有効.
                           integer := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
@@ -311,7 +318,7 @@ component AXI4_MASTER_READ_INTERFACE
                           in    std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
         REQ_SIZE        : --! @brief Request Transfer Size.
                           --! 転送したいバイト数を指定する. 
-                          --! * REQ_SIZE_ENABLE=0の場合は、この信号は無視される.
+                          --! * REQ_SIZE_VALID=0の場合は、この信号は無視される.
                           --! * この値が後述の XFER_SIZE_SEL 信号で示される最大転送
                           --!   バイト数および FLOW_SIZE 信号で示される転送バイト数
                           --!   を越える場合は、そちらの方が優先される.
@@ -375,7 +382,7 @@ component AXI4_MASTER_READ_INTERFACE
                           --! * この信号のアサートでもってトランザクションを開始する.
                           --! * 一度この信号をアサートすると Acknowledge を返すまで、
                           --!   この信号はアサートされなくてはならない.
-                          in    std_logic;
+                          in    std_logic_vector(VAL_BITS-1 downto 0);
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           out   std_logic;
@@ -395,7 +402,7 @@ component AXI4_MASTER_READ_INTERFACE
                           --!   やかに REQ_VAL 信号をネゲートして Request を取り下
                           --!   げるか、REQ_VALをアサートしたままで次の Request 情
                           --!   報を用意しておかなければならない.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS-1 downto 0);
         ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
                           --! この信号がアサートされる.
@@ -436,21 +443,21 @@ component AXI4_MASTER_READ_INTERFACE
         ---------------------------------------------------------------------------
         -- Reserve Size Signals.
         ---------------------------------------------------------------------------
-        RESV_VAL        : out   std_logic;
+        RESV_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         RESV_LAST       : out   std_logic;
         RESV_ERROR      : out   std_logic;
         RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
         ---------------------------------------------------------------------------
         -- Push Size Signals.
         ---------------------------------------------------------------------------
-        PUSH_VAL        : out   std_logic;
+        PUSH_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_LAST       : out   std_logic;
         PUSH_ERROR      : out   std_logic;
         PUSH_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
         ---------------------------------------------------------------------------
         -- Read Buffer Interface Signals.
         ---------------------------------------------------------------------------
-        BUF_WEN         : out   std_logic;
+        BUF_WEN         : out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_BEN         : out   std_logic_vector(BUF_DATA_WIDTH/8 -1 downto 0);
         BUF_DATA        : out   std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
@@ -475,22 +482,25 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
                           integer range 1 to AXI4_ID_MAX_WIDTH;
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          integer := 1;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
                           integer := 32;
-        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+        REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
-                          --! * REQ_SIZE_ENABLE=0で無効.
-                          --! * REQ_SIZE_ENABLE>0で有効.
+                          --! * REQ_SIZE_VALID=0で無効.
+                          --! * REQ_SIZE_VALID>0で有効.
                           integer :=  1;
-        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+        FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
-                          --! * FLOW_ENABLE=0で無効.
-                          --! * FLOW_ENABLE>0で有効.
+                          --! * FLOW_VALID=0で無効.
+                          --! * FLOW_VALID>0で有効.
                           integer := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
@@ -632,7 +642,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           in    std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
         REQ_SIZE        : --! @brief Request Transfer Size.
                           --! 転送したいバイト数を指定する.
-                          --! * REQ_SIZE_ENABLE=0の場合は、この信号は無視される.
+                          --! * REQ_SIZE_VALID=0の場合は、この信号は無視される.
                           --! * この値が後述の XFER_SIZE_SEL 信号で示される最大転送
                           --!   バイト数および FLOW_SIZE 信号で示される転送バイト数
                           --!   を越える場合は、そちらの方が優先される.
@@ -697,7 +707,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! * この信号のアサートでもってトランザクションを開始する.
                           --! * 一度この信号をアサートすると Acknowledge を返すまで、
                           --!   この信号はアサートされなくてはならない.
-                          in    std_logic;
+                          in    std_logic_vector(VAL_BITS-1 downto 0);
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           out   std_logic;
@@ -717,7 +727,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --!   やかに REQ_VAL 信号をネゲートして Request を取り下
                           --!   げるか、REQ_VALをアサートしたままで次の Request 情
                           --!   報を用意しておかなければならない.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS-1 downto 0);
         ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
                           --! この信号がアサートされる.
@@ -758,21 +768,21 @@ component AXI4_MASTER_WRITE_INTERFACE
         ---------------------------------------------------------------------------
         -- Reserve Size Signals.
         ---------------------------------------------------------------------------
-        RESV_VAL        : out   std_logic;
+        RESV_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         RESV_LAST       : out   std_logic;
         RESV_ERROR      : out   std_logic;
         RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-        PULL_VAL        : out   std_logic;
+        PULL_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_LAST       : out   std_logic;
         PULL_ERROR      : out   std_logic;
         PULL_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
         ---------------------------------------------------------------------------
         -- Read Buffer Interface Signals.
         ---------------------------------------------------------------------------
-        BUF_REN         : out   std_logic;
+        BUF_REN         : out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_DATA        : in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
         BUF_RDY         : in    std_logic

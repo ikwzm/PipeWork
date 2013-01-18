@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 0.0.9
---!     @date    2013/1/17
+--!     @version 0.0.10
+--!     @date    2013/1/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -46,7 +46,10 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
-        DATA_SIZE       : --! @brief AXI4 DATA SIZE :
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          integer := 1;
+        DATA_SIZE       : --! @brief DATA SIZE :
                           --! データバスのバイト数を"２のべき乗値"で指定する.
                           integer := 6;
         ADDR_BITS       : --! @brief ADDRESS BITS :
@@ -61,16 +64,16 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
                           --!   ーが発生しないように、REQ_SIZE_BITS>0にしておかなけ
                           --!   ればならない.
                           integer := 32;
-        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+        REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
-                          --! * REQ_SIZE_ENABLE=0で無効.
-                          --! * REQ_SIZE_ENABLE>0で有効.
+                          --! * REQ_SIZE_VALID=0で無効.
+                          --! * REQ_SIZE_VALID>0で有効.
                           integer :=  1;
-        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+        FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
-                          --! * FLOW_ENABLE=0で無効.
-                          --! * FLOW_ENABLE>0で有効.
+                          --! * FLOW_VALID=0で無効.
+                          --! * FLOW_VALID>0で有効.
                           integer := 1;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
@@ -105,12 +108,12 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         REQ_LAST        : in    std_logic;
         REQ_SPECULATIVE : in    std_logic;
         REQ_SAFETY      : in    std_logic;
-        REQ_VAL         : in    std_logic;
+        REQ_VAL         : in    std_logic_vector(VAL_BITS     -1 downto 0);
         REQ_RDY         : out   std_logic;
         ---------------------------------------------------------------------------
         -- Command Acknowledge Signals.
         ---------------------------------------------------------------------------
-        ACK_VAL         : out   std_logic;
+        ACK_VAL         : out   std_logic_vector(VAL_BITS     -1 downto 0);
         ACK_NEXT        : out   std_logic;
         ACK_LAST        : out   std_logic;
         ACK_ERROR       : out   std_logic;
@@ -133,6 +136,7 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         ---------------------------------------------------------------------------
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS    -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE   downto 0);
+        XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS     -1 downto 0);
         XFER_REQ_FIRST  : out   std_logic;
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
@@ -213,15 +217,17 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
                                   STOP_STATE,
                                   NONE_STATE);
     signal   curr_state         : STATE_TYPE;
+    signal   curr_valid         : std_logic_vector(VAL_BITS -1   downto 0);
+    constant NULL_VALID         : std_logic_vector(VAL_BITS -1   downto 0) := (others => '0');
 begin
     -------------------------------------------------------------------------------
     -- req_xfer_stop : 転送中止要求.
     -------------------------------------------------------------------------------
-    req_xfer_stop  <= '1' when (FLOW_STOP     = '1' and FLOW_ENABLE /= 0) else '0';
+    req_xfer_stop  <= '1' when (FLOW_STOP     = '1' and FLOW_VALID /= 0) else '0';
     -------------------------------------------------------------------------------
     -- req_xfer_pause: 転送中断要求.
     -------------------------------------------------------------------------------
-    req_xfer_pause <= '1' when (FLOW_PAUSE    = '1' and FLOW_ENABLE /= 0) else '0';
+    req_xfer_pause <= '1' when (FLOW_PAUSE    = '1' and FLOW_VALID /= 0) else '0';
     -------------------------------------------------------------------------------
     -- req_xfer_none : 転送無効要求.
     -------------------------------------------------------------------------------
@@ -242,17 +248,20 @@ begin
     begin
         if (RST = '1') then
                 curr_state    <= IDLE_STATE;
+                curr_valid    <= NULL_VALID;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 curr_state    <= IDLE_STATE;
+                curr_valid    <= NULL_VALID;
             else
                 case curr_state is
                     when IDLE_STATE =>
-                        if (REQ_VAL = '1') then
+                        if (REQ_VAL /= NULL_VALID) then
                             next_state := WAIT_STATE;
                         else
                             next_state := IDLE_STATE;
                         end if;
+                        curr_valid <= REQ_VAL;
                     when WAIT_STATE =>
                         if    (req_xfer_stop  = '1') then
                             next_state := STOP_STATE;
@@ -291,7 +300,7 @@ begin
     -------------------------------------------------------------------------------
     -- max_xfer_load : max_xfer_size などを計算するためのトリガー信号.
     -------------------------------------------------------------------------------
-    max_xfer_load  <= '1' when (curr_state = IDLE_STATE and REQ_VAL = '1') else '0';
+    max_xfer_load  <= '1' when (curr_state = IDLE_STATE and REQ_VAL /= NULL_VALID) else '0';
     -------------------------------------------------------------------------------
     -- req_xfer_valid: 転送開始要求トリガー.
     -------------------------------------------------------------------------------
@@ -301,9 +310,9 @@ begin
     -- req_size_none : REQ_SIZEの値が0であることを示すフラグ.
     -- req_size_last : REQ_SIZEによる最後の転送要求であることを示すフラグ.
     -------------------------------------------------------------------------------
-    -- REQ_SIZE_ENABLE /= 0 の場合は CHOPPER を使って上記の信号を生成する.
+    -- REQ_SIZE_VALID /= 0 の場合は CHOPPER を使って上記の信号を生成する.
     -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_1: if (REQ_SIZE_ENABLE /= 0) generate
+    MAX_XFER_SIZE_1: if (REQ_SIZE_VALID /= 0) generate
         GEN: CHOPPER
             generic map (
                 BURST       => 1                     ,              
@@ -337,18 +346,18 @@ begin
             );
     end generate;
     -------------------------------------------------------------------------------
-    -- REQ_SIZE_ENABLE = 0 かつ XFER_MAX_SIZE <= XFER_MIN_SIZEの場合は固定値.
+    -- REQ_SIZE_VALID = 0 かつ XFER_MAX_SIZE <= XFER_MIN_SIZEの場合は固定値.
     -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_GEN_2: if (REQ_SIZE_ENABLE = 0 and XFER_MAX_SIZE <= XFER_MIN_SIZE) generate
+    MAX_XFER_SIZE_GEN_2: if (REQ_SIZE_VALID = 0 and XFER_MAX_SIZE <= XFER_MIN_SIZE) generate
         req_size_none <= '0';
         req_size_last <= '1';
         max_xfer_size <= std_logic_vector(to_unsigned(2**XFER_MAX_SIZE, max_xfer_size'length));
     end generate;
     -------------------------------------------------------------------------------
-    -- REQ_SIZE_ENABLE = 0 かつ XFER_MAX_SIZE > XFER_MIN_SIZEの場合はXFER_SIZE_SEL
+    -- REQ_SIZE_VALID = 0 かつ XFER_MAX_SIZE > XFER_MIN_SIZEの場合はXFER_SIZE_SEL
     -- から生成する.
     -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_GEN_3: if (REQ_SIZE_ENABLE = 0 and XFER_MAX_SIZE >  XFER_MIN_SIZE) generate
+    MAX_XFER_SIZE_GEN_3: if (REQ_SIZE_VALID = 0 and XFER_MAX_SIZE >  XFER_MIN_SIZE) generate
         req_size_none <= '0';
         req_size_last <= '1';
         process (XFER_SIZE_SEL)
@@ -378,7 +387,7 @@ begin
         variable u_last_address  : unsigned(XFER_MAX_SIZE downto 0);
         variable u_burst_length  : unsigned(XFER_MAX_SIZE downto DATA_SIZE);
     begin
-        if (FLOW_ENABLE /= 0) then
+        if (FLOW_VALID /= 0) then
             u_flow_size     := to_01(unsigned(FLOW_SIZE    ), '0');
             u_xfer_max_size := to_01(unsigned(max_xfer_size), '0');
             if    (u_flow_size < u_xfer_max_size) then
@@ -470,19 +479,20 @@ begin
     -- ACK_NONE        : 転送サイズが０の転送要求だったことを示すフラグ.
     -- ACK_SIZE        : 転送応答サイズ信号出力.
     -------------------------------------------------------------------------------
-    ACK_VAL   <= '1' when (curr_state = XFER_STATE and ack_xfer_valid = '1') or
-                          (curr_state = STOP_STATE and XFER_RUNNING   = '0') or
-                          (curr_state = NONE_STATE) else '0';
-    ACK_NEXT  <= '1' when (curr_state = XFER_STATE and ack_xfer_next  = '1') or
-                          (curr_state = NONE_STATE and REQ_LAST       = '0') else '0';
-    ACK_LAST  <= '1' when (curr_state = XFER_STATE and ack_xfer_last  = '1') or
-                          (curr_state = NONE_STATE and REQ_LAST       = '1') else '0';
-    ACK_ERROR <= '1' when (curr_state = XFER_STATE and XFER_ACK_ERR   = '1') else '0';
-    ACK_STOP  <= '1' when (curr_state = STOP_STATE and XFER_RUNNING   = '0') else '0';
-    ACK_NONE  <= '1' when (curr_state = NONE_STATE) else '0';
+    ACK_VAL   <= curr_valid    when (curr_state = XFER_STATE and ack_xfer_valid = '1') or
+                                    (curr_state = STOP_STATE and XFER_RUNNING   = '0') or
+                                    (curr_state = NONE_STATE) else NULL_VALID;
+    ACK_NEXT  <= '1'           when (curr_state = XFER_STATE and ack_xfer_next  = '1') or
+                                    (curr_state = NONE_STATE and REQ_LAST       = '0') else '0';
+    ACK_LAST  <= '1'           when (curr_state = XFER_STATE and ack_xfer_last  = '1') or
+                                    (curr_state = NONE_STATE and REQ_LAST       = '1') else '0';
+    ACK_ERROR <= '1'           when (curr_state = XFER_STATE and XFER_ACK_ERR   = '1') else '0';
+    ACK_STOP  <= '1'           when (curr_state = STOP_STATE and XFER_RUNNING   = '0') else '0';
+    ACK_NONE  <= '1'           when (curr_state = NONE_STATE) else '0';
     ACK_SIZE  <= ack_xfer_size when (curr_state = XFER_STATE) else (others => '0');
     -------------------------------------------------------------------------------
     -- XFER_REQ_VAL    : 転送要求有効信号
+    -- XFER_REQ_SEL    : 転送要求選択信号
     -- XFER_REQ_ADDR   : 転送要求開始アドレス
     -- XFER_REQ_SIZE   : 転送要求サイズ.
     -- XFER_REQ_END    : 最後の転送要求であることを示すフラグ.
@@ -491,6 +501,7 @@ begin
     -- XFER_REQ_SAFETY : セーフティモード.
     -------------------------------------------------------------------------------
     XFER_REQ_VAL    <= req_xfer_valid;
+    XFER_REQ_SEL    <= curr_valid;
     XFER_REQ_ADDR   <= REQ_ADDR;
     XFER_REQ_SIZE   <= req_xfer_size;
     XFER_REQ_NEXT   <= req_xfer_next;

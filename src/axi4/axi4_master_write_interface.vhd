@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 0.0.9
---!     @date    2013/1/17
+--!     @version 0.0.10
+--!     @date    2013/1/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -56,22 +56,25 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
                           integer range 1 to AXI4_ID_MAX_WIDTH;
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          integer := 1;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
                           integer := 32;
-        REQ_SIZE_ENABLE : --! @brief REQUEST SIZE ENABLE :
+        REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
-                          --! * REQ_SIZE_ENABLE=0で無効.
-                          --! * REQ_SIZE_ENABLE>0で有効.
+                          --! * REQ_SIZE_VALID=0で無効.
+                          --! * REQ_SIZE_VALID>0で有効.
                           integer :=  1;
-        FLOW_ENABLE     : --! @brief FLOW ENABLE :
+        FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
-                          --! * FLOW_ENABLE=0で無効.
-                          --! * FLOW_ENABLE>0で有効.
+                          --! * FLOW_VALID=0で無効.
+                          --! * FLOW_VALID>0で有効.
                           integer := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
@@ -213,7 +216,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           in    std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
         REQ_SIZE        : --! @brief Request Transfer Size.
                           --! 転送したいバイト数を指定する.
-                          --! * REQ_SIZE_ENABLE=0の場合は、この信号は無視される.
+                          --! * REQ_SIZE_VALID=0の場合は、この信号は無視される.
                           --! * この値が後述の XFER_SIZE_SEL 信号で示される最大転送
                           --!   バイト数および FLOW_SIZE 信号で示される転送バイト数
                           --!   を越える場合は、そちらの方が優先される.
@@ -278,7 +281,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! * この信号のアサートでもってトランザクションを開始する.
                           --! * 一度この信号をアサートすると Acknowledge を返すまで、
                           --!   この信号はアサートされなくてはならない.
-                          in    std_logic;
+                          in    std_logic_vector(VAL_BITS-1 downto 0);
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           out   std_logic;
@@ -298,7 +301,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --!   やかに REQ_VAL 信号をネゲートして Request を取り下
                           --!   げるか、REQ_VALをアサートしたままで次の Request 情
                           --!   報を用意しておかなければならない.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS-1 downto 0);
         ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
                           --! この信号がアサートされる.
@@ -339,21 +342,21 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         ---------------------------------------------------------------------------
         -- Reserve Size Signals.
         ---------------------------------------------------------------------------
-        RESV_VAL        : out   std_logic;
+        RESV_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         RESV_LAST       : out   std_logic;
         RESV_ERROR      : out   std_logic;
         RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-        PULL_VAL        : out   std_logic;
+        PULL_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_LAST       : out   std_logic;
         PULL_ERROR      : out   std_logic;
         PULL_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
         ---------------------------------------------------------------------------
         -- Read Buffer Interface Signals.
         ---------------------------------------------------------------------------
-        BUF_REN         : out   std_logic;
+        BUF_REN         : out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_DATA        : in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
         BUF_RDY         : in    std_logic
@@ -390,7 +393,8 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
-    signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
+    signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
+    signal   xfer_req_select    : std_logic_vector(VAL_BITS       -1 downto 0);
     signal   xfer_req_valid     : std_logic;
     signal   xfer_req_ready     : std_logic;
     signal   xfer_req_next      : std_logic;
@@ -460,6 +464,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   ack_queue_valid    : std_logic_vector(QUEUE_SIZE     downto 0);
     signal   ack_queue_next     : std_logic;
     signal   ack_queue_last     : std_logic;
+    signal   ack_queue_select   : std_logic_vector(VAL_BITS    -1 downto 0);
     signal   ack_queue_size     : std_logic_vector(XFER_MAX_SIZE  downto 0);
     signal   ack_queue_empty    : std_logic;
     signal   ack_queue_safety   : std_logic;
@@ -478,8 +483,8 @@ begin
             ADDR_BITS       => AXI4_ADDR_WIDTH   ,
             SIZE_BITS       => SIZE_BITS         ,
             REQ_SIZE_BITS   => REQ_SIZE_BITS     ,
-            REQ_SIZE_ENABLE => REQ_SIZE_ENABLE   ,
-            FLOW_ENABLE     => FLOW_ENABLE       ,
+            REQ_SIZE_VALID  => REQ_SIZE_VALID    ,
+            FLOW_VALID      => FLOW_VALID        ,
             XFER_MIN_SIZE   => XFER_MIN_SIZE     ,
             XFER_MAX_SIZE   => XFER_MAX_SIZE     
         )
@@ -538,6 +543,7 @@ begin
             XFER_REQ_LAST   => xfer_req_last     , -- Out :
             XFER_REQ_NEXT   => xfer_req_next     , -- Out :
             XFER_REQ_SAFETY => xfer_req_safety   , -- Out :
+            XFER_REQ_SEL    => xfer_req_select   , -- Out :
             XFER_REQ_VAL    => xfer_req_valid    , -- Out :
             XFER_REQ_RDY    => xfer_req_ready    , -- In  :
             -----------------------------------------------------------------------
@@ -866,7 +872,9 @@ begin
         constant VEC_LO         : integer := 0;
         constant VEC_SIZE_LO    : integer := VEC_LO;
         constant VEC_SIZE_HI    : integer := VEC_SIZE_LO  + XFER_MAX_SIZE;
-        constant VEC_NEXT_POS   : integer := VEC_SIZE_HI  + 1;
+        constant VEC_SEL_LO     : integer := VEC_SIZE_HI  + 1;
+        constant VEC_SEL_HI     : integer := VEC_SEL_LO   + VAL_BITS-1;
+        constant VEC_NEXT_POS   : integer := VEC_SEL_HI   + 1;
         constant VEC_LAST_POS   : integer := VEC_NEXT_POS + 1;
         constant VEC_SAFETY_POS : integer := VEC_LAST_POS + 1;
         constant VEC_HI         : integer := VEC_SAFETY_POS;
@@ -875,6 +883,7 @@ begin
         constant Q_ALL_0        : std_logic_vector(QUEUE_SIZE downto 0) := (others => '0');
     begin
         i_vec(VEC_SIZE_HI downto VEC_SIZE_LO) <= xfer_req_size;
+        i_vec(VEC_SEL_HI  downto VEC_SEL_LO ) <= xfer_req_select;
         i_vec(VEC_NEXT_POS)                   <= xfer_req_next;
         i_vec(VEC_LAST_POS)                   <= xfer_req_last;
         i_vec(VEC_SAFETY_POS)                 <= xfer_req_safety;
@@ -898,6 +907,7 @@ begin
                 Q_RDY       => BVALID              -- In  :
             );
         ack_queue_size   <= q_vec(VEC_SIZE_HI downto VEC_SIZE_LO);
+        ack_queue_select <= q_vec(VEC_SEL_HI  downto VEC_SEL_LO);
         ack_queue_next   <= q_vec(VEC_NEXT_POS);
         ack_queue_last   <= q_vec(VEC_LAST_POS);
         ack_queue_safety <= q_vec(VEC_SAFETY_POS);
@@ -927,16 +937,16 @@ begin
     -------------------------------------------------------------------------------
     -- Reserve Size and Last
     -------------------------------------------------------------------------------
-    RESV_VAL       <= '1' when (xfer_start    = '1') else '0';
-    RESV_LAST      <= '1' when (xfer_req_last = '1') else '0';
+    RESV_VAL       <= xfer_req_select when (xfer_start    = '1') else (others => '0');
+    RESV_LAST      <= '1'             when (xfer_req_last = '1') else '0';
     RESV_ERROR     <= '0';
     RESV_SIZE      <= std_logic_vector(RESIZE(unsigned(xfer_req_size) , RESV_SIZE'length));
     -------------------------------------------------------------------------------
     -- Pull Size and Last
     -------------------------------------------------------------------------------
-    PULL_VAL       <= '1' when (ack_queue_valid(0) = '1' and BVALID = '1') else '0';
-    PULL_LAST      <= '1' when (ack_queue_last = '1') else '0';
-    PULL_ERROR     <= '1' when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
-    PULL_SIZE      <= (others => '0') when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
+    PULL_VAL       <= ack_queue_select when (ack_queue_valid(0) = '1' and BVALID = '1') else (others => '0');
+    PULL_LAST      <= '1'              when (ack_queue_last = '1') else '0';
+    PULL_ERROR     <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
+    PULL_SIZE      <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
                       std_logic_vector(RESIZE(unsigned(ack_queue_size), PULL_SIZE'length));
 end RTL;
