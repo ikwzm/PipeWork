@@ -2,7 +2,7 @@ GHDL=ghdl
 GHDLFLAGS=--mb-comments
 WORK=PIPEWORK
 
-SRC_PATH  = ../../src/
+SRC_PATH  = ../../src
 
 COMPONENTS = components                             \
              chopper                                \
@@ -22,6 +22,7 @@ COMPONENTS = components                             \
              pump_control_register                  \
              pump_intake_valve                      \
              pump_outlet_valve                      \
+             pump_controller                        \
              axi4_types                             \
              axi4_components                        \
              axi4_master_address_channel_controller \
@@ -91,6 +92,9 @@ pump_intake_valve.o                      : $(SRC_PATH)/pump/pump_intake_valve.vh
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_outlet_valve.o                      : $(SRC_PATH)/pump/pump_outlet_valve.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pump_controller.o                        : $(SRC_PATH)/pump/pump_controller.vhd pump_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 axi4_types.o                             : $(SRC_PATH)/axi4/axi4_types.vhd
