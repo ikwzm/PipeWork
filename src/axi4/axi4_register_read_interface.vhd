@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 0.0.4
---!     @date    2013/1/7
+--!     @version 0.0.5
+--!     @date    2013/1/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -318,40 +318,40 @@ begin
     -- xfer_req_size : リードするバイト数.
     -------------------------------------------------------------------------------
     process (xfer_req_addr, burst_length, word_size)
-        variable dt_size : unsigned(XFER_MAX_SIZE   downto 0);
-        variable dt_len  : unsigned(AXI4_ALEN_WIDTH downto 0);
-        variable dt_addr : unsigned(              6 downto 0);
-        variable u_addr  : unsigned(              6 downto 0);
-        constant u_zero  : unsigned(              6 downto 0) := (6 downto 0 => '0');
+        constant u_zero      : unsigned(              6 downto 0) := (6 downto 0 => '0');
+        variable u_addr      : unsigned(              6 downto 0);
+        variable dt_len      : unsigned(AXI4_ALEN_WIDTH downto 0);
+        variable others_size : unsigned(XFER_MAX_SIZE   downto 0);
+        variable first_size  : unsigned(              6 downto 0);
     begin
-        dt_len := RESIZE(to_01(unsigned(burst_length )) +1, dt_len'length);
-        u_addr := RESIZE(to_01(unsigned(xfer_req_addr))   , u_addr'length);
+        dt_len := RESIZE(to_01(unsigned(burst_length )), dt_len'length);
+        u_addr := RESIZE(to_01(unsigned(xfer_req_addr)), u_addr'length);
         if    (word_size = AXI4_ASIZE_128BYTE and AXI4_DATA_WIDTH >= 128*8) then
-            dt_addr := RESIZE(         u_addr(6 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(6 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(6 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(6 downto 0), others_size'length);
         elsif (word_size = AXI4_ASIZE_64BYTE  and AXI4_DATA_WIDTH >=  64*8) then
-            dt_addr := RESIZE(         u_addr(5 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(5 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(5 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(5 downto 0), others_size'length);
         elsif (word_size = AXI4_ASIZE_32BYTE  and AXI4_DATA_WIDTH >=  32*8) then
-            dt_addr := RESIZE(         u_addr(4 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(4 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(4 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(4 downto 0), others_size'length);
         elsif (word_size = AXI4_ASIZE_16BYTE  and AXI4_DATA_WIDTH >=  16*8) then
-            dt_addr := RESIZE(         u_addr(3 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(3 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(3 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(3 downto 0), others_size'length);
         elsif (word_size = AXI4_ASIZE_8BYTE   and AXI4_DATA_WIDTH >=   8*8) then
-            dt_addr := RESIZE(         u_addr(2 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(2 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(2 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(2 downto 0), others_size'length);
         elsif (word_size = AXI4_ASIZE_4BYTE   and AXI4_DATA_WIDTH >=   4*8) then
-            dt_addr := RESIZE(         u_addr(1 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(1 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(1 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(1 downto 0), others_size'length);
         elsif (word_size = AXI4_ASIZE_2BYTE   and AXI4_DATA_WIDTH >=   2*8) then
-            dt_addr := RESIZE(         u_addr(0 downto 0), dt_addr'length);
-            dt_size := RESIZE(dt_len & u_zero(0 downto 0), dt_size'length);
+            first_size  := RESIZE(     not u_addr(0 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(0 downto 0), others_size'length);
         else
-            dt_addr := (others => '0');
-            dt_size := RESIZE(dt_len                     , dt_size'length);
+            first_size  := (others => '1');
+            others_size := RESIZE(dt_len                     , others_size'length);
         end if;
-        xfer_req_size <= std_logic_vector(dt_size - dt_addr);
+        xfer_req_size <= std_logic_vector(others_size + first_size + 1);
     end process;
     -------------------------------------------------------------------------------
     -- 不正なサイズを指定された事を示すフラグ.
