@@ -22,6 +22,7 @@ COMPONENTS = components                             \
              pump_control_register                  \
              pump_intake_valve                      \
              pump_outlet_valve                      \
+             pump_flow_syncronizer                  \
              pump_controller                        \
              axi4_types                             \
              axi4_components                        \
@@ -92,6 +93,9 @@ pump_intake_valve.o                      : $(SRC_PATH)/pump/pump_intake_valve.vh
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_outlet_valve.o                      : $(SRC_PATH)/pump/pump_outlet_valve.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pump_flow_syncronizer.o                  : $(SRC_PATH)/pump/pump_flow_syncronizer.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_controller.o                        : $(SRC_PATH)/pump/pump_controller.vhd pump_components.o

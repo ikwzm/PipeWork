@@ -37,24 +37,32 @@
 
 入力データを DELAY REGISTER の出力に合わせて調整して出力する回路です.
 
+*PipeWork* PUMP Component
+-------------------------
+
+####PUMP_CONTROLLER####
+
+データを入力(INTAKE)側から入力し、出力(OUTLET)側に出力するためのコントローラです.    
+
+
 *PipeWork* AIX4 Component
 -------------------------
 
 ####AXI4_TYPES####
 
-AXI4 I/F の信号のタイプなどを定義しているパッケージです.
+AXI4 I/F の信号のタイプなどを定義しているパッケージです.    
 
-####AXI4_MASTER_READ_CONTROLLER####
+####AXI4_MASTER_READ_INTERFACE####
 
-AXI4 Master Read コントローラーです.
+AXI4 Master Read コントローラーです.    
 
-####AXI4_MASTER_WRITE_CONTROLLER####
+####AXI4_MASTER_WRITE_INTERFACE####
 
-AXI4 Master Write コントローラーです.
+AXI4 Master Write コントローラーです.    
 
 ####AXI4_REGISTER_INTERFACE####
 
-AXI4 スレーブ I/F から簡単なレジスタアクセスを行うためのアダプタです.
+AXI4 スレーブ I/F から簡単なレジスタアクセスを行うためのアダプタです.    
 
 
 *PipeWork* Examples
@@ -65,11 +73,12 @@ AXI4 スレーブ I/F から簡単なレジスタアクセスを行うための�
 ####FIFO with done####
 
 終了処理付きのFIFOです.  
-詳細は [docs/ja/fifo_with_done.md](docs/ja/fifo_with_done.md) を参照.
+詳細は [https://github.com/ikwzm/FIFO_with_done](https://github.com/ikwzm/FIFO_with_done) を参照.
 
 ####PUMP AXI4 to AXI4####
 
 入力側と出力側に AXI4 Master I/F を持つポンプ(所謂DMA)です.
+詳細は [https://github.com/ikwzm/PUMP_AXI4](https://github.com/ikwzm/PUMP_AXI4) を参照.
 
 ライセンス
 ----------

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_count_up_register.vhd
 --!     @brief   PUMP COUNT UP REGISTER
---!              データを転送したバイト数をカウントするレジスタ.
+--!              転送したバイト数をカウントするレジスタ.
 --!     @version 1.0.0
 --!     @date    2013/1/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>

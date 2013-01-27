@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.0.4
---!     @date    2013/1/19
+--!     @version 1.2.0
+--!     @date    2013/1/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -239,9 +239,19 @@ entity  PUMP_CONTROL_REGISTER is
     -------------------------------------------------------------------------------
     -- Status.
     -------------------------------------------------------------------------------
-        VALVE_OPEN      : out std_logic;
-        XFER_RUNNING    : out std_logic;
-        XFER_DONE       : out std_logic
+        VALVE_OPEN      : --! @brief Valve Open Flag.
+                          --! 最初の(REQ_FIRST='1'付き)トランザクション開始時にアサ
+                          --! ートされ、最後の(REQ_LAST='1'付き)トランザクション終
+                          --! 了時または、トランザクション中にエラーが発生した時に
+                          --! ネゲートされる.
+                          out std_logic;
+        XFER_RUNNING    : --! @brief Transaction Running Flag.
+                          --! トランザクション中であることを示すフラグ.
+                          out std_logic;
+        XFER_DONE       : --! @brief Transaction Done Flag.
+                          --! トランザクションが終了したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic
     );
 end PUMP_CONTROL_REGISTER;
 -----------------------------------------------------------------------------------

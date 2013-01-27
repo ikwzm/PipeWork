@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.0.4                                                           --
---!     @date    2013/01/19                                                      --
+--!     @version 1.2.0                                                           --
+--!     @date    2013/01/27                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -208,8 +208,10 @@ end component;
 component PUMP_CONTROL_REGISTER
     generic (
         MODE_BITS       : --! @brief MODE REGISTER BITS :
+                          --! モードレジスタのビット数を指定する.
                           integer := 32;
         STAT_BITS       : --! @brief STATUS REGISTER BITS :
+                          --! ステータスレジスタのビット数を指定する.
                           integer := 32
     );
     port (
@@ -348,25 +350,74 @@ component PUMP_CONTROL_REGISTER
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-        REQ_VALID       : out std_logic;
-        REQ_FIRST       : out std_logic;
-        REQ_LAST        : out std_logic;
-        REQ_READY       : in  std_logic;
+        REQ_VALID       : --! @brief Request Valid Signal.
+                          --! 下記の各種リクエスト信号が有効であることを示す.
+                          --! * この信号のアサートでもってトランザクションを開始する.
+                          --! * 一度この信号をアサートすると Acknowledge を返すまで、
+                          --!   この信号はアサートされなくてはならない.
+                          out std_logic;
+        REQ_FIRST       : --! @brief Request First Transaction.
+                          --! 最初のトランザクションであることを示す.
+                          out std_logic;
+        REQ_LAST        : --! @brief Request Last Transaction.
+                          --! 最後のトランザクションであることを示す.
+                          out std_logic;
+        REQ_READY       : --! @brief Request Ready Signal.
+                          --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                          in  std_logic;
     -------------------------------------------------------------------------------
-    -- Transaction Command Response Signals.
+    -- Transaction Command Acknowledge Signals.
     -------------------------------------------------------------------------------
-        ACK_VALID       : in  std_logic;
-        ACK_ERROR       : in  std_logic;
-        ACK_NEXT        : in  std_logic;
-        ACK_LAST        : in  std_logic;
-        ACK_STOP        : in  std_logic;
-        ACK_NONE        : in  std_logic;
+        ACK_VALID       : --! @brief Acknowledge Valid Signal.
+                          --! 上記の Command Request の応答信号.
+                          --! 下記の 各種 Acknowledge 信号が有効である事を示す.
+                          --! * この信号のアサートでもって、Command Request が受け
+                          --!   付けられたことを示す. ただし、あくまでも Request が
+                          --!   受け付けられただけであって、必ずしもトランザクショ
+                          --!   ンが完了したわけではないことに注意.
+                          --! * この信号は Request につき１クロックだけアサートされ
+                          --!   る.
+                          --! * この信号がアサートされたら、アプリケーション側は速
+                          --!   やかに REQ_VAL 信号をネゲートして Request を取り下
+                          --!   げるか、REQ_VALをアサートしたままで次の Request 情
+                          --!   報を用意しておかなければならない.
+                          in  std_logic;
+        ACK_ERROR       : --! @brief Acknowledge with Error.
+                          --! トランザクション中になんらかのエラーが発生した場合、
+                          --! この信号がアサートされる.
+                          in  std_logic;
+        ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
+                          --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
+                          --! この信号がアサートされる.
+                          in  std_logic;
+        ACK_LAST        : --! @brief Acknowledge with Last transaction.
+                          --! すべてのトランザクションが終了かつ REQ_LAST=1 の場合、
+                          --! この信号がアサートされる.
+                          in  std_logic;
+        ACK_STOP        : --! @brief Acknowledge with Stop operation.
+                          --! トランザクションが中止された場合、この信号がアサート
+                          --! される.
+                          in  std_logic;
+        ACK_NONE        : --! @brief Acknowledge with None Request transfer size.
+                          --! REQ_SIZE=0 の Request だった場合、この信号がアサート
+                          --! される.
+                          in  std_logic;
     -------------------------------------------------------------------------------
     -- Status.
     -------------------------------------------------------------------------------
-        VALVE_OPEN      : out std_logic;
-        XFER_RUNNING    : out std_logic;
-        XFER_DONE       : out std_logic
+        VALVE_OPEN      : --! @brief Valve Open Flag.
+                          --! 最初の(REQ_FIRST='1'付き)トランザクション開始時にアサ
+                          --! ートされ、最後の(REQ_LAST='1'付き)トランザクション終
+                          --! 了時または、トランザクション中にエラーが発生した時に
+                          --! ネゲートされる.
+                          out std_logic;
+        XFER_RUNNING    : --! @brief Transaction Running Flag.
+                          --! トランザクション中であることを示すフラグ.
+                          out std_logic;
+        XFER_DONE       : --! @brief Transaction Done Flag.
+                          --! トランザクションが終了したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -397,38 +448,80 @@ component PUMP_INTAKE_VALVE
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
-        BUFFER_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        THRESHOLD_SIZE  : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_OPEN          : in  std_logic;
-        O_OPEN          : in  std_logic;
-        RESET           : in  std_logic;
-        PAUSE           : in  std_logic;
-        STOP            : in  std_logic;
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic;
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic;
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic;
+        I_OPEN          : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        O_OPEN          : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        BUFFER_SIZE     : --! @brief BUFFER SIZE :
+                          --! バッファの大きさをバイト数で指定する.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! フローカウンタの値がこの値以下の時に転送を開始する.
+                          --! フローカウンタの値がこの値を越えた時に転送を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : in  std_logic;
-        PUSH_LAST       : in  std_logic;
-        PUSH_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_VAL        : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : in  std_logic;
-        PULL_LAST       : in  std_logic;
-        PULL_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_VAL        : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic;
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Input Flow Control Signals.
+    -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
-        FLOW_PAUSE      : out std_logic;
-        FLOW_STOP       : out std_logic;
-        FLOW_LAST       : out std_logic;
-        FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW INTAKE STOP :
+                          --! 転送の中止を指示する信号.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW INTAKE LAST :
+                          --! INTAKE側では未使用.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
+                          --! 入力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Flow Counter.
+    -- Flow Counter Signals.
     -------------------------------------------------------------------------------
-        FLOW_COUNT      : out std_logic_vector(COUNT_BITS-1 downto 0);
-        FLOW_NEG        : out std_logic;
-        PAUSED          : out std_logic
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -459,37 +552,169 @@ component PUMP_OUTLET_VALVE
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
-        THRESHOLD_SIZE  : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_OPEN          : in  std_logic;
-        O_OPEN          : in  std_logic;
-        RESET           : in  std_logic;
-        PAUSE           : in  std_logic;
-        STOP            : in  std_logic;
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic;
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic;
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic;
+        I_OPEN          : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        O_OPEN          : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! フローカウンタの値がこの値以上の時に転送を開始する.
+                          --! フローカウンタの値がこの値未満の時に転送を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : in  std_logic;
-        PUSH_LAST       : in  std_logic;
-        PUSH_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_VAL        : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : in  std_logic;
-        PULL_LAST       : in  std_logic;
-        PULL_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_VAL        : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic;
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Input Flow Control Signals.
+    -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
-        FLOW_PAUSE      : out std_logic;
-        FLOW_STOP       : out std_logic;
-        FLOW_LAST       : out std_logic;
-        FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW OUTLET STOP :
+                          --! 転送の中止を指示する信号.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW OUTLET LAST :
+                          --! 入力側から最後の入力を示すフラグがあったことを示す.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW OUTLET ENABLE SIZE :
+                          --! 出力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.
     -------------------------------------------------------------------------------
-        FLOW_COUNT      : out std_logic_vector(COUNT_BITS-1 downto 0);
-        FLOW_NEG        : out std_logic;
-        PAUSED          : out std_logic
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief PUMP_FLOW_SYNCRONIZER                                                 --
+-----------------------------------------------------------------------------------
+component PUMP_FLOW_SYNCRONIZER
+    generic (
+        I_CLK_RATE  : --! @brief INPUT CLOCK RATE :
+                      --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
+                      --! ク(O_CLK)との関係を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer :=  1;
+        O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
+                      --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
+                      --! ク(O_CLK)との関係を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer :=  1;
+        DELAY_CYCLE : --! @brief DELAY CYCLE :
+                      --! 入力側から出力側への転送する際の遅延サイクルを指定する.
+                      integer :=  0;
+        SIZE_BITS   : --! @brief I_SIZE/O_SIZEのビット数を指定する.
+                      integer :=  8
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- リセット信号
+    -------------------------------------------------------------------------------
+        RST         : --! @brief RESET :
+                      --! 非同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側の各種信号
+    -------------------------------------------------------------------------------
+        I_CLK       : --! @brief INPUT CLOCK :
+                      --! 入力側のクロック信号.
+                      in  std_logic;
+        I_CLR       : --! @brief INPUT CLEAR :
+                      --! 入力側の同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+        I_CKE       : --! @brief INPUT CLOCK ENABLE :
+                      --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
+                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
+                      --!   関係を示す時に使用する.
+                      --! * I_CLKの立上り時とOCLKの立上り時が同じ時にアサートするよ
+                      --!   うに入力されなければならない.
+                      --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時のみ有
+                      --!   効. それ以外は未使用.
+                      in  std_logic;
+        I_OPEN      : --! @brief INPUT OPEN FLAG :
+                      --! 入力側のバルブが開いていることを示すフラグ.
+                      in  std_logic;
+        I_VAL       : --! @brief INPUT SIZE/LAST VALID :
+                      --! I_LAST、I_SIZEが有効であることを示す信号.
+                      --! この信号のアサートによりI_LAST、I_SIZEの内容が出力側に伝達
+                      --! されて、O_LAST、O_SIZEから出力される.
+                      in  std_logic;
+        I_LAST      : --! @brief INPUT LAST FLAG :
+                      --! 最後の転送であることを示すフラグを入力.
+                      in  std_logic;
+        I_SIZE      : --! @brief INPUT SIZE :
+                      --! 転送バイト数を入力.
+                      in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側の各種信号
+    -------------------------------------------------------------------------------
+        O_CLK       : --! @brief OUTPUT CLK :
+                      --! 出力側のクロック信号.
+                      in  std_logic;
+        O_CLR       : --! @brief OUTPUT CLEAR :
+                      --! 出力側の同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+        O_CKE       : --! @brief OUTPUT CLOCK ENABLE :
+                      --! 出力側のクロック(O_CLK)の立上りが有効であることを示す信号.
+                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
+                      --!   関係を示す時に使用する.
+                      --! * I_CLKの立上り時とO_CLKの立上り時が同じ時にアサートする
+                      --!   ように入力されなければならない.
+                      --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ有
+                      --!   効. それ以外は未使用.
+                      in  std_logic;
+        O_OPEN      : --! @brief OUTPUT OPEN FLAG :
+                      --! 入力側のバルブが開いていることを示すフラグ.
+                      out std_logic;
+        O_VAL       : --! @brief OUTPUT SIZE/LAST VALID :
+                      --! O_LAST、O_SIZEが有効であることを示す信号.
+                      out std_logic;
+        O_LAST      : --! @brief OUTPUT LAST FLAG :
+                      --! 最後の転送であることを示すフラグを出力.
+                      out std_logic;
+        O_SIZE      : --! @brief INPUT SIZE :
+                      --! 転送バイト数を出力.
+                      out std_logic_vector(SIZE_BITS-1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -497,53 +722,79 @@ end component;
 -----------------------------------------------------------------------------------
 component PUMP_CONTROLLER
     generic (
+        I_CLK_RATE      : --! @brief INPUT CLOCK RATE :
+                          --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
+                          --! クロック(O_CLK)との関係を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer :=  1;
         I_REQ_ADDR_VALID: --! @brief INTAKE REQUEST ADDRESS VALID :
                           --! I_REQ_ADDR信号を有効にするか否かを指示する.
                           --! * I_ADDR_VAL=0で無効.
                           --! * I_ADDR_VAL>0で有効.
-                          integer := 1;
+                          integer :=  1;
         I_REQ_ADDR_BITS : --! @brief INTAKE REQUEST ADDRESS BITS :
                           --! I_REQ_ADDR信号のビット数を指定する.
+                          --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         I_REG_ADDR_BITS : --! @brief INTAKE ADDRESS REGISTER BITS :
                           --! I_REG_ADDR信号のビット数を指定する.
+                          --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         I_REQ_SIZE_VALID: --! @brief INTAKE REQUEST SIZE VALID :
                           --! I_REQ_SIZE信号を有効にするか否かを指示する.
                           --! * I_SIZE_VAL=0で無効.
                           --! * I_SIZE_VAL>0で有効.
-                          integer := 1;
+                          integer :=  1;
         I_REQ_SIZE_BITS : --! @brief INTAKE REQUEST SIZE BITS :
                           --! I_REQ_SIZE信号のビット数を指定する.
+                          --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         I_REG_SIZE_BITS : --! @brief INTAKE SIZE REGISTER BITS :
                           --! I_REG_SIZE信号のビット数を指定する.
+                          --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         I_REG_MODE_BITS : --! @brief INTAKE MODE REGISTER BITS :
                           integer := 32;
         I_REG_STAT_BITS : --! @brief INTAKE STATUS REGISTER BITS :
                           integer := 32;
+        O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
+                          --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
+                          --! クロック(O_CLK)との関係を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer :=  1;
         O_REQ_ADDR_VALID: --! @brief OUTLET REQUEST ADDRESS VALID :
                           --! O_REQ_ADDR信号を有効にするか否かを指示する.
                           --! * O_ADDR_VAL=0で無効.
                           --! * O_ADDR_VAL>0で有効.
-                          integer := 1;
+                          integer :=  1;
         O_REQ_ADDR_BITS : --! @brief OUTLET REQUEST ADDRESS BITS :
                           --! O_REQ_ADDR信号のビット数を指定する.
+                          --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         O_REG_ADDR_BITS : --! @brief OUTLET ADDRESS REGISTER BITS :
                           --! O_REG_ADDR信号のビット数を指定する.
+                          --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         O_REQ_SIZE_VALID: --! @brief OUTLET REQUEST SIZE VALID :
                           --! O_REQ_SIZE信号を有効にするか否かを指示する.
                           --! * O_SIZE_VAL=0で無効.
                           --! * O_SIZE_VAL>0で有効.
-                          integer := 1;
+                          integer :=  1;
         O_REQ_SIZE_BITS : --! @brief OUTLET REQUEST SIZE BITS :
                           --! O_REQ_SIZE信号のビット数を指定する.
+                          --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         O_REG_SIZE_BITS : --! @brief OUTLET SIZE REGISTER BITS :
                           --! O_REG_SIZE信号のビット数を指定する.
+                          --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
+                          --!   しなければならない.
                           integer := 32;
         O_REG_MODE_BITS : --! @brief OUTLET MODE REGISTER BITS :
                           integer := 32;
@@ -552,28 +803,21 @@ component PUMP_CONTROLLER
         BUF_DEPTH       : --! @brief BUFFER DEPTH :
                           --! バッファの容量(バイト数)を２のべき乗値で指定する.
                           integer := 12;
-        I_THRESHOLD     : --! @brief INTAKE THRESHOLD SIZE :
-                          --! 入力側の閾値をバイト数で指定する.
-                          --! フローカウンタがこの値以下の時に入力を開始する.
-                          integer := 32;
-        O_THRESHOLD     : --! @brief OUTLET THRESHOLD SIZE :
-                          --! 出力側の閾値をバイト数で指定する.
-                          --! フローカウンタがこの値以下の時に出力を開始する.
-                          integer := 32
+        I2O_DELAY_CYCLE : --! @brief DELAY CYCLE :
+                          --! 入力側から出力側への転送する際の遅延サイクルを指定する.
+                          integer :=  0
     );
     port (
     -------------------------------------------------------------------------------
-    -- Clock & Reset Signals.
+    --Reset Signals.
     -------------------------------------------------------------------------------
-        CLK             : --! @brief CLOCK :
-                          --! クロック信号
-                          in  std_logic; 
-        RST             : --! @brief ASYNCRONOUSE RESET :
-                          --! 非同期リセット信号.アクティブハイ.
-                          in  std_logic;
-        CLR             : --! @brief SYNCRONOUSE RESET :
-                          --! 同期リセット信号.アクティブハイ.
-                          in  std_logic;
+        RST             : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Clock and Clock Enable.
+    -------------------------------------------------------------------------------
+        I_CLK           : in  std_logic;
+        I_CLR           : in  std_logic;
+        I_CKE           : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Control Register Interface.
     -------------------------------------------------------------------------------
@@ -618,6 +862,17 @@ component PUMP_CONTROLLER
         I_ERR_ST_D      : in  std_logic;
         I_ERR_ST_Q      : out std_logic;
     -------------------------------------------------------------------------------
+    -- Intake Configuration Signals.
+    -------------------------------------------------------------------------------
+        I_ADDR_FIX      : in  std_logic;
+        I_THRESHOLD_SIZE: in  std_logic_vector(BUF_DEPTH         downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Clock and Clock Enable.
+    -------------------------------------------------------------------------------
+        O_CLK           : in  std_logic;
+        O_CLR           : in  std_logic;
+        O_CKE           : in  std_logic;
+    -------------------------------------------------------------------------------
     -- Outlet Control Register Interface.
     -------------------------------------------------------------------------------
         O_ADDR_L        : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
@@ -660,6 +915,11 @@ component PUMP_CONTROLLER
         O_ERR_ST_L      : in  std_logic;
         O_ERR_ST_D      : in  std_logic;
         O_ERR_ST_Q      : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Configuration Signals.
+    -------------------------------------------------------------------------------
+        O_ADDR_FIX      : in  std_logic;
+        O_THRESHOLD_SIZE: in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Request Signals.
     -------------------------------------------------------------------------------

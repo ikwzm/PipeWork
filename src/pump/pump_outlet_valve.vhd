@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_outlet_valve.vhd
 --!     @brief   PUMP OUTLET VALVE
---!     @version 1.0.4
---!     @date    2013/1/18
+--!     @version 1.2.0
+--!     @date    2013/1/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -64,37 +64,77 @@ entity  PUMP_OUTLET_VALVE is
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
-        THRESHOLD_SIZE  : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_OPEN          : in  std_logic;
-        O_OPEN          : in  std_logic;
-        RESET           : in  std_logic;
-        PAUSE           : in  std_logic;
-        STOP            : in  std_logic;
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic;
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic;
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic;
+        I_OPEN          : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        O_OPEN          : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! フローカウンタの値がこの値以上の時に転送を開始する.
+                          --! フローカウンタの値がこの値未満の時に転送を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : in  std_logic;
-        PUSH_LAST       : in  std_logic;
-        PUSH_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_VAL        : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : in  std_logic;
-        PULL_LAST       : in  std_logic;
-        PULL_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_VAL        : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic;
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Input Flow Control Signals.
+    -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
-        FLOW_PAUSE      : out std_logic;
-        FLOW_STOP       : out std_logic;
-        FLOW_LAST       : out std_logic;
-        FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW OUTLET STOP :
+                          --! 転送の中止を指示する信号.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW OUTLET LAST :
+                          --! 入力側から最後の入力を示すフラグがあったことを示す.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW OUTLET ENABLE SIZE :
+                          --! 出力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.
     -------------------------------------------------------------------------------
-        FLOW_COUNT      : out std_logic_vector(COUNT_BITS-1 downto 0);
-        FLOW_NEG        : out std_logic;
-        PAUSED          : out std_logic
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
     );
 end PUMP_OUTLET_VALVE;
 -----------------------------------------------------------------------------------
@@ -110,7 +150,44 @@ architecture RTL of PUMP_OUTLET_VALVE is
     signal   flow_zero          : boolean;
     signal   io_open            : boolean;
     signal   io_last            : boolean;
+    signal   pause_flag         : boolean;
 begin
+    -------------------------------------------------------------------------------
+    -- io_open : 入力側のバルブと出力側のバルブが開いていることを示すフラグ.
+    --           入力側のバルブと出力側のバルブが双方とも開いた時点でアサート.
+    --           入力側のバルブと出力側のバルブが双方とも閉じた時点でネゲート.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if    (RST = '1') then
+                io_open       <= FALSE;
+        elsif (CLK'event and CLK = '1') then
+            if    (CLR   = '1' or RESET = '1') then
+                io_open       <= FALSE;
+            elsif (io_open = FALSE and I_OPEN = '1' and O_OPEN = '1') then
+                io_open <= TRUE;
+            elsif (io_open = TRUE  and I_OPEN = '0' and O_OPEN = '0') then
+                io_open <= FALSE;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- io_last : I_LAST(入力側からの最後の入力だったことを示すフラグ)を、
+    --           io_open=TRUE の間だけ保持するレジスタ.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if    (RST = '1') then
+                io_last <= FALSE;
+        elsif (CLK'event and CLK = '1') then
+            if    (CLR   = '1' or RESET = '1' or io_open = FALSE) then
+                io_last <= FALSE;
+            elsif (PUSH_VAL = '1' and PUSH_LAST = '1') then
+                io_last <= TRUE;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- flow_counter : 現在バッファに入っている(または入る予定)の量をカウント
+    -------------------------------------------------------------------------------
     process (CLK, RST)
         variable next_counter : unsigned(COUNT_BITS downto 0);
     begin
@@ -119,16 +196,12 @@ begin
                 flow_positive <= FALSE;
                 flow_negative <= FALSE;
                 flow_zero     <= TRUE;
-                io_open       <= FALSE;
-                io_last       <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1' or RESET = '1') then
                 flow_counter  <= (others => '0');
                 flow_positive <= FALSE;
                 flow_negative <= FALSE;
                 flow_zero     <= TRUE;
-                io_open       <= FALSE;
-                io_last       <= FALSE;
             else
                 if (io_open) then
                     next_counter := "0" & flow_counter;
@@ -156,31 +229,37 @@ begin
                     flow_zero     <= TRUE;
                 end if;
                 flow_counter <= next_counter(flow_counter'range);
-                if    (io_open = FALSE and I_OPEN = '1' and O_OPEN = '1') then
-                    io_open <= TRUE;
-                elsif (io_open = TRUE  and I_OPEN = '0' and O_OPEN = '0') then
-                    io_open <= FALSE;
-                end if;
-                if (io_open = FALSE) then
-                    io_last <= FALSE;
-                elsif (PUSH_VAL = '1' and PUSH_LAST = '1') then
-                    io_last <= TRUE;
-                end if;
             end if;
         end if;
     end process;
+    -------------------------------------------------------------------------------
+    -- FLOW_COUNT : flow_counter の値を出力.
+    -------------------------------------------------------------------------------
     FLOW_COUNT <= std_logic_vector(flow_counter);
     FLOW_NEG   <= '1' when (flow_negative) else '0';
+    -------------------------------------------------------------------------------
+    -- FLOW_STOP  : 転送の中止を指示する信号.
+    -------------------------------------------------------------------------------
     FLOW_STOP  <= '1' when (STOP  = '1') or
                            (io_last and flow_negative) else '0';
-    FLOW_PAUSE <= '1' when (PAUSE = '1') or
-                           (io_open = FALSE) or
-                           (io_last = TRUE  and flow_zero) or
-                           (io_last = FALSE and to_01(flow_counter) <  to_01(unsigned(THRESHOLD_SIZE))) else '0';
-    PAUSED     <= '1' when (PAUSE = '1') or
-                           (io_open = FALSE) or
-                           (io_last = TRUE  and flow_zero) or
-                           (io_last = FALSE and to_01(flow_counter) <  to_01(unsigned(THRESHOLD_SIZE))) else '0';
+    -------------------------------------------------------------------------------
+    -- FLOW_PAUSE : フローカウンタの状態で、転送を一時的に止めたり、再開することを
+    --              指示する信号.
+    -------------------------------------------------------------------------------
+    pause_flag <= (PAUSE   = '1'  ) or
+                  (io_open = FALSE) or
+                  (io_last = TRUE  and flow_zero) or
+                  (io_last = FALSE and to_01(flow_counter) <  to_01(unsigned(THRESHOLD_SIZE)));
+    FLOW_PAUSE <= '1' when (pause_flag) else '0';
+    PAUSED     <= '1' when (pause_flag) else '0';
+    -------------------------------------------------------------------------------
+    -- FLOW_LAST  : 入力側から最後の入力を示すフラグがあったことを示す.
+    --              ただし、flow_counter の値が THRESHOLD_SIZE 以下である場合のみ、
+    --              アサートされる.
+    -------------------------------------------------------------------------------
     FLOW_LAST  <= '1' when (io_last = TRUE  and to_01(flow_counter) <= to_01(unsigned(THRESHOLD_SIZE))) else '0';
+    -------------------------------------------------------------------------------
+    -- FLOW_SIZE  : 出力可能なバイト数(すなわちflow_counterの値)を出力.
+    -------------------------------------------------------------------------------
     FLOW_SIZE  <= std_logic_vector(flow_counter);
 end RTL;
