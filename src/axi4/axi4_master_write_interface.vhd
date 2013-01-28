@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 0.0.10
---!     @date    2013/1/18
+--!     @version 0.0.11
+--!     @date    2013/1/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -499,6 +499,7 @@ begin
             -- AXI4 Address Channel Signals.
             ----------------------------------------------------------------------
             AADDR           => AWADDR            , -- Out :
+            ASIZE           => AWSIZE            , -- Out :
             ALEN            => AWLEN             , -- Out :
             AVALID          => AWVALID           , -- Out :
             AREADY          => AWREADY           , -- In  :
@@ -560,7 +561,6 @@ begin
     -- AXI4 Write Address Channel Signals Output.
     -------------------------------------------------------------------------------
     AWBURST  <= REQ_BURST;
-    AWSIZE   <= std_logic_vector(to_unsigned(AXI4_DATA_SIZE, AWSIZE'length));
     AWLOCK   <= REQ_LOCK;
     AWCACHE  <= REQ_CACHE;
     AWPROT   <= REQ_PROT;

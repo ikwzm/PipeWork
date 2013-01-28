@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 0.0.10
---!     @date    2013/1/18
+--!     @version 0.0.11
+--!     @date    2013/1/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -469,6 +469,7 @@ begin
             -- AXI4 Address Channel Signals.
             ----------------------------------------------------------------------
             AADDR           => ARADDR            , -- Out :
+            ASIZE           => ARSIZE            , -- Out :
             ALEN            => ARLEN             , -- Out :
             AVALID          => ARVALID           , -- Out :
             AREADY          => ARREADY           , -- In  :
@@ -530,7 +531,6 @@ begin
     -- AXI4 Read Address Channel Signals Output.
     -------------------------------------------------------------------------------
     ARBURST  <= REQ_BURST;
-    ARSIZE   <= std_logic_vector(to_unsigned(AXI4_DATA_SIZE, ARSIZE'length));
     ARLOCK   <= REQ_LOCK;
     ARCACHE  <= REQ_CACHE;
     ARPROT   <= REQ_PROT;

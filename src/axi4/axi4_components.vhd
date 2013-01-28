@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 0.0.10                                                          --
---!     @date    2013/01/18                                                      --
+--!     @version 0.0.11                                                          --
+--!     @date    2013/01/29                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -101,6 +101,7 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         -- AXI4 Address Channel Signals.
         --------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
+        ASIZE           : out   AXI4_ASIZE_TYPE;
         ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;

@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 0.0.10
---!     @date    2013/1/18
+--!     @version 0.0.11
+--!     @date    2013/1/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -96,6 +96,7 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         -- AXI4 Address Channel Signals.
         --------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
+        ASIZE           : out   AXI4_ASIZE_TYPE;
         ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
@@ -310,9 +311,9 @@ begin
     -- req_size_none : REQ_SIZEの値が0であることを示すフラグ.
     -- req_size_last : REQ_SIZEによる最後の転送要求であることを示すフラグ.
     -------------------------------------------------------------------------------
-    -- REQ_SIZE_VALID /= 0 の場合は CHOPPER を使って上記の信号を生成する.
+    -- REQ_SIZE_VALID /= 0 の場合.
     -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_1: if (REQ_SIZE_VALID /= 0) generate
+    MAX_XFER_SIZE_NE_0: if (REQ_SIZE_VALID /= 0) generate
         GEN: CHOPPER
             generic map (
                 BURST       => 1                     ,              
@@ -346,32 +347,54 @@ begin
             );
     end generate;
     -------------------------------------------------------------------------------
-    -- REQ_SIZE_VALID = 0 かつ XFER_MAX_SIZE <= XFER_MIN_SIZEの場合は固定値.
+    -- REQ_SIZE_VALID = 0 の場合.
     -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_GEN_2: if (REQ_SIZE_VALID = 0 and XFER_MAX_SIZE <= XFER_MIN_SIZE) generate
-        req_size_none <= '0';
-        req_size_last <= '1';
-        max_xfer_size <= std_logic_vector(to_unsigned(2**XFER_MAX_SIZE, max_xfer_size'length));
-    end generate;
-    -------------------------------------------------------------------------------
-    -- REQ_SIZE_VALID = 0 かつ XFER_MAX_SIZE > XFER_MIN_SIZEの場合はXFER_SIZE_SEL
-    -- から生成する.
-    -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_GEN_3: if (REQ_SIZE_VALID = 0 and XFER_MAX_SIZE >  XFER_MIN_SIZE) generate
-        req_size_none <= '0';
-        req_size_last <= '1';
-        process (XFER_SIZE_SEL)
-            variable max_xfer_bytes : integer range 2**XFER_MIN_SIZE to 2**XFER_MAX_SIZE;
+    MAX_XFER_SIZE_EQ_0: if (REQ_SIZE_VALID = 0) generate
+        function GEN_MAX_REQ_SIZE return std_logic_vector is
+            variable value : std_logic_vector(XFER_MAX_SIZE downto 0);
         begin
-            max_xfer_bytes := 2**XFER_MIN_SIZE;
-            for i in XFER_MAX_SIZE to XFER_MIN_SIZE loop
-                if (XFER_SIZE_SEL(i) = '1') then
-                    max_xfer_bytes := 2**i;
-                    exit;
+            for i in value'range loop
+                if (i = value'high) then
+                    value(i) := '1';
+                else
+                    value(i) := '0';
                 end if;
             end loop;
-            max_xfer_size <= std_logic_vector(to_unsigned(max_xfer_bytes, max_xfer_size'length));
-        end process;
+            return value;
+        end function;
+        constant MAX_REQ_SIZE : std_logic_vector(XFER_MAX_SIZE downto 0) := GEN_MAX_REQ_SIZE;
+    begin
+        GEN: CHOPPER
+            generic map (
+                BURST       => 1                     ,              
+                MIN_PIECE   => XFER_MIN_SIZE         ,
+                MAX_PIECE   => XFER_MAX_SIZE         ,
+                MAX_SIZE    => SIZE_BITS+1           ,
+                ADDR_BITS   => REQ_ADDR'length       ,
+                SIZE_BITS   => MAX_REQ_SIZE'length   ,
+                COUNT_BITS  => 1                     ,
+                PSIZE_BITS  => max_xfer_size'length  ,
+                GEN_VALID   => 0
+            )
+            port map (
+                CLK         => CLK                   , -- In  :
+                RST         => RST                   , -- In  :
+                CLR         => CLR                   , -- In  :
+                ADDR        => REQ_ADDR              , -- In  :
+                SIZE        => MAX_REQ_SIZE          , -- In  :
+                SEL         => XFER_SIZE_SEL         , -- In  :
+                LOAD        => max_xfer_load         , -- In  :
+                CHOP        => max_xfer_chop         , -- In  :
+                COUNT       => open                  , -- Out :
+                NONE        => req_size_none         , -- Out : 
+                LAST        => req_size_last         , -- Out : 
+                NEXT_NONE   => open                  , -- Out :
+                NEXT_LAST   => open                  , -- Out :
+                PSIZE       => max_xfer_size         , -- Out :
+                NEXT_PSIZE  => open                  , -- Out :
+                VALID       => open                  , -- Out :
+                NEXT_VALID  => open                    -- Out :
+            );
     end generate;
     -------------------------------------------------------------------------------
     -- req_xfer_size : 実際の転送要求サイズ.
@@ -532,5 +555,6 @@ begin
             end if;
         end if;
     end process;
-    AADDR  <= REQ_ADDR;
+    AADDR <= REQ_ADDR;
+    ASIZE <= std_logic_vector(to_unsigned(DATA_SIZE, ASIZE'length));
 end RTL;
