@@ -496,7 +496,7 @@ begin
             REQ_VALID       => I_REQ_VALID     , -- Out :
             REQ_FIRST       => I_REQ_FIRST     , -- Out :
             REQ_LAST        => I_REQ_LAST      , -- Out :
-            REQ_READY       => I_REQ_READY     , -- Out :
+            REQ_READY       => I_REQ_READY     , -- In  :
             ACK_VALID       => I_ACK_VALID     , -- In  :
             ACK_ERROR       => I_ACK_ERROR     , -- In  :
             ACK_NEXT        => I_ACK_NEXT      , -- In  :
@@ -663,7 +663,7 @@ begin
             REQ_VALID       => O_REQ_VALID     , -- Out :
             REQ_FIRST       => O_REQ_FIRST     , -- Out :
             REQ_LAST        => O_REQ_LAST      , -- Out :
-            REQ_READY       => O_REQ_READY     , -- Out :
+            REQ_READY       => O_REQ_READY     , -- In  :
             ACK_VALID       => O_ACK_VALID     , -- In  :
             ACK_ERROR       => O_ACK_ERROR     , -- In  :
             ACK_NEXT        => O_ACK_NEXT      , -- In  :
