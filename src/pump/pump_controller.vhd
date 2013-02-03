@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 1.2.0
---!     @date    2013/1/27
+--!     @version 1.2.1
+--!     @date    2013/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -276,6 +276,7 @@ entity  PUMP_CONTROLLER is
         I_OPEN          : out std_logic;
         I_RUNNING       : out std_logic;
         I_DONE          : out std_logic;
+        I_ERROR         : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Request Signals.
     -------------------------------------------------------------------------------
@@ -312,7 +313,8 @@ entity  PUMP_CONTROLLER is
     -------------------------------------------------------------------------------
         O_OPEN          : out std_logic;
         O_RUNNING       : out std_logic;
-        O_DONE          : out std_logic
+        O_DONE          : out std_logic;
+        O_ERROR         : out std_logic
     );
 end PUMP_CONTROLLER;
 -----------------------------------------------------------------------------------
@@ -505,6 +507,7 @@ begin
             ACK_NONE        => I_ACK_NONE      , -- In  :
             VALVE_OPEN      => i_valve_open    , -- Out :
             XFER_DONE       => I_DONE          , -- Out :
+            XFER_ERROR      => I_ERROR         , -- Out :
             XFER_RUNNING    => i_xfer_running    -- Out :
         );
     I_RESET_Q <= i_reset;
@@ -672,6 +675,7 @@ begin
             ACK_NONE        => O_ACK_NONE      , -- In  :
             VALVE_OPEN      => o_valve_open    , -- Out :
             XFER_DONE       => O_DONE          , -- Out :
+            XFER_ERROR      => O_ERROR         , -- Out :
             XFER_RUNNING    => o_xfer_running    -- Out :
         );
     O_RESET_Q <= o_reset;

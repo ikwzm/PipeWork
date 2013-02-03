@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.2.0                                                           --
---!     @date    2013/01/27                                                      --
+--!     @version 1.2.1                                                           --
+--!     @date    2013/02/03                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -416,6 +416,10 @@ component PUMP_CONTROL_REGISTER
                           out std_logic;
         XFER_DONE       : --! @brief Transaction Done Flag.
                           --! トランザクションが終了したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic;
+        XFER_ERROR      : --! @brief Transaction Done Flag.
+                          --! トランザクション中にエラーが発生したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic
     );
@@ -957,6 +961,7 @@ component PUMP_CONTROLLER
         I_OPEN          : out std_logic;
         I_RUNNING       : out std_logic;
         I_DONE          : out std_logic;
+        I_ERROR         : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Request Signals.
     -------------------------------------------------------------------------------
@@ -993,7 +998,138 @@ component PUMP_CONTROLLER
     -------------------------------------------------------------------------------
         O_OPEN          : out std_logic;
         O_RUNNING       : out std_logic;
-        O_DONE          : out std_logic
+        O_DONE          : out std_logic;
+        O_ERROR         : out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief PUMP_SEQUENCER                                                        --
+-----------------------------------------------------------------------------------
+component PUMP_SEQUENCER
+    generic (
+        M_ADDR_BITS     : --! @brief Transfer Request Block Read Address Bits :
+                          --! M_REQ_ADDR のビット数を示す.
+                          integer := 32;
+        M_BUF_SIZE      : --! @brief Transfer Request Block Read Buffer Size :
+                          --! ブロックを格納するバッファのバイト数を２のべき乗値で示す.
+                          integer :=  4;
+        M_BUF_WIDTH     : --! @brief Transfer Request Block Read Buffer Data Width :
+                          --! ブロックを格納するバッファのデータ幅を２のべき乗値で示す.
+                          integer :=  2;
+        TRB_BITS        : --! @brief Transfer Request Block Bits:
+                          --! Transfer Request Block の総ビット数を指定する.
+                          integer := 128;
+        TRB_PUMP_LO     : --! @brief Transfer Request Block PUMP Operand Low :
+                          --! Transfer Request Block うち、PUMPに渡すオペランドの
+                          --! 最下位ビットの位置を指定する.
+                          integer :=  0;
+        TRB_PUMP_HI     : --! @brief Transfer Request Block PUMP Operand High :
+                          --! Transfer Request Block うち、PUMPに渡すオペランドの
+                          --! 最上位ビットの位置を指定する.
+                          integer := 121;
+        TRB_ADDR_LO     : --! @brief Transfer Request Block Address Field Low :
+                          --! Transfer Request Block うち、Address Field の最下位
+                          --! ビットの位置を指定する.
+                          integer :=   0;
+        TRB_ADDR_HI     : --! @brief Transfer Request Block Address Field High :
+                          --! Transfer Request Block うち、Address Field の最上位
+                          --! ビットの位置を指定する.
+                          integer :=  63;
+        TRB_MODE_LO     : --! @brief Transfer Request Block Mode Field Low :
+                          --! Transfer Request Block うち、Mode Field の最下位ビッ
+                          --! トの位置を指定する.
+                          integer :=  64;
+        TRB_MODE_HI     : --! @brief Transfer Request Block Mode Field High :
+                          --! Transfer Request Block うち、Mode Field の最上位ビッ
+                          --! トの位置を指定する.
+                          integer := 111;
+        TRB_STAT_LO     : --! @brief Transfer Request Block Status Field Low :
+                          --! Transfer Request Block うち、Status Field の最下位ビ
+                          --! ットの位置を指定する.
+                          integer := 112;
+        TRB_STAT_HI     : --! @brief Transfer Request Block Status Field High :
+                          --! Transfer Request Block うち、Status Field の最上位ビ
+                          --! ットの位置を指定する.
+                          integer := 119
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- Clock & Reset Signals.
+    -------------------------------------------------------------------------------
+        CLK             : in  std_logic; 
+        RST             : in  std_logic;
+        CLR             : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Transfer Request Block Read Signals.
+    -------------------------------------------------------------------------------
+        M_REQ_VALID     : out std_logic;
+        M_REQ_ADDR      : out std_logic_vector(M_ADDR_BITS-1        downto 0);
+        M_REQ_SIZE      : out std_logic_vector(M_BUF_SIZE           downto 0);
+        M_REQ_PTR       : out std_logic_vector(M_BUF_SIZE -1        downto 0);
+        M_REQ_FIRST     : out std_logic;
+        M_REQ_LAST      : out std_logic;
+        M_REQ_READY     : in  std_logic;
+        M_ACK_VALID     : in  std_logic;
+        M_ACK_ERROR     : in  std_logic;
+        M_ACK_NEXT      : in  std_logic;
+        M_ACK_LAST      : in  std_logic;
+        M_ACK_STOP      : in  std_logic;
+        M_ACK_NONE      : in  std_logic;
+        M_ACK_SIZE      : in  std_logic_vector(M_BUF_SIZE           downto 0);
+        M_BUF_WE        : in  std_logic;
+        M_BUF_BEN       : in  std_logic_vector(2**(M_BUF_WIDTH-3)-1 downto 0);
+        M_BUF_DATA      : in  std_logic_vector(2**(M_BUF_WIDTH  )-1 downto 0);
+        M_BUF_PTR       : in  std_logic_vector(M_BUF_SIZE        -1 downto 0);
+        M_BUF_RDY       : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Status Register Interface Signals.
+    -------------------------------------------------------------------------------
+        T_ADDR_L        : in  std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
+        T_ADDR_D        : in  std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
+        T_ADDR_Q        : out std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
+        T_MODE_L        : in  std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
+        T_MODE_D        : in  std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
+        T_MODE_Q        : out std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
+        T_STAT_L        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+        T_STAT_D        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+        T_STAT_Q        : out std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+        T_STAT_I        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+        T_RESET_L       : in  std_logic;
+        T_RESET_D       : in  std_logic;
+        T_RESET_Q       : out std_logic;
+        T_START_L       : in  std_logic;
+        T_START_D       : in  std_logic;
+        T_START_Q       : out std_logic;
+        T_STOP_L        : in  std_logic;
+        T_STOP_D        : in  std_logic;
+        T_STOP_Q        : out std_logic;
+        T_PAUSE_L       : in  std_logic;
+        T_PAUSE_D       : in  std_logic;
+        T_PAUSE_Q       : out std_logic;
+        T_ERROR         : out std_logic_vector(2 downto 0);
+        T_DONE          : out std_logic;
+        T_ENTER         : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Pump Control Register Interface Signals.
+    -------------------------------------------------------------------------------
+        P_RESET_L       : out std_logic;
+        P_RESET_D       : out std_logic;
+        P_RESET_Q       : in  std_logic;
+        P_START_L       : out std_logic;
+        P_START_D       : out std_logic;
+        P_START_Q       : in  std_logic;
+        P_STOP_L        : out std_logic;
+        P_STOP_D        : out std_logic;
+        P_STOP_Q        : in  std_logic;
+        P_PAUSE_L       : out std_logic;
+        P_PAUSE_D       : out std_logic;
+        P_PAUSE_Q       : in  std_logic;
+        P_OPERAND_L     : out std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
+        P_OPERAND_D     : out std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
+        P_OPERAND_Q     : in  std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
+        P_RUN           : in  std_logic;
+        P_DONE          : in  std_logic;
+        P_ERROR         : in  std_logic
     );
 end component;
 end PUMP_COMPONENTS;

@@ -24,6 +24,7 @@ COMPONENTS = components                             \
              pump_outlet_valve                      \
              pump_flow_syncronizer                  \
              pump_controller                        \
+             pump_sequencer                         \
              axi4_types                             \
              axi4_components                        \
              axi4_master_address_channel_controller \
@@ -99,6 +100,9 @@ pump_flow_syncronizer.o                  : $(SRC_PATH)/pump/pump_flow_syncronize
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_controller.o                        : $(SRC_PATH)/pump/pump_controller.vhd pump_components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pump_sequencer.o                         : $(SRC_PATH)/pump/pump_sequencer.vhd  pump_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 axi4_types.o                             : $(SRC_PATH)/axi4/axi4_types.vhd

@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.2.0
---!     @date    2013/1/27
+--!     @version 1.2.1
+--!     @date    2013/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -251,6 +251,10 @@ entity  PUMP_CONTROL_REGISTER is
         XFER_DONE       : --! @brief Transaction Done Flag.
                           --! トランザクションが終了したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic;
+        XFER_ERROR      : --! @brief Transaction Done Flag.
+                          --! トランザクション中にエラーが発生したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic
     );
 end PUMP_CONTROL_REGISTER;
@@ -273,6 +277,7 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   done_en_bit        : std_logic;
     signal   done_bit           : std_logic;
     signal   error_bit          : std_logic;
+    signal   error_flag         : std_logic;
     signal   mode_regs          : std_logic_vector(MODE_BITS-1 downto 0);
     signal   stat_regs          : std_logic_vector(STAT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -300,6 +305,7 @@ begin
                 done_en_bit <= '0';
                 done_bit    <= '0';
                 error_bit   <= '0';
+                error_flag  <= '0';
                 mode_regs   <= (others => '0');
                 stat_regs   <= (others => '0');
         elsif (CLK'event and CLK = '1') then
@@ -315,6 +321,7 @@ begin
                 done_en_bit <= '0';
                 done_bit    <= '0';
                 error_bit   <= '0';
+                error_flag  <= '0';
                 mode_regs   <= (others => '0');
                 stat_regs   <= (others => '0');
             else
@@ -459,9 +466,17 @@ begin
                     error_bit  <= '0';
                 end if;
                 -------------------------------------------------------------------
+                -- ERROR FLAG  :
+                -------------------------------------------------------------------
+                if    (next_state = DONE_STATE and ACK_ERROR = '1') then
+                    error_flag <= '1';
+                else
+                    error_flag <= '0';
+                end if;
+                -------------------------------------------------------------------
                 -- MODE REGISTER
                 -------------------------------------------------------------------
-                if (reset_bit = '1') then
+                if    (reset_bit = '1') then
                     mode_regs <= (others => '0');
                 else
                     for i in mode_regs'range loop
@@ -473,7 +488,7 @@ begin
                 -------------------------------------------------------------------
                 -- STATUS REGISTER
                 -------------------------------------------------------------------
-                if (reset_bit = '1') then
+                if    (reset_bit = '1') then
                     stat_regs <= (others => '0');
                 else
                     for i in stat_regs'range loop
@@ -507,6 +522,7 @@ begin
     VALVE_OPEN   <= first_state(1);
     XFER_RUNNING <= start_bit;
     XFER_DONE    <= '1' when (curr_state = DONE_STATE) else '0';
+    XFER_ERROR   <= error_flag;
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
