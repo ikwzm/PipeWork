@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.2.1                                                           --
---!     @date    2013/02/03                                                      --
+--!     @date    2013/02/05                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1003,54 +1003,81 @@ component PUMP_CONTROLLER
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PUMP_SEQUENCER                                                        --
+--! @brief PUMP_OPERATION_PROCESSOR                                              --
 -----------------------------------------------------------------------------------
-component PUMP_SEQUENCER
+component PUMP_OPERATION_PROCESSOR
     generic (
-        M_ADDR_BITS     : --! @brief Transfer Request Block Read Address Bits :
+        M_ADDR_BITS     : --! @brief Operation Code Fetch Address Bits :
                           --! M_REQ_ADDR のビット数を示す.
                           integer := 32;
-        M_BUF_SIZE      : --! @brief Transfer Request Block Read Buffer Size :
-                          --! ブロックを格納するバッファのバイト数を２のべき乗値で示す.
+        M_BUF_SIZE      : --! @brief Operation Code Fetch Buffer Size :
+                          --! オペレーションコードを格納するバッファのバイト数を２
+                          --! のべき乗値で示す.
                           integer :=  4;
-        M_BUF_WIDTH     : --! @brief Transfer Request Block Read Buffer Data Width :
-                          --! ブロックを格納するバッファのデータ幅を２のべき乗値で示す.
-                          integer :=  2;
-        TRB_BITS        : --! @brief Transfer Request Block Bits:
-                          --! Transfer Request Block の総ビット数を指定する.
+        M_BUF_WIDTH     : --! @brief Operation Code Fetch Data Width :
+                          --! オペレーションコードを格納するバッファのデータのビッ
+                          --! ト幅を２のべき乗値で示す.
+                          integer :=  5;
+        OP_BITS         : --! @brief Operation Code Bits:
+                          --! オペレーションコードの総ビット数を指定する.
                           integer := 128;
-        TRB_PUMP_LO     : --! @brief Transfer Request Block PUMP Operand Low :
-                          --! Transfer Request Block うち、PUMPに渡すオペランドの
-                          --! 最下位ビットの位置を指定する.
+        OP_XFER_LO      : --! @brief Transfer Operation Code Low :
+                          --! 転送オペレーションコードの最下位ビットの位置を指定す
+                          --! る.
                           integer :=  0;
-        TRB_PUMP_HI     : --! @brief Transfer Request Block PUMP Operand High :
-                          --! Transfer Request Block うち、PUMPに渡すオペランドの
-                          --! 最上位ビットの位置を指定する.
+        OP_XFER_HI      : --! @brief Transfer Operation Code High :
+                          --! 転送オペレーションコードの最上位ビットの位置を指定す
+                          --! る.
                           integer := 121;
-        TRB_ADDR_LO     : --! @brief Transfer Request Block Address Field Low :
-                          --! Transfer Request Block うち、Address Field の最下位
+        OP_ADDR_LO      : --! @brief Link Operation Code Jump Address Low :
+                          --! リンクオペレーション時の次のフェッチアドレスの最下位
                           --! ビットの位置を指定する.
                           integer :=   0;
-        TRB_ADDR_HI     : --! @brief Transfer Request Block Address Field High :
-                          --! Transfer Request Block うち、Address Field の最上位
+        OP_ADDR_HI      : --! @brief Link Operation Code Jump Address High :
+                          --! リンクオペレーション時の次のフェッチアドレスの最上位
                           --! ビットの位置を指定する.
                           integer :=  63;
-        TRB_MODE_LO     : --! @brief Transfer Request Block Mode Field Low :
-                          --! Transfer Request Block うち、Mode Field の最下位ビッ
-                          --! トの位置を指定する.
+        OP_MODE_LO      : --! @brief Link Operation Code Mode Low :
+                          --! リンクオペレーション時の Mode Field の最下位ビットの
+                          --! 位置を指定する.
                           integer :=  64;
-        TRB_MODE_HI     : --! @brief Transfer Request Block Mode Field High :
-                          --! Transfer Request Block うち、Mode Field の最上位ビッ
-                          --! トの位置を指定する.
+        OP_MODE_HI      : --! @brief Link Operation Code Mode High :
+                          --! リンクオペレーション時の Mode Field の最上位ビットの
+                          --! 位置を指定する.
                           integer := 111;
-        TRB_STAT_LO     : --! @brief Transfer Request Block Status Field Low :
-                          --! Transfer Request Block うち、Status Field の最下位ビ
-                          --! ットの位置を指定する.
+        OP_STAT_LO      : --! @brief Link Operation Code Status Low :
+                          --! リンクオペレーション時の Status Field の最下位ビット
+                          --! の位置を指定する.
                           integer := 112;
-        TRB_STAT_HI     : --! @brief Transfer Request Block Status Field High :
-                          --! Transfer Request Block うち、Status Field の最上位ビ
-                          --! ットの位置を指定する.
-                          integer := 119
+        OP_STAT_HI      : --! @brief Link Operation Code Status High :
+                          --! リンクオペレーション時の Status Field の最上位ビット
+                          --! の位置を指定する.
+                          integer := 119;
+        OP_FETCH_POS    : --! @brief Operation Fetch Code Posigion :
+                          --! オペレーションコードをフェッチした時に割り込みを通知
+                          --! することを示すビットの位置を指定する.
+                          integer := 122;
+        OP_END_POS      : --! @brief Operation End Code Posigion :
+                          --! 最後のオペレーションコードであることを示すビットの位
+                          --! 置を指定する.
+                          integer := 123;
+        OP_TYPE_LO      : --! @brief Operation Type Low :
+                          --! オペレーションのタイプを示すフィールドの最下位ビット
+                          --! の位置を指定する.
+                          integer := 124;
+        OP_TYPE_HI      : --! @brief Operation Type High :
+                          --! オペレーションのタイプを示すフィールドの最上位ビット
+                          --! の位置を指定する.
+                          integer := 127;
+        OP_NONE_CODE    : --! @brief None Operation Type :
+                          --! ノーオペレーションタイプのコードを指定する.
+                          integer := 0;
+        OP_XFER_CODE    : --! @brief Transfer Operation Type :
+                          --! 転送オペレーションタイプのコードを指定する.
+                          integer := 12;
+        OP_LINK_CODE    : --! @brief Transfer Operation Type :
+                          --! リンクオペレーションタイプのコードを指定する.
+                          integer := 13
     );
     port (
     -------------------------------------------------------------------------------
@@ -1084,16 +1111,16 @@ component PUMP_SEQUENCER
     -------------------------------------------------------------------------------
     -- Control Status Register Interface Signals.
     -------------------------------------------------------------------------------
-        T_ADDR_L        : in  std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-        T_ADDR_D        : in  std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-        T_ADDR_Q        : out std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-        T_MODE_L        : in  std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-        T_MODE_D        : in  std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-        T_MODE_Q        : out std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-        T_STAT_L        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-        T_STAT_D        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-        T_STAT_Q        : out std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-        T_STAT_I        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+        T_ADDR_L        : in  std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+        T_ADDR_D        : in  std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+        T_ADDR_Q        : out std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+        T_MODE_L        : in  std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+        T_MODE_D        : in  std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+        T_MODE_Q        : out std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+        T_STAT_L        : in  std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+        T_STAT_D        : in  std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+        T_STAT_Q        : out std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+        T_STAT_I        : in  std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
         T_RESET_L       : in  std_logic;
         T_RESET_D       : in  std_logic;
         T_RESET_Q       : out std_logic;
@@ -1107,29 +1134,29 @@ component PUMP_SEQUENCER
         T_PAUSE_D       : in  std_logic;
         T_PAUSE_Q       : out std_logic;
         T_ERROR         : out std_logic_vector(2 downto 0);
-        T_DONE          : out std_logic;
-        T_ENTER         : out std_logic;
+        T_FETCH         : out std_logic;
+        T_END           : out std_logic;
     -------------------------------------------------------------------------------
-    -- Pump Control Register Interface Signals.
+    -- Transfer Control Register Interface Signals.
     -------------------------------------------------------------------------------
-        P_RESET_L       : out std_logic;
-        P_RESET_D       : out std_logic;
-        P_RESET_Q       : in  std_logic;
-        P_START_L       : out std_logic;
-        P_START_D       : out std_logic;
-        P_START_Q       : in  std_logic;
-        P_STOP_L        : out std_logic;
-        P_STOP_D        : out std_logic;
-        P_STOP_Q        : in  std_logic;
-        P_PAUSE_L       : out std_logic;
-        P_PAUSE_D       : out std_logic;
-        P_PAUSE_Q       : in  std_logic;
-        P_OPERAND_L     : out std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
-        P_OPERAND_D     : out std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
-        P_OPERAND_Q     : in  std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
-        P_RUN           : in  std_logic;
-        P_DONE          : in  std_logic;
-        P_ERROR         : in  std_logic
+        X_RESET_L       : out std_logic;
+        X_RESET_D       : out std_logic;
+        X_RESET_Q       : in  std_logic;
+        X_START_L       : out std_logic;
+        X_START_D       : out std_logic;
+        X_START_Q       : in  std_logic;
+        X_STOP_L        : out std_logic;
+        X_STOP_D        : out std_logic;
+        X_STOP_Q        : in  std_logic;
+        X_PAUSE_L       : out std_logic;
+        X_PAUSE_D       : out std_logic;
+        X_PAUSE_Q       : in  std_logic;
+        X_OPERAND_L     : out std_logic_vector(OP_XFER_HI downto OP_XFER_LO);
+        X_OPERAND_D     : out std_logic_vector(OP_XFER_HI downto OP_XFER_LO);
+        X_OPERAND_Q     : in  std_logic_vector(OP_XFER_HI downto OP_XFER_LO);
+        X_RUN           : in  std_logic;
+        X_DONE          : in  std_logic;
+        X_ERROR         : in  std_logic
     );
 end component;
 end PUMP_COMPONENTS;

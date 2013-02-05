@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pump_sequencer.vhd
---!     @brief   PUMP Sequencer
+--!     @file    pump_operation_processor.vhd
+--!     @brief   PUMP Operation Processor
 --!     @version 1.2.1
---!     @date    2013/2/3
+--!     @date    2013/2/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,54 +37,81 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PUMP SEQUENCER :
+--! @brief   PUMP OPERATION PROCESSOR :
 -----------------------------------------------------------------------------------
-entity  PUMP_SEQUENCER is
+entity  PUMP_OPERATION_PROCESSOR is
     generic (
-        M_ADDR_BITS     : --! @brief Transfer Request Block Read Address Bits :
+        M_ADDR_BITS     : --! @brief Operation Code Fetch Address Bits :
                           --! M_REQ_ADDR のビット数を示す.
                           integer := 32;
-        M_BUF_SIZE      : --! @brief Transfer Request Block Read Buffer Size :
-                          --! ブロックを格納するバッファのバイト数を２のべき乗値で示す.
+        M_BUF_SIZE      : --! @brief Operation Code Fetch Buffer Size :
+                          --! オペレーションコードを格納するバッファのバイト数を２
+                          --! のべき乗値で示す.
                           integer :=  4;
-        M_BUF_WIDTH     : --! @brief Transfer Request Block Read Buffer Data Width :
-                          --! ブロックを格納するバッファのデータ幅を２のべき乗値で示す.
-                          integer :=  2;
-        TRB_BITS        : --! @brief Transfer Request Block Bits:
-                          --! Transfer Request Block の総ビット数を指定する.
+        M_BUF_WIDTH     : --! @brief Operation Code Fetch Data Width :
+                          --! オペレーションコードを格納するバッファのデータのビッ
+                          --! ト幅を２のべき乗値で示す.
+                          integer :=  5;
+        OP_BITS         : --! @brief Operation Code Bits:
+                          --! オペレーションコードの総ビット数を指定する.
                           integer := 128;
-        TRB_PUMP_LO     : --! @brief Transfer Request Block PUMP Operand Low :
-                          --! Transfer Request Block うち、PUMPに渡すオペランドの
-                          --! 最下位ビットの位置を指定する.
+        OP_XFER_LO      : --! @brief Transfer Operation Code Low :
+                          --! 転送オペレーションコードの最下位ビットの位置を指定す
+                          --! る.
                           integer :=  0;
-        TRB_PUMP_HI     : --! @brief Transfer Request Block PUMP Operand High :
-                          --! Transfer Request Block うち、PUMPに渡すオペランドの
-                          --! 最上位ビットの位置を指定する.
+        OP_XFER_HI      : --! @brief Transfer Operation Code High :
+                          --! 転送オペレーションコードの最上位ビットの位置を指定す
+                          --! る.
                           integer := 121;
-        TRB_ADDR_LO     : --! @brief Transfer Request Block Address Field Low :
-                          --! Transfer Request Block うち、Address Field の最下位
+        OP_ADDR_LO      : --! @brief Link Operation Code Jump Address Low :
+                          --! リンクオペレーション時の次のフェッチアドレスの最下位
                           --! ビットの位置を指定する.
                           integer :=   0;
-        TRB_ADDR_HI     : --! @brief Transfer Request Block Address Field High :
-                          --! Transfer Request Block うち、Address Field の最上位
+        OP_ADDR_HI      : --! @brief Link Operation Code Jump Address High :
+                          --! リンクオペレーション時の次のフェッチアドレスの最上位
                           --! ビットの位置を指定する.
                           integer :=  63;
-        TRB_MODE_LO     : --! @brief Transfer Request Block Mode Field Low :
-                          --! Transfer Request Block うち、Mode Field の最下位ビッ
-                          --! トの位置を指定する.
+        OP_MODE_LO      : --! @brief Link Operation Code Mode Low :
+                          --! リンクオペレーション時の Mode Field の最下位ビットの
+                          --! 位置を指定する.
                           integer :=  64;
-        TRB_MODE_HI     : --! @brief Transfer Request Block Mode Field High :
-                          --! Transfer Request Block うち、Mode Field の最上位ビッ
-                          --! トの位置を指定する.
+        OP_MODE_HI      : --! @brief Link Operation Code Mode High :
+                          --! リンクオペレーション時の Mode Field の最上位ビットの
+                          --! 位置を指定する.
                           integer := 111;
-        TRB_STAT_LO     : --! @brief Transfer Request Block Status Field Low :
-                          --! Transfer Request Block うち、Status Field の最下位ビ
-                          --! ットの位置を指定する.
+        OP_STAT_LO      : --! @brief Link Operation Code Status Low :
+                          --! リンクオペレーション時の Status Field の最下位ビット
+                          --! の位置を指定する.
                           integer := 112;
-        TRB_STAT_HI     : --! @brief Transfer Request Block Status Field High :
-                          --! Transfer Request Block うち、Status Field の最上位ビ
-                          --! ットの位置を指定する.
-                          integer := 119
+        OP_STAT_HI      : --! @brief Link Operation Code Status High :
+                          --! リンクオペレーション時の Status Field の最上位ビット
+                          --! の位置を指定する.
+                          integer := 119;
+        OP_FETCH_POS    : --! @brief Operation Fetch Code Posigion :
+                          --! オペレーションコードをフェッチした時に割り込みを通知
+                          --! することを示すビットの位置を指定する.
+                          integer := 122;
+        OP_END_POS      : --! @brief Operation End Code Posigion :
+                          --! 最後のオペレーションコードであることを示すビットの位
+                          --! 置を指定する.
+                          integer := 123;
+        OP_TYPE_LO      : --! @brief Operation Type Low :
+                          --! オペレーションのタイプを示すフィールドの最下位ビット
+                          --! の位置を指定する.
+                          integer := 124;
+        OP_TYPE_HI      : --! @brief Operation Type High :
+                          --! オペレーションのタイプを示すフィールドの最上位ビット
+                          --! の位置を指定する.
+                          integer := 127;
+        OP_NONE_CODE    : --! @brief None Operation Type :
+                          --! ノーオペレーションタイプのコードを指定する.
+                          integer := 0;
+        OP_XFER_CODE    : --! @brief Transfer Operation Type :
+                          --! 転送オペレーションタイプのコードを指定する.
+                          integer := 12;
+        OP_LINK_CODE    : --! @brief Transfer Operation Type :
+                          --! リンクオペレーションタイプのコードを指定する.
+                          integer := 13
     );
     port (
     -------------------------------------------------------------------------------
@@ -118,16 +145,16 @@ entity  PUMP_SEQUENCER is
     -------------------------------------------------------------------------------
     -- Control Status Register Interface Signals.
     -------------------------------------------------------------------------------
-        T_ADDR_L        : in  std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-        T_ADDR_D        : in  std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-        T_ADDR_Q        : out std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-        T_MODE_L        : in  std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-        T_MODE_D        : in  std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-        T_MODE_Q        : out std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-        T_STAT_L        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-        T_STAT_D        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-        T_STAT_Q        : out std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-        T_STAT_I        : in  std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+        T_ADDR_L        : in  std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+        T_ADDR_D        : in  std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+        T_ADDR_Q        : out std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+        T_MODE_L        : in  std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+        T_MODE_D        : in  std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+        T_MODE_Q        : out std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+        T_STAT_L        : in  std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+        T_STAT_D        : in  std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+        T_STAT_Q        : out std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+        T_STAT_I        : in  std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
         T_RESET_L       : in  std_logic;
         T_RESET_D       : in  std_logic;
         T_RESET_Q       : out std_logic;
@@ -141,31 +168,31 @@ entity  PUMP_SEQUENCER is
         T_PAUSE_D       : in  std_logic;
         T_PAUSE_Q       : out std_logic;
         T_ERROR         : out std_logic_vector(2 downto 0);
-        T_DONE          : out std_logic;
-        T_ENTER         : out std_logic;
+        T_FETCH         : out std_logic;
+        T_END           : out std_logic;
     -------------------------------------------------------------------------------
-    -- Pump Control Register Interface Signals.
+    -- Transfer Control Register Interface Signals.
     -------------------------------------------------------------------------------
-        P_RESET_L       : out std_logic;
-        P_RESET_D       : out std_logic;
-        P_RESET_Q       : in  std_logic;
-        P_START_L       : out std_logic;
-        P_START_D       : out std_logic;
-        P_START_Q       : in  std_logic;
-        P_STOP_L        : out std_logic;
-        P_STOP_D        : out std_logic;
-        P_STOP_Q        : in  std_logic;
-        P_PAUSE_L       : out std_logic;
-        P_PAUSE_D       : out std_logic;
-        P_PAUSE_Q       : in  std_logic;
-        P_OPERAND_L     : out std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
-        P_OPERAND_D     : out std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
-        P_OPERAND_Q     : in  std_logic_vector(TRB_PUMP_HI downto TRB_PUMP_LO);
-        P_RUN           : in  std_logic;
-        P_DONE          : in  std_logic;
-        P_ERROR         : in  std_logic
+        X_RESET_L       : out std_logic;
+        X_RESET_D       : out std_logic;
+        X_RESET_Q       : in  std_logic;
+        X_START_L       : out std_logic;
+        X_START_D       : out std_logic;
+        X_START_Q       : in  std_logic;
+        X_STOP_L        : out std_logic;
+        X_STOP_D        : out std_logic;
+        X_STOP_Q        : in  std_logic;
+        X_PAUSE_L       : out std_logic;
+        X_PAUSE_D       : out std_logic;
+        X_PAUSE_Q       : in  std_logic;
+        X_OPERAND_L     : out std_logic_vector(OP_XFER_HI downto OP_XFER_LO);
+        X_OPERAND_D     : out std_logic_vector(OP_XFER_HI downto OP_XFER_LO);
+        X_OPERAND_Q     : in  std_logic_vector(OP_XFER_HI downto OP_XFER_LO);
+        X_RUN           : in  std_logic;
+        X_DONE          : in  std_logic;
+        X_ERROR         : in  std_logic
     );
-end PUMP_SEQUENCER;
+end PUMP_OPERATION_PROCESSOR;
 -----------------------------------------------------------------------------------
 -- アーキテクチャ本体
 -----------------------------------------------------------------------------------
@@ -177,11 +204,11 @@ use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_UP_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_DOWN_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-architecture RTL of PUMP_SEQUENCER is
+architecture RTL of PUMP_OPERATION_PROCESSOR is
     -------------------------------------------------------------------------------
-    -- Transfer Request Block のバイト数を示す.
+    -- Operation Code のバイト数を示す.
     -------------------------------------------------------------------------------
-    constant TRB_BYTES          : integer := (TRB_BITS+7)/8;
+    constant OP_CODE_BYTES      : integer := (OP_BITS+7)/8;
     -------------------------------------------------------------------------------
     -- Control/Status Register Bit
     -------------------------------------------------------------------------------
@@ -189,21 +216,23 @@ architecture RTL of PUMP_SEQUENCER is
     signal   start_bit          : std_logic;
     signal   pause_bit          : std_logic;
     signal   stop_bit           : std_logic;
-    signal   mode_load          : std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-    signal   mode_data          : std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-    signal   mode_regs          : std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO);
-    signal   stat_load          : std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-    signal   stat_data          : std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
-    signal   stat_regs          : std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO);
+    signal   fetch_bit          : std_logic;
+    signal   error_bits         : std_logic_vector(2 downto 0);
+    signal   mode_load          : std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+    signal   mode_data          : std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+    signal   mode_regs          : std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
+    signal   stat_load          : std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+    signal   stat_data          : std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
+    signal   stat_regs          : std_logic_vector(OP_STAT_HI downto OP_STAT_LO);
     -------------------------------------------------------------------------------
-    -- Transfer Request Block Read Signals.
+    -- Operation Code Fetch Signals.
     -------------------------------------------------------------------------------
-    signal   m_addr_load        : std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
-    signal   m_addr_data        : std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO);
+    signal   m_addr_load        : std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
+    signal   m_addr_data        : std_logic_vector(OP_ADDR_HI downto OP_ADDR_LO);
     constant m_addr_up_ben      : std_logic_vector(M_ADDR_BITS-1 downto 0) := (others => '1');
     signal   m_size_load        : std_logic_vector(M_BUF_SIZE    downto 0);
     constant m_size_data        : std_logic_vector(M_BUF_SIZE    downto 0) :=
-                                  std_logic_vector(to_unsigned(TRB_BYTES, M_BUF_SIZE+1));
+                                  std_logic_vector(to_unsigned(OP_CODE_BYTES, M_BUF_SIZE+1));
     signal   m_buf_ptr_load     : std_logic_vector(M_BUF_SIZE-1 downto 0);
     constant m_buf_ptr_data     : std_logic_vector(M_BUF_SIZE-1 downto 0) := (others => '0');
     constant m_buf_ptr_up_ben   : std_logic_vector(M_BUF_SIZE-1 downto 0) := (others => '1');
@@ -226,37 +255,34 @@ architecture RTL of PUMP_SEQUENCER is
     type     STATE_TYPE     is  ( IDLE_STATE   ,
                                   M_START_STATE,
                                   M_RUN_STATE  ,
+                                  X_START_STATE,
+                                  X_DONE_STATE ,
                                   DECODE_STATE ,
-                                  P_START_STATE,
-                                  P_DONE_STATE ,
                                   STOP_STATE   ,
                                   DONE_STATE   );
     signal   curr_state         : STATE_TYPE;
     -------------------------------------------------------------------------------
     -- Operation Code
     -------------------------------------------------------------------------------
-    signal   curr_trb           : std_logic_vector(TRB_BITS-1 downto 0);
-    signal   trb_valid          : std_logic;
-    alias    trb_addr           : std_logic_vector(TRB_ADDR_HI downto TRB_ADDR_LO) is 
-                                  curr_trb(TRB_ADDR_HI downto TRB_ADDR_LO);
-    alias    trb_mode           : std_logic_vector(TRB_MODE_HI downto TRB_MODE_LO) is
-                                  curr_trb(TRB_MODE_HI downto TRB_MODE_LO);
-    alias    trb_stat           : std_logic_vector(TRB_STAT_HI downto TRB_STAT_LO) is
-                                  curr_trb(TRB_STAT_HI downto TRB_STAT_LO);
-    alias    trb_done           : std_logic_vector(  0 downto 0) is curr_trb(TRB_BITS-6 downto TRB_BITS-6);
-    alias    trb_enter          : std_logic_vector(  0 downto 0) is curr_trb(TRB_BITS-5 downto TRB_BITS-5);
-    alias    trb_type           : std_logic_vector(  3 downto 0) is curr_trb(TRB_BITS-1 downto TRB_BITS-4);
-    constant TRB_NONE_TYPE      : std_logic_vector(  3 downto 0) := "0000";
-    constant TRB_PUMP_TYPE      : std_logic_vector(  3 downto 0) := "1100";
-    constant TRB_LINK_TYPE      : std_logic_vector(  3 downto 0) := "1101";
+    signal   op_code            : std_logic_vector(OP_BITS-1 downto 0);
+    signal   op_valid           : std_logic;
+    signal   op_fetch           : std_logic;
+    signal   op_type            : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO);
+    constant OP_NONE_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
+                                  std_logic_vector(to_unsigned(OP_NONE_CODE, op_type'length));
+    constant OP_XFER_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
+                                  std_logic_vector(to_unsigned(OP_XFER_CODE, op_type'length));
+    constant OP_LINK_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
+                                  std_logic_vector(to_unsigned(OP_LINK_CODE, op_type'length));
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
-    signal   trb_decode         : boolean;
+    signal   op_decode          : boolean;
     signal   link_start         : boolean;
-    signal   pump_start         : boolean;
-    signal   pump_busy          : std_logic;
-    signal   pump_error         : std_logic;
+    signal   xfer_start         : boolean;
+    signal   xfer_busy          : std_logic;
+    signal   xfer_error         : std_logic;
+    signal   xfer_last          : std_logic;
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -280,8 +306,8 @@ begin
             UP_SIZE         => M_ACK_SIZE      , -- In  :
             COUNTER         => M_REQ_ADDR        -- Out :
         );
-    m_addr_load <= (others => '1') when (link_start) else T_ADDR_L;
-    m_addr_data <= trb_addr        when (link_start) else T_ADDR_D;
+    m_addr_load <= (others => '1')                       when (link_start) else T_ADDR_L;
+    m_addr_data <= op_code(OP_ADDR_HI downto OP_ADDR_LO) when (link_start) else T_ADDR_D;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -390,10 +416,30 @@ begin
             XFER_ERROR      => m_error         , -- Out :
             XFER_RUNNING    => m_xfer_running    -- Out :
         );
-    mode_load    <= (others => '1') when (link_start) else T_MODE_L;
-    mode_data    <= trb_mode        when (link_start) else T_MODE_D;
-    stat_load    <= (others => '1') when (link_start) else T_STAT_L;
-    stat_data    <= trb_stat        when (link_start) else T_STAT_D;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    process (link_start, op_code, T_MODE_L, T_MODE_D) begin
+        if (OP_MODE_LO < OP_BITS and OP_MODE_HI < OP_BITS and link_start = TRUE) then
+            mode_load <= (others => '1');
+            mode_data <= op_code(OP_MODE_HI downto OP_MODE_LO);
+        else
+            mode_load <= T_MODE_L;
+            mode_data <= T_MODE_D;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    process (link_start, op_code, T_STAT_L, T_STAT_D) begin
+        if (OP_STAT_LO < OP_BITS and OP_STAT_HI < OP_BITS and link_start = TRUE) then
+            stat_load <= (others => '1');
+            stat_data <= op_code(OP_STAT_HI downto OP_STAT_LO);
+        else
+            stat_load <= T_STAT_L;
+            stat_data <= T_STAT_D;
+        end if;
+    end process;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -401,14 +447,18 @@ begin
         variable next_state : STATE_TYPE;
     begin
         if    (RST = '1') then
-                curr_state  <= IDLE_STATE;
-                start_bit   <= '0';
-                stop_bit    <= '0';
+                curr_state <= IDLE_STATE;
+                start_bit  <= '0';
+                stop_bit   <= '0';
+                xfer_last  <= '0';
+                fetch_bit  <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1') then
-                curr_state  <= IDLE_STATE;
-                start_bit   <= '0';
-                stop_bit    <= '0';
+                curr_state <= IDLE_STATE;
+                start_bit  <= '0';
+                stop_bit   <= '0';
+                xfer_last  <= '0';
+                fetch_bit  <= '0';
             else
                 -------------------------------------------------------------------
                 --
@@ -430,7 +480,7 @@ begin
                         if    (stop_bit = '1') then
                             next_state := STOP_STATE;
                         elsif (m_xfer_running = '0' and m_error = '1') then
-                            next_state := P_DONE_STATE;
+                            next_state := X_DONE_STATE;
                         elsif (m_xfer_running = '0' and m_error = '0') then
                             next_state := DECODE_STATE;
                         else
@@ -439,41 +489,43 @@ begin
                     when DECODE_STATE =>
                         if    (stop_bit = '1') then
                             next_state := STOP_STATE;
-                        elsif (trb_valid = '0') then
+                        elsif (op_valid = '0') then
                             next_state := DECODE_STATE;
-                        elsif (trb_type = TRB_PUMP_TYPE) then
-                            next_state := P_START_STATE;
-                        elsif (trb_type = TRB_LINK_TYPE and trb_done = "1") then
-                            next_state := P_DONE_STATE;
-                        elsif (trb_type = TRB_LINK_TYPE and trb_done = "0") then
+                        elsif (op_type = OP_XFER_TYPE) then
+                            next_state := X_START_STATE;
+                        elsif (op_type = OP_LINK_TYPE and op_code(OP_END_POS) = '1') then
+                            next_state := X_DONE_STATE;
+                        elsif (op_type = OP_LINK_TYPE and op_code(OP_END_POS) = '0') then
                             next_state := M_START_STATE;
-                        elsif (trb_type = TRB_NONE_TYPE and trb_done = "1") then
-                            next_state := P_DONE_STATE;
-                        elsif (trb_type = TRB_NONE_TYPE and trb_done = "0") then
+                        elsif (op_type = OP_NONE_TYPE and op_code(OP_END_POS) = '1') then
+                            next_state := X_DONE_STATE;
+                        elsif (op_type = OP_NONE_TYPE and op_code(OP_END_POS) = '0') then
                             next_state := M_START_STATE;
                         else
-                            next_state := P_DONE_STATE;
+                            next_state := X_DONE_STATE;
                         end if;
-                    when P_START_STATE =>
-                        if    (stop_bit  = '1') then
+                    when X_START_STATE =>
+                        if    (stop_bit   = '1') then
                             next_state := STOP_STATE;
-                        elsif (pump_busy = '1') then
-                            next_state := P_START_STATE;
-                        elsif (pump_error = '1') then
-                            next_state := P_DONE_STATE;
-                        elsif (trb_done = "1") then
-                            next_state := P_DONE_STATE;
+                        elsif (xfer_busy  = '1') then
+                            next_state := X_START_STATE;
+                        elsif (xfer_error = '1') then
+                            next_state := X_DONE_STATE;
+                        elsif (xfer_last  = '1') then
+                            next_state := X_DONE_STATE;
                         else
                             next_state := M_START_STATE;
                         end if;
-                    when P_DONE_STATE | STOP_STATE => 
-                        if    (pump_busy = '0') then
+                    when X_DONE_STATE | STOP_STATE => 
+                        if    (xfer_busy = '0') then
                             next_state := DONE_STATE;
                         end if;
                     when DONE_STATE =>
                             next_state := IDLE_STATE;
+                            xfer_last  <= '0';
                     when others =>
                             next_state := IDLE_STATE;
+                            xfer_last  <= '0';
                 end case;
                 -------------------------------------------------------------------
                 --
@@ -499,6 +551,49 @@ begin
                 elsif (next_state = DONE_STATE) then
                     stop_bit  <= '0';
                 end if;
+                -------------------------------------------------------------------
+                -- xfer_last
+                -------------------------------------------------------------------
+                if   (op_decode and op_type = OP_XFER_TYPE) then
+                    xfer_last <= op_code(OP_END_POS);
+                elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
+                    xfer_last <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- fetch_bit
+                -------------------------------------------------------------------
+                if   (op_decode and OP_FETCH_POS < OP_BITS) then
+                    fetch_bit <= op_code(OP_FETCH_POS);
+                else
+                    fetch_bit <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- error_bits(0)
+                -------------------------------------------------------------------
+                if (op_decode and
+                    op_type   /= OP_NONE_TYPE and
+                    op_type   /= OP_XFER_TYPE and
+                    op_type   /= OP_LINK_TYPE) then
+                    error_bits(0) <= '1';
+                elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
+                    error_bits(0) <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- error_bits(1)
+                -------------------------------------------------------------------
+                if   (curr_state = M_RUN_STATE and m_error = '1') then
+                    error_bits(1) <= '1';
+                elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
+                    error_bits(1) <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- error_bits(2)
+                -------------------------------------------------------------------
+                if   (curr_state = X_START_STATE and xfer_error = '1') then
+                    error_bits(2) <= '1';
+                elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
+                    error_bits(2) <= '0';
+                end if;
             end if;
         end if;     
     end process;
@@ -508,47 +603,36 @@ begin
     m_start_load <= '1' when (curr_state = M_START_STATE) else '0';
     m_done_load  <= '1' when (curr_state = M_START_STATE or
                               curr_state = DONE_STATE   ) else '0';
-    trb_decode   <= (curr_state = DECODE_STATE and stop_bit = '0');
-    link_start   <= (trb_decode and trb_valid = '1' and trb_type = TRB_LINK_TYPE);
-    pump_start   <= (trb_decode and trb_valid = '1' and trb_type = TRB_PUMP_TYPE);
+    link_start   <= (op_decode and op_type = OP_LINK_TYPE and stop_bit = '0');
+    xfer_start   <= (op_decode and op_type = OP_XFER_TYPE and stop_bit = '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    T_RESET_Q  <= reset_bit;
-    T_START_Q  <= start_bit;
-    T_STOP_Q   <= stop_bit;
-    T_PAUSE_Q  <= pause_bit;
-    T_DONE     <= '1' when (curr_state = DONE_STATE) else '0';
-    T_ENTER    <= '1' when (curr_state = DECODE_STATE and
-                            trb_valid  = '1' and
-                            trb_enter  = "1") else '0';
-    T_ERROR(0) <= '1' when (curr_state = DECODE_STATE and
-                            trb_valid  = '1' and
-                            trb_type  /= TRB_NONE_TYPE and
-                            trb_type  /= TRB_PUMP_TYPE and
-                            trb_type  /= TRB_LINK_TYPE) else '0';
-    T_ERROR(1) <= '1' when (curr_state = M_RUN_STATE and
-                            m_error    = '1') else '0';
-    T_ERROR(2) <= '1' when (curr_state = P_START_STATE and
-                            pump_error = '1') else '0';
+    T_RESET_Q    <= reset_bit;
+    T_START_Q    <= start_bit;
+    T_STOP_Q     <= stop_bit;
+    T_PAUSE_Q    <= pause_bit;
+    T_FETCH      <= fetch_bit;
+    T_END        <= '1'        when (curr_state = DONE_STATE) else '0';
+    T_ERROR      <= error_bits when (curr_state = DONE_STATE) else (others => '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable lo_ptr : unsigned(M_BUF_SIZE downto 0);
         variable hi_ptr : unsigned(M_BUF_SIZE downto 0);
-        variable valid  : std_logic_vector(curr_trb'range);
+        variable valid  : std_logic_vector(op_code'range);
     begin
         if    (RST = '1') then
-                curr_trb  <= (others => '0');
-                trb_valid <= '0';
+                op_code  <= (others => '0');
+                op_valid <= '0';
         elsif (CLK'event and CLK = '1') then
             if    (CLR   = '1' or reset_bit = '1') then
-                curr_trb  <= (others => '0');
-                trb_valid <= '0';
+                op_code  <= (others => '0');
+                op_valid <= '0';
             elsif (M_BUF_WE = '1') then
                 for i in lo_ptr'range loop
-                    if (i < M_BUF_SIZE-1) then
+                    if (i < M_BUF_SIZE) then
                         if (i >= M_BUF_WIDTH-3) then
                             lo_ptr(i) := M_BUF_PTR(i);
                             hi_ptr(i) := M_BUF_PTR(i);
@@ -562,38 +646,39 @@ begin
                     end if;
                 end loop;
                 valid := (others => '0');
-                for i in curr_trb 'range loop
+                for i in op_code 'range loop
                     if (i/8 >= lo_ptr) and (i/8 <= hi_ptr) then
                         if (M_BUF_BEN((i/8) mod 2**(M_BUF_WIDTH-3)) = '1') then
-                            curr_trb(i) <= M_BUF_DATA(i mod 2**(M_BUF_WIDTH));
+                            op_code(i) <= M_BUF_DATA(i mod 2**(M_BUF_WIDTH));
                             valid(i) := '1';
                         end if;
                     end if;
                 end loop;
                 if (valid(valid'high) = '1') then
-                    trb_valid <= '1';
+                    op_valid <= '1';
                 end if;
-            elsif (curr_state = DECODE_STATE and trb_valid = '1') then
-                trb_valid <= '0';
+            elsif (op_decode = TRUE) then
+                op_valid <= '0';
             end if;
         end if;
     end process;
+    op_decode <= (curr_state = DECODE_STATE and op_valid = '1');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    pump_busy   <= '1' when (trb_valid = '1' or P_RUN = '1') else '0';
-    pump_error  <= '1' when (P_ERROR = '1') else '0';
+    xfer_busy   <= '1' when (op_valid = '1' or X_RUN = '1') else '0';
+    xfer_error  <= '1' when (X_ERROR = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    P_OPERAND_L <= (others => '1') when (pump_start) else (others => '0');
-    P_OPERAND_D <= curr_trb(TRB_PUMP_HI downto TRB_PUMP_LO);
-    P_START_L   <= '1' when (pump_start) else '0';
-    P_START_D   <= '1' when (pump_start) else '0';
-    P_STOP_L    <= T_STOP_L;
-    P_STOP_D    <= T_STOP_D;
-    P_RESET_L   <= T_RESET_L;
-    P_RESET_D   <= T_RESET_D;
-    P_PAUSE_L   <= T_PAUSE_L;
-    P_PAUSE_D   <= T_PAUSE_D;
+    X_OPERAND_L <= (others => '1') when (xfer_start) else (others => '0');
+    X_OPERAND_D <= op_code(OP_XFER_HI downto OP_XFER_LO);
+    X_START_L   <= '1' when (xfer_start) else '0';
+    X_START_D   <= '1' when (xfer_start) else '0';
+    X_STOP_L    <= T_STOP_L;
+    X_STOP_D    <= T_STOP_D;
+    X_RESET_L   <= T_RESET_L;
+    X_RESET_D   <= T_RESET_D;
+    X_PAUSE_L   <= T_PAUSE_L;
+    X_PAUSE_D   <= T_PAUSE_D;
 end RTL;
