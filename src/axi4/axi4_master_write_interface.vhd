@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 0.0.11
---!     @date    2013/1/29
+--!     @version 0.0.12
+--!     @date    2013/2/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -479,14 +479,15 @@ begin
     -------------------------------------------------------------------------------
     AW: AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         generic map (
-            DATA_SIZE       => AXI4_DATA_SIZE    ,
-            ADDR_BITS       => AXI4_ADDR_WIDTH   ,
-            SIZE_BITS       => SIZE_BITS         ,
-            REQ_SIZE_BITS   => REQ_SIZE_BITS     ,
-            REQ_SIZE_VALID  => REQ_SIZE_VALID    ,
-            FLOW_VALID      => FLOW_VALID        ,
-            XFER_MIN_SIZE   => XFER_MIN_SIZE     ,
-            XFER_MAX_SIZE   => XFER_MAX_SIZE     
+            VAL_BITS        => VAL_BITS          , --
+            DATA_SIZE       => AXI4_DATA_SIZE    , --
+            ADDR_BITS       => AXI4_ADDR_WIDTH   , --
+            SIZE_BITS       => SIZE_BITS         , --
+            REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
+            REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
+            FLOW_VALID      => FLOW_VALID        , --
+            XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
+            XFER_MAX_SIZE   => XFER_MAX_SIZE       --
         )
         port map (
             ----------------------------------------------------------------------

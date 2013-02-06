@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 0.0.11
---!     @date    2013/1/29
+--!     @version 0.0.12
+--!     @date    2013/2/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -316,17 +316,17 @@ begin
     MAX_XFER_SIZE_NE_0: if (REQ_SIZE_VALID /= 0) generate
         GEN: CHOPPER
             generic map (
-                BURST       => 1                     ,              
-                MIN_PIECE   => XFER_MIN_SIZE         ,
-                MAX_PIECE   => XFER_MAX_SIZE         ,
-                MAX_SIZE    => SIZE_BITS+1           ,
-                ADDR_BITS   => REQ_ADDR'length       ,
-                SIZE_BITS   => REQ_SIZE'length       ,
-                COUNT_BITS  => 1                     ,
-                PSIZE_BITS  => max_xfer_size'length  ,
-                GEN_VALID   => 0
-            )
-            port map (
+                BURST       => 1                     , --
+                MIN_PIECE   => XFER_MIN_SIZE         , --
+                MAX_PIECE   => XFER_MAX_SIZE         , --
+                MAX_SIZE    => SIZE_BITS+1           , --
+                ADDR_BITS   => REQ_ADDR'length       , --
+                SIZE_BITS   => REQ_SIZE'length       , --
+                COUNT_BITS  => 1                     , --
+                PSIZE_BITS  => max_xfer_size'length  , --
+                GEN_VALID   => 0                       --
+            )                                          --
+            port map (                                 --
                 CLK         => CLK                   , -- In  :
                 RST         => RST                   , -- In  :
                 CLR         => CLR                   , -- In  :
@@ -366,17 +366,17 @@ begin
     begin
         GEN: CHOPPER
             generic map (
-                BURST       => 1                     ,              
-                MIN_PIECE   => XFER_MIN_SIZE         ,
-                MAX_PIECE   => XFER_MAX_SIZE         ,
-                MAX_SIZE    => SIZE_BITS+1           ,
-                ADDR_BITS   => REQ_ADDR'length       ,
-                SIZE_BITS   => MAX_REQ_SIZE'length   ,
-                COUNT_BITS  => 1                     ,
-                PSIZE_BITS  => max_xfer_size'length  ,
-                GEN_VALID   => 0
-            )
-            port map (
+                BURST       => 1                     , --
+                MIN_PIECE   => XFER_MIN_SIZE         , --
+                MAX_PIECE   => XFER_MAX_SIZE         , --
+                MAX_SIZE    => SIZE_BITS+1           , --
+                ADDR_BITS   => REQ_ADDR'length       , --
+                SIZE_BITS   => MAX_REQ_SIZE'length   , --
+                COUNT_BITS  => 1                     , --
+                PSIZE_BITS  => max_xfer_size'length  , --
+                GEN_VALID   => 0                       --
+            )                                          -- 
+            port map (                                 -- 
                 CLK         => CLK                   , -- In  :
                 RST         => RST                   , -- In  :
                 CLR         => CLR                   , -- In  :
