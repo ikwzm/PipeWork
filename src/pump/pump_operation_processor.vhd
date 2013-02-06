@@ -2,7 +2,7 @@
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
 --!     @version 1.2.1
---!     @date    2013/2/5
+--!     @date    2013/2/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -266,7 +266,6 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     -------------------------------------------------------------------------------
     signal   op_code            : std_logic_vector(OP_BITS-1 downto 0);
     signal   op_valid           : std_logic;
-    signal   op_fetch           : std_logic;
     signal   op_type            : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO);
     constant OP_NONE_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
                                   std_logic_vector(to_unsigned(OP_NONE_CODE, op_type'length));
@@ -285,9 +284,9 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     signal   xfer_last          : std_logic;
 begin
     -------------------------------------------------------------------------------
-    -- 
+    -- M_REQ_ADDR : 
     -------------------------------------------------------------------------------
-    M_ADDR_REGS: PUMP_COUNT_UP_REGISTER
+    M_REQ_ADDR_REGS: PUMP_COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_ADDR_BITS     , -- 
@@ -309,9 +308,9 @@ begin
     m_addr_load <= (others => '1')                       when (link_start) else T_ADDR_L;
     m_addr_data <= op_code(OP_ADDR_HI downto OP_ADDR_LO) when (link_start) else T_ADDR_D;
     -------------------------------------------------------------------------------
-    -- 
+    -- M_REQ_SIZE :
     -------------------------------------------------------------------------------
-    M_SIZE_REGS: PUMP_COUNT_DOWN_REGISTER
+    M_REQ_SIZE_REGS: PUMP_COUNT_DOWN_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_BUF_SIZE+1    , -- 
@@ -333,9 +332,9 @@ begin
        );
     m_size_load <= (others => '1') when (curr_state = M_START_STATE) else (others => '0');
     -------------------------------------------------------------------------------
-    -- 
+    -- M_REP_PTR  :
     -------------------------------------------------------------------------------
-    M_BUF_PTR_REGS: PUMP_COUNT_UP_REGISTER
+    M_REQ_PTR_REGS: PUMP_COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_BUF_SIZE      , -- 
@@ -417,7 +416,7 @@ begin
             XFER_RUNNING    => m_xfer_running    -- Out :
         );
     -------------------------------------------------------------------------------
-    -- 
+    -- モードレジスタ入出力
     -------------------------------------------------------------------------------
     process (link_start, op_code, T_MODE_L, T_MODE_D) begin
         if (OP_MODE_LO < OP_BITS and OP_MODE_HI < OP_BITS and link_start = TRUE) then
@@ -428,8 +427,9 @@ begin
             mode_data <= T_MODE_D;
         end if;
     end process;
+    T_MODE_Q <= mode_regs;
     -------------------------------------------------------------------------------
-    -- 
+    -- ステータスレジスタ入出力
     -------------------------------------------------------------------------------
     process (link_start, op_code, T_STAT_L, T_STAT_D) begin
         if (OP_STAT_LO < OP_BITS and OP_STAT_HI < OP_BITS and link_start = TRUE) then
@@ -440,8 +440,9 @@ begin
             stat_data <= T_STAT_D;
         end if;
     end process;
+    T_STAT_Q <= stat_regs;
     -------------------------------------------------------------------------------
-    -- 
+    -- 各種制御ビットとステートマシン
     -------------------------------------------------------------------------------
     process (CLK, RST) 
         variable next_state : STATE_TYPE;
@@ -461,7 +462,7 @@ begin
                 fetch_bit  <= '0';
             else
                 -------------------------------------------------------------------
-                --
+                -- ステートマシン
                 -------------------------------------------------------------------
                 case curr_state is
                     when IDLE_STATE =>
@@ -532,7 +533,7 @@ begin
                 -------------------------------------------------------------------
                 curr_state <= next_state;
                 -------------------------------------------------------------------
-                -- START BIT   :
+                -- START BIT :
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     start_bit <= '0';
@@ -542,7 +543,7 @@ begin
                     start_bit <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- STOP BIT    :
+                -- STOP BIT  :
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     stop_bit  <= '0';
@@ -552,7 +553,7 @@ begin
                     stop_bit  <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- xfer_last
+                -- xfer_last :
                 -------------------------------------------------------------------
                 if   (op_decode and op_type = OP_XFER_TYPE) then
                     xfer_last <= op_code(OP_END_POS);
@@ -560,7 +561,7 @@ begin
                     xfer_last <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- fetch_bit
+                -- FETCH BIT :
                 -------------------------------------------------------------------
                 if   (op_decode and OP_FETCH_POS < OP_BITS) then
                     fetch_bit <= op_code(OP_FETCH_POS);
@@ -568,7 +569,7 @@ begin
                     fetch_bit <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- error_bits(0)
+                -- ERROR(0)  :
                 -------------------------------------------------------------------
                 if (op_decode and
                     op_type   /= OP_NONE_TYPE and
@@ -579,7 +580,7 @@ begin
                     error_bits(0) <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- error_bits(1)
+                -- ERROR(1)  :
                 -------------------------------------------------------------------
                 if   (curr_state = M_RUN_STATE and m_error = '1') then
                     error_bits(1) <= '1';
@@ -587,7 +588,7 @@ begin
                     error_bits(1) <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- error_bits(2)
+                -- ERROR(2)  :
                 -------------------------------------------------------------------
                 if   (curr_state = X_START_STATE and xfer_error = '1') then
                     error_bits(2) <= '1';
@@ -663,6 +664,7 @@ begin
         end if;
     end process;
     op_decode <= (curr_state = DECODE_STATE and op_valid = '1');
+    op_type   <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
