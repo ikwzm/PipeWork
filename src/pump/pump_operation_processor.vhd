@@ -663,11 +663,12 @@ begin
             end if;
         end if;
     end process;
-    op_decode <= (curr_state = DECODE_STATE and op_valid = '1');
-    op_type   <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
+    op_decode   <= (curr_state = DECODE_STATE and op_valid = '1');
+    op_type     <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
+    M_BUF_RDY   <= '1';
     xfer_busy   <= '1' when (op_valid = '1' or X_RUN = '1') else '0';
     xfer_error  <= '1' when (X_ERROR = '1') else '0';
     -------------------------------------------------------------------------------
