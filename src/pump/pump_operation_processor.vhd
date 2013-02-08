@@ -2,7 +2,7 @@
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
 --!     @version 1.2.1
---!     @date    2013/2/6
+--!     @date    2013/2/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -121,7 +121,7 @@ entity  PUMP_OPERATION_PROCESSOR is
         RST             : in  std_logic;
         CLR             : in  std_logic;
     -------------------------------------------------------------------------------
-    -- Transfer Request Block Read Signals.
+    -- Operation Code Fetch Interface Signals.
     -------------------------------------------------------------------------------
         M_REQ_VALID     : out std_logic;
         M_REQ_ADDR      : out std_logic_vector(M_ADDR_BITS-1        downto 0);
@@ -218,6 +218,7 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     signal   stop_bit           : std_logic;
     signal   fetch_bit          : std_logic;
     signal   error_bits         : std_logic_vector(2 downto 0);
+    constant NO_ERROR           : std_logic_vector(2 downto 0) := (others => '0');
     signal   mode_load          : std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
     signal   mode_data          : std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
     signal   mode_regs          : std_logic_vector(OP_MODE_HI downto OP_MODE_LO);
@@ -242,7 +243,7 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     signal   m_stop             : std_logic;
     signal   m_done             : std_logic;
     signal   m_error            : std_logic;
-    signal   m_xfer_running     : std_logic;
+    signal   m_xfer_run         : std_logic;
     constant m_first            : std_logic := '1';
     constant m_last             : std_logic := '1';
     constant m_start_data       : std_logic := '1';
@@ -266,6 +267,7 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     -------------------------------------------------------------------------------
     signal   op_code            : std_logic_vector(OP_BITS-1 downto 0);
     signal   op_valid           : std_logic;
+    signal   op_shift           : std_logic;
     signal   op_type            : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO);
     constant OP_NONE_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
                                   std_logic_vector(to_unsigned(OP_NONE_CODE, op_type'length));
@@ -277,10 +279,9 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     -- Control Signals.
     -------------------------------------------------------------------------------
     signal   op_decode          : boolean;
+    signal   stop_request       : boolean;
     signal   link_start         : boolean;
     signal   xfer_start         : boolean;
-    signal   xfer_busy          : std_logic;
-    signal   xfer_error         : std_logic;
     signal   xfer_last          : std_logic;
 begin
     -------------------------------------------------------------------------------
@@ -299,7 +300,7 @@ begin
             REGS_WEN        => m_addr_load     , -- In  :
             REGS_WDATA      => m_addr_data     , -- In  :
             REGS_RDATA      => T_ADDR_Q        , -- Out :
-            UP_ENA          => m_xfer_running  , -- In  :
+            UP_ENA          => m_xfer_run      , -- In  :
             UP_VAL          => M_ACK_VALID     , -- In  :
             UP_BEN          => m_addr_up_ben   , -- In  :
             UP_SIZE         => M_ACK_SIZE      , -- In  :
@@ -323,7 +324,7 @@ begin
             REGS_WEN        => m_size_load     , -- In  :
             REGS_WDATA      => m_size_data     , -- In  :
             REGS_RDATA      => open            , -- Out :
-            DN_ENA          => m_xfer_running  , -- In  :
+            DN_ENA          => m_xfer_run      , -- In  :
             DN_VAL          => M_ACK_VALID     , -- In  :
             DN_SIZE         => M_ACK_SIZE      , -- In  :
             COUNTER         => M_REQ_SIZE      , -- Out :
@@ -347,7 +348,7 @@ begin
             REGS_WEN        => m_buf_ptr_load  , -- In  :
             REGS_WDATA      => m_buf_ptr_data  , -- In  :
             REGS_RDATA      => open            , -- Out :
-            UP_ENA          => m_xfer_running  , -- In  :
+            UP_ENA          => m_xfer_run      , -- In  :
             UP_VAL          => M_ACK_VALID     , -- In  :
             UP_BEN          => m_buf_ptr_up_ben, -- In  :
             UP_SIZE         => M_ACK_SIZE      , -- In  :
@@ -355,7 +356,7 @@ begin
         );
     m_buf_ptr_load <= (others => '1') when (curr_state = M_START_STATE) else (others => '0');
     -------------------------------------------------------------------------------
-    -- 
+    -- M_CTRL_REGS:
     -------------------------------------------------------------------------------
     M_CTRL_REGS: PUMP_CONTROL_REGISTER
         generic map (                            -- 
@@ -413,7 +414,7 @@ begin
             VALVE_OPEN      => open            , -- Out :
             XFER_DONE       => m_done          , -- Out :
             XFER_ERROR      => m_error         , -- Out :
-            XFER_RUNNING    => m_xfer_running    -- Out :
+            XFER_RUNNING    => m_xfer_run        -- Out :
         );
     -------------------------------------------------------------------------------
     -- モードレジスタ入出力
@@ -453,6 +454,7 @@ begin
                 stop_bit   <= '0';
                 xfer_last  <= '0';
                 fetch_bit  <= '0';
+                op_shift   <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1') then
                 curr_state <= IDLE_STATE;
@@ -460,39 +462,40 @@ begin
                 stop_bit   <= '0';
                 xfer_last  <= '0';
                 fetch_bit  <= '0';
+                op_shift   <= '0';
             else
                 -------------------------------------------------------------------
                 -- ステートマシン
                 -------------------------------------------------------------------
                 case curr_state is
                     when IDLE_STATE =>
-                        if (start_bit = '1' and m_xfer_running = '0') then
+                        if    (start_bit = '1' and m_xfer_run = '0') then
                             next_state := M_START_STATE;
                         else
                             next_state := IDLE_STATE;
                         end if;
                     when M_START_STATE =>
-                        if (m_xfer_running = '1') then
+                        if    (m_xfer_run = '1') then
                             next_state := M_RUN_STATE;
                         else
                             next_state := M_START_STATE;
                         end if;
                     when M_RUN_STATE =>
-                        if    (stop_bit = '1') then
+                        if    (stop_request) then
                             next_state := STOP_STATE;
-                        elsif (m_xfer_running = '0' and m_error = '1') then
-                            next_state := X_DONE_STATE;
-                        elsif (m_xfer_running = '0' and m_error = '0') then
+                        elsif (m_xfer_run = '0') then
                             next_state := DECODE_STATE;
                         else
                             next_state := M_RUN_STATE;
                         end if;
                     when DECODE_STATE =>
-                        if    (stop_bit = '1') then
+                        if    (stop_request) then
                             next_state := STOP_STATE;
                         elsif (op_valid = '0') then
                             next_state := DECODE_STATE;
-                        elsif (op_type = OP_XFER_TYPE) then
+                        elsif (op_type = OP_XFER_TYPE and X_RUN = '1') then
+                            next_state := DECODE_STATE;
+                        elsif (op_type = OP_XFER_TYPE and X_RUN = '0') then
                             next_state := X_START_STATE;
                         elsif (op_type = OP_LINK_TYPE and op_code(OP_END_POS) = '1') then
                             next_state := X_DONE_STATE;
@@ -506,32 +509,32 @@ begin
                             next_state := X_DONE_STATE;
                         end if;
                     when X_START_STATE =>
-                        if    (stop_bit   = '1') then
+                        if    (stop_request) then
                             next_state := STOP_STATE;
-                        elsif (xfer_busy  = '1') then
+                        elsif (X_RUN     = '0') then
                             next_state := X_START_STATE;
-                        elsif (xfer_error = '1') then
-                            next_state := X_DONE_STATE;
-                        elsif (xfer_last  = '1') then
+                        elsif (xfer_last = '1') then
                             next_state := X_DONE_STATE;
                         else
                             next_state := M_START_STATE;
                         end if;
                     when X_DONE_STATE | STOP_STATE => 
-                        if    (xfer_busy = '0') then
+                        if    (X_RUN = '0') then
                             next_state := DONE_STATE;
                         end if;
                     when DONE_STATE =>
                             next_state := IDLE_STATE;
-                            xfer_last  <= '0';
                     when others =>
                             next_state := IDLE_STATE;
-                            xfer_last  <= '0';
                 end case;
                 -------------------------------------------------------------------
                 --
                 -------------------------------------------------------------------
-                curr_state <= next_state;
+                if    (reset_bit = '1') then
+                    curr_state <= IDLE_STATE;
+                else
+                    curr_state <= next_state;
+                end if;
                 -------------------------------------------------------------------
                 -- START BIT :
                 -------------------------------------------------------------------
@@ -561,6 +564,14 @@ begin
                     xfer_last <= '0';
                 end if;
                 -------------------------------------------------------------------
+                -- op_shift  :
+                -------------------------------------------------------------------
+                if   (curr_state = DECODE_STATE and next_state /= DECODE_STATE) then
+                    op_shift  <= '1';
+                else
+                    op_shift  <= '0';
+                end if;
+                -------------------------------------------------------------------
                 -- FETCH BIT :
                 -------------------------------------------------------------------
                 if   (op_decode and OP_FETCH_POS < OP_BITS) then
@@ -582,7 +593,7 @@ begin
                 -------------------------------------------------------------------
                 -- ERROR(1)  :
                 -------------------------------------------------------------------
-                if   (curr_state = M_RUN_STATE and m_error = '1') then
+                if   (m_error = '1') then
                     error_bits(1) <= '1';
                 elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
                     error_bits(1) <= '0';
@@ -590,7 +601,7 @@ begin
                 -------------------------------------------------------------------
                 -- ERROR(2)  :
                 -------------------------------------------------------------------
-                if   (curr_state = X_START_STATE and xfer_error = '1') then
+                if   (X_ERROR = '1') then
                     error_bits(2) <= '1';
                 elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
                     error_bits(2) <= '0';
@@ -604,8 +615,9 @@ begin
     m_start_load <= '1' when (curr_state = M_START_STATE) else '0';
     m_done_load  <= '1' when (curr_state = M_START_STATE or
                               curr_state = DONE_STATE   ) else '0';
-    link_start   <= (op_decode and op_type = OP_LINK_TYPE and stop_bit = '0');
-    xfer_start   <= (op_decode and op_type = OP_XFER_TYPE and stop_bit = '0');
+    stop_request <= (stop_bit = '1' or error_bits /= NO_ERROR);
+    link_start   <= (op_decode and op_type = OP_LINK_TYPE and stop_request = FALSE);
+    xfer_start   <= (op_decode and op_type = OP_XFER_TYPE and stop_request = FALSE and X_RUN = '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -617,7 +629,8 @@ begin
     T_END        <= '1'        when (curr_state = DONE_STATE) else '0';
     T_ERROR      <= error_bits when (curr_state = DONE_STATE) else (others => '0');
     -------------------------------------------------------------------------------
-    -- 
+    -- op_code  : キューの先頭にあるオペコード.
+    -- op_valid : 有効なオペコードがキューに入っていることを示すフラグ.
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable lo_ptr : unsigned(M_BUF_SIZE downto 0);
@@ -658,19 +671,14 @@ begin
                 if (valid(valid'high) = '1') then
                     op_valid <= '1';
                 end if;
-            elsif (op_decode = TRUE) then
+            elsif (op_shift = '1') then
                 op_valid <= '0';
             end if;
         end if;
     end process;
     op_decode   <= (curr_state = DECODE_STATE and op_valid = '1');
     op_type     <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
     M_BUF_RDY   <= '1';
-    xfer_busy   <= '1' when (op_valid = '1' or X_RUN = '1') else '0';
-    xfer_error  <= '1' when (X_ERROR = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

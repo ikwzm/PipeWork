@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.2.1                                                           --
---!     @date    2013/02/06                                                      --
+--!     @date    2013/02/08                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1087,7 +1087,7 @@ component PUMP_OPERATION_PROCESSOR
         RST             : in  std_logic;
         CLR             : in  std_logic;
     -------------------------------------------------------------------------------
-    -- Transfer Request Block Read Signals.
+    -- Operation Code Fetch Interface Signals.
     -------------------------------------------------------------------------------
         M_REQ_VALID     : out std_logic;
         M_REQ_ADDR      : out std_logic_vector(M_ADDR_BITS-1        downto 0);
