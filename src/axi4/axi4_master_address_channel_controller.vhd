@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 0.0.12
---!     @date    2013/2/6
+--!     @version 1.2.1
+--!     @date    2013/2/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -82,27 +82,24 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        --------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
         CLK             : in    std_logic;
         RST             : in    std_logic;
         CLR             : in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Address Channel Signals.
+    ------------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
         ASIZE           : out   AXI4_ASIZE_TYPE;
         ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Request Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Request Signals.
+    -------------------------------------------------------------------------------
         REQ_ADDR        : in    std_logic_vector(ADDR_BITS    -1 downto 0);
         REQ_SIZE        : in    std_logic_vector(REQ_SIZE_BITS-1 downto 0);
         REQ_FIRST       : in    std_logic;
@@ -111,9 +108,9 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         REQ_SAFETY      : in    std_logic;
         REQ_VAL         : in    std_logic_vector(VAL_BITS     -1 downto 0);
         REQ_RDY         : out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Acknowledge Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
         ACK_VAL         : out   std_logic_vector(VAL_BITS     -1 downto 0);
         ACK_NEXT        : out   std_logic;
         ACK_LAST        : out   std_logic;
@@ -121,20 +118,20 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         ACK_STOP        : out   std_logic;
         ACK_NONE        : out   std_logic;
         ACK_SIZE        : out   std_logic_vector(SIZE_BITS    -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Flow Control Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Flow Control Signals.
+    -------------------------------------------------------------------------------
         FLOW_PAUSE      : in    std_logic := '0';
         FLOW_STOP       : in    std_logic := '0';
         FLOW_LAST       : in    std_logic := '1';
         FLOW_SIZE       : in    std_logic_vector(SIZE_BITS    -1 downto 0) := (others => '1');
-        ---------------------------------------------------------------------------
-        -- Transfer Size Select Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Size Select Signals.
+    -------------------------------------------------------------------------------
         XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE   downto XFER_MIN_SIZE) := (others => '1');
-        ---------------------------------------------------------------------------
-        -- Transfer Request Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Request Signals.
+    -------------------------------------------------------------------------------
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS    -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE   downto 0);
         XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS     -1 downto 0);
@@ -144,17 +141,17 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         XFER_REQ_SAFETY : out   std_logic;
         XFER_REQ_VAL    : out   std_logic;
         XFER_REQ_RDY    : in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Transfer Response Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Response Signals.
+    -------------------------------------------------------------------------------
         XFER_ACK_SIZE   : in    std_logic_vector(XFER_MAX_SIZE   downto 0);
         XFER_ACK_VAL    : in    std_logic;
         XFER_ACK_NEXT   : in    std_logic;
         XFER_ACK_LAST   : in    std_logic;
         XFER_ACK_ERR    : in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Transfer Status Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Status Signals.
+    -------------------------------------------------------------------------------
         XFER_RUNNING    : in    std_logic
     );
 end AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;

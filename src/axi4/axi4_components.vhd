@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 0.0.12                                                          --
---!     @date    2013/02/06                                                      --
+--!     @version 1.2.1                                                           --
+--!     @date    2013/02/09                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -87,27 +87,24 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        --------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
         CLK             : in    std_logic;
         RST             : in    std_logic;
         CLR             : in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Address Channel Signals.
+    ------------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
         ASIZE           : out   AXI4_ASIZE_TYPE;
         ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Request Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Request Signals.
+    -------------------------------------------------------------------------------
         REQ_ADDR        : in    std_logic_vector(ADDR_BITS    -1 downto 0);
         REQ_SIZE        : in    std_logic_vector(REQ_SIZE_BITS-1 downto 0);
         REQ_FIRST       : in    std_logic;
@@ -116,9 +113,9 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         REQ_SAFETY      : in    std_logic;
         REQ_VAL         : in    std_logic_vector(VAL_BITS     -1 downto 0);
         REQ_RDY         : out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Acknowledge Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
         ACK_VAL         : out   std_logic_vector(VAL_BITS     -1 downto 0);
         ACK_NEXT        : out   std_logic;
         ACK_LAST        : out   std_logic;
@@ -126,20 +123,20 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         ACK_STOP        : out   std_logic;
         ACK_NONE        : out   std_logic;
         ACK_SIZE        : out   std_logic_vector(SIZE_BITS    -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Flow Control Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Flow Control Signals.
+    -------------------------------------------------------------------------------
         FLOW_PAUSE      : in    std_logic := '0';
         FLOW_STOP       : in    std_logic := '0';
         FLOW_LAST       : in    std_logic := '1';
         FLOW_SIZE       : in    std_logic_vector(SIZE_BITS    -1 downto 0) := (others => '1');
-        ---------------------------------------------------------------------------
-        -- Transfer Size Select Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Size Select Signals.
+    -------------------------------------------------------------------------------
         XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE   downto XFER_MIN_SIZE) := (others => '1');
-        ---------------------------------------------------------------------------
-        -- Transfer Request Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Request Signals.
+    -------------------------------------------------------------------------------
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS    -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE   downto 0);
         XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS     -1 downto 0);
@@ -149,17 +146,17 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         XFER_REQ_SAFETY : out   std_logic;
         XFER_REQ_VAL    : out   std_logic;
         XFER_REQ_RDY    : in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Transfer Response Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Response Signals.
+    -------------------------------------------------------------------------------
         XFER_ACK_SIZE   : in    std_logic_vector(XFER_MAX_SIZE   downto 0);
         XFER_ACK_VAL    : in    std_logic;
         XFER_ACK_NEXT   : in    std_logic;
         XFER_ACK_LAST   : in    std_logic;
         XFER_ACK_ERR    : in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Transfer Status Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Status Signals.
+    -------------------------------------------------------------------------------
         XFER_RUNNING    : in    std_logic
     );
 end component;
@@ -217,22 +214,19 @@ component AXI4_MASTER_READ_INTERFACE
                           --! キューの大きさを指定する.
                           integer := 1
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        --------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Read Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Read Address Channel Signals.
+    ------------------------------------------------------------------------------
         ARID            : --! @brief Read address ID.
                           --! This signal is identification tag for the read
                           --! address group of singals.
@@ -282,9 +276,9 @@ component AXI4_MASTER_READ_INTERFACE
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Read Data Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Read Data Channel Signals.
+    ------------------------------------------------------------------------------
         RID             : --! @brief Read ID tag.
                           --! This signal is the identification tag for the read
                           --! data group of signals generated by the slave.
@@ -305,9 +299,9 @@ component AXI4_MASTER_READ_INTERFACE
                           --! This signal indicates that the master can accept the
                           --! read data and response information.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Request Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Request Signals.
+    -------------------------------------------------------------------------------
         XFER_SIZE_SEL   : --! @brief Max Transfer Size Select Signal.
                           --! 一回の転送サイズの最大バイト数を指定する.  
                           --! * XFER_MAX_SIZE=XFER_MIN_SIZEの場合は、この信号は無視
@@ -387,9 +381,9 @@ component AXI4_MASTER_READ_INTERFACE
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Acknowledge Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
         ACK_VAL         : --! @brief Acknowledge Valid Signal.
                           --! 上記の Command Request の応答信号.
                           --! 下記の 各種 Acknowledge 信号が有効である事を示す.
@@ -429,35 +423,35 @@ component AXI4_MASTER_READ_INTERFACE
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
                           out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Transfer Status Signal.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Status Signal.
+    -------------------------------------------------------------------------------
         XFER_BUSY       : --! @brief このモジュールが BUSY 状態であることを示す.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Flow Control Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Flow Control Signals.
+    -------------------------------------------------------------------------------
         FLOW_PAUSE      : in    std_logic := '0';
         FLOW_STOP       : in    std_logic := '0';
         FLOW_LAST       : in    std_logic := '1';
         FLOW_SIZE       : in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
-        ---------------------------------------------------------------------------
-        -- Reserve Size Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Reserve Size Signals.
+    -------------------------------------------------------------------------------
         RESV_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         RESV_LAST       : out   std_logic;
         RESV_ERROR      : out   std_logic;
         RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Push Size Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Push Size Signals.
+    -------------------------------------------------------------------------------
         PUSH_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_LAST       : out   std_logic;
         PUSH_ERROR      : out   std_logic;
         PUSH_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Read Buffer Interface Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Read Buffer Interface Signals.
+    -------------------------------------------------------------------------------
         BUF_WEN         : out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_BEN         : out   std_logic_vector(BUF_DATA_WIDTH/8 -1 downto 0);
         BUF_DATA        : out   std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
@@ -519,22 +513,19 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! キューの大きさを指定する.
                           integer := 1
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        --------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Address Channel Signals.
+    ------------------------------------------------------------------------------
         AWID            : --! @brief Write address ID.
                           --! This signal is identification tag for the write
                           --! address group of singals.
@@ -584,9 +575,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Data Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Data Channel Signals.
+    ------------------------------------------------------------------------------
         WID             : --! @brief Write ID tag.
                           --! This signal is the identification tag for the write
                           --! data transfer. Supported only AXI3.
@@ -609,9 +600,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! This signal indicates that the slave can accept the
                           --! write data.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Response Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Response Channel Signals.
+    ------------------------------------------------------------------------------
         BID             : --! @brief Response ID tag.
                           --! This signal is the identification tag of write
                           --! response .
@@ -627,11 +618,11 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! This signal indicates that the master can accept a
                           --! write response.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Request Signals.
-        -- これらの信号は Command Acknowledge Signal(ACK_VAL)がアサートされるまで
-        -- 変更してはならない.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Request Signals.
+    -- これらの信号は Command Acknowledge Signal(ACK_VAL)がアサートされるまで変更し
+    -- てはならない.
+    -------------------------------------------------------------------------------
         XFER_SIZE_SEL   : --! @brief Max Transfer Size Select Signal.
                           --! 一回の転送サイズの最大バイト数を指定する.  
                           --! * XFER_MAX_SIZE=XFER_MIN_SIZEの場合は、この信号は無視
@@ -712,9 +703,9 @@ component AXI4_MASTER_WRITE_INTERFACE
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Acknowledge Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
         ACK_VAL         : --! @brief Acknowledge Valid Signal.
                           --! 上記の Command Request の応答信号.
                           --! 下記の 各種 Acknowledge 信号が有効である事を示す.
@@ -754,35 +745,35 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
                           out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Transfer Status Signal.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Transfer Status Signal.
+    -------------------------------------------------------------------------------
         XFER_BUSY       : --! @brief このモジュールが BUSY 状態であることを示す.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Flow Control Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Flow Control Signals.
+    -------------------------------------------------------------------------------
         FLOW_PAUSE      : in    std_logic := '0';
         FLOW_STOP       : in    std_logic := '0';
         FLOW_LAST       : in    std_logic := '1';
         FLOW_SIZE       : in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
-        ---------------------------------------------------------------------------
-        -- Reserve Size Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Reserve Size Signals.
+    -------------------------------------------------------------------------------
         RESV_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         RESV_LAST       : out   std_logic;
         RESV_ERROR      : out   std_logic;
         RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Pull Size Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
         PULL_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_LAST       : out   std_logic;
         PULL_ERROR      : out   std_logic;
         PULL_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Read Buffer Interface Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Read Buffer Interface Signals.
+    -------------------------------------------------------------------------------
         BUF_REN         : out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_DATA        : in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
@@ -816,22 +807,19 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           --! 指定する.
                           integer := 32
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    -------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Write Address Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Write Address Channel Signals.
+    -------------------------------------------------------------------------------
         AWID            : --! @brief Write address ID.
                           --! This signal is identification tag for the write
                           --! address group of singals.
@@ -861,9 +849,9 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Write Data Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Write Data Channel Signals.
+    -------------------------------------------------------------------------------
         WDATA           : --! @brief Write data.
                           in    std_logic_vector(AXI4_DATA_WIDTH  -1 downto 0);
         WSTRB           : --! @brief Write strobes.
@@ -882,9 +870,9 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           --! This signal indicates that the slave can accept the
                           --! write data.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Write Response Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Write Response Channel Signals.
+    -------------------------------------------------------------------------------
         BID             : --! @brief Response ID tag.
                           --! This signal is the identification tag of write
                           --! response .
@@ -900,9 +888,9 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           --! This signal indicates that the master can accept a
                           --! write response.
                           in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Register Write Interface.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Register Write Interface.
+    -------------------------------------------------------------------------------
         REGS_REQ        : --! @breif レジスタアクセス要求信号.
                           --! レジスタアクセス要求時にアサートされる.
                           --! REGS_ACK 信号がアサートされるまで、この信号はアサー
@@ -948,22 +936,19 @@ component AXI4_REGISTER_READ_INTERFACE
                           --! 指定する.
                           integer := 32
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    -------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Read Address Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Read Address Channel Signals.
+    -------------------------------------------------------------------------------
         ARID            : --! @brief Read address ID.
                           --! This signal is identification tag for the read
                           --! address group of singals.
@@ -993,9 +978,9 @@ component AXI4_REGISTER_READ_INTERFACE
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Read Data Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Read Data Channel Signals.
+    -------------------------------------------------------------------------------
         RID             : --! @brief Read ID tag.
                           --! This signal is the identification tag for the read
                           --! data group of signals generated by the slave.
@@ -1016,9 +1001,9 @@ component AXI4_REGISTER_READ_INTERFACE
                           --! This signal indicates that the master can accept the
                           --! read data and response information.
                           in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Register Read Interface.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Register Read Interface.
+    -------------------------------------------------------------------------------
         REGS_REQ        : --! @breif レジスタアクセス要求信号.
                           --! レジスタアクセス要求時にアサートされる.
                           --! REGS_ACK 信号がアサートされるまで、この信号はアサー
@@ -1064,22 +1049,19 @@ component AXI4_REGISTER_INTERFACE
                           --! 指定する.
                           integer := 32
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        --------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Read Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Read Address Channel Signals.
+    ------------------------------------------------------------------------------
         ARID            : --! @brief Read address ID.
                           --! This signal is identification tag for the read
                           --! address group of singals.
@@ -1109,9 +1091,9 @@ component AXI4_REGISTER_INTERFACE
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           out   std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Read Data Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Read Data Channel Signals.
+    ------------------------------------------------------------------------------
         RID             : --! @brief Read ID tag.
                           --! This signal is the identification tag for the read
                           --! data group of signals generated by the slave.
@@ -1132,9 +1114,9 @@ component AXI4_REGISTER_INTERFACE
                           --! This signal indicates that the master can accept the
                           --! read data and response information.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Address Channel Signals.
+    ------------------------------------------------------------------------------
         AWID            : --! @brief Write address ID.
                           --! This signal is identification tag for the write
                           --! address group of singals.
@@ -1164,9 +1146,9 @@ component AXI4_REGISTER_INTERFACE
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           out   std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Data Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Data Channel Signals.
+    ------------------------------------------------------------------------------
         WDATA           : --! @brief Write data.
                           in    std_logic_vector(AXI4_DATA_WIDTH  -1 downto 0);
         WSTRB           : --! @brief Write strobes.
@@ -1185,9 +1167,9 @@ component AXI4_REGISTER_INTERFACE
                           --! This signal indicates that the slave can accept the
                           --! write data.
                           out   std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Response Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Response Channel Signals.
+    ------------------------------------------------------------------------------
         BID             : --! @brief Response ID tag.
                           --! This signal is the identification tag of write
                           --! response .
@@ -1203,9 +1185,9 @@ component AXI4_REGISTER_INTERFACE
                           --! This signal indicates that the master can accept a
                           --! write response.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- Register Interface.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Register Interface.
+    ------------------------------------------------------------------------------
         REGS_REQ        : --! @breif レジスタアクセス要求信号.
                           --! レジスタアクセス要求時にアサートされる.
                           --! REGS_ACK 信号がアサートされるまで、この信号はアサー
