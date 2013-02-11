@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 0.0.4
---!     @date    2013/1/7
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -65,22 +65,19 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
                           --! 指定する.
                           integer := 32
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    -------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Write Address Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Write Address Channel Signals.
+    -------------------------------------------------------------------------------
         AWID            : --! @brief Write address ID.
                           --! This signal is identification tag for the write
                           --! address group of singals.
@@ -110,9 +107,9 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Write Data Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Write Data Channel Signals.
+    -------------------------------------------------------------------------------
         WDATA           : --! @brief Write data.
                           in    std_logic_vector(AXI4_DATA_WIDTH  -1 downto 0);
         WSTRB           : --! @brief Write strobes.
@@ -131,9 +128,9 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
                           --! This signal indicates that the slave can accept the
                           --! write data.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- AXI4 Write Response Channel Signals.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- AXI4 Write Response Channel Signals.
+    -------------------------------------------------------------------------------
         BID             : --! @brief Response ID tag.
                           --! This signal is the identification tag of write
                           --! response .
@@ -149,9 +146,9 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
                           --! This signal indicates that the master can accept a
                           --! write response.
                           in    std_logic;
-        ---------------------------------------------------------------------------
-        -- Register Write Interface.
-        ---------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    -- Register Write Interface.
+    -------------------------------------------------------------------------------
         REGS_REQ        : --! @breif レジスタアクセス要求信号.
                           --! レジスタアクセス要求時にアサートされる.
                           --! REGS_ACK 信号がアサートされるまで、この信号はアサー

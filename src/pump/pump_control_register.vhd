@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.0.3
---!     @date    2013/1/14
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,13 +37,15 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PUMP VALVE CONTROL REGISTER :
+--! @brief   PUMP CONTROL REGISTER :
 -----------------------------------------------------------------------------------
 entity  PUMP_CONTROL_REGISTER is
     generic (
         MODE_BITS       : --! @brief MODE REGISTER BITS :
+                          --! モードレジスタのビット数を指定する.
                           integer := 32;
         STAT_BITS       : --! @brief STATUS REGISTER BITS :
+                          --! ステータスレジスタのビット数を指定する.
                           integer := 32
     );
     port (
@@ -60,88 +62,200 @@ entity  PUMP_CONTROL_REGISTER is
                           --! 同期リセット信号.アクティブハイ.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- RESET Bit Register Access Interface.
+    -- RESET Bit        : コントローラの各種レジスタをリセットする.
     -------------------------------------------------------------------------------
-        RESET_WRITE     : in  std_logic;
-        RESET_WDATA     : in  std_logic;
-        RESET_RDATA     : out std_logic;
+    -- * RESET_L='1' and RESET_D='1' でリセット開始.
+    -- * RESET_L='1' and RESET_D='0' でリセット解除.
+    -- * RESET_Q は現在のリセット状態を返す.
+    -- * RESET_Q='1' で現在リセット中であることを示す.
     -------------------------------------------------------------------------------
-    -- START Bit Register Access Interface.
+        RESET_L         : in  std_logic;
+        RESET_D         : in  std_logic;
+        RESET_Q         : out std_logic;
     -------------------------------------------------------------------------------
-        START_WRITE     : in  std_logic;
-        START_WDATA     : in  std_logic;
-        START_RDATA     : out std_logic;
+    -- START Bit        : 転送を開始を指示する.
     -------------------------------------------------------------------------------
-    -- STOP Bit Register Access Interface.
+    -- * START_L='1' and START_D='1' で転送開始.
+    -- * START_L='1' and START_D='0' の場合は無視される.
+    -- * START_Q は現在の状態を返す.
+    -- * START_Q='1' で転送中であることを示す.
+    -- * START_Q='0 'で転送は行われていないことを示す.
     -------------------------------------------------------------------------------
-        STOP_WRITE      : in  std_logic;
-        STOP_WDATA      : in  std_logic;
-        STOP_RDATA      : out std_logic;
+        START_L         : in  std_logic;
+        START_D         : in  std_logic;
+        START_Q         : out std_logic;
     -------------------------------------------------------------------------------
-    -- PAUSE Bit Register Access Interface.
+    -- STOP Bit         : 現在処理中の転送を中止する.
     -------------------------------------------------------------------------------
-        PAUSE_WRITE     : in  std_logic;
-        PAUSE_WDATA     : in  std_logic;
-        PAUSE_RDATA     : out std_logic;
+    -- * STOP_L='1' and STOP_D='1' で転送中止処理開始.
+    -- * STOP_L='1' and STOP_D='0' の場合は無視される.
+    -- * STOP_Q は現在の状態を返す.
+    -- * STOP_Q='1' で転送中止処理中であることを示す.
+    -- * STOP_Q='0' で転送中止処理が完了していることを示す.
     -------------------------------------------------------------------------------
-    -- FIRST Bit Register Access Interface.
+        STOP_L          : in  std_logic;
+        STOP_D          : in  std_logic;
+        STOP_Q          : out std_logic;
     -------------------------------------------------------------------------------
-        FIRST_WRITE     : in  std_logic;
-        FIRST_WDATA     : in  std_logic;
-        FIRST_RDATA     : out std_logic;
+    -- PAUSE Bit        : 転送の中断を指示する.
     -------------------------------------------------------------------------------
-    -- LAST Bit Register Access Interface.
+    -- * PAUSE_L='1' and PAUSE_D='1' で転送中断.
+    -- * PAUSE_L='1' and PAUSE_D='0' で転送再開.
+    -- * PAUSE_Q は現在中断中か否かを返す.
+    -- * PAUSE_Q='1' で現在中断していることを示す.
+    -- * PAUSE_Q='0' で現在転送を再開していることを示す.
     -------------------------------------------------------------------------------
-        LAST_WRITE      : in  std_logic;
-        LAST_WDATA      : in  std_logic;
-        LAST_RDATA      : out std_logic;
+        PAUSE_L         : in  std_logic;
+        PAUSE_D         : in  std_logic;
+        PAUSE_Q         : out std_logic;
     -------------------------------------------------------------------------------
-    -- DONE Status Bit Register Access Interface.
+    -- FIRST Bit        : 最初の転送であるか否かを指示する.
     -------------------------------------------------------------------------------
-        DONE_WRITE      : in  std_logic;
-        DONE_WDATA      : in  std_logic;
-        DONE_RDATA      : out std_logic;
+    -- * FIRST_L='1' and FIRST_D='1' で最初の転送であることを指示する.
+    -- * FIRST_L='1' and FIRST_D='0' で最初の転送でないことを指示する.
+    -- * FIRST_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-    -- ERROR Status Bit Register Access Interface.
+        FIRST_L         : in  std_logic;
+        FIRST_D         : in  std_logic;
+        FIRST_Q         : out std_logic;
     -------------------------------------------------------------------------------
-        ERROR_WRITE     : in  std_logic;
-        ERROR_WDATA     : in  std_logic;
-        ERROR_RDATA     : out std_logic;
+    -- LAST Bit         : 最後の転送であるか否かを指示する.
     -------------------------------------------------------------------------------
-    -- MODE Register Access Interface.
+    -- * LAST_L='1' and LAST_D='1' で最後の転送であることを指示する.
+    -- * LAST_L='1' and LAST_D='0' で最後の転送でないことを指示する.
+    -- * LAST_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        MODE_WRITE      : in  std_logic_vector(MODE_BITS-1 downto 0);
-        MODE_WDATA      : in  std_logic_vector(MODE_BITS-1 downto 0);
-        MODE_RDATA      : out std_logic_vector(MODE_BITS-1 downto 0);
+        LAST_L          : in  std_logic;
+        LAST_D          : in  std_logic;
+        LAST_Q          : out std_logic;
     -------------------------------------------------------------------------------
-    -- STAT Register Access Interface.
+    -- DONE ENable Bit  : 転送終了時に DONE STatus Bit をセットするか否かを指示する.
     -------------------------------------------------------------------------------
-        STAT_WRITE      : in  std_logic_vector(STAT_BITS-1 downto 0);
-        STAT_WDATA      : in  std_logic_vector(STAT_BITS-1 downto 0);
-        STAT_RDATA      : out std_logic_vector(STAT_BITS-1 downto 0);
-        STAT            : in  std_logic_vector(STAT_BITS-1 downto 0);
+    -- * DONE_EN_L='1' and DONE_EN_D='1' で転送終了時に DONE STatus Bit をセットす
+    --   ることを指示する.
+    -- * DONE_EN_L='1' and DONE_EN_D='0' で転送終了時に DONE STatus Bit をセットし
+    --   ないことを指示する.
+    -- * DONE_EN_Q は現在の状態を示す.
+    -------------------------------------------------------------------------------
+        DONE_EN_L       : in  std_logic;
+        DONE_EN_D       : in  std_logic;
+        DONE_EN_Q       : out std_logic;
+    -------------------------------------------------------------------------------
+    -- DONE STatus Bit  : DONE_EN_Q='1'の時、転送終了時にセットされる.
+    -------------------------------------------------------------------------------
+    -- * DONE_ST_L='1' and DONE_ST_D='0' でこのビットをクリアする.
+    -- * DONE_ST_L='1' and DONE_ST_D='1' の場合、このビットに変化は無い.
+    -- * DONE_ST_Q='1' は、DONE_EN_Q='1' の時、転送が終了したことを示す.
+    -------------------------------------------------------------------------------
+        DONE_ST_L       : in  std_logic;
+        DONE_ST_D       : in  std_logic;
+        DONE_ST_Q       : out std_logic;
+    -------------------------------------------------------------------------------
+    -- ERRor STatus Bit : 転送中にエラーが発生した時にセットされる.
+    -------------------------------------------------------------------------------
+    -- * ERR_ST_L='1' and ERR_ST_D='0' でこのビットをクリアする.
+    -- * ERR_ST_L='1' and ERR_ST_D='1' の場合、このビットに変化は無い.
+    -- * ERR_ST_Q='1' は転送中にエラーが発生したことを示す.
+    -------------------------------------------------------------------------------
+        ERR_ST_L        : in  std_logic;
+        ERR_ST_D        : in  std_logic;
+        ERR_ST_Q        : out std_logic;
+    -------------------------------------------------------------------------------
+    -- MODE Register    : その他のモードレジスタ.
+    -------------------------------------------------------------------------------
+    -- * MODE_L(x)='1' and MODE_D(x)='1' で MODE_Q(x) に'1'をセット.
+    -- * MODE_L(x)='1' and MODE_D(x)='0' で MODE_Q(x) に'0'をセット.
+    -------------------------------------------------------------------------------
+        MODE_L          : in  std_logic_vector(MODE_BITS-1 downto 0);
+        MODE_D          : in  std_logic_vector(MODE_BITS-1 downto 0);
+        MODE_Q          : out std_logic_vector(MODE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- STATus Register  : その他のステータスレジスタ.
+    -------------------------------------------------------------------------------
+    -- * STAT_L(x)='1' and STAT_D(x)='0' で STAT_Q(x)をクリア.
+    -- * STAT_L(x)='1' and STAT_D(x)='1' の場合、STAT_Q(x) に変化は無い.
+    -- * STAT_I(x)='1' で STAT_Q(x) に'1'をセット.
+    -- * STAT_I(x)='0' の場合、STAT_Q(x) に変化は無い.
+    -------------------------------------------------------------------------------
+        STAT_L          : in  std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_D          : in  std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_Q          : out std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_I          : in  std_logic_vector(STAT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-        REQ_VALID       : out std_logic;
-        REQ_FIRST       : out std_logic;
-        REQ_LAST        : out std_logic;
-        REQ_READY       : in  std_logic;
+        REQ_VALID       : --! @brief Request Valid Signal.
+                          --! 下記の各種リクエスト信号が有効であることを示す.
+                          --! * この信号のアサートでもってトランザクションを開始する.
+                          --! * 一度この信号をアサートすると Acknowledge を返すまで、
+                          --!   この信号はアサートされなくてはならない.
+                          out std_logic;
+        REQ_FIRST       : --! @brief Request First Transaction.
+                          --! 最初のトランザクションであることを示す.
+                          out std_logic;
+        REQ_LAST        : --! @brief Request Last Transaction.
+                          --! 最後のトランザクションであることを示す.
+                          out std_logic;
+        REQ_READY       : --! @brief Request Ready Signal.
+                          --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                          in  std_logic;
     -------------------------------------------------------------------------------
-    -- Transaction Command Response Signals.
+    -- Transaction Command Acknowledge Signals.
     -------------------------------------------------------------------------------
-        ACK_VALID       : in  std_logic;
-        ACK_ERROR       : in  std_logic;
-        ACK_NEXT        : in  std_logic;
-        ACK_LAST        : in  std_logic;
-        ACK_STOP        : in  std_logic;
-        ACK_NONE        : in  std_logic;
+        ACK_VALID       : --! @brief Acknowledge Valid Signal.
+                          --! 上記の Command Request の応答信号.
+                          --! 下記の 各種 Acknowledge 信号が有効である事を示す.
+                          --! * この信号のアサートでもって、Command Request が受け
+                          --!   付けられたことを示す. ただし、あくまでも Request が
+                          --!   受け付けられただけであって、必ずしもトランザクショ
+                          --!   ンが完了したわけではないことに注意.
+                          --! * この信号は Request につき１クロックだけアサートされ
+                          --!   る.
+                          --! * この信号がアサートされたら、アプリケーション側は速
+                          --!   やかに REQ_VAL 信号をネゲートして Request を取り下
+                          --!   げるか、REQ_VALをアサートしたままで次の Request 情
+                          --!   報を用意しておかなければならない.
+                          in  std_logic;
+        ACK_ERROR       : --! @brief Acknowledge with Error.
+                          --! トランザクション中になんらかのエラーが発生した場合、
+                          --! この信号がアサートされる.
+                          in  std_logic;
+        ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
+                          --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
+                          --! この信号がアサートされる.
+                          in  std_logic;
+        ACK_LAST        : --! @brief Acknowledge with Last transaction.
+                          --! すべてのトランザクションが終了かつ REQ_LAST=1 の場合、
+                          --! この信号がアサートされる.
+                          in  std_logic;
+        ACK_STOP        : --! @brief Acknowledge with Stop operation.
+                          --! トランザクションが中止された場合、この信号がアサート
+                          --! される.
+                          in  std_logic;
+        ACK_NONE        : --! @brief Acknowledge with None Request transfer size.
+                          --! REQ_SIZE=0 の Request だった場合、この信号がアサート
+                          --! される.
+                          in  std_logic;
     -------------------------------------------------------------------------------
     -- Status.
     -------------------------------------------------------------------------------
-        VALVE_OPEN      : out std_logic;
-        XFER_RUNNING    : out std_logic;
-        XFER_DONE       : out std_logic
+        VALVE_OPEN      : --! @brief Valve Open Flag.
+                          --! 最初の(REQ_FIRST='1'付き)トランザクション開始時にアサ
+                          --! ートされ、最後の(REQ_LAST='1'付き)トランザクション終
+                          --! 了時または、トランザクション中にエラーが発生した時に
+                          --! ネゲートされる.
+                          out std_logic;
+        XFER_RUNNING    : --! @brief Transaction Running Flag.
+                          --! トランザクション中であることを示すフラグ.
+                          out std_logic;
+        XFER_DONE       : --! @brief Transaction Done Flag.
+                          --! トランザクションが終了したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic;
+        XFER_ERROR      : --! @brief Transaction Done Flag.
+                          --! トランザクション中にエラーが発生したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic
     );
 end PUMP_CONTROL_REGISTER;
 -----------------------------------------------------------------------------------
@@ -160,8 +274,10 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   pause_bit          : std_logic;
     signal   first_bit          : std_logic;
     signal   last_bit           : std_logic;
+    signal   done_en_bit        : std_logic;
     signal   done_bit           : std_logic;
     signal   error_bit          : std_logic;
+    signal   error_flag         : std_logic;
     signal   mode_regs          : std_logic_vector(MODE_BITS-1 downto 0);
     signal   stat_regs          : std_logic_vector(STAT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -170,7 +286,6 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     type     STATE_TYPE     is  ( IDLE_STATE, REQ_STATE, ACK_STATE, TURN_AR, DONE_STATE);
     signal   curr_state         : STATE_TYPE;
     signal   first_state        : std_logic_vector(1 downto 0);
-    signal   flag_clear         : boolean;
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -187,11 +302,12 @@ begin
                 pause_bit   <= '0';
                 first_bit   <= '0';
                 last_bit    <= '0';
+                done_en_bit <= '0';
                 done_bit    <= '0';
                 error_bit   <= '0';
+                error_flag  <= '0';
                 mode_regs   <= (others => '0');
                 stat_regs   <= (others => '0');
-                flag_clear  <= TRUE;
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1') then
                 curr_state  <= IDLE_STATE;
@@ -202,11 +318,12 @@ begin
                 pause_bit   <= '0';
                 first_bit   <= '0';
                 last_bit    <= '0';
+                done_en_bit <= '0';
                 done_bit    <= '0';
                 error_bit   <= '0';
+                error_flag  <= '0';
                 mode_regs   <= (others => '0');
                 stat_regs   <= (others => '0');
-                flag_clear  <= TRUE;
             else
                 -------------------------------------------------------------------
                 -- ステートマシン
@@ -253,11 +370,6 @@ begin
                     curr_state <= next_state;
                 end if;
                 -------------------------------------------------------------------
-                -- flag_clear  : 
-                -------------------------------------------------------------------
-                flag_clear <= (next_state = DONE_STATE) and 
-                              (ACK_LAST = '1' or ACK_ERROR = '1' or ACK_STOP = '1');
-                -------------------------------------------------------------------
                 -- first_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
@@ -278,15 +390,15 @@ begin
                 -------------------------------------------------------------------
                 -- RESET BIT   :
                 -------------------------------------------------------------------
-                if    (RESET_WRITE = '1') then
-                    reset_bit <= RESET_WDATA;
+                if    (RESET_L = '1') then
+                    reset_bit <= RESET_D;
                 end if;
                 -------------------------------------------------------------------
                 -- START BIT   :
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     start_bit <= '0';
-                elsif (START_WRITE = '1' and START_WDATA = '1') then
+                elsif (START_L = '1' and START_D = '1') then
                     start_bit <= '1';
                 elsif (next_state = DONE_STATE) then
                     start_bit <= '0';
@@ -294,7 +406,9 @@ begin
                 -------------------------------------------------------------------
                 -- STOP BIT    :
                 -------------------------------------------------------------------
-                if    (STOP_WRITE  = '1' and STOP_WDATA  = '1') then
+                if    (reset_bit = '1') then
+                    stop_bit  <= '0';
+                elsif (STOP_L  = '1' and STOP_D  = '1') then
                     stop_bit  <= '1';
                 elsif (next_state = DONE_STATE) then
                     stop_bit  <= '0';
@@ -302,63 +416,85 @@ begin
                 -------------------------------------------------------------------
                 -- PAUSE BIT   :
                 -------------------------------------------------------------------
-                if    (PAUSE_WRITE = '1') then
-                    pause_bit <= PAUSE_WDATA;
+                if    (reset_bit = '1') then
+                    pause_bit <= '0';
+                elsif (PAUSE_L = '1') then
+                    pause_bit <= PAUSE_D;
                 end if;
                 -------------------------------------------------------------------
                 -- FIRST BIT   :
                 -------------------------------------------------------------------
-                if    (FIRST_WRITE = '1') then
-                    first_bit <= FIRST_WDATA;
+                if    (reset_bit = '1') then
+                    first_bit <= '0';
+                elsif (FIRST_L = '1') then
+                    first_bit <= FIRST_D;
                 end if;
                 -------------------------------------------------------------------
                 -- LAST BIT    :
                 -------------------------------------------------------------------
-                if    (LAST_WRITE  = '1') then
-                    last_bit  <= LAST_WDATA;
+                if    (reset_bit = '1') then
+                    last_bit  <= '0';
+                elsif (LAST_L  = '1') then
+                    last_bit  <= LAST_D;
                 end if;
                 -------------------------------------------------------------------
-                -- DONE BIT    :
+                -- DONE_EN BIT :
+                -------------------------------------------------------------------
+                if    (reset_bit = '1') then
+                    done_en_bit  <= '0';
+                elsif (DONE_EN_L  = '1') then
+                    done_en_bit  <= DONE_EN_D;
+                end if;
+                -------------------------------------------------------------------
+                -- DONE_ST BIT :
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     done_bit  <= '0';
-                elsif (next_state = DONE_STATE) then
+                elsif (done_en_bit = '1' and next_state = DONE_STATE) then
                     done_bit  <= '1';
-                elsif (DONE_WRITE  = '1' and DONE_WDATA  = '0') then
+                elsif (DONE_ST_L  = '1' and DONE_ST_D = '0') then
                     done_bit  <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- ERROR BIT   :
+                -- ERR_ST BIT  :
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     error_bit <= '0';
                 elsif (next_state = DONE_STATE and ACK_ERROR = '1') then
                     error_bit <= '1';
-                elsif (ERROR_WRITE = '1' and ERROR_WDATA = '0') then
+                elsif (ERR_ST_L = '1' and ERR_ST_D = '0') then
                     error_bit  <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- ERROR FLAG  :
+                -------------------------------------------------------------------
+                if    (next_state = DONE_STATE and ACK_ERROR = '1') then
+                    error_flag <= '1';
+                else
+                    error_flag <= '0';
                 end if;
                 -------------------------------------------------------------------
                 -- MODE REGISTER
                 -------------------------------------------------------------------
-                if (reset_bit = '1') then
+                if    (reset_bit = '1') then
                     mode_regs <= (others => '0');
                 else
                     for i in mode_regs'range loop
-                        if (MODE_WRITE(i) = '1') then
-                            mode_regs(i) <= MODE_WDATA(i);
+                        if (MODE_L(i) = '1') then
+                            mode_regs(i) <= MODE_D(i);
                         end if;
                     end loop;
                 end if;
                 -------------------------------------------------------------------
                 -- STATUS REGISTER
                 -------------------------------------------------------------------
-                if (reset_bit = '1') then
+                if    (reset_bit = '1') then
                     stat_regs <= (others => '0');
                 else
                     for i in stat_regs'range loop
-                        if    (STAT_WRITE(i) = '1' and STAT_WDATA(i) = '0') then
+                        if    (STAT_L(i) = '1' and STAT_D(i) = '0') then
                             stat_regs(i) <= '0';
-                        elsif (STAT(i) = '1') then
+                        elsif (STAT_I(i) = '1') then
                             stat_regs(i) <= '1';
                         end if;
                     end loop;
@@ -369,22 +505,24 @@ begin
     -------------------------------------------------------------------------------
     -- Register Output Signals.
     -------------------------------------------------------------------------------
-    RESET_RDATA  <= reset_bit;
-    START_RDATA  <= start_bit;
-    STOP_RDATA   <= stop_bit;
-    PAUSE_RDATA  <= pause_bit;
-    FIRST_RDATA  <= first_bit;
-    LAST_RDATA   <= last_bit;
-    DONE_RDATA   <= done_bit;
-    ERROR_RDATA  <= error_bit;
-    MODE_RDATA   <= mode_regs;
-    STAT_RDATA   <= stat_regs;
+    RESET_Q      <= reset_bit;
+    START_Q      <= start_bit;
+    STOP_Q       <= stop_bit;
+    PAUSE_Q      <= pause_bit;
+    FIRST_Q      <= first_bit;
+    LAST_Q       <= last_bit;
+    DONE_EN_Q    <= done_en_bit;
+    DONE_ST_Q    <= done_bit;
+    ERR_ST_Q     <= error_bit;
+    MODE_Q       <= mode_regs;
+    STAT_Q       <= stat_regs;
     -------------------------------------------------------------------------------
     -- Status
     -------------------------------------------------------------------------------
+    VALVE_OPEN   <= first_state(1);
     XFER_RUNNING <= start_bit;
     XFER_DONE    <= '1' when (curr_state = DONE_STATE) else '0';
-    VALVE_OPEN   <= first_state(1);
+    XFER_ERROR   <= error_flag;
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------

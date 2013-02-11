@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 0.0.7
---!     @date    2013/1/13
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -50,18 +50,32 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! AXI4 ライトアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
         AXI4_DATA_WIDTH : --! @brief AXI4 WRITE DATA CHANNEL DATA WIDTH :
-                          --! AXI4 ライトデータチャネルのRDATA信号のビット幅.
+                          --! AXI4 ライトデータチャネルのWDATA信号のビット幅.
                           integer range 8 to AXI4_DATA_MAX_WIDTH := 32;
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
                           integer range 1 to AXI4_ID_MAX_WIDTH;
-        REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
-                          --! REQ_SIZE信号のビット数を指定する.
-                          integer := 32;
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          integer := 1;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
+        REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
+                          --! REQ_SIZE信号のビット数を指定する.
+                          integer := 32;
+        REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
+                          --! REQ_SIZE信号を有効にするかどうかを指定する.
+                          --! * REQ_SIZE_VALID=0で無効.
+                          --! * REQ_SIZE_VALID>0で有効.
+                          integer :=  1;
+        FLOW_VALID      : --! @brief FLOW VALID :
+                          --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
+                          --! にするかどうかを指定する.
+                          --! * FLOW_VALID=0で無効.
+                          --! * FLOW_VALID>0で有効.
+                          integer := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
                           integer := 32;
@@ -78,22 +92,19 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! キューの大きさを指定する.
                           integer := 1
     );
-    -------------------------------------------------------------------------------
-    -- 入出力ポートの定義.
-    -------------------------------------------------------------------------------
     port(
-        --------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
         CLK             : --! @brief Global clock signal.  
                           in    std_logic;
         RST             : --! @brief Global asyncrounos reset signal, active HIGH.
                           in    std_logic;
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Address Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Address Channel Signals.
+    ------------------------------------------------------------------------------
         AWID            : --! @brief Write address ID.
                           --! This signal is identification tag for the write
                           --! address group of singals.
@@ -143,9 +154,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! This signal indicates that the slave is ready to
                           --! accept and associated control signals.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Data Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Data Channel Signals.
+    ------------------------------------------------------------------------------
         WID             : --! @brief Write ID tag.
                           --! This signal is the identification tag for the write
                           --! data transfer. Supported only AXI3.
@@ -168,9 +179,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! This signal indicates that the slave can accept the
                           --! write data.
                           in    std_logic;
-        --------------------------------------------------------------------------
-        -- AXI4 Write Response Channel Signals.
-        --------------------------------------------------------------------------
+    ------------------------------------------------------------------------------
+    -- AXI4 Write Response Channel Signals.
+    ------------------------------------------------------------------------------
         BID             : --! @brief Response ID tag.
                           --! This signal is the identification tag of write
                           --! response .
@@ -186,64 +197,237 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! This signal indicates that the master can accept a
                           --! write response.
                           out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Request Signals.
-        ---------------------------------------------------------------------------
-        REQ_ADDR        : in    std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
-        REQ_SIZE        : in    std_logic_vector(REQ_SIZE_BITS    -1 downto 0);
-        REQ_ID          : in    std_logic_vector(AXI4_ID_WIDTH    -1 downto 0);
-        REQ_BURST       : in    AXI4_ABURST_TYPE;
-        REQ_LOCK        : in    AXI4_ALOCK_TYPE;
-        REQ_CACHE       : in    AXI4_ACACHE_TYPE;
-        REQ_PROT        : in    AXI4_APROT_TYPE;
-        REQ_QOS         : in    AXI4_AQOS_TYPE;
-        REQ_REGION      : in    AXI4_AREGION_TYPE;
-        REQ_FIRST       : in    std_logic;
-        REQ_LAST        : in    std_logic;
-        REQ_SPECULATIVE : in    std_logic;
-        REQ_SAFETY      : in    std_logic;
-        REQ_VAL         : in    std_logic;
-        REQ_RDY         : out   std_logic;
-        XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE downto XFER_MIN_SIZE);
-        XFER_BUSY       : out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Command Response Signals.
-        ---------------------------------------------------------------------------
-        ACK_VAL         : out   std_logic;
-        ACK_NEXT        : out   std_logic;
-        ACK_LAST        : out   std_logic;
-        ACK_ERROR       : out   std_logic;
-        ACK_STOP        : out   std_logic;
-        ACK_NONE        : out   std_logic;
-        ACK_SIZE        : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Flow Control Signals.
-        ---------------------------------------------------------------------------
-        FLOW_PAUSE      : in    std_logic;
-        FLOW_STOP       : in    std_logic;
-        FLOW_LAST       : in    std_logic;
-        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS        -1 downto 0);
-        ---------------------------------------------------------------------------
-        -- Reserve Size Signals.
-        ---------------------------------------------------------------------------
-        RESV_VAL        : out   std_logic;
-        RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        RESV_LAST       : out   std_logic;
-        RESV_ERROR      : out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Pull Size Signals.
-        ---------------------------------------------------------------------------
-        PULL_VAL        : out   std_logic;
-        PULL_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
-        PULL_LAST       : out   std_logic;
-        PULL_ERROR      : out   std_logic;
-        ---------------------------------------------------------------------------
-        -- Read Buffer Interface Signals.
-        ---------------------------------------------------------------------------
-        BUF_REN         : out   std_logic;
-        BUF_DATA        : in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
-        BUF_PTR         : out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : in    std_logic
+    -------------------------------------------------------------------------------
+    -- Command Request Signals.
+    -- これらの信号は Command Acknowledge Signal(ACK_VAL)がアサートされるまで変更し
+    -- てはならない.
+    -------------------------------------------------------------------------------
+        XFER_SIZE_SEL   : --! @brief Max Transfer Size Select Signal.
+                          --! 一回の転送サイズの最大バイト数を指定する.  
+                          --! * XFER_MAX_SIZE=XFER_MIN_SIZEの場合は、この信号は無視
+                          --!   される.
+                          in    std_logic_vector(XFER_MAX_SIZE downto XFER_MIN_SIZE)
+                          := (others => '1');
+        REQ_ADDR        : --! @brief Request Address.
+                          --! 転送開始アドレスを指定する.
+                          in    std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
+        REQ_SIZE        : --! @brief Request Transfer Size.
+                          --! 転送したいバイト数を指定する.
+                          --! * REQ_SIZE_VALID=0の場合は、この信号は無視される.
+                          --! * この値が後述の XFER_SIZE_SEL 信号で示される最大転送
+                          --!   バイト数および FLOW_SIZE 信号で示される転送バイト数
+                          --!   を越える場合は、そちらの方が優先される.
+                          in    std_logic_vector(REQ_SIZE_BITS    -1 downto 0);
+        REQ_ID          : --! @brief Request ID.
+                          --! AWID および WID の値を指定する.  
+                          in    std_logic_vector(AXI4_ID_WIDTH    -1 downto 0);
+        REQ_BURST       : --! @brief Request Burst type.
+                          --! バーストタイプを指定する.  
+                          --! * このモジュールでは AXI4_ABURST_INCR と AXI4_ABURST_FIXED
+                          --!   のみをサポートしている.
+                          in    AXI4_ABURST_TYPE;
+        REQ_LOCK        : --! @brief Request Lock type.
+                          --! AWLOCK の値を指定する.
+                          in    AXI4_ALOCK_TYPE;
+        REQ_CACHE       : --! @brief Request Memory type.
+                          --! AWCACHE の値を指定する.
+                          in    AXI4_ACACHE_TYPE;
+        REQ_PROT        : --! @brief Request Protection type.
+                          --! AWPROT の値を指定する.
+                          in    AXI4_APROT_TYPE;
+        REQ_QOS         : --! @brief Request Quality of Service.
+                          --! AWQOS の値を指定する.
+                          in    AXI4_AQOS_TYPE;
+        REQ_REGION      : --! @brief Request Region identifier.
+                          --! AWREGION の値を指定する.
+                          in    AXI4_AREGION_TYPE;
+        REQ_BUF_PTR     : --! @brief Request Read Buffer Pointer.
+                          --! リードバッファの先頭ポインタの値を指定する.  
+                          --! * リードバッファのこのポインタの位置からデータを読み
+                          --!   込んで、WDATAに出力する.
+                          in    std_logic_vector(BUF_PTR_BITS     -1 downto 0);
+        REQ_FIRST       : --! @brief Request First Transaction.
+                          --! 最初のトランザクションであることを示す.  
+                          --! * REQ_FIRST=1の場合、内部状態を初期化してからトランザ
+                          --!   クションを開始する.
+                          in    std_logic;
+        REQ_LAST        : --! @brief Request Last Transaction.
+                          --! 最後のトランザクションであることを示す.
+                          --! * REQ_LAST=1の場合、Acknowledge を返す際に、すべての
+                          --!   トランザクションが終了していると、ACK_LAST 信号をア
+                          --!   サートする.
+                          --! * REQ_LAST=0の場合、Acknowledge を返す際に、すべての
+                          --!   トランザクションが終了していると、ACK_NEXT 信号をア
+                          --!   サートする.
+                          in    std_logic;
+        REQ_SPECULATIVE : --! @brief Request Speculative Mode.
+                          --! Acknowledge を返すタイミングを投機モードで行うかどう
+                          --! かを指定する.
+                          in    std_logic;
+        REQ_SAFETY      : --! @brief Request Safety Mode.
+                          --! Acknowledge を返すタイミングを安全モードで行うかどう
+                          --! かを指定する.
+                          --! * REQ_SAFETY=1の場合、スレーブから Write Response が
+                          --!   帰ってきた時点で Acknowledge を返す.
+                          --! * REQ_SAFETY=0の場合、スレーブに最後のデータを出力し
+                          --!   た時点で Acknowledge を返す. 応答を待たないので、
+                          --!   エラーが発生しても分からない.
+                          in    std_logic;
+        REQ_VAL         : --! @brief Request Valid Signal.
+                          --! 上記の各種リクエスト信号が有効であることを示す.
+                          --! * この信号のアサートでもってトランザクションを開始する.
+                          --! * 一度この信号をアサートすると Acknowledge を返すまで、
+                          --!   この信号はアサートされなくてはならない.
+                          in    std_logic_vector(VAL_BITS-1 downto 0);
+        REQ_RDY         : --! @brief Request Ready Signal.
+                          --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                          --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
+                          --!   れていても、次のリクエストを受け付け可能な場合があ
+                          --!   る
+                          out   std_logic;
+    -------------------------------------------------------------------------------
+    -- Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
+        ACK_VAL         : --! @brief Acknowledge Valid Signal.
+                          --! 上記の Command Request の応答信号.
+                          --! 下記の 各種 Acknowledge 信号が有効である事を示す.
+                          --! * この信号のアサートでもって、Command Request が受け
+                          --!   付けられたことを示す. ただし、あくまでも Request が
+                          --!   受け付けられただけであって、必ずしもトランザクショ
+                          --!   ンが完了したわけではないことに注意.
+                          --! * この信号は Request につき１クロックだけアサートされ
+                          --!   る.
+                          --! * この信号がアサートされたら、アプリケーション側は速
+                          --!   やかに REQ_VAL 信号をネゲートして Request を取り下
+                          --!   げるか、REQ_VALをアサートしたままで次の Request 情
+                          --!   報を用意しておかなければならない.
+                          out   std_logic_vector(VAL_BITS-1 downto 0);
+        ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
+                          --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
+                          --! この信号がアサートされる.
+                          out   std_logic;
+        ACK_LAST        : --! @brief Acknowledge with Last transaction.
+                          --! すべてのトランザクションが終了かつ REQ_LAST=1 の場合、
+                          --! この信号がアサートされる.
+                          out   std_logic;
+        ACK_ERROR       : --! @brief Acknowledge with Error.
+                          --! トランザクション中になんらかのエラーが発生した場合、
+                          --! この信号がアサートされる.
+                          out   std_logic;
+        ACK_STOP        : --! @brief Acknowledge with Stop operation.
+                          --! トランザクションが中止された場合、この信号がアサート
+                          --! される.
+                          out   std_logic;
+        ACK_NONE        : --! @brief Acknowledge with None Request transfer size.
+                          --! REQ_SIZE=0 の Request だった場合、この信号がアサート
+                          --! される.
+                          out   std_logic;
+        ACK_SIZE        : --! @brief Acknowledge transfer size.
+                          --! 転送するバイト数を示す.
+                          --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
+                          --! れるバイト数分を加算/減算すると良い.
+                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Transfer Status Signal.
+    -------------------------------------------------------------------------------
+        XFER_BUSY       : --! @brief Transfer Busy.
+                          --! このモジュールが未だデータの転送中であることを示す.
+                          --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
+                          --!   れていても、次のリクエストを受け付け可能な場合があ
+                          --!   る.
+                          out   std_logic;
+    -------------------------------------------------------------------------------
+    -- Flow Control Signals.
+    -------------------------------------------------------------------------------
+        FLOW_STOP       : --! @brief Flow Stop.
+                          --! 転送中止信号.
+                          --! * 転送を中止する時はこの信号をアサートする.
+                          --! * 一旦アサートしたら、完全に停止するまで(XFER_BUSYが
+                          --!   ネゲートされるまで)、アサートしたままにしておかなけ
+                          --!   ればならない.
+                          --! * ただし、一度 AXI4 に発行したトランザクションは中止
+                          --!   出来ない.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic := '0';
+        FLOW_PAUSE      : --! @brief Flow Pause.
+                          --! 転送一時中断信号.
+                          --! * 転送を一時中断する時はこの信号をアサートする.
+                          --! * 転送を再開したい時はこの信号をネゲートする.
+                          --! * ただし、一度 AXI4 に発行したトランザクションは中断
+                          --!   出来ない. あくまでも、次に発行する予定のトランザク
+                          --!   ションを一時的に停めるだけ.
+                          --! * 例えば FIFO に格納されているデータのバイト数が、あ
+                          --!   る一定の値未満の時にこの信号をアサートするようにし
+                          --!   ておくと、再びある一定の値以上になってこの信号がネ
+                          --!   ゲートされるまで、転送を中断しておける.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic := '0';
+        FLOW_LAST       : --! 最後の転送であることを示す.
+                          --! * FLOW_PAUSE='0'の時のみ有効.
+                          --! * 例えば FIFO に残っているデータで最後の時に、この信
+                          --!   号をアサートしておけば、最後のデータを出力し終えた
+                          --!   時点で、転送をする.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic := '1';
+        FLOW_SIZE       : --! @brief Flow Size.
+                          --! 転送するバイト数を指定する.
+                          --! * FLOW_PAUSE='0'の時のみ有効.
+                          --! * 例えば FIFO に残っているデータの容量を入力しておく
+                          --!   と、そのバイト数を越えた転送は行わない.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
+    -------------------------------------------------------------------------------
+    -- Reserve Size Signals.
+    -------------------------------------------------------------------------------
+        RESV_VAL        : --! @brief Reserve Valid.
+                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        RESV_LAST       : --! @brief Reserve Last.
+                          --! 最後の転送"する予定"である事を示すフラグ.
+                          out   std_logic;
+        RESV_ERROR      : --! @brief Reserve Error.
+                          --! 転送"する予定"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        RESV_SIZE       : --! @brief Reserve Size.
+                          --! 転送"する予定"のバイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VAL        : --! @brief Pull Valid.
+                          --! PULL_LAST/PULL_ERROR/PULL_SIZEが有効であることを示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        PULL_LAST       : --! @brief Pull Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PULL_ERROR      : --! @brief Reserve Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PULL_SIZE       : --! @brief Reserve Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Read Buffer Interface Signals.
+    -------------------------------------------------------------------------------
+        BUF_REN         : --! @brief Buffer Read Enable.
+                          --! バッファからデータをリードすることを示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        BUF_DATA        : --! @brief Buffer Data.
+                          --! バッファからリードしたデータを入力する.
+                          in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
+        BUF_PTR         : --! @brief Buffer Read Pointer.
+                          --! 次にリードするデータのバッファの位置を出力する.
+                          --! * この信号の１クロック後に、バッファからリードした
+                          --!   データを BUF_DATA に入力すること.
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
+        BUF_RDY         : --! @brief Buffer Read Ready.
+                          --! バッファにデータが用意出来ていることを示す.
+                          --! * この信号がネゲートされていると、ライトデータチャネ
+                          --!   ルからデータが出力されずに、再びアサートされるまで
+                          --!   停止する.
+                          --! * ただし、この信号はライトデータチャネルを制御するも
+                          --!   ので、ライトアドレスチャネルを制御するものではない.
+                          in    std_logic
     );
 end AXI4_MASTER_WRITE_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -277,7 +461,8 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
-    signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
+    signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
+    signal   xfer_req_select    : std_logic_vector(VAL_BITS       -1 downto 0);
     signal   xfer_req_valid     : std_logic;
     signal   xfer_req_ready     : std_logic;
     signal   xfer_req_next      : std_logic;
@@ -338,7 +523,6 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   init_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     signal   next_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     signal   curr_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -348,6 +532,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   ack_queue_valid    : std_logic_vector(QUEUE_SIZE     downto 0);
     signal   ack_queue_next     : std_logic;
     signal   ack_queue_last     : std_logic;
+    signal   ack_queue_select   : std_logic_vector(VAL_BITS    -1 downto 0);
     signal   ack_queue_size     : std_logic_vector(XFER_MAX_SIZE  downto 0);
     signal   ack_queue_empty    : std_logic;
     signal   ack_queue_safety   : std_logic;
@@ -362,30 +547,34 @@ begin
     -------------------------------------------------------------------------------
     AW: AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         generic map (
-            DATA_SIZE       => AXI4_DATA_SIZE    ,
-            ADDR_BITS       => AXI4_ADDR_WIDTH   ,
-            REQ_SIZE_BITS   => REQ_SIZE_BITS     ,
-            SIZE_BITS       => SIZE_BITS         ,
-            XFER_MIN_SIZE   => XFER_MIN_SIZE     ,
-            XFER_MAX_SIZE   => XFER_MAX_SIZE     
+            VAL_BITS        => VAL_BITS          , --
+            DATA_SIZE       => AXI4_DATA_SIZE    , --
+            ADDR_BITS       => AXI4_ADDR_WIDTH   , --
+            SIZE_BITS       => SIZE_BITS         , --
+            REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
+            REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
+            FLOW_VALID      => FLOW_VALID        , --
+            XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
+            XFER_MAX_SIZE   => XFER_MAX_SIZE       --
         )
         port map (
-            ----------------------------------------------------------------------
-            -- Clock and Reset Signals.
-            ----------------------------------------------------------------------
+        --------------------------------------------------------------------------
+        -- Clock and Reset Signals.
+        --------------------------------------------------------------------------
             CLK             => CLK               , -- In  :
             RST             => RST               , -- In  :
             CLR             => CLR               , -- In  :
-            ----------------------------------------------------------------------
-            -- AXI4 Address Channel Signals.
-            ----------------------------------------------------------------------
+        --------------------------------------------------------------------------
+        -- AXI4 Address Channel Signals.
+        --------------------------------------------------------------------------
             AADDR           => AWADDR            , -- Out :
+            ASIZE           => AWSIZE            , -- Out :
             ALEN            => AWLEN             , -- Out :
             AVALID          => AWVALID           , -- Out :
             AREADY          => AWREADY           , -- In  :
-            -----------------------------------------------------------------------
-            -- Command Request Signals.
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Command Request Signals.
+        ---------------------------------------------------------------------------
             REQ_ADDR        => REQ_ADDR          , -- In  :
             REQ_SIZE        => REQ_SIZE          , -- In  :
             REQ_FIRST       => REQ_FIRST         , -- In  :
@@ -394,9 +583,9 @@ begin
             REQ_SAFETY      => REQ_SAFETY        , -- In  :
             REQ_VAL         => REQ_VAL           , -- In  :
             REQ_RDY         => REQ_RDY           , -- Out :
-            -----------------------------------------------------------------------
-            -- Command Response Signals.
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Command Response Signals.
+        ---------------------------------------------------------------------------
             ACK_VAL         => ACK_VAL           , -- Out :
             ACK_NEXT        => ACK_NEXT          , -- Out :
             ACK_LAST        => ACK_LAST          , -- Out :
@@ -404,31 +593,32 @@ begin
             ACK_STOP        => ACK_STOP          , -- Out :
             ACK_NONE        => ACK_NONE          , -- Out :
             ACK_SIZE        => ACK_SIZE          , -- Out :
-            -----------------------------------------------------------------------
-            -- Transfer Control Signals.
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Transfer Control Signals.
+        ---------------------------------------------------------------------------
             FLOW_PAUSE      => FLOW_PAUSE        , -- In  :
             FLOW_STOP       => FLOW_STOP         , -- In  :
             FLOW_LAST       => FLOW_LAST         , -- In  :
             FLOW_SIZE       => FLOW_SIZE         , -- In  :
-            -----------------------------------------------------------------------
-            -- Transfer Size Select Signals.
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Transfer Size Select Signals.
+        ---------------------------------------------------------------------------
             XFER_SIZE_SEL   => XFER_SIZE_SEL     , -- In  :
-            -----------------------------------------------------------------------
-            -- Transfer Request Signals. 
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Transfer Request Signals. 
+        ---------------------------------------------------------------------------
             XFER_REQ_ADDR   => xfer_req_addr     , -- Out : 
             XFER_REQ_SIZE   => xfer_req_size     , -- Out :
             XFER_REQ_FIRST  => xfer_req_first    , -- Out :
             XFER_REQ_LAST   => xfer_req_last     , -- Out :
             XFER_REQ_NEXT   => xfer_req_next     , -- Out :
             XFER_REQ_SAFETY => xfer_req_safety   , -- Out :
+            XFER_REQ_SEL    => xfer_req_select   , -- Out :
             XFER_REQ_VAL    => xfer_req_valid    , -- Out :
             XFER_REQ_RDY    => xfer_req_ready    , -- In  :
-            -----------------------------------------------------------------------
-            -- Transfer Response Signals.
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Transfer Response Signals.
+        ---------------------------------------------------------------------------
             XFER_ACK_SIZE   => xfer_ack_size     , -- In  :
             XFER_ACK_VAL    => xfer_ack_valid    , -- In  :
             XFER_ACK_NEXT   => xfer_ack_next     , -- In  :
@@ -440,7 +630,6 @@ begin
     -- AXI4 Write Address Channel Signals Output.
     -------------------------------------------------------------------------------
     AWBURST  <= REQ_BURST;
-    AWSIZE   <= std_logic_vector(to_unsigned(AXI4_DATA_SIZE, AWSIZE'length));
     AWLOCK   <= REQ_LOCK;
     AWCACHE  <= REQ_CACHE;
     AWPROT   <= REQ_PROT;
@@ -515,7 +704,7 @@ begin
                               curr_state = WAIT_WLAST  or
                               ack_queue_empty = '0' ) else '0';
     -------------------------------------------------------------------------------
-    -- xfer_req_ready : 
+    -- xfer_req_ready : Transfer Requestを受け付けることが出来ることを示すフラグ.
     -------------------------------------------------------------------------------
     xfer_req_ready  <= '1' when (curr_state = IDLE and ack_queue_ready = '1') else '0';
     -------------------------------------------------------------------------------
@@ -533,53 +722,52 @@ begin
             MIN_PIECE       => BUF_DATA_SIZE         ,
             MAX_PIECE       => BUF_DATA_SIZE         ,
             MAX_SIZE        => XFER_MAX_SIZE         ,
-            ADDR_BITS       => init_read_ptr'length  ,
+            ADDR_BITS       => REQ_BUF_PTR'length    ,
             SIZE_BITS       => xfer_req_size'length  ,
             COUNT_BITS      => 1                     ,
             PSIZE_BITS      => buf_push_size'length  ,
             GEN_VALID       => 1
         )
         port map (
-            ----------------------------------------------------------------------
-            -- Clock and Reset Signals.
-            ----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- Clock and Reset Signals.
+        ---------------------------------------------------------------------------
             CLK             => CLK                   , -- In  :
             RST             => RST                   , -- In  :
             CLR             => CLR                   , -- In  :
-            -----------------------------------------------------------------------
-            -- 各種初期値
-            -----------------------------------------------------------------------
-            ADDR            => init_read_ptr         , -- In  :
+        ---------------------------------------------------------------------------
+        -- 各種初期値
+        ---------------------------------------------------------------------------
+            ADDR            => REQ_BUF_PTR           , -- In  :
             SIZE            => xfer_req_size         , -- In  :
             SEL             => xfer_beat_sel         , -- In  :
             LOAD            => xfer_start            , -- In  :
-            -----------------------------------------------------------------------
-            -- 制御信号
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- 制御信号
+        ---------------------------------------------------------------------------
             CHOP            => xfer_beat_chop        , -- In  :
-            -----------------------------------------------------------------------
-            -- ピースカウンタ/フラグ出力
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- ピースカウンタ/フラグ出力
+        ---------------------------------------------------------------------------
             COUNT           => open                  , -- Out :
             NONE            => open                  , -- Out :
             LAST            => buf_push_last         , -- Out :
             NEXT_NONE       => open                  , -- Out :
             NEXT_LAST       => open                  , -- Out :
-            -----------------------------------------------------------------------
-            -- １ワードのバイト数
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- １ワードのバイト数
+        ---------------------------------------------------------------------------
             PSIZE           => buf_push_size         , -- Out :
             NEXT_PSIZE      => open                  , -- Out :
-            -----------------------------------------------------------------------
-            -- バイトイネーブル信号
-            -----------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+        -- バイトイネーブル信号
+        ---------------------------------------------------------------------------
             VALID           => buf_push_ben          , -- Out :
             NEXT_VALID      => open                    -- Out :
         );
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    init_read_ptr <= (others => '0') when (xfer_req_first = '1') else curr_read_ptr;
     next_read_ptr <= std_logic_vector(to_01(unsigned(curr_read_ptr)) +
                                       to_01(unsigned(buf_push_size)));
     process(CLK, RST) begin
@@ -589,15 +777,16 @@ begin
             if (CLR = '1') then 
                 curr_read_ptr <= (others => '0');
             elsif (xfer_start = '1') then
-                curr_read_ptr <= init_read_ptr;
+                curr_read_ptr <= REQ_BUF_PTR;
             elsif (xfer_beat_chop = '1') then
                 curr_read_ptr <= next_read_ptr;
             end if;
         end if;
     end process;
-    BUF_PTR <= init_read_ptr when (xfer_start     = '1') else
+    BUF_PTR <= REQ_BUF_PTR   when (xfer_start     = '1') else
                next_read_ptr when (xfer_beat_chop = '1') else
                curr_read_ptr;
+    BUF_RE  <= '1' when (xfer_start = '1' or buf_enable = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -753,7 +942,9 @@ begin
         constant VEC_LO         : integer := 0;
         constant VEC_SIZE_LO    : integer := VEC_LO;
         constant VEC_SIZE_HI    : integer := VEC_SIZE_LO  + XFER_MAX_SIZE;
-        constant VEC_NEXT_POS   : integer := VEC_SIZE_HI  + 1;
+        constant VEC_SEL_LO     : integer := VEC_SIZE_HI  + 1;
+        constant VEC_SEL_HI     : integer := VEC_SEL_LO   + VAL_BITS-1;
+        constant VEC_NEXT_POS   : integer := VEC_SEL_HI   + 1;
         constant VEC_LAST_POS   : integer := VEC_NEXT_POS + 1;
         constant VEC_SAFETY_POS : integer := VEC_LAST_POS + 1;
         constant VEC_HI         : integer := VEC_SAFETY_POS;
@@ -762,6 +953,7 @@ begin
         constant Q_ALL_0        : std_logic_vector(QUEUE_SIZE downto 0) := (others => '0');
     begin
         i_vec(VEC_SIZE_HI downto VEC_SIZE_LO) <= xfer_req_size;
+        i_vec(VEC_SEL_HI  downto VEC_SEL_LO ) <= xfer_req_select;
         i_vec(VEC_NEXT_POS)                   <= xfer_req_next;
         i_vec(VEC_LAST_POS)                   <= xfer_req_last;
         i_vec(VEC_SAFETY_POS)                 <= xfer_req_safety;
@@ -785,6 +977,7 @@ begin
                 Q_RDY       => BVALID              -- In  :
             );
         ack_queue_size   <= q_vec(VEC_SIZE_HI downto VEC_SIZE_LO);
+        ack_queue_select <= q_vec(VEC_SEL_HI  downto VEC_SEL_LO);
         ack_queue_next   <= q_vec(VEC_NEXT_POS);
         ack_queue_last   <= q_vec(VEC_LAST_POS);
         ack_queue_safety <= q_vec(VEC_SAFETY_POS);
@@ -814,16 +1007,16 @@ begin
     -------------------------------------------------------------------------------
     -- Reserve Size and Last
     -------------------------------------------------------------------------------
-    RESV_VAL       <= '1' when (xfer_start    = '1') else '0';
-    RESV_LAST      <= '1' when (xfer_req_last = '1') else '0';
+    RESV_VAL       <= xfer_req_select when (xfer_start    = '1') else (others => '0');
+    RESV_LAST      <= '1'             when (xfer_req_last = '1') else '0';
     RESV_ERROR     <= '0';
     RESV_SIZE      <= std_logic_vector(RESIZE(unsigned(xfer_req_size) , RESV_SIZE'length));
     -------------------------------------------------------------------------------
     -- Pull Size and Last
     -------------------------------------------------------------------------------
-    PULL_VAL       <= '1' when (ack_queue_valid(0) = '1' and BVALID = '1') else '0';
-    PULL_LAST      <= '1' when (ack_queue_last = '1') else '0';
-    PULL_ERROR     <= '1' when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
-    PULL_SIZE      <= (others => '0') when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
+    PULL_VAL       <= ack_queue_select when (ack_queue_valid(0) = '1' and BVALID = '1') else (others => '0');
+    PULL_LAST      <= '1'              when (ack_queue_last = '1') else '0';
+    PULL_ERROR     <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
+    PULL_SIZE      <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
                       std_logic_vector(RESIZE(unsigned(ack_queue_size), PULL_SIZE'length));
 end RTL;
