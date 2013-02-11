@@ -44,6 +44,10 @@
 
 データを入力(INTAKE)側から入力し、出力(OUTLET)側に出力するためのコントローラです.    
 
+####PUMP_OPERATION_PROCESSOR####
+
+PUMP_CONTROLLERの動作を、メモリ上に展開したオペレーションリストに基づいて行うプロセッサもどきです.   
+
 
 *PipeWork* AIX4 Component
 -------------------------

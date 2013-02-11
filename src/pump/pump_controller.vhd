@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.2.1
---!     @date    2013/2/3
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -77,8 +77,10 @@ entity  PUMP_CONTROLLER is
                           --!   しなければならない.
                           integer := 32;
         I_REG_MODE_BITS : --! @brief INTAKE MODE REGISTER BITS :
+                          --! I_MODE_L/I_MODE_D/I_MODE_Qのビット数を指定する.
                           integer := 32;
         I_REG_STAT_BITS : --! @brief INTAKE STATUS REGISTER BITS :
+                          --! I_STAT_L/I_STAT_D/I_STAT_Qのビット数を指定する.
                           integer := 32;
         O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
                           --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
@@ -116,8 +118,10 @@ entity  PUMP_CONTROLLER is
                           --!   しなければならない.
                           integer := 32;
         O_REG_MODE_BITS : --! @brief OUTLET MODE REGISTER BITS :
+                          --! O_MODE_L/O_MODE_D/O_MODE_Qのビット数を指定する.
                           integer := 32;
         O_REG_STAT_BITS : --! @brief OUTLET STATUS REGISTER BITS :
+                          --! O_STAT_L/O_STAT_D/O_STAT_Qのビット数を指定する.
                           integer := 32;
         BUF_DEPTH       : --! @brief BUFFER DEPTH :
                           --! バッファの容量(バイト数)を２のべき乗値で指定する.

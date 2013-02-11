@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.2.1
---!     @date    2013/2/9
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -50,7 +50,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! AXI4 ライトアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
         AXI4_DATA_WIDTH : --! @brief AXI4 WRITE DATA CHANNEL DATA WIDTH :
-                          --! AXI4 ライトデータチャネルのRDATA信号のビット幅.
+                          --! AXI4 ライトデータチャネルのWDATA信号のビット幅.
                           integer range 8 to AXI4_DATA_MAX_WIDTH := 32;
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
@@ -281,6 +281,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           in    std_logic_vector(VAL_BITS-1 downto 0);
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                          --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
+                          --!   れていても、次のリクエストを受け付け可能な場合があ
+                          --!   る
                           out   std_logic;
     -------------------------------------------------------------------------------
     -- Command Acknowledge Signals.
@@ -327,36 +330,104 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- Transfer Status Signal.
     -------------------------------------------------------------------------------
-        XFER_BUSY       : --! @brief このモジュールが BUSY 状態であることを示す.
+        XFER_BUSY       : --! @brief Transfer Busy.
+                          --! このモジュールが未だデータの転送中であることを示す.
+                          --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
+                          --!   れていても、次のリクエストを受け付け可能な場合があ
+                          --!   る.
                           out   std_logic;
     -------------------------------------------------------------------------------
     -- Flow Control Signals.
     -------------------------------------------------------------------------------
-        FLOW_PAUSE      : in    std_logic := '0';
-        FLOW_STOP       : in    std_logic := '0';
-        FLOW_LAST       : in    std_logic := '1';
-        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
+        FLOW_STOP       : --! @brief Flow Stop.
+                          --! 転送中止信号.
+                          --! * 転送を中止する時はこの信号をアサートする.
+                          --! * 一旦アサートしたら、完全に停止するまで(XFER_BUSYが
+                          --!   ネゲートされるまで)、アサートしたままにしておかなけ
+                          --!   ればならない.
+                          --! * ただし、一度 AXI4 に発行したトランザクションは中止
+                          --!   出来ない.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic := '0';
+        FLOW_PAUSE      : --! @brief Flow Pause.
+                          --! 転送一時中断信号.
+                          --! * 転送を一時中断する時はこの信号をアサートする.
+                          --! * 転送を再開したい時はこの信号をネゲートする.
+                          --! * ただし、一度 AXI4 に発行したトランザクションは中断
+                          --!   出来ない. あくまでも、次に発行する予定のトランザク
+                          --!   ションを一時的に停めるだけ.
+                          --! * 例えば FIFO に格納されているデータのバイト数が、あ
+                          --!   る一定の値未満の時にこの信号をアサートするようにし
+                          --!   ておくと、再びある一定の値以上になってこの信号がネ
+                          --!   ゲートされるまで、転送を中断しておける.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic := '0';
+        FLOW_LAST       : --! 最後の転送であることを示す.
+                          --! * FLOW_PAUSE='0'の時のみ有効.
+                          --! * 例えば FIFO に残っているデータで最後の時に、この信
+                          --!   号をアサートしておけば、最後のデータを出力し終えた
+                          --!   時点で、転送をする.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic := '1';
+        FLOW_SIZE       : --! @brief Flow Size.
+                          --! 転送するバイト数を指定する.
+                          --! * FLOW_PAUSE='0'の時のみ有効.
+                          --! * 例えば FIFO に残っているデータの容量を入力しておく
+                          --!   と、そのバイト数を越えた転送は行わない.
+                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
-        RESV_LAST       : out   std_logic;
-        RESV_ERROR      : out   std_logic;
-        RESV_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
+        RESV_VAL        : --! @brief Reserve Valid.
+                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        RESV_LAST       : --! @brief Reserve Last.
+                          --! 最後の転送"する予定"である事を示すフラグ.
+                          out   std_logic;
+        RESV_ERROR      : --! @brief Reserve Error.
+                          --! 転送"する予定"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        RESV_SIZE       : --! @brief Reserve Size.
+                          --! 転送"する予定"のバイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : out   std_logic_vector(VAL_BITS         -1 downto 0);
-        PULL_LAST       : out   std_logic;
-        PULL_ERROR      : out   std_logic;
-        PULL_SIZE       : out   std_logic_vector(SIZE_BITS        -1 downto 0);
+        PULL_VAL        : --! @brief Pull Valid.
+                          --! PULL_LAST/PULL_ERROR/PULL_SIZEが有効であることを示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        PULL_LAST       : --! @brief Pull Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PULL_ERROR      : --! @brief Reserve Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PULL_SIZE       : --! @brief Reserve Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
-        BUF_REN         : out   std_logic_vector(VAL_BITS         -1 downto 0);
-        BUF_DATA        : in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
-        BUF_PTR         : out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : in    std_logic
+        BUF_REN         : --! @brief Buffer Read Enable.
+                          --! バッファからデータをリードすることを示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        BUF_DATA        : --! @brief Buffer Data.
+                          --! バッファからリードしたデータを入力する.
+                          in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
+        BUF_PTR         : --! @brief Buffer Read Pointer.
+                          --! 次にリードするデータのバッファの位置を出力する.
+                          --! * この信号の１クロック後に、バッファからリードした
+                          --!   データを BUF_DATA に入力すること.
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
+        BUF_RDY         : --! @brief Buffer Read Ready.
+                          --! バッファにデータが用意出来ていることを示す.
+                          --! * この信号がネゲートされていると、ライトデータチャネ
+                          --!   ルからデータが出力されずに、再びアサートされるまで
+                          --!   停止する.
+                          --! * ただし、この信号はライトデータチャネルを制御するも
+                          --!   ので、ライトアドレスチャネルを制御するものではない.
+                          in    std_logic
     );
 end AXI4_MASTER_WRITE_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -715,6 +786,7 @@ begin
     BUF_PTR <= REQ_BUF_PTR   when (xfer_start     = '1') else
                next_read_ptr when (xfer_beat_chop = '1') else
                curr_read_ptr;
+    BUF_RE  <= '1' when (xfer_start = '1' or buf_enable = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
