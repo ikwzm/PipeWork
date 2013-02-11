@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.2.1
---!     @date    2013/2/6
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

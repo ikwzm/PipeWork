@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 1.2.1
---!     @date    2013/2/9
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

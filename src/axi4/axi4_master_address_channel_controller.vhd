@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.2.1
---!     @date    2013/2/9
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
