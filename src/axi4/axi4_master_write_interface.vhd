@@ -510,6 +510,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   buf_busy           : std_logic;
     signal   buf_enable         : std_logic;
+    signal   buf_select         : std_logic_vector(VAL_BITS    -1 downto 0);
     signal   buf_push_valid     : std_logic;
     signal   buf_push_ben       : std_logic_vector(BUF_DATA_WIDTH/8-1 downto 0);
     signal   buf_push_size      : std_logic_vector(BUF_DATA_SIZE      downto 0);
@@ -783,23 +784,27 @@ begin
             end if;
         end if;
     end process;
-    BUF_PTR <= REQ_BUF_PTR   when (xfer_start     = '1') else
-               next_read_ptr when (xfer_beat_chop = '1') else
+    BUF_PTR <= REQ_BUF_PTR     when (xfer_start     = '1') else
+               next_read_ptr   when (xfer_beat_chop = '1') else
                curr_read_ptr;
-    BUF_RE  <= '1' when (xfer_start = '1' or buf_enable = '1') else '0';
+    BUF_REN <= xfer_req_select when (xfer_start     = '1') else buf_select;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     process(CLK, RST) begin
         if (RST = '1') then
                 buf_enable <= '0';
+                buf_select <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 buf_enable <= '0';
+                buf_select <= (others => '0');
             elsif (xfer_start = '1') then
                 buf_enable <= '1';
+                buf_select <= xfer_req_select;
             elsif (buf_push_valid = '1' and buf_push_ready = '1' and buf_push_last = '1') then
                 buf_enable <= '0';
+                buf_select <= (others => '0');
             end if;
         end if;
     end process;
