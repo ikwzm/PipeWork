@@ -2,8 +2,8 @@
 --!     @file    pump_count_down_register.vhd
 --!     @brief   PUMP COUNT DOWN REGISTER
 --!              転送したバイト数をカウントダウンするレジスタ.
---!     @version 1.2.0
---!     @date    2013/1/27
+--!     @version 1.3.0
+--!     @date    2013/2/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
