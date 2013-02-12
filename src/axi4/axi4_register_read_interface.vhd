@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.3.1
+--!     @date    2013/2/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -345,7 +345,7 @@ begin
             first_size  := RESIZE(     not u_addr(0 downto 0),  first_size'length);
             others_size := RESIZE(dt_len & u_zero(0 downto 0), others_size'length);
         else
-            first_size  := (others => '1');
+            first_size  := (others => '0');
             others_size := RESIZE(dt_len                     , others_size'length);
         end if;
         xfer_req_size <= std_logic_vector(others_size + first_size + 1);
