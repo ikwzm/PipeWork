@@ -33,6 +33,10 @@ COMPONENTS = components                             \
              axi4_register_write_interface          \
              axi4_register_read_interface           \
              axi4_register_interface                \
+             pcie_tlp_types                         \
+             pcie_tlp_rx_stream_interface           \
+             pcie_tlp_tx_stream_interface           \
+             pcie_tlp_tx_arbiter                    \
              $(END_LINE)
 
 OBJS      = $(addsuffix .o,$(COMPONENTS))
@@ -129,3 +133,14 @@ axi4_register_read_interface.o           : $(SRC_PATH)/axi4/axi4_register_read_i
 axi4_register_interface.o                : $(SRC_PATH)/axi4/axi4_register_interface.vhd       components.o axi4_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
+pcie_tlp_types.o                         : $(SRC_PATH)/pcie/pcie_tlp_types.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pcie_tlp_rx_stream_interface.o           : $(SRC_PATH)/pcie/pcie_tlp_rx_stream_interface.vhd pcie_tlp_types.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pcie_tlp_tx_stream_interface.o           : $(SRC_PATH)/pcie/pcie_tlp_tx_stream_interface.vhd pcie_tlp_types.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pcie_tlp_tx_arbiter.o                    : $(SRC_PATH)/pcie/pcie_tlp_tx_arbiter.vhd          pcie_tlp_types.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
