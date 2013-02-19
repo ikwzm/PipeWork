@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_tx_stream_interface.vhd
 --!     @brief   PCI-Express TLP(Transaction Layer Packet) Transmit Stream Interface
---!     @version 0.0.1
---!     @date    2013/2/18
+--!     @version 0.0.2
+--!     @date    2013/2/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -344,8 +344,9 @@ begin
                         next_queue(i).VAL  := (ALTERA_MODE  /=  0) and
                                               (TX_DATA_BITS >= 64) and
                                               (i = 4) and
-                                              (TLP_HVAL = '1') and
-                                              (TLP_HEAD.ADDR(2) = '1');
+                                              (TLP_HVAL          = '1') and
+                                              (TLP_HEAD.HEAD_LEN = '1') and
+                                              (TLP_HEAD.ADDR(2)  = '1');
                         next_queue(i).ENBL := '0';
                         next_queue(i).DATA := curr_queue(i).DATA;
                     end loop;
