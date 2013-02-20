@@ -47,29 +47,37 @@ entity  PCIe_TLP_TX_ARBITER is
     -------------------------------------------------------------------------------
     generic (
         REQ_ENABLE      : --! @brief リクエストパケットを送信するかどうかを指定する.
-                          --! * REQ_ENABLE=0の場合はリクエストパケットを送信しない.
                           --! * REQ_ENABLE=1の場合はリクエストパケットを送信する.
                           --!   この場合、REQ_HVAL/REQ_HRDY/REQ_HEAD配列の範囲は
-                          --!   TLP_HSEL配列の範囲内でなければならない.
+                          --!   TLP_HSEL配列の範囲"内"でなければならない.
+                          --! * REQ_ENABLE=0の場合はリクエストパケットを送信しない.
+                          --!   この場合、REQ_HVAL/REQ_HRDY/REQ_HEAD配列の範囲は
+                          --!   適当でも構わないが長さは１以上でなければならない.
                           integer := 1;
         CPL_ENABLE      : --! @breif コンプレッションパケットを送信するかどうかを指定する.
-                          --! * CPL_ENABLE=0の場合はコンプレッションパケットを送信
-                          --!   しない.
                           --! * CPL_ENABLE=1の場合はコンプレッションパケットを送信
                           --!   する. この場合、CPL_HVAL/CPL_HRDY/CPL_HEAD配列の範
-                          --!   囲はTLP_HSEL配列の範囲内でなければならない.
+                          --!   囲はTLP_HSEL配列の範囲"内"でなければならない.
+                          --! * CPL_ENABLE=0の場合はコンプレッションパケットを送信
+                          --!   しない. この場合、CPL_HVAL/CPL_HRDY/CPL_HEAD配列の
+                          --!   範囲は適当でも構わないが長さは１以上でなければなら
+                          --!   ない.
                           integer := 1;
         MSG_ENABLE      : --! @brief メッセージパケットを送信するかどうかを指定する.
-                          --! * MSG_ENABLE=0の場合はメッセージパケットを送信しない.
                           --! * MSG_ENABLE=1の場合はメッセージパケットを送信する.
                           --!   この場合、MES_HVAL/MES_HRDY/MES_HEAD配列の範囲は
-                          --!   TLP_HSEL配列の範囲内でなければならない.
+                          --!   TLP_HSEL配列の範囲"内"でなければならない.
+                          --! * MSG_ENABLE=0の場合はメッセージパケットを送信しない.
+                          --!   この場合、MSG_HVAL/MSG_HRDY/MSG_HEAD配列の範囲は
+                          --!   適当でも構わないが長さは１以上でなければならない.
                           integer := 1;
         ERR_ENABLE      : --! @brief エラー応答パケットを送信するかどうかを指定する.
-                          --! * ERR_ENABLE=0の場合はエラー応答パケットを送信しない.
                           --! * ERR_ENABLE=1の場合はエラー応答パケットを送信する.
                           --!   この場合、ERR_HVAL/ERR_HRDY/MERR_HEAD配列の範囲は
-                          --!   TLP_HSEL配列の範囲内でなければならない.
+                          --!   TLP_HSEL配列の範囲"内"でなければならない.
+                          --! * ERR_ENABLE=0の場合はエラー応答パケットを送信しない.
+                          --!   この場合、ERR_HVAL/ERR_HRDY/ERR_HEAD配列の範囲は
+                          --!   適当でも構わないが長さは１以上でなければならない.
                           integer := 1;
         LATENCY         : --! @brief 調停した結果を一度レジスタで叩くかどうかを指定する.
                           --! * LATENCY=1の場合、調停結果を一度レジスタで叩いて
@@ -215,7 +223,7 @@ begin
             GRANT_NUM   => req_arb_num , -- Out : 選択された送信要求信号の番号
             REQUEST_O   => req_arb_req   -- Out : リクエストパケット送信要求信号
         );
-    req_header  <= req_head_vec(req_arb_num);
+    req_header  <= req_head_vec(req_arb_num) when (REQ_ENABLE /= 0) else PCIe_TLP_REQ_HEAD_NULL;
     req_arb_ena <= '1' when (REQ_ENABLE /= 0) else '0';
     req_arb_sft <= '1' when (arb_grant = REQ_SEL and TLP_HRDY = '1') else '0';
     -------------------------------------------------------------------------------
@@ -237,7 +245,7 @@ begin
             GRANT_NUM   => cpl_arb_num , -- Out : 選択された送信要求信号の番号
             REQUEST_O   => cpl_arb_req   -- Out : コンプレッションパケット送信要求信号
         );
-    cpl_header  <= cpl_head_vec(cpl_arb_num);
+    cpl_header  <= cpl_head_vec(cpl_arb_num) when (CPL_ENABLE /= 0) else PCIe_TLP_CPL_HEAD_NULL;
     cpl_arb_ena <= '1' when (CPL_ENABLE /= 0) else '0';
     cpl_arb_sft <= '1' when (arb_grant = CPL_SEL and TLP_HRDY = '1') else '0';
     -------------------------------------------------------------------------------
@@ -259,7 +267,7 @@ begin
             GRANT_NUM   => msg_arb_num , -- Out : 選択された要求信号のインデックス
             REQUEST_O   => msg_arb_req   -- Out : メッセージパケット送信要求信号
         );
-    msg_header  <= msg_head_vec(msg_arb_num);
+    msg_header  <= msg_head_vec(msg_arb_num) when (MSG_ENABLE /= 0) else PCIe_TLP_MSG_HEAD_NULL;
     msg_arb_ena <= '1' when (MSG_ENABLE /= 0) else '0';
     msg_arb_sft <= '1' when (arb_grant = MSG_SEL and TLP_HRDY = '1') else '0';
     -------------------------------------------------------------------------------
@@ -281,7 +289,7 @@ begin
             GRANT_NUM   => err_arb_num , -- Out : 選択された要求信号のインデックス
             REQUEST_O   => err_arb_req   -- Out : エラー応答パケット送信要求信号
         );
-    err_header  <= err_head_vec(err_arb_num);
+    err_header  <= err_head_vec(err_arb_num) when (ERR_ENABLE /= 0) else PCIe_TLP_CPL_HEAD_NULL;
     err_arb_ena <= '1' when (ERR_ENABLE /= 0) else '0';
     err_arb_sft <= '1' when (arb_grant = ERR_SEL and TLP_HRDY = '1') else '0';
     -------------------------------------------------------------------------------
@@ -297,15 +305,16 @@ begin
     -------------------------------------------------------------------------------
     LAT0: if (LATENCY = 0) generate
         arb_grant <= arb_sel_d;
-        req_grant <= req_arb_gnt when (arb_sel_d = REQ_SEL) else (others => '0');
-        cpl_grant <= cpl_arb_gnt when (arb_sel_d = CPL_SEL) else (others => '0');
-        msg_grant <= msg_arb_gnt when (arb_sel_d = MSG_SEL) else (others => '0');
-        err_grant <= err_arb_gnt when (arb_sel_d = ERR_SEL) else (others => '0');
+        req_grant <= req_arb_gnt when (REQ_ENABLE /= 0 and arb_sel_d = REQ_SEL) else (others => '0');
+        cpl_grant <= cpl_arb_gnt when (CPL_ENABLE /= 0 and arb_sel_d = CPL_SEL) else (others => '0');
+        msg_grant <= msg_arb_gnt when (MSG_ENABLE /= 0 and arb_sel_d = MSG_SEL) else (others => '0');
+        err_grant <= err_arb_gnt when (ERR_ENABLE /= 0 and arb_sel_d = ERR_SEL) else (others => '0');
         request   <= '1' when (arb_sel_d /= NON_SEL) else '0';
-        header    <= To_PCIe_TLP_HEADER(req_header) when (arb_sel_d = REQ_SEL) else
-                     To_PCIe_TLP_HEADER(cpl_header) when (arb_sel_d = CPL_SEL) else
-                     To_PCIe_TLP_HEADER(msg_header) when (arb_sel_d = MSG_SEL) else
-                     To_PCIe_TLP_HEADER(err_header);
+        header    <= To_PCIe_TLP_HEADER(req_header) when (REQ_ENABLE /= 0 and arb_sel_d = REQ_SEL) else
+                     To_PCIe_TLP_HEADER(cpl_header) when (CPL_ENABLE /= 0 and arb_sel_d = CPL_SEL) else
+                     To_PCIe_TLP_HEADER(msg_header) when (MSG_ENABLE /= 0 and arb_sel_d = MSG_SEL) else
+                     To_PCIe_TLP_HEADER(err_header) when (ERR_ENABLE /= 0 and arb_sel_d = ERR_SEL) else
+                     PCIe_TLP_HEAD_NULL;
     end generate;
     -------------------------------------------------------------------------------
     -- LATENCY /= 0 の場合は一度クロックで叩いてから出力
@@ -388,13 +397,13 @@ begin
         alias err_sel_vec : std_logic_vector(ERR_HVAL'range) is err_grant;
     begin
         for i in TLP_HSEL'range loop
-            if    (i >= REQ_HVAL'low and i <= REQ_HVAL'high) then
+            if    (REQ_ENABLE /= 0 and i >= REQ_HVAL'low and i <= REQ_HVAL'high) then
                 TLP_HSEL(i) <= req_sel_vec(i);
-            elsif (i >= CPL_HVAL'low and i <= CPL_HVAL'high) then
+            elsif (CPL_ENABLE /= 0 and i >= CPL_HVAL'low and i <= CPL_HVAL'high) then
                 TLP_HSEL(i) <= cpl_sel_vec(i);
-            elsif (i >= MSG_HVAL'low and i <= MSG_HVAL'high) then
+            elsif (MSG_ENABLE /= 0 and i >= MSG_HVAL'low and i <= MSG_HVAL'high) then
                 TLP_HSEL(i) <= msg_sel_vec(i);
-            elsif (i >= ERR_HVAL'low and i <= ERR_HVAL'high) then
+            elsif (ERR_ENABLE /= 0 and i >= ERR_HVAL'low and i <= ERR_HVAL'high) then
                 TLP_HSEL(i) <= err_sel_vec(i);
             else
                 TLP_HSEL(i) <= '0';
@@ -404,8 +413,8 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    REQ_HRDY <= req_grant when (TLP_HRDY = '1') else (REQ_HRDY'range => '0');
-    CPL_HRDY <= cpl_grant when (TLP_HRDY = '1') else (CPL_HRDY'range => '0');
-    MSG_HRDY <= msg_grant when (TLP_HRDY = '1') else (MSG_HRDY'range => '0');
-    ERR_HRDY <= err_grant when (TLP_HRDY = '1') else (ERR_HRDY'range => '0');
+    REQ_HRDY <= req_grant when (REQ_ENABLE /= 0 and TLP_HRDY = '1') else (REQ_HRDY'range => '0');
+    CPL_HRDY <= cpl_grant when (CPL_ENABLE /= 0 and TLP_HRDY = '1') else (CPL_HRDY'range => '0');
+    MSG_HRDY <= msg_grant when (MSG_ENABLE /= 0 and TLP_HRDY = '1') else (MSG_HRDY'range => '0');
+    ERR_HRDY <= err_grant when (ERR_ENABLE /= 0 and TLP_HRDY = '1') else (ERR_HRDY'range => '0');
 end RTL;
