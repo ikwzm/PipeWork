@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_tx_stream_interface.vhd
 --!     @brief   PCI-Express TLP(Transaction Layer Packet) Transmit Stream Interface
---!     @version 0.0.2
---!     @date    2013/2/19
+--!     @version 0.0.3
+--!     @date    2013/2/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -66,12 +66,6 @@ entity  PCIe_TLP_TX_STREAM_INTERFACE is
                           --! * 5 = 2**5=32bit
                           --! * 6 = 2**6=64bit
                           integer range 5 to 8 := 6;
-        SEL_MAX         : --! @brief TLP_HSEL/TLP_DSEL MAX NUMBER :
-                          --! TLP_HSEL/TLP_DSEL の最大値を指定する.
-                          integer := 0;
-        SEL_MIN         : --! @brief TLP_HSEL/TLP_DSEL MIN NUMBER :
-                          --! TLP_HSEL/TLP_DSEL の最小値を指定する.
-                          integer := 0;
         QUEUE_SIZE      : --! @brief QUEUE SIZE :
                           --! 一時的に格納できるワードの数を指定する.
                           --! * QUEUE_SIZE=0の場合は、自動的に最適な数を設定する.
@@ -108,14 +102,14 @@ entity  PCIe_TLP_TX_STREAM_INTERFACE is
     -- PCI-Express TLP Header Input Interface.
     -------------------------------------------------------------------------------
         TLP_HEAD        : in  PCIe_TLP_HEAD_TYPE;
-        TLP_HSEL        : in  std_logic_vector(SEL_MAX downto SEL_MIN);
+        TLP_HSEL        : in  std_logic_vector;
         TLP_HVAL        : in  std_logic;
         TLP_HRDY        : out std_logic;
     -------------------------------------------------------------------------------
     -- PCI-Express TLP Payload Data Input Interface.
     -------------------------------------------------------------------------------
         TLP_DATA        : in  std_logic_vector(2**(TLP_DATA_WIDTH)-1 downto 0);
-        TLP_DSEL        : out std_logic_vector(SEL_MAX downto SEL_MIN);
+        TLP_DSEL        : out std_logic_vector;
         TLP_DEND        : in  std_logic;
         TLP_DVAL        : in  std_logic;
         TLP_DRDY        : out std_logic

@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_rx_stream_interface.vhd
 --!     @brief   PCI-Express TLP(Transaction Layer Packet) Receive Stream Interface
---!     @version 0.0.1
---!     @date    2013/2/18
+--!     @version 0.0.3
+--!     @date    2013/2/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -65,19 +65,7 @@ entity  PCIe_TLP_RX_STREAM_INTERFACE is
                           --! TLP_DATAのビット幅を２のべき乗値で指定する.
                           --! * 5 = 2**5=32bit
                           --! * 6 = 2**6=64bit
-                          integer range 5 to 8 := 6;
-        SEL_MAX         : --! @brief TLP_HSEL/TLP_DSEL MAX NUMBER :
-                          --! TLP_HSEL/TLP_DSEL の最大値を指定する.
-                          integer := 0;
-        SEL_MIN         : --! @brief TLP_HSEL/TLP_DSEL MIN NUMBER :
-                          --! TLP_HSEL/TLP_DSEL の最小値を指定する.
-                          integer := 0;
-        DEC_MAX         : --! @brief RX_DEC/TLP_DEC MAX NUMBER :
-                          --! RX_DEC/TLP_HDEC の最大値を指定する.
-                          integer := 0;
-        DEC_MIN         : --! @brief RX_DEC/TLP_DEC MIN NUMBER :
-                          --! RX_DEC/TLP_HDEC の最小値を指定する.
-                          integer := 0
+                          integer range 5 to 8 := 6
     );
     port(
     -------------------------------------------------------------------------------
@@ -96,7 +84,7 @@ entity  PCIe_TLP_RX_STREAM_INTERFACE is
         RX_SOP          : in  std_logic;
         RX_EOP          : in  std_logic;
         RX_VC           : in  std_logic_vector(2 downto 0);
-        RX_DEC          : in  std_logic_vector(DEC_MAX downto DEC_MIN);
+        RX_BAR_HIT      : in  std_logic_vector;
         RX_DATA         : in  std_logic_vector(2**(RX_DATA_WIDTH  )-1 downto 0);
         RX_BEN          : in  std_logic_vector(2**(RX_DATA_WIDTH-3)-1 downto 0);
         RX_RDY          : out std_logic;
@@ -105,15 +93,15 @@ entity  PCIe_TLP_RX_STREAM_INTERFACE is
     -------------------------------------------------------------------------------
         TLP_HEAD        : out PCIe_TLP_HEAD_TYPE;
         TLP_HVAL        : out std_logic;
-        TLP_HDEC        : out std_logic_vector(DEC_MAX downto DEC_MIN);
         TLP_HHIT        : in  std_logic;
-        TLP_HSEL        : in  std_logic_vector(SEL_MAX downto SEL_MIN);
+        TLP_HSEL        : in  std_logic_vector;
         TLP_HRDY        : in  std_logic;
+        BAR_HIT         : out std_logic_vector;
     -------------------------------------------------------------------------------
     -- PCI-Express TLP Payload Data Output Interface.
     -------------------------------------------------------------------------------
         TLP_DATA        : out std_logic_vector(2**(TLP_DATA_WIDTH )-1 downto 0);
-        TLP_DSEL        : out std_logic_vector(SEL_MAX downto SEL_MIN);
+        TLP_DSEL        : out std_logic_vector;
         TLP_DVAL        : out std_logic;
         TLP_DEND        : out std_logic;
         TLP_DRDY        : in  std_logic
@@ -602,12 +590,12 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                TLP_HDEC <= (others => '0');
+                BAR_HIT <= (BAR_HIT'range => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
-                TLP_HDEC <= (others => '0');
+                BAR_HIT <= (BAR_HIT'range => '0');
             elsif (head_end = TRUE) then
-                TLP_HDEC <= RX_DEC;
+                BAR_HIT <= RX_BAR_HIT;
             end if;
         end if;
     end process;
@@ -616,10 +604,10 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                TLP_DSEL <= (others => '0');
+                TLP_DSEL <= (TLP_DSEL'range => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
-                TLP_DSEL <= (others => '0');
+                TLP_DSEL <= (TLP_DSEL'range => '0');
             elsif (head_valid = '1' and TLP_HRDY = '1') then
                 TLP_DSEL <= TLP_HSEL;
             end if;
