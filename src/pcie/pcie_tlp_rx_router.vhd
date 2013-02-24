@@ -179,7 +179,7 @@ architecture RTL of PCIe_TLP_RX_ROUTER is
     -- リクエストパケット用のデコード信号
     -------------------------------------------------------------------------------
     signal      req_header          : PCIe_TLP_REQ_HEAD_TYPE;
-    signal      req_hit             : boolean;
+    signal      req_hit             : std_logic;
     signal      req_hit_sel         : std_logic_vector(REQ_TABLE'range);
     signal      req_type_mem        : std_logic;
     signal      req_type_io         : std_logic;
@@ -192,14 +192,14 @@ architecture RTL of PCIe_TLP_RX_ROUTER is
     --  コンプレッションパケット用デコード信号
     -------------------------------------------------------------------------------
     signal      cpl_header          : PCIe_TLP_CPL_HEAD_TYPE;
-    signal      cpl_hit             : boolean;
+    signal      cpl_hit             : std_logic;
     signal      cpl_hit_sel         : std_logic_vector(CPL_TABLE'range);
     signal      cpl_valid           : std_logic_vector(CPL_HVAL'range);
     constant    CPL_VALID_ALL0      : std_logic_vector(CPL_HVAL'range) := (others => '0');
     -------------------------------------------------------------------------------
     -- メッセージパケット用デコード信号
     -------------------------------------------------------------------------------
-    signal      msg_hit             : boolean;
+    signal      msg_hit             : std_logic;
     signal      msg_hit_sel         : std_logic_vector(MSG_TABLE'range);
     signal      msg_valid           : std_logic_vector(MSG_HVAL'range);
     constant    MSG_VALID_ALL0      : std_logic_vector(MSG_HVAL'range) := (others => '0');
@@ -242,17 +242,17 @@ begin
                 case state is
                    when IDLE => 
                        if (TLP_HVAL = '1') then
-                           if    (req_hit = TRUE) then
+                           if    (req_hit = '1') then
                                state   <= S_REQ;
                                SET_VALID(req_valid, req_hit_sel);
                                CLR_VALID(cpl_valid);
                                CLR_VALID(msg_valid);
-                           elsif (cpl_hit = TRUE) then
+                           elsif (cpl_hit = '1') then
                                state   <= S_CPL;
                                CLR_VALID(req_valid);
                                SET_VALID(cpl_valid, cpl_hit_sel);
                                CLR_VALID(msg_valid);
-                           elsif (msg_hit = TRUE) then
+                           elsif (msg_hit = '1') then
                                state <= S_MSG;
                                CLR_VALID(req_valid);
                                CLR_VALID(cpl_valid);
@@ -335,7 +335,7 @@ begin
     -------------------------------------------------------------------------------
     -- TLP_HHIT    : 
     -------------------------------------------------------------------------------
-    TLP_HHIT <= '1' when (req_hit or cpl_hit or msg_hit ) else '0';
+    TLP_HHIT <= '1' when (req_hit = '1' or cpl_hit = '1' or msg_hit = '1') else '0';
     -------------------------------------------------------------------------------
     -- TLP_HSEL    : 
     -------------------------------------------------------------------------------
@@ -394,7 +394,7 @@ begin
         variable hit : boolean;
     begin
         sel := (others => '0');
-        if (TLP_HVAL = '1' and req_hit = TRUE) then
+        if (TLP_HVAL = '1' and req_hit = '1') then
             for i in REQ_TABLE'range loop
                 hit := FALSE;
                 for target_num in target_sel_hit'range loop
@@ -469,7 +469,11 @@ begin
         end if;
         cpl_header  <= cpl_head;
         cpl_hit_sel <= hit_sel;
-        cpl_hit     <= (hit_sel /= hit_sel_all0);
+        if (hit_sel /= hit_sel_all0) then
+            cpl_hit <= '1';
+        else
+            cpl_hit <= '0';
+        end if;
     end process;
     -------------------------------------------------------------------------------
     -- CPL_HVAL    :
@@ -492,15 +496,15 @@ begin
     -------------------------------------------------------------------------------
     -- msg_hit     :
     -------------------------------------------------------------------------------
-    msg_hit <= (MSG_ENABLE /= 0) and 
-               ((TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG0) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG1) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG2) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG3) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG4) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG5) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG6) or
-                (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG7));
+    msg_hit <= '1' when (MSG_ENABLE /= 0) and 
+                        ((TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG0) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG1) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG2) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG3) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG4) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG5) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG6) or
+                         (TLP_HEAD.PKT_TYPE = PCIe_TLP_PKT_TYPE_MSG7)) else '0';
     -------------------------------------------------------------------------------
     -- MSG_HVAL    :
     -------------------------------------------------------------------------------
