@@ -1,8 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pci_target_select.vhd
 --!     @brief   PCI Target Select Package.
+--!              PCI/PCI-Express において、アドレス、コマンドなどを解析して
+--!              ターゲットを選択するモジュール、
+--!              および解析に必要な情報を記述するディスクリプタのタイプ宣言を
+--!              まとめたパッケージ.
 --!     @version 0.0.1
---!     @date    2013/2/23
+--!     @date    2013/2/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -38,6 +42,9 @@ library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
 --! @brief   PCI Target Select Package.
+--!          PCI/PCI-Express において、アドレス、コマンドなどを解析して
+--!          ターゲットを選択するモジュール、および解析に必要な情報を記述する
+--!          ディスクリプタのタイプ宣言をまとめたパッケージ.
 -----------------------------------------------------------------------------------
 package  PCI_TARGET_SELECT is
     -------------------------------------------------------------------------------
@@ -62,62 +69,62 @@ package  PCI_TARGET_SELECT is
               PCI_DECODE_ADDR16               -- 16bit アドレスデコード
     );
     -------------------------------------------------------------------------------
-    --! @brief PCI のベースアドレス.
+    --! @brief PCI のベースアドレスの型.
     -------------------------------------------------------------------------------
     subtype   PCI_BASE_ADDR_TYPE  is std_logic_vector(63 downto 4);
     -------------------------------------------------------------------------------
-    --! @brief PCI のターゲット選択を指定するための構造体
+    --! @brief PCI のターゲット選択を指定するための構造体.
     -------------------------------------------------------------------------------
     type      PCI_TARGET_SELECT_ENTRY_TYPE is record
         ---------------------------------------------------------------------------
-        --! @brief PCIのアクセスタイプを指定する
+        --! @brief PCIのアクセスタイプ.
         ---------------------------------------------------------------------------
               AccessType   : PCI_ACCESS_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief デコードする/しないの指定
+        --! @brief デコードする/しないの指定.
         ---------------------------------------------------------------------------
               DecodeEnable : boolean;
         ---------------------------------------------------------------------------
-        --! @brief 拡張64BIT転送する/しないの指定
+        --! @brief 拡張64BIT転送する/しないの指定.
         ---------------------------------------------------------------------------
               Ex64Enable   : boolean;
         ---------------------------------------------------------------------------
-        --! @brief プリフェッチする/しないの指定
+        --! @brief プリフェッチする/しないの指定.
         ---------------------------------------------------------------------------
               Prefechable  : boolean;
         ---------------------------------------------------------------------------
-        --! @brief ベースアドレスレジスタのアドレスデコード長
+        --! @brief ベースアドレスレジスタのアドレスデコード長.
         ---------------------------------------------------------------------------
               DecodeType   : PCI_DECODE_TYPE;
         ---------------------------------------------------------------------------
         --! @brief ベースアドレスレジスタの値
-        ---------------------------------------------------------------------------
+        --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         --! * AccessType の種類によって働きが異なる.
         --! * AccessType が PCI_IO_ACCESS または PCI_MEM_ACCESS の場合、
         --!   ベースアドレスレジスタの値になる.
-        --! * AccessType が PCI_CONFIG_TYPE0_ACCESS の場合、BaseAddr(15 downto 8)が
-        --!   対応するファンクション番号を示す. BaseAddr(8)はファンクション番号0 〜
-        --!   BaseAddr(15)はファンクション番号7.
+        --! * AccessType が PCI_CONFIG_TYPE0_ACCESS の場合、
+        --!   BaseAddr(15 downto 8)が対応するファンクション番号を示す.
+        --!   BaseAddr(8)はファンクション番号0 〜 BaseAddr(15)はファンクション番号7.
         --! * AccessType が PCI_TO_PCI_CONFIG_TYPE0_STREAM または 
         --!   PCI_TO_PCI_CONFIG_TYPE1_STREAM の場合、
         --!   BaseAddr(15 downto  8) が２次バス番号、
         --!   BaseAddr(23 downto 16) が従属バス番号となる.
-        --! * AccessType が PCI_TO_PCI_IO_STREAM  の場合、BaseAddr(31 downto 12)が
-        --!   開始アドレスになる.
-        --! * AccessType が PCI_TO_PCI_MEM_STREAM の場合、BaseAddr(63 downto 20)が
-        --!   開始アドレスになる.
+        --! * AccessType が PCI_TO_PCI_IO_STREAM  の場合、
+        --!   BaseAddr(31 downto 12)が開始アドレスになる.
+        --! * AccessType が PCI_TO_PCI_MEM_STREAM の場合、
+        --!   BaseAddr(63 downto 20)が開始アドレスになる.
         ---------------------------------------------------------------------------
               BaseAddr     : PCI_BASE_ADDR_TYPE;
         ---------------------------------------------------------------------------
         --! @brief アドレスデコードの際に必要な情報
-        ---------------------------------------------------------------------------
+        --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         --! * AccessType の種類によって働きが異なる.
         --! * AccessType が PCI_IO_ACCESS または PCI_MEM_ACCESS の場合、
         --!   アドレス比較/マッピング時使うマスク値になる. 
-        --! * AccessType が PCI_TO_PCI_IO_STREAM  の場合、Mask(31 downto 12)が
-        --!   リミットアドレスになる.
-        --! * AccessType が PCI_TO_PCI_MEM_STREAM の場合、Mask(63 downto 20)が
-        --!   リミットアドレスになる.
+        --! * AccessType が PCI_TO_PCI_IO_STREAM  の場合、
+        --!   Mask(31 downto 12)がリミットアドレスになる.
+        --! * AccessType が PCI_TO_PCI_MEM_STREAM の場合、
+        --!   Mask(63 downto 20)がリミットアドレスになる.
         ---------------------------------------------------------------------------
               Mask         : PCI_BASE_ADDR_TYPE;
         ---------------------------------------------------------------------------
@@ -189,7 +196,7 @@ package  PCI_TARGET_SELECT is
             T_MEM       : in  std_logic;       
             T_CFG0      : in  std_logic;       
             T_CFG1      : in  std_logic;       
-            HIT         : out boolean;
+            HIT         : out std_logic;
             ENA64       : out std_logic;       
             HIT_SEL     : out std_logic_vector       (TARGET_MIN to TARGET_MAX);
             TARGET_SEL  : in  PCI_TARGET_SELECT_TABLE(TARGET_MIN to TARGET_MAX);
@@ -208,13 +215,13 @@ library PipeWork;
 use     PipeWork.PCI_TARGET_SELECT.all;
 entity  PCI_TARGET_SELECT_ENTRY_CHECKER is
     generic (
-        USE_BAR_HIT : integer := 0;
-        PCI_TO_PCI  : integer := 0;
-        PCI_EXPRESS : integer := 0
+        USE_BAR_HIT : integer := 0;                     --! 1=T_BAR_HITを使う.0=使わない.
+        PCI_TO_PCI  : integer := 0;                     --! 1=PCI-PCIブリッジ機構を使う.
+        PCI_EXPRESS : integer := 0                      --! 1=PCI-Expressモード.0=PCIモード.
     );
     port (
     -------------------------------------------------------------------------------
-    -- 入力情報
+    -- PCI/PCI-Expressからの入力情報
     -------------------------------------------------------------------------------
         T_BAR_HIT   : in  std_logic_vector;             --! ベースアドレスレジスタヒット信号
         T_ADDR      : in  std_logic_vector;             --! アドレス
@@ -224,13 +231,13 @@ entity  PCI_TARGET_SELECT_ENTRY_CHECKER is
         T_CFG0      : in  std_logic;                    --! Type0 Configuration Access
         T_CFG1      : in  std_logic;                    --! Type1 Configuration Access
     -------------------------------------------------------------------------------
-    -- デコード結果出力
+    -- 解析結果出力
     -------------------------------------------------------------------------------
         HIT         : out std_logic;                    --! デコードヒット信号
         ENA64       : out std_logic;                    --! 拡張64bit転送許可信号
         LEVEL       : out integer range 0 to 1;         --! デコードレベル
     -------------------------------------------------------------------------------
-    -- デコーダの設定入力
+    -- 設定入力
     -------------------------------------------------------------------------------
         ENTRY       : in  PCI_TARGET_SELECT_ENTRY_TYPE; --! ターゲット選択記述.
         MEM_ENA     : in  std_logic;                    --! メモリアクセス許可信号
@@ -260,11 +267,14 @@ begin
     --!   MEM_ENA をチェックして cycle_hit、address_hit、decode_enableのデコードヒ
     --!   ット信号、および ex64_enable、decode_levelのデコード属性信号を生成する.
     -------------------------------------------------------------------------------
-    DEC_GEN: process (ENTRY, IO_ENA, MEM_ENA, PRIMARY,
-                      T_ADDR, T_BAR_HIT, T_AD64, T_IO, T_MEM, T_CFG0, T_CFG1)
+    DECODE: process (ENTRY, IO_ENA, MEM_ENA, PRIMARY,
+                     T_ADDR, T_BAR_HIT, T_AD64, T_IO, T_MEM, T_CFG0, T_CFG1)
         ---------------------------------------------------------------------------
         -- このプロセスで使用されるテンポラリ変数の定義
         ---------------------------------------------------------------------------
+        variable    u_addr        : unsigned(T_ADDR'range);
+        variable    u_base        : unsigned(PCI_BASE_ADDR_TYPE'range);
+        variable    u_mask        : unsigned(PCI_BASE_ADDR_TYPE'range);
         variable    hit           : boolean;
         variable    bus_num       : unsigned(7 downto 0);
         variable    sec_bus_num   : unsigned(7 downto 0);
@@ -320,7 +330,7 @@ begin
         is 
             variable    func      : unsigned(2 downto 0);
         begin
-            if (PCI_EXPRESS > 0) then
+            if (PCI_EXPRESS /= 0) then
                 func := unsigned(ADDR(18 downto 16));
             else
                 func := unsigned(ADDR(10 downto  8));
@@ -377,12 +387,14 @@ begin
         elsif (PCI_TO_PCI =  1 ) and
               (PRIMARY    = '1') and
               (ENTRY.AccessType = PCI_TO_PCI_CONFIG_TYPE0_STREAM) then
-            if (PCI_EXPRESS > 0) then
-                bus_num   := unsigned(T_ADDR(31 downto 24));
+            u_addr := to_01(unsigned(T_ADDR        ),'0');
+            u_base := to_01(unsigned(ENTRY.BaseAddr),'0');
+            if (PCI_EXPRESS /= 0) then
+                bus_num   := u_addr(31 downto 24);
             else
-                bus_num   := unsigned(T_ADDR(23 downto 16));
+                bus_num   := u_addr(23 downto 16);
             end if;
-            sec_bus_num   := unsigned(ENTRY.BaseAddr(15 downto  8));
+            sec_bus_num   := u_base(15 downto  8);
             address_hit   <= (bus_num = sec_bus_num);
             decode_enable <= ENTRY.DecodeEnable;
             decode_level  <= 1;
@@ -397,13 +409,15 @@ begin
         elsif (PCI_TO_PCI =  1 ) and
               (PRIMARY    = '1') and
               (ENTRY.AccessType = PCI_TO_PCI_CONFIG_TYPE1_STREAM) then
-            if (PCI_EXPRESS > 0) then
-                bus_num   := unsigned(T_ADDR(31 downto 24));
+            u_addr := to_01(unsigned(T_ADDR        ),'0');
+            u_base := to_01(unsigned(ENTRY.BaseAddr),'0');
+            if (PCI_EXPRESS /= 0) then
+                bus_num   := u_addr(31 downto 24);
             else
-                bus_num   := unsigned(T_ADDR(23 downto 16));
+                bus_num   := u_addr(23 downto 16);
             end if;
-            sec_bus_num   := unsigned(ENTRY.BaseAddr(15 downto  8));
-            sub_bus_num   := unsigned(ENTRY.BaseAddr(23 downto 16));
+            sec_bus_num   := u_base(15 downto  8);
+            sub_bus_num   := u_base(23 downto 16);
             address_hit   <= (bus_num >  sec_bus_num) and
                              (bus_num <= sub_bus_num);
             decode_enable <= ENTRY.DecodeEnable;
@@ -417,8 +431,11 @@ begin
         ---------------------------------------------------------------------------
         elsif (PCI_TO_PCI = 1) and
               (ENTRY.AccessType = PCI_TO_PCI_IO_STREAM) then
-            hit := (unsigned(T_ADDR(31 downto 12)) >= unsigned(ENTRY.BaseAddr(31 downto 12))) and
-                   (unsigned(T_ADDR(31 downto 12)) <= unsigned(ENTRY.Mask    (31 downto 12))) ;
+            u_addr := to_01(unsigned(T_ADDR        ),'0');
+            u_base := to_01(unsigned(ENTRY.BaseAddr),'0');
+            u_mask := to_01(unsigned(ENTRY.Mask    ),'0');
+            hit := (u_addr(31 downto 12) >= u_base(31 downto 12)) and
+                   (u_addr(31 downto 12) <= u_mask(31 downto 12)) ;
             address_hit   <= (PRIMARY = '1' and hit = TRUE ) or
                              (PRIMARY = '0' and hit = FALSE) ;
             decode_enable <= ENTRY.DecodeEnable;
@@ -433,13 +450,16 @@ begin
         elsif (PCI_TO_PCI = 1) and
               (ENTRY.AccessType = PCI_TO_PCI_MEM_STREAM) and
               (ENTRY.DecodeType = PCI_DECODE_ADDR64    ) then
+            u_addr := to_01(unsigned(T_ADDR        ),'0');
+            u_base := to_01(unsigned(ENTRY.BaseAddr),'0');
+            u_mask := to_01(unsigned(ENTRY.Mask    ),'0');
             if (T_AD64 = '1' and T_ADDR'high >= 32) then
-                hit := (unsigned(T_ADDR(63 downto 20)) >= unsigned(ENTRY.BaseAddr(63 downto 20))) and
-                       (unsigned(T_ADDR(63 downto 20)) <= unsigned(ENTRY.Mask    (63 downto 20)));
+                hit := (u_addr(63 downto 20) >= u_base(63 downto 20)) and
+                       (u_addr(63 downto 20) <= u_mask(63 downto 20));
             else
-                hit := (unsigned(ENTRY.Mask(63 downto 32)) = 0) and
-                       (unsigned(T_ADDR(31 downto 20)) >= unsigned(ENTRY.BaseAddr(31 downto 20))) and
-                       (unsigned(T_ADDR(31 downto 20)) <= unsigned(ENTRY.Mask    (31 downto 20)));
+                hit := (u_mask(63 downto 32) = 0) and
+                       (u_addr(31 downto 20) >= u_base(31 downto 20)) and
+                       (u_addr(31 downto 20) <= u_mask(31 downto 20));
             end if;
             address_hit   <= (PRIMARY = '1' and hit = TRUE ) or
                              (PRIMARY = '0' and hit = FALSE) ;
@@ -457,13 +477,16 @@ begin
         elsif (PCI_TO_PCI = 1) and
               (ENTRY.AccessType  = PCI_TO_PCI_MEM_STREAM) and
               (ENTRY.DecodeType /= PCI_DECODE_ADDR64    ) then
+            u_addr := to_01(unsigned(T_ADDR        ),'0');
+            u_base := to_01(unsigned(ENTRY.BaseAddr),'0');
+            u_mask := to_01(unsigned(ENTRY.Mask    ),'0');
             if (T_AD64 = '1' and T_ADDR'high >= 32) then
-                hit := (unsigned(T_ADDR(T_ADDR'high downto 32)) = 0) and
-                       (unsigned(T_ADDR(31 downto 20)) >= unsigned(ENTRY.BaseAddr(31 downto 20))) and
-                       (unsigned(T_ADDR(31 downto 20)) <= unsigned(ENTRY.Mask    (31 downto 20)));
+                hit := (u_addr(u_addr'high downto 32) = 0) and
+                       (u_addr(31 downto 20) >= u_base(31 downto 20)) and
+                       (u_addr(31 downto 20) <= u_mask(31 downto 20));
             else
-                hit := (unsigned(T_ADDR(31 downto 20)) >= unsigned(ENTRY.BaseAddr(31 downto 20))) and
-                       (unsigned(T_ADDR(31 downto 20)) <= unsigned(ENTRY.Mask    (31 downto 20)));
+                hit := (u_addr(31 downto 20) >= u_base(31 downto 20)) and
+                       (u_addr(31 downto 20) <= u_mask(31 downto 20));
             end if;
             address_hit   <= (PRIMARY = '1' and hit = TRUE ) or
                              (PRIMARY = '0' and hit = FALSE) ;
@@ -500,17 +523,17 @@ library PipeWork;
 use     PipeWork.PCI_TARGET_SELECT.all;
 entity  PCI_TARGET_SELECTER is
     generic (
-        ENABLE      : integer := 1;
-        FORCE       : integer := 0;
-        USE_BAR_HIT : integer := 0;
-        PCI_TO_PCI  : integer := 0;
-        PCI_EXPRESS : integer := 0;
-        TARGET_MIN  : integer := 0;
-        TARGET_MAX  : integer := 0
+        ENABLE      : integer := 1;                     --! 1=このモジュールを有効化.
+        FORCE       : integer := 0;                     --! 1=アドレス解析をせずにアクセス種だけ決定.
+        USE_BAR_HIT : integer := 0;                     --! 1=T_BAR_HITを使う.0=使わない.
+        PCI_TO_PCI  : integer := 0;                     --! 1=PCI-PCIブリッジ機構を使う.
+        PCI_EXPRESS : integer := 0;                     --! 1=PCI-Expressモード.0=PCIモード.
+        TARGET_MIN  : integer := 0;                     --! TARGET_SELの最小引数値.
+        TARGET_MAX  : integer := 0                      --! TARGET_SELの最大引数値.
     );
     port (
     -------------------------------------------------------------------------------
-    -- 入力情報
+    -- PCI/PCI-Expressからの入力情報
     -------------------------------------------------------------------------------
         T_BAR_HIT   : in  std_logic_vector;             --! ベースアドレスレジスタヒット信号
         T_ADDR      : in  std_logic_vector;             --! アドレス
@@ -520,13 +543,13 @@ entity  PCI_TARGET_SELECTER is
         T_CFG0      : in  std_logic;                    --! Type0 Configuration Access
         T_CFG1      : in  std_logic;                    --! Type1 Configuration Access
     -------------------------------------------------------------------------------
-    -- デコード結果出力
+    -- 解析結果出力
     -------------------------------------------------------------------------------
-        HIT         : out boolean;
+        HIT         : out std_logic;                    --! デコードヒット信号
         ENA64       : out std_logic;                    --! 拡張64bit転送許可信号
         HIT_SEL     : out std_logic_vector       (TARGET_MIN to TARGET_MAX);
     -------------------------------------------------------------------------------
-    -- デコーダの設定入力
+    -- 設定入力
     -------------------------------------------------------------------------------
         TARGET_SEL  : in  PCI_TARGET_SELECT_TABLE(TARGET_MIN to TARGET_MAX);
         MEM_ENA     : in  std_logic;                    --! メモリアクセス許可信号
@@ -548,16 +571,16 @@ architecture RTL of PCI_TARGET_SELECTER is
     constant    DECODE_ALL0      : std_logic_vector(TARGET_SEL'range) := (others => '0');
 begin
     -------------------------------------------------------------------------------
-    -- decode_hit   :
-    -- decode_level :
-    -- decode_ena64 :
+    -- decode_hit   : TARGET_SELの各エントリ毎のHIT信号を配列にしたもの.
+    -- decode_level : TARGET_SELの各エントリ毎のLEVEL信号を配列にしたもの.
+    -- decode_ena64 : TARGET_SELの各エントリ毎のENA64信号を配列にしたもの.
     -------------------------------------------------------------------------------
     ENTRY: for i in TARGET_SEL'range generate
         CHECKER: PCI_TARGET_SELECT_ENTRY_CHECKER    -- 
             generic map (                           -- 
-                USE_BAR_HIT => USE_BAR_HIT,         -- 
-                PCI_TO_PCI  => PCI_TO_PCI ,         -- 
-                PCI_EXPRESS => PCI_EXPRESS          -- 
+                USE_BAR_HIT => USE_BAR_HIT,         -- T_BAR_HITを使うか否かを指定.
+                PCI_TO_PCI  => PCI_TO_PCI ,         -- PCI-PCIブリッジ機構を使うか否かを指定.
+                PCI_EXPRESS => PCI_EXPRESS          -- PCI-Expressモード/PCIモードを指定.
             )                                       -- 
             port map (                              -- 
                 T_BAR_HIT   => T_BAR_HIT,           -- In  : ベースアドレスレジスタヒット信号
@@ -577,8 +600,8 @@ begin
             );
     end generate;
     -------------------------------------------------------------------------------
-    -- HIT     : 上記のデコード回路で生成された TARGET_SEL ごとの
-    --           decode_hit信号を集計して、どれかにヒットすれば'1'になる信号.
+    -- HIT          : 上記のデコード回路で生成された TARGET_SEL ごとの decode_hit
+    --                信号を集計して、どれかにヒットすれば'1'になる.
     -------------------------------------------------------------------------------
     process (decode_hit, PRIMARY, TARGET_SEL, T_IO, T_MEM, T_CFG0, T_CFG1) 
         variable mem_hit_mask : std_logic_vector(TARGET_SEL'range);
@@ -590,21 +613,29 @@ begin
         -- そもそも ENABLE=0 の場合は HIT 信号がアサートされることはない.
         ---------------------------------------------------------------------------
         if    (ENABLE = 0) then
-            HIT <= FALSE;
+            HIT <= '0';
         ---------------------------------------------------------------------------
         -- TARGET_SELに指定されたアクセス条件に関わらず、常にリクエストを受け付ける
         -- 場合(FORCE /= 0)は、各アクセス信号のいずれかがアサートされて入れば、
         -- HIT 信号をアサートする.
         ---------------------------------------------------------------------------
         elsif (FORCE /= 0) then
-            HIT <= (T_MEM = '1' or T_IO = '1' or T_CFG0 = '1' or T_CFG1 = '1');
+            if (T_MEM = '1' or T_IO = '1' or T_CFG0 = '1' or T_CFG1 = '1') then
+                HIT <= '1';
+            else
+                HIT <= '0';
+            end if;
         ---------------------------------------------------------------------------
         -- PCI-PCIバスブリッジでない場合(PCI_TO_PCI=0)または、PCI-PCIバスブリッジで
         -- も１次バス側(PRIMARY=1)の場合は、単純に decode_hit配列のどれかが'1'に
         -- なっていれば、HIT 信号をアサートする.
         ---------------------------------------------------------------------------
         elsif (PCI_TO_PCI = 0 or PRIMARY = '1') then
-            HIT <= (decode_hit /= none_hit);
+            if (decode_hit /= none_hit) then
+                HIT <= '1';
+            else
+                HIT <= '0';
+            end if;
         ---------------------------------------------------------------------------
         -- PCI-PCIバスブリッジにおいて、２次バス側(PRIMARY=0)の場合は、アップストリ
         -- ームメモリトランザクション(２次バス側から１次バス側へのメモリトランザク
@@ -622,11 +653,17 @@ begin
             end loop;
             mem_hit := decode_hit and     mem_hit_mask;
             oth_hit := decode_hit and not mem_hit_mask;
-            HIT <= ((mem_hit = mem_hit_mask) or (oth_hit /= none_hit));
+            if ((mem_hit = mem_hit_mask) or (oth_hit /= none_hit)) then
+                HIT <= '1';
+            else
+                HIT <= '0';
+            end if;
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- HIT_SEL :  
+    -- decode_sel   : 上記のデコード回路で生成された TARGET_SEL ごとの decode_hit
+    --                信号、decode_level信号を集計して、最も適する TARGET_SEL の
+    --                エントリのみ'1'をセットし、それ以外は'0'クリアした配列.
     -------------------------------------------------------------------------------
     process (decode_hit, decode_level)
         type     HIT_VECTOR is array (integer range <>) of boolean;
@@ -686,9 +723,12 @@ begin
             decode_sel <= sel;
         end if;
     end process;
+    -------------------------------------------------------------------------------
+    -- HIT_SEL      : decode_sel信号の結果を出力.
+    -------------------------------------------------------------------------------
     HIT_SEL <= decode_sel;
     -------------------------------------------------------------------------------
-    --
+    -- ENA64        : 
     -------------------------------------------------------------------------------
     ENA64   <= '1' when ((decode_sel and decode_ena64) /= DECODE_ALL0) else '0';
 end RTL;
