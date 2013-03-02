@@ -2,7 +2,7 @@
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
 --!     @version 1.3.1
---!     @date    2013/2/13
+--!     @date    2013/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -133,7 +133,7 @@ entity  AXI4_REGISTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- Register Read Interface.
     -------------------------------------------------------------------------------
-        REGS_REQ        : --! @breif レジスタアクセス要求信号.
+        REGS_REQ        : --! @brief レジスタアクセス要求信号.
                           --! レジスタアクセス要求時にアサートされる.
                           --! REGS_ACK 信号がアサートされるまで、この信号はアサー
                           --! トされたまま.

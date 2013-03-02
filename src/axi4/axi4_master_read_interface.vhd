@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.3.1
+--!     @date    2013/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

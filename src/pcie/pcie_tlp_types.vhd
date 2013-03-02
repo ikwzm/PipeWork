@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_types.vhd
 --!     @brief   PCI-Express TLP(Transaction Layer Packet) Type Package.
---!     @version 0.0.1
---!     @date    2013/2/18
+--!     @version 0.0.2
+--!     @date    2013/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -43,11 +43,11 @@ use     ieee.std_logic_1164.all;
 package PCIe_TLP_TYPES is
 
     -------------------------------------------------------------------------------
-    --! @brief PCIe_TLP_HEAD_TYPE.PKT_TYPE のタイプ
+    --! @brief PCIe_TLP_HEAD_TYPE.PKT_TYPE のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_PKT_TYPE         is std_logic_vector(4 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe_TLP_HEAD_TYPE.PKT_TYPE の値
+    --! @brief PCIe_TLP_HEAD_TYPE.PKT_TYPE の値. 
     -------------------------------------------------------------------------------
     constant PCIe_TLP_PKT_TYPE_NULL     : PCIe_TLP_PKT_TYPE := "00000";
     constant PCIe_TLP_PKT_TYPE_MEM      : PCIe_TLP_PKT_TYPE := "00000";
@@ -66,11 +66,11 @@ package PCIe_TLP_TYPES is
     constant PCIe_TLP_PKT_TYPE_CPL      : PCIe_TLP_PKT_TYPE := "01010";
     constant PCIe_TLP_PKT_TYPE_CPLLK    : PCIe_TLP_PKT_TYPE := "01011";
     -------------------------------------------------------------------------------
-    --! @brief PCIe_TLP_CPL_HEAD_TYPE.STATUS のタイプ
+    --! @brief PCIe_TLP_CPL_HEAD_TYPE.STATUS のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_CPL_STATUS_TYPE  is std_logic_vector(2 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe_TLP_CPL_HEAD_TYPE.STATUS の値
+    --! @brief PCIe_TLP_CPL_HEAD_TYPE.STATUS の値. 
     -------------------------------------------------------------------------------
     constant PCIe_TLP_CPL_STATUS_NULL   : PCIe_TLP_CPL_STATUS_TYPE := "000";
     constant PCIe_TLP_CPL_SUCCESS       : PCIe_TLP_CPL_STATUS_TYPE := "000";
@@ -78,39 +78,39 @@ package PCIe_TLP_TYPES is
     constant PCIe_TLP_CPL_CFG_RETRY     : PCIe_TLP_CPL_STATUS_TYPE := "010";
     constant PCIe_TLP_CPL_ABORT         : PCIe_TLP_CPL_STATUS_TYPE := "100";
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用するアドレスのタイプ
+    --! @brief PCIe TLP で使用するアドレスのタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_ADDR_TYPE        is std_logic_vector(63 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用するサイズのタイプ バイト単位かつ最大4Kバイト
+    --! @brief PCIe TLP で使用するサイズのタイプ バイト単位かつ最大4Kバイト. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_SIZE_TYPE        is std_logic_vector(12 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用する Requester ID および Completer ID のタイプ
+    --! @brief PCIe TLP で使用する Requester ID および Completer ID のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_ID_TYPE          is std_logic_vector(15 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用する Tag のタイプ
+    --! @brief PCIe TLP で使用する Tag のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_TAG_TYPE         is std_logic_vector( 7 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用する TC(Transaction Class) のタイプ
+    --! @brief PCIe TLP で使用する TC(Transaction Class) のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_TC_TYPE          is std_logic_vector( 2 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用する Attribute のタイプ
+    --! @brief PCIe TLP で使用する Attribute のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_ATTR_TYPE        is std_logic_vector( 1 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP で使用する VC(Virtual Channel) のタイプ
+    --! @brief PCIe TLP で使用する VC(Virtual Channel) のタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_VC_TYPE          is std_logic_vector( 2 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP リクエストパケットで使用するアドレスのタイプ
+    --! @brief PCIe TLP リクエストパケットで使用するアドレスのタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_REQ_ADDR_TYPE    is std_logic_vector(63 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief PCIE TLP リクエストパケットのトランザクションタイプ
+    --! @brief PCIE TLP リクエストパケットのトランザクションタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_REQ_TRAN_TYPE    is std_logic_vector( 1 downto 0);
     constant PCIe_TLP_REQ_TRAN_NULL     : PCIe_TLP_REQ_TRAN_TYPE := "00";
@@ -118,30 +118,30 @@ package PCIe_TLP_TYPES is
     constant PCIe_TLP_REQ_TRAN_WRITE    : PCIe_TLP_REQ_TRAN_TYPE := "10";
     constant PCIe_TLP_REQ_TRAN_FLUSH    : PCIe_TLP_REQ_TRAN_TYPE := "11";
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP コンプレッションパケットで使用するアドレスのタイプ
+    --! @brief PCIe TLP コンプレッションパケットで使用するアドレスのタイプ. 
     -------------------------------------------------------------------------------
     subtype  PCIe_TLP_CPL_ADDR_TYPE    is std_logic_vector( 6 downto 0);
     -------------------------------------------------------------------------------
-    --! @brief TLP(Transaction Layer Packet)のヘッダー部を記述した構造体
+    --! @brief TLP(Transaction Layer Packet)のヘッダー部を記述した構造体. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     --!   後述の PCIe_TLP_REQ_HEAD_TYPE(リクエストパケットのヘッダー部を記述した構
     --!   造体)、PCIe_TLP_CPL_HEAD_TYPE(コンプレッションパケットのヘッダー部を記述
     --!   した構造体)、PCIe_TLP_MSG_HEAD_TYPE(メッセージパケットのヘッダー部を記述
-    --!   した構造体)を単一の構造体で統一的に扱いたい時に使用する。
+    --!   した構造体)を単一の構造体で統一的に扱いたい時に使用する. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_HEAD_TYPE is record
         ---------------------------------------------------------------------------
         --! @brief Header Length (Fmt[0]) ヘッダーの長さを示す.
         --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        --! * '1' = ヘッダーは4DW(16バイト,128bit)長
-        --! * '0' = ヘッダーは3DW(12バイト,96bit)長
+        --! * '1' = ヘッダーは4DW(16バイト,128bit)長. 
+        --! * '0' = ヘッダーは3DW(12バイト,96bit)長. 
         ---------------------------------------------------------------------------
         HEAD_LEN        : std_logic;
         ---------------------------------------------------------------------------
         --! @brief With Data (Fmt[1]) データを伴うかどうかを示す.
         --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        --! * '1' = データあり
-        --! * '0' = データなし
+        --! * '1' = データあり. 
+        --! * '0' = データなし. 
         ---------------------------------------------------------------------------
         WITH_DATA       : std_logic;
         ---------------------------------------------------------------------------
@@ -149,45 +149,45 @@ package PCIe_TLP_TYPES is
         ---------------------------------------------------------------------------
         PKT_TYPE        : PCIe_TLP_PKT_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Traffic Class
+        --! @brief Traffic Class. 
         ---------------------------------------------------------------------------
         TC              : PCIe_TLP_TC_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief TLP Digest Field Present
+        --! @brief TLP Digest Field Present. 
         ---------------------------------------------------------------------------
         TD              : std_logic;
         ---------------------------------------------------------------------------
-        --! @brief Poisoned Data
+        --! @brief Poisoned Data. 
         ---------------------------------------------------------------------------
         EP              : std_logic;
         ---------------------------------------------------------------------------
-        --! @brief Attributes
+        --! @brief Attributes. 
         ---------------------------------------------------------------------------
         ATTR            : PCIe_TLP_ATTR_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Data Length(ワード(32bit)単位)
+        --! @brief Data Length(ワード(32bit)単位). 
         --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        --! * 00-0000-0001 = 1DW
-        --! * 00-0000-0010 = 2DW
-        --! * 11-1111-1111 = 1023DW
-        --! * 00-0000-0000 = 1024DW
+        --! * 00-0000-0001 = 1DW. 
+        --! * 00-0000-0010 = 2DW. 
+        --! * 11-1111-1111 = 1023DW. 
+        --! * 00-0000-0000 = 1024DW. 
         ---------------------------------------------------------------------------
         DATA_LEN        : std_logic_vector( 9 downto 0);
         ---------------------------------------------------------------------------
-        --! @brief ヘッダの2DW目に格納されているパケットの種類に依存した各種情報
+        --! @brief ヘッダの2DW目に格納されているパケットの種類に依存した各種情報. 
         ---------------------------------------------------------------------------
         INFO            : std_logic_vector(31 downto 0);
         ---------------------------------------------------------------------------
         --! @brief アドレス情報またはヘッダの3DW〜4DW目に格納されているパケットの
-        --!        種類に依存した各種情報
+        --!        種類に依存した各種情報. 
         ---------------------------------------------------------------------------
         ADDR            : std_logic_vector(63 downto 0);
         ---------------------------------------------------------------------------
-        --! @brief データワード位置
+        --! @brief データワード位置. 
         --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         --! この情報はTLP(Transaction Layer Packet)のヘッダに含まれるものではなく、
         --! 送信パケット生成時において、送信するペイロードデータの最初のワードの開
-        --! 始位置を指示するためのもの.
+        --! 始位置を指示するためのもの.    
         --! Mem Read のコンプレッションパケットの場合は、ヘッダにアドレスを含むので
         --! このフィールドは意味無いが、IO Read/Write, Config Read/Write のコンプレ
         --! ッションパケットの場合は、通常のヘッダ内のアドレスは０クリアされてしま
@@ -196,11 +196,11 @@ package PCIe_TLP_TYPES is
         WORD_POS        : std_logic_vector( 6 downto 2);
     end record;
     -------------------------------------------------------------------------------
-    --! @brief リクエストパケットのヘッダー部を記述した構造体
+    --! @brief リクエストパケットのヘッダー部を記述した構造体. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_REQ_HEAD_TYPE is record
         ---------------------------------------------------------------------------
-        -- PCIe_TLP_HEAD_TYPE と共通部 : 詳細は PCIe_TLP_HEAD_TYPE を参照
+        -- PCIe_TLP_HEAD_TYPE と共通部 : 詳細は PCIe_TLP_HEAD_TYPE を参照. 
         ---------------------------------------------------------------------------
         HEAD_LEN        : std_logic;
         PKT_TYPE        : PCIe_TLP_PKT_TYPE;
@@ -209,32 +209,32 @@ package PCIe_TLP_TYPES is
         EP              : std_logic;
         ATTR            : PCIe_TLP_ATTR_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Requester ID
+        --! @brief Requester ID. 
         ---------------------------------------------------------------------------
         REQ_ID          : PCIe_TLP_ID_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Tag
+        --! @brief Tag. 
         ---------------------------------------------------------------------------
         TAG             : PCIe_TLP_TAG_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Transaction Request Address
+        --! @brief Transaction Request Address. 
         ---------------------------------------------------------------------------
         ADDR            : PCIe_TLP_REQ_ADDR_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Transaction Request Byte Size
+        --! @brief Transaction Request Byte Size. 
         ---------------------------------------------------------------------------
         SIZE            : PCIe_TLP_SIZE_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Transaction Request Type
+        --! @brief Transaction Request Type. 
         ---------------------------------------------------------------------------
         TRAN_TYPE       : PCIe_TLP_REQ_TRAN_TYPE;
     end record;
     -------------------------------------------------------------------------------
-    --! @brief コンプレッションパケットのヘッダー部を記述した構造体
+    --! @brief コンプレッションパケットのヘッダー部を記述した構造体. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_CPL_HEAD_TYPE is record
         ---------------------------------------------------------------------------
-        -- PCIe_TLP_HEAD_TYPE と共通部: 詳細は PCIe_TLP_HEAD_TYPE を参照
+        -- PCIe_TLP_HEAD_TYPE と共通部: 詳細は PCIe_TLP_HEAD_TYPE を参照. 
         ---------------------------------------------------------------------------
         WITH_DATA       : std_logic;
         TC              : PCIe_TLP_TC_TYPE;
@@ -242,60 +242,60 @@ package PCIe_TLP_TYPES is
         EP              : std_logic;
         ATTR            : PCIe_TLP_ATTR_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief LOCK
+        --! @brief LOCK. 
         ---------------------------------------------------------------------------
         LOCK            : std_logic;
         ---------------------------------------------------------------------------
-        --! @brief Completer ID
+        --! @brief Completer ID. 
         ---------------------------------------------------------------------------
         CPL_ID          : PCIe_TLP_ID_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Completion Status
+        --! @brief Completion Status. 
         ---------------------------------------------------------------------------
         STATUS          : PCIe_TLP_CPL_STATUS_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Byte Count Modified
+        --! @brief Byte Count Modified. 
         ---------------------------------------------------------------------------
         BCM             : std_logic;
         ---------------------------------------------------------------------------
-        --! @brief Byte Count(残りの転送バイト数)
+        --! @brief Byte Count(残りの転送バイト数). 
         ---------------------------------------------------------------------------
         COUNT           : PCIe_TLP_SIZE_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Requester ID
+        --! @brief Requester ID. 
         ---------------------------------------------------------------------------
         REQ_ID          : PCIe_TLP_ID_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Tag
+        --! @brief Tag. 
         ---------------------------------------------------------------------------
         TAG             : PCIe_TLP_TAG_TYPE;
         ---------------------------------------------------------------------------
-        --! @ brief Requester TLP Type
+        --! @ brief Requester TLP Type. 
         --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         --! これは PCIe_TLP_CPL_HEAD_TYPE -> PCIe_TLP_HEAD_TYPE に変換する場合でのみ
         --! 使用する. PCIe_TLP_HEAD_TYPE -> PCIe_TLP_CPL_HEAD_TYPE に変換した場合は、
-        --! PCIe_TLP_HEAD_TYPE の PKT_TYPE がセットされる。
+        --! PCIe_TLP_HEAD_TYPE の PKT_TYPE がセットされる. 
         ---------------------------------------------------------------------------
         REQ_TYPE        : PCIe_TLP_PKT_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Completion Low Address
+        --! @brief Completion Low Address. 
         ---------------------------------------------------------------------------
         ADDR            : PCIe_TLP_CPL_ADDR_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Payload Size(パケットに含まれるデータのバイト数)
+        --! @brief Payload Size(パケットに含まれるデータのバイト数). 
         ---------------------------------------------------------------------------
         SIZE            : PCIe_TLP_SIZE_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief 最後のペイロードパケットであることを示すフラグ
+        --! @brief 最後のペイロードパケットであることを示すフラグ. 
         ---------------------------------------------------------------------------
         LAST            : std_logic;
     end record;
     -------------------------------------------------------------------------------
-    --! @brief メッセージパケットのヘッダー部を記述した構造体
+    --! @brief メッセージパケットのヘッダー部を記述した構造体. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_MSG_HEAD_TYPE is record
         ---------------------------------------------------------------------------
-        -- PCIe_TLP_HEAD_TYPE と共通部: 詳細は PCIe_TLP_HEAD_TYPE を参照
+        -- PCIe_TLP_HEAD_TYPE と共通部: 詳細は PCIe_TLP_HEAD_TYPE を参照. 
         ---------------------------------------------------------------------------
         WITH_DATA       : std_logic;
         TC              : PCIe_TLP_TC_TYPE;
@@ -303,67 +303,67 @@ package PCIe_TLP_TYPES is
         EP              : std_logic;
         ATTR            : PCIe_TLP_ATTR_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Routing
+        --! @brief Routing. 
         ---------------------------------------------------------------------------
         ROUTING         : std_logic_vector( 2 downto 0);
         ---------------------------------------------------------------------------
-        --! @brief Requester ID
+        --! @brief Requester ID. 
         ---------------------------------------------------------------------------
         REQ_ID          : PCIe_TLP_ID_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Tag
+        --! @brief Tag. 
         ---------------------------------------------------------------------------
         TAG             : PCIe_TLP_TAG_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief Message Code
+        --! @brief Message Code. 
         ---------------------------------------------------------------------------
         CODE            : std_logic_vector( 7 downto 0);
         ---------------------------------------------------------------------------
-        --! @brief Infomation
+        --! @brief Infomation. 
         ---------------------------------------------------------------------------
         INFO            : std_logic_vector(63 downto 0);
         ---------------------------------------------------------------------------
-        --! @brief Payload Size(パケットに含まれるデータのバイト数)
+        --! @brief Payload Size(パケットに含まれるデータのバイト数). 
         ---------------------------------------------------------------------------
         SIZE            : PCIe_TLP_SIZE_TYPE;
     end record;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header の配列タイプ
+    --! @brief PCIe TLP Header の配列タイプ. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_HEAD_VECTOR     is array (INTEGER range <>) of PCIe_TLP_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Request Header の配列タイプ
+    --! @brief PCIe TLP Request Header の配列タイプ. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_REQ_HEAD_VECTOR is array (INTEGER range <>) of PCIe_TLP_REQ_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Completion Header の配列タイプ
+    --! @brief PCIe TLP Completion Header の配列タイプ. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_CPL_HEAD_VECTOR is array (INTEGER range <>) of PCIe_TLP_CPL_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Message Header の配列タイプ
+    --! @brief PCIe TLP Message Header の配列タイプ. 
     -------------------------------------------------------------------------------
     type  PCIe_TLP_MSG_HEAD_VECTOR is array (INTEGER range <>) of PCIe_TLP_MSG_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header の NULL値を生成する関数
+    --! @brief PCIe TLP Header の NULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_HEAD_NULL     return PCIe_TLP_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Request Header のNULL値を生成する関数
+    --! @brief PCIe TLP Request Header のNULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_REQ_HEAD_NULL return PCIe_TLP_REQ_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Completion Header のNULL値を生成する関数
+    --! @brief PCIe TLP Completion Header のNULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_CPL_HEAD_NULL return PCIe_TLP_CPL_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Message Header のNULL値を生成する関数
+    --! @brief PCIe TLP Message Header のNULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_MSG_HEAD_NULL return PCIe_TLP_MSG_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Request Header を PCIe TLP Header に変換する関数
+    --! @brief PCIe TLP Request Header を PCIe TLP Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param REQ    PCIe TLP Request Header
-    --! @return       PCIe TLP Header
+    --! @param REQ    PCIe TLP Request Header. 
+    --! @return       PCIe TLP Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_HEADER(REQ:PCIe_TLP_REQ_HEAD_TYPE) return PCIe_TLP_HEAD_TYPE;
     -------------------------------------------------------------------------------
@@ -374,31 +374,31 @@ package PCIe_TLP_TYPES is
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_HEADER(CPL:PCIe_TLP_CPL_HEAD_TYPE) return PCIe_TLP_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Message Header を PCIe TLP Header に変換する関数
+    --! @brief PCIe TLP Message Header を PCIe TLP Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param MSG    PCIe TLP Message Header
-    --! @return       PCIe TLP Header
+    --! @param MSG    PCIe TLP Message Header. 
+    --! @return       PCIe TLP Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_HEADER(MSG:PCIe_TLP_MSG_HEAD_TYPE) return PCIe_TLP_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header を PCIe TLP Request Header に変換する関数
+    --! @brief PCIe TLP Header を PCIe TLP Request Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param TLP    PCIe TLP Header
-    --! @return       PCIe TLP Request Header
+    --! @param TLP    PCIe TLP Header. 
+    --! @return       PCIe TLP Request Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_REQ_HEADER(TLP:PCIe_TLP_HEAD_TYPE) return PCIe_TLP_REQ_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header を PCIe TLP Completion Header に変換する関数
+    --! @brief PCIe TLP Header を PCIe TLP Completion Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param TLP    PCIe TLP Header
-    --! @return       PCIe TLP Completion Header
+    --! @param TLP    PCIe TLP Header. 
+    --! @return       PCIe TLP Completion Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_CPL_HEADER(TLP:PCIe_TLP_HEAD_TYPE) return PCIe_TLP_CPL_HEAD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header を PCIe TLP Message Header に変換する関数
+    --! @brief PCIe TLP Header を PCIe TLP Message Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param TLP    PCIe TLP Header
-    --! @return       PCIe TLP Message Header
+    --! @param TLP    PCIe TLP Header. 
+    --! @return       PCIe TLP Message Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_MSG_HEADER(TLP:PCIe_TLP_HEAD_TYPE) return PCIe_TLP_MSG_HEAD_TYPE;
 end PCIe_TLP_TYPES;
@@ -411,7 +411,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 package body PCIe_TLP_TYPES is
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header の NULL値を生成する関数
+    --! @brief PCIe TLP Header の NULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_HEAD_NULL return PCIe_TLP_HEAD_TYPE is
         variable tlp_head  : PCIe_TLP_HEAD_TYPE;
@@ -430,7 +430,7 @@ package body PCIe_TLP_TYPES is
         return tlp_head;
     end PCIe_TLP_HEAD_NULL;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Request Header のNULL値を生成する関数
+    --! @brief PCIe TLP Request Header のNULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_REQ_HEAD_NULL return PCIe_TLP_REQ_HEAD_TYPE is
         variable req_head  : PCIe_TLP_REQ_HEAD_TYPE;
@@ -449,7 +449,7 @@ package body PCIe_TLP_TYPES is
         return req_head;
     end PCIe_TLP_REQ_HEAD_NULL;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Completion Header のNULL値を生成する関数
+    --! @brief PCIe TLP Completion Header のNULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_CPL_HEAD_NULL return PCIe_TLP_CPL_HEAD_TYPE is
         variable cpl_head  : PCIe_TLP_CPL_HEAD_TYPE;
@@ -473,7 +473,7 @@ package body PCIe_TLP_TYPES is
         return cpl_head;
     end PCIe_TLP_CPL_HEAD_NULL;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Message Header のNULL値を生成する関数
+    --! @brief PCIe TLP Message Header のNULL値を生成する関数. 
     -------------------------------------------------------------------------------
     function PCIe_TLP_MSG_HEAD_NULL return PCIe_TLP_MSG_HEAD_TYPE is
         variable msg_head  : PCIe_TLP_MSG_HEAD_TYPE;
@@ -492,10 +492,10 @@ package body PCIe_TLP_TYPES is
         return msg_head;
     end PCIe_TLP_MSG_HEAD_NULL;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Request Header を PCIe TLP Header に変換する関数
+    --! @brief PCIe TLP Request Header を PCIe TLP Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param REQ    PCIe TLP Request Header
-    --! @return       PCIe TLP Header
+    --! @param REQ    PCIe TLP Request Header. 
+    --! @return       PCIe TLP Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_HEADER(REQ:PCIe_TLP_REQ_HEAD_TYPE) return PCIe_TLP_HEAD_TYPE is
         variable tlp_head   : PCIe_TLP_HEAD_TYPE;
@@ -509,11 +509,11 @@ package body PCIe_TLP_TYPES is
     begin
         ---------------------------------------------------------------------------
         -- u_size   : REQ.SIZE に不定値があるとシミュレーション時に警告が出るので、
-        --            正規化しおく。
+        --            正規化しおく. 
         ---------------------------------------------------------------------------
         u_size := to_01(unsigned(REQ.SIZE),'0');
         ---------------------------------------------------------------------------
-        -- もし REQ.SIZE(転送バイト数)が０の場合またはフラッシュの場合
+        -- もし REQ.SIZE(転送バイト数)が０の場合またはフラッシュの場合. 
         ---------------------------------------------------------------------------
         if (u_size = 0 or REQ.TRAN_TYPE = PCIe_TLP_REQ_TRAN_FLUSH) then
             ben_first := "0000";
@@ -521,7 +521,7 @@ package body PCIe_TLP_TYPES is
             u_length  := to_unsigned(4, u_length'length);
             with_data := '0';
         ---------------------------------------------------------------------------
-        -- もし REQ.SIZE(転送バイト数)が１以上の場合
+        -- もし REQ.SIZE(転送バイト数)が１以上の場合. 
         ---------------------------------------------------------------------------
         else
             u_addr_1st := to_01(unsigned(REQ.ADDR(1 downto 0)));
@@ -564,10 +564,10 @@ package body PCIe_TLP_TYPES is
         return tlp_head;
     end To_PCIe_TLP_HEADER;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Completion Header を PCIe TLP Header に変換する関数
+    --! @brief PCIe TLP Completion Header を PCIe TLP Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param CPL    PCIe TLP Completion Header
-    --! @return       PCIe TLP Header
+    --! @param CPL    PCIe TLP Completion Header. 
+    --! @return       PCIe TLP Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_HEADER(CPL:PCIe_TLP_CPL_HEAD_TYPE) return PCIe_TLP_HEAD_TYPE is
         variable tlp_head   : PCIe_TLP_HEAD_TYPE;
@@ -629,10 +629,10 @@ package body PCIe_TLP_TYPES is
         return tlp_head;
     end To_PCIe_TLP_HEADER;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Message Header を PCIe TLP Header に変換する関数
+    --! @brief PCIe TLP Message Header を PCIe TLP Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param MSG    PCIe TLP Message Header
-    --! @return       PCIe TLP Header
+    --! @param MSG    PCIe TLP Message Header. 
+    --! @return       PCIe TLP Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_HEADER(MSG:PCIe_TLP_MSG_HEAD_TYPE) return PCIe_TLP_HEAD_TYPE is
         variable tlp_head   : PCIe_TLP_HEAD_TYPE;
@@ -652,10 +652,10 @@ package body PCIe_TLP_TYPES is
         return tlp_head;
     end To_PCIe_TLP_HEADER;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header を PCIe TLP Request Header に変換する関数
+    --! @brief PCIe TLP Header を PCIe TLP Request Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param TLP    PCIe TLP Header
-    --! @return       PCIe TLP Request Header
+    --! @param TLP    PCIe TLP Header. 
+    --! @return       PCIe TLP Request Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_REQ_HEADER(TLP:PCIe_TLP_HEAD_TYPE) return PCIe_TLP_REQ_HEAD_TYPE is
         variable req_head       : PCIe_TLP_REQ_HEAD_TYPE;
@@ -676,7 +676,7 @@ package body PCIe_TLP_TYPES is
         ben_last          := TLP.INFO( 7 downto  4);
         ben_1st           := TLP.INFO( 3 downto  0);
         ---------------------------------------------------------------------------
-        -- アドレスの下位２ビットは 1st DW BE から得る。
+        -- アドレスの下位２ビットは 1st DW BE から得る. 
         ---------------------------------------------------------------------------
         if    (ben_1st(0) = '1') then req_head.ADDR(1 downto 0) := "00";
         elsif (ben_1st(1) = '1') then req_head.ADDR(1 downto 0) := "01";
@@ -685,12 +685,12 @@ package body PCIe_TLP_TYPES is
         else                          req_head.ADDR(1 downto 0) := "00";
         end if;
         ---------------------------------------------------------------------------
-        -- アドレスの上位62ビットは TLP.ADDR から得る。
+        -- アドレスの上位62ビットは TLP.ADDR から得る. 
         ---------------------------------------------------------------------------
         req_head.ADDR(63 downto 2) := TLP.ADDR(63 downto 2);
         ---------------------------------------------------------------------------
         -- リクエストヘッダの Length フィールド が 1DW の場合(この場合 Last DW 
-        -- BE は必ず 0000b になるはず)の転送要求バイト数を計算する。
+        -- BE は必ず 0000b になるはず)の転送要求バイト数を計算する. 
         ---------------------------------------------------------------------------
         if (ben_last = "0000") then
             case ben_1st is
@@ -713,8 +713,7 @@ package body PCIe_TLP_TYPES is
                 when others => u_size := TO_UNSIGNED(0, u_size'length);
             end case;
         -------------------------------------------------------------------------------
-        -- リクエストヘッダの Length が 1DW を越える場合の転送要求バイト数を計算す
-        -- る。
+        -- リクエストヘッダの Length が 1DW を越える場合の転送要求バイト数を計算する.
         -------------------------------------------------------------------------------
         else
             u_size( 1 downto 0) := "00";
@@ -749,10 +748,10 @@ package body PCIe_TLP_TYPES is
         return req_head;
     end To_PCIe_TLP_REQ_HEADER;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header を PCIe TLP Completion Header に変換する関数
+    --! @brief PCIe TLP Header を PCIe TLP Completion Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param TLP    PCIe TLP Header
-    --! @return       PCIe TLP Completion Header
+    --! @param TLP    PCIe TLP Header. 
+    --! @return       PCIe TLP Completion Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_CPL_HEADER(TLP:PCIe_TLP_HEAD_TYPE) return PCIe_TLP_CPL_HEAD_TYPE is
         variable cpl_head       : PCIe_TLP_CPL_HEAD_TYPE;
@@ -806,10 +805,10 @@ package body PCIe_TLP_TYPES is
         return cpl_head;
     end To_PCIe_TLP_CPL_HEADER;
     -------------------------------------------------------------------------------
-    --! @brief PCIe TLP Header を PCIe TLP Message Header に変換する関数
+    --! @brief PCIe TLP Header を PCIe TLP Message Header に変換する関数. 
     --! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    --! @param TLP    PCIe TLP Header
-    --! @return       PCIe TLP Message Header
+    --! @param TLP    PCIe TLP Header. 
+    --! @return       PCIe TLP Message Header. 
     -------------------------------------------------------------------------------
     function To_PCIe_TLP_MSG_HEADER(TLP:PCIe_TLP_HEAD_TYPE) return PCIe_TLP_MSG_HEAD_TYPE is
         variable msg_head       : PCIe_TLP_MSG_HEAD_TYPE;
