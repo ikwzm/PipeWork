@@ -54,7 +54,7 @@ entity  PCIe_TLP_TX_ARBITER is
                           --!   この場合、REQ_HVAL/REQ_HRDY/REQ_HEAD配列の範囲は
                           --!   適当でも構わないが長さは１以上でなければならない.
                           integer := 1;
-        CPL_ENABLE      : --! @breif コンプレッションパケットを送信するかどうかを指定する.
+        CPL_ENABLE      : --! @brief コンプレッションパケットを送信するかどうかを指定する.
                           --! * CPL_ENABLE=1の場合はコンプレッションパケットを送信
                           --!   する. この場合、CPL_HVAL/CPL_HRDY/CPL_HEAD配列の範
                           --!   囲はTLP_HSEL配列の範囲"内"でなければならない.
