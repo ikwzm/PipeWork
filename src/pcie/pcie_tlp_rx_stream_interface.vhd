@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_rx_stream_interface.vhd
 --!     @brief   PCI-Express TLP(Transaction Layer Packet) Receive Stream Interface
---!     @version 0.0.3
---!     @date    2013/2/20
+--!     @version 0.0.4
+--!     @date    2013/3/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -372,7 +372,7 @@ begin
                     next_addr(0)   <= recv_word(0);    -- アドレスの下位ワード
                     next_addr(1)   <= NULL_WORD;       -- アドレスの上位ワードは０クリア
                     if (with_data = TRUE) then
-                        data_wval := "01";
+                        data_wval := "10";
                     else
                         data_wval := "00";
                     end if;
