@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_rx_router.vhd
 --!     @brief   PCI-Express TLP Receive Router Module.
---!     @version 0.0.1
---!     @date    2013/2/18
+--!     @version 0.0.2
+--!     @date    2013/3/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -118,7 +118,7 @@ entity  PCIe_TLP_RX_ROUTER is
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
     -------------------------------------------------------------------------------
-    -- TLP(Transaction Layer Packet)入力
+    -- Transaction Layer Packet Input Ports.
     -------------------------------------------------------------------------------
         TLP_HEAD        : in  PCIe_TLP_HEAD_TYPE;
         TLP_HVAL        : in  std_logic;
@@ -127,7 +127,7 @@ entity  PCIe_TLP_RX_ROUTER is
         TLP_HSEL        : out std_logic_vector;
         BAR_HIT         : in  std_logic_vector;
     -------------------------------------------------------------------------------
-    -- リクエストパケット I/F
+    -- Request Packet Output Ports.
     -------------------------------------------------------------------------------
         REQ_HEAD        : out PCIe_TLP_REQ_HEAD_TYPE;
         REQ_HVAL        : out std_logic_vector;
@@ -135,14 +135,14 @@ entity  PCIe_TLP_RX_ROUTER is
         REQ_TABLE       : in  PCIe_TLP_RX_ROUTING.REQ_TABLE(REQ_TABLE_MIN to REQ_TABLE_MAX);
         TARGET_SEL      : in  PCI_TARGET_SELECT_TABLE(PCI_TARGET_MIN to PCI_TARGET_MAX);
     -------------------------------------------------------------------------------
-    -- コンプレッションパケット I/F
+    -- Completion Packet Output Ports.
     -------------------------------------------------------------------------------
         CPL_HEAD        : out PCIe_TLP_CPL_HEAD_TYPE;
         CPL_HVAL        : out std_logic_vector;
         CPL_HRDY        : in  std_logic_vector;
         CPL_TABLE       : in  PCIe_TLP_RX_ROUTING.CPL_TABLE(CPL_TABLE_MIN to CPL_TABLE_MAX);
     -------------------------------------------------------------------------------
-    -- メッセージパケット I/F
+    -- Message Packet Output Ports.
     -------------------------------------------------------------------------------
         MSG_HEAD        : out PCIe_TLP_MSG_HEAD_TYPE;
         MSG_HVAL        : out std_logic_vector;
@@ -155,7 +155,7 @@ entity  PCIe_TLP_RX_ROUTER is
         ERR_HVAL        : out std_logic;
         ERR_HRDY        : in  std_logic;
     -------------------------------------------------------------------------------
-    -- Configrationモジュールとやりとりするための信号たち。
+    -- Configration Signals.
     -------------------------------------------------------------------------------
         PCIe_ID         : in  PCIe_TLP_ID_TYPE;
         MEM_ENA         : in  std_logic;
@@ -378,6 +378,7 @@ begin
             T_IO        => req_type_io         , -- In  : I/O Access
             T_MEM       => req_type_mem        , -- In  : Memory Access
             T_CFG0      => req_type_cfg0       , -- In  : Type0 Configuration Access
+            T_CFG1      => req_type_cfg1       , -- In  : Type1 Configuration Access
             HIT         => req_hit             , -- Out : 
             ENA64       => open                , -- Out :
             HIT_SEL     => target_sel_hit      , -- Out :
