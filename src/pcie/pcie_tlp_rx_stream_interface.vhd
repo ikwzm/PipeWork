@@ -126,11 +126,11 @@ architecture RTL of PCIe_TLP_RX_STREAM_INTERFACE is
     constant TLP_DATA_BITS  : integer := 2**TLP_DATA_WIDTH;
     constant WORD_BITS      : integer := 2**WORD_WIDTH;
     constant BYTE_BITS      : integer := 2**BYTE_WIDTH;
-    constant ENBL_BITS      : integer := WORD_BITS/BYTE_BITS;
+    constant WORD_BYTES     : integer := WORD_BITS/BYTE_BITS;
     subtype  WORD_TYPE     is std_logic_vector(WORD_BITS-1 downto 0);
     type     WORD_VECTOR   is array (INTEGER range <>) of WORD_TYPE;
     constant NULL_WORD      : WORD_TYPE := (others => '0');
-    constant NULL_ENBL      : std_logic_vector(ENBL_BITS-1 downto 0) := (others => '0');
+    constant NULL_BEN       : std_logic_vector(WORD_BYTES-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- ヘッダ長のワード数
     -------------------------------------------------------------------------------
@@ -190,7 +190,7 @@ begin
         if (RX_WORD_ORDER = 0) then
             for i in recv_word'range loop
                 recv_word(recv_word'low +i) := RX_DATA(WORD_BITS*(i+1)-1 downto WORD_BITS*i);
-                if (RX_BEN(ENBL_BITS*(i+1)-1 downto ENBL_BITS*i) /= NULL_ENBL) then
+                if (RX_BEN(WORD_BYTES*(i+1)-1 downto WORD_BYTES*i) /= NULL_BEN) then
                     recv_wval(recv_word'low +i) := '1';
                 else
                     recv_wval(recv_word'low +i) := '0';
@@ -199,7 +199,7 @@ begin
         else
             for i in recv_word'range loop
                 recv_word(recv_word'high-i) := RX_DATA(WORD_BITS*(i+1)-1 downto WORD_BITS*i);
-                if (RX_BEN(ENBL_BITS*(i+1)-1 downto ENBL_BITS*i) /= NULL_ENBL) then
+                if (RX_BEN(WORD_BYTES*(i+1)-1 downto WORD_BYTES*i) /= NULL_BEN) then
                     recv_wval(recv_word'high-i) := '1';
                 else
                     recv_wval(recv_word'high-i) := '0';
@@ -657,7 +657,7 @@ begin
     D: REDUCER
         generic map (
             WORD_BITS   => WORD_BITS       ,
-            ENBL_BITS   => ENBL_BITS       ,
+            ENBL_BITS   => 1               ,
             I_WIDTH     =>  RX_DATA_BITS/WORD_BITS,
             O_WIDTH     => TLP_DATA_BITS/WORD_BITS,
             QUEUE_SIZE  => 0               ,
