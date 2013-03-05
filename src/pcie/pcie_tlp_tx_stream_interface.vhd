@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pcie_tlp_tx_stream_interface.vhd
 --!     @brief   PCI-Express TLP(Transaction Layer Packet) Transmit Stream Interface
---!     @version 0.0.3
---!     @date    2013/2/20
+--!     @version 0.0.4
+--!     @date    2013/3/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -253,7 +253,7 @@ architecture RTL of PCIe_TLP_TX_STREAM_INTERFACE is
     -------------------------------------------------------------------------------
     --! @brief TLP_DATAをバイト単位で入れ替えた(かもしれない)結果
     -------------------------------------------------------------------------------
-    signal    tlp_data_word : std_logic_vector(WORD_BITS-1 downto 0);
+    signal    tlp_data_word : std_logic_vector(TLP_DATA_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- メインプロセス
