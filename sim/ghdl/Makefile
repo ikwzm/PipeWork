@@ -35,6 +35,7 @@ COMPONENTS = components                             \
              axi4_register_interface                \
              pci_target_select                      \
              pcie_tlp_types                         \
+             pcie_tlp_components                    \
              pcie_tlp_rx_stream_interface           \
              pcie_tlp_tx_stream_interface           \
              pcie_tlp_tx_arbiter                    \
@@ -137,6 +138,9 @@ axi4_register_interface.o                : $(SRC_PATH)/axi4/axi4_register_interf
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pcie_tlp_types.o                         : $(SRC_PATH)/pcie/pcie_tlp_types.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pcie_tlp_components.o                    : $(SRC_PATH)/pcie/pcie_tlp_components.vhd pcie_tlp_types.o pcie_tlp_rx_routing.o pci_target_select.o 
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pcie_tlp_rx_stream_interface.o           : $(SRC_PATH)/pcie/pcie_tlp_rx_stream_interface.vhd pcie_tlp_types.o

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.3
-#       Created     :   2012/8/2
+#       Version     :   0.0.4
+#       Created     :   2013/3/5
 #       File name   :   MakeComponentPackage.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードから entity 宣言している部分を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012 Ichiro Kawazome
+#       Copyright (C) 2012,2013 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@ require 'optparse'
 class ComponentPackage
   def initialize
     @program_name      = "MakeComponentPackage"
-    @program_version   = "0.0.3"
+    @program_version   = "0.0.4"
     @program_id        = @program_name + " " + @program_version
     @line_width        = 83
     @components        = Hash.new
@@ -212,6 +212,13 @@ class ComponentPackage
         next;
       end
       #---------------------------------------------------------------------------
+      # use ライブラリ名.パッケージ名; の解釈
+      #---------------------------------------------------------------------------
+      if (parse_line =~ /^use[\s]+[\w]+\.[\w]+[\s]*;/i)
+        use_lines << line;
+        next;
+      end
+      #---------------------------------------------------------------------------
       # entity宣言処理中でない場合はスキップ
       #---------------------------------------------------------------------------
       if (component_name == nil)
@@ -259,6 +266,16 @@ class ComponentPackage
                 @libraries[library_name][:Use][package_name] = Hash.new
               end
               @libraries[library_name][:Use][package_name][item_name] = use_line
+            elsif (use_line =~ /^use[\s]+([\w]+)\.([\w]+)[\s]*;/i)
+              library_name = $1.upcase;
+              package_name = $2.upcase;
+              if (@libraries[library_name][:Use] == nil)
+                @libraries[library_name][:Use] = Hash.new
+              end
+              if (@libraries[library_name][:Use][package_name] == nil)
+                @libraries[library_name][:Use][package_name] = Hash.new
+              end
+              @libraries[library_name][:Use][package_name][""] = use_line
             end
           end
           #-----------------------------------------------------------------------
