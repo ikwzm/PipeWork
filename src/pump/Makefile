@@ -8,7 +8,7 @@ ENTITY_FILES = pump_count_up_register.vhd              \
                pump_operation_processor.vhd            \
                ${ENDLIST}
 
-components.vhd : ${ENTITY_FILES}
+pump_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION' \
             --version 1.3.0 \
