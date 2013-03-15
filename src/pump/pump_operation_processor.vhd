@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.4.0
+--!     @date    2013/3/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -201,8 +201,8 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_UP_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_DOWN_REGISTER;
+use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
+use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
 architecture RTL of PUMP_OPERATION_PROCESSOR is
     -------------------------------------------------------------------------------
@@ -287,7 +287,7 @@ begin
     -------------------------------------------------------------------------------
     -- M_REQ_ADDR : 
     -------------------------------------------------------------------------------
-    M_REQ_ADDR_REGS: PUMP_COUNT_UP_REGISTER
+    M_REQ_ADDR_REGS: COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_ADDR_BITS     , -- 
@@ -311,7 +311,7 @@ begin
     -------------------------------------------------------------------------------
     -- M_REQ_SIZE :
     -------------------------------------------------------------------------------
-    M_REQ_SIZE_REGS: PUMP_COUNT_DOWN_REGISTER
+    M_REQ_SIZE_REGS: COUNT_DOWN_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_BUF_SIZE+1    , -- 
@@ -335,7 +335,7 @@ begin
     -------------------------------------------------------------------------------
     -- M_REP_PTR  :
     -------------------------------------------------------------------------------
-    M_REQ_PTR_REGS: PUMP_COUNT_UP_REGISTER
+    M_REQ_PTR_REGS: COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_BUF_SIZE      , -- 

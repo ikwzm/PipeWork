@@ -2,8 +2,8 @@
 --!     @file    pump_flow_syncronizer.vhd
 --!     @brief   PUMP FLOW SYNCRONIZER
 --!              PUMPの入力側と出力側の間で各種情報を伝達するモジュール
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.4.0
+--!     @date    2013/3/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

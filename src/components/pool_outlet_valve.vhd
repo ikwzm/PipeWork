@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pump_outlet_valve.vhd
---!     @brief   PUMP OUTLET VALVE
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @file    pool_outlet_valve.vhd
+--!     @brief   POOL OUTLET VALVE
+--!     @version 1.4.0
+--!     @date    2013/3/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PUMP OUT VALVE :
+--! @brief   POOL OUT VALVE :
 -----------------------------------------------------------------------------------
-entity  PUMP_OUTLET_VALVE is
+entity  POOL_OUTLET_VALVE is
     generic (
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
@@ -73,10 +73,10 @@ entity  PUMP_OUTLET_VALVE is
         STOP            : --! @brief STOP  REQUEST :
                           --! 強制的にフローを中止する事を指示する信号.
                           in  std_logic;
-        I_OPEN          : --! @brief INTAKE VALVE OPEN FLAG :
+        INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
                           --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
-        O_OPEN          : --! @brief OUTLET VALVE OPEN FLAG :
+        OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
                           --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
         THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
@@ -136,14 +136,14 @@ entity  PUMP_OUTLET_VALVE is
                           --! 現在一時停止中であることを示すフラグ.
                           out std_logic
     );
-end PUMP_OUTLET_VALVE;
+end POOL_OUTLET_VALVE;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
 library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
-architecture RTL of PUMP_OUTLET_VALVE is
+architecture RTL of POOL_OUTLET_VALVE is
     signal   flow_counter       : unsigned(COUNT_BITS-1 downto 0);
     signal   flow_negative      : boolean;
     signal   flow_positive      : boolean;
@@ -163,9 +163,9 @@ begin
         elsif (CLK'event and CLK = '1') then
             if    (CLR   = '1' or RESET = '1') then
                 io_open       <= FALSE;
-            elsif (io_open = FALSE and I_OPEN = '1' and O_OPEN = '1') then
+            elsif (io_open = FALSE and INTAKE_OPEN = '1' and OUTLET_OPEN = '1') then
                 io_open <= TRUE;
-            elsif (io_open = TRUE  and I_OPEN = '0' and O_OPEN = '0') then
+            elsif (io_open = TRUE  and INTAKE_OPEN = '0' and OUTLET_OPEN = '0') then
                 io_open <= FALSE;
             end if;
         end if;

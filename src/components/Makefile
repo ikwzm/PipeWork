@@ -7,12 +7,16 @@ ENTITY_FILES = chopper.vhd                             \
                syncronizer.vhd                         \
                syncronizer_input_pending_register.vhd  \
                sdpram.vhd                              \
+               count_down_register.vhd                 \
+               count_up_register.vhd                   \
+               pool_intake_valve.vhd                   \
+               pool_outlet_valve.vhd                   \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK COMPONENT LIBRARY DESCRIPTION' \
-            --version 1.0.8 \
+            --version 1.4.0 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package COMPONENTS \
