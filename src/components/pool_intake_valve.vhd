@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pump_intake_valve.vhd
---!     @brief   PUMP INTAKE VALVE
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @file    pool_intake_valve.vhd
+--!     @brief   POOL INTAKE VALVE
+--!     @version 1.4.0
+--!     @date    2013/3/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PUMP IN VALVE :
+--! @brief   POOL INTAKE VALVE :
 -----------------------------------------------------------------------------------
-entity  PUMP_INTAKE_VALVE is
+entity  POOL_INTAKE_VALVE is
     generic (
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
@@ -73,14 +73,14 @@ entity  PUMP_INTAKE_VALVE is
         STOP            : --! @brief STOP  REQUEST :
                           --! 強制的にフローを中止する事を指示する信号.
                           in  std_logic;
-        I_OPEN          : --! @brief INTAKE VALVE OPEN FLAG :
+        INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
                           --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
-        O_OPEN          : --! @brief OUTLET VALVE OPEN FLAG :
+        OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
                           --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
-        BUFFER_SIZE     : --! @brief BUFFER SIZE :
-                          --! バッファの大きさをバイト数で指定する.
+        POOL_SIZE       : --! @brief POOL SIZE :
+                          --! プールの大きさをバイト数で指定する.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
                           --! 一時停止する/しないを指示するための閾値.
@@ -139,14 +139,14 @@ entity  PUMP_INTAKE_VALVE is
                           --! 現在一時停止中であることを示すフラグ.
                           out std_logic
     );
-end PUMP_INTAKE_VALVE;
+end POOL_INTAKE_VALVE;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
 library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
-architecture RTL of PUMP_INTAKE_VALVE is
+architecture RTL of POOL_INTAKE_VALVE is
     signal   flow_counter       : unsigned(COUNT_BITS-1 downto 0);
     signal   flow_negative      : boolean;
     signal   flow_positive      : boolean;
@@ -165,9 +165,9 @@ begin
         elsif (CLK'event and CLK = '1') then
             if    (CLR   = '1' or RESET = '1') then
                 io_open       <= FALSE;
-            elsif (io_open = FALSE and I_OPEN = '1' and O_OPEN = '1') then
+            elsif (io_open = FALSE and INTAKE_OPEN = '1' and OUTLET_OPEN = '1') then
                 io_open <= TRUE;
-            elsif (io_open = TRUE  and I_OPEN = '0' and O_OPEN = '0') then
+            elsif (io_open = TRUE  and INTAKE_OPEN = '0' and OUTLET_OPEN = '0') then
                 io_open <= FALSE;
             end if;
         end if;
@@ -228,7 +228,7 @@ begin
     -- FLOW_STOP  : 転送の中止を指示する信号.
     -------------------------------------------------------------------------------
     FLOW_STOP  <= '1' when (STOP  = '1') or
-                           (io_open = TRUE  and I_OPEN = '1' and O_OPEN = '0') else '0';
+                           (io_open = TRUE  and INTAKE_OPEN = '1' and OUTLET_OPEN = '0') else '0';
     -------------------------------------------------------------------------------
     -- FLOW_PAUSE : フローカウンタの状態で、転送を一時的に止めたり、再開することを
     --              指示する信号.
@@ -245,5 +245,5 @@ begin
     -------------------------------------------------------------------------------
     -- FLOW_SIZE  : 入力可能なバイト数を出力.
     -------------------------------------------------------------------------------
-    FLOW_SIZE  <= std_logic_vector(to_01(unsigned(BUFFER_SIZE)) - to_01(unsigned(THRESHOLD_SIZE)));
+    FLOW_SIZE  <= std_logic_vector(to_01(unsigned(POOL_SIZE)) - to_01(unsigned(THRESHOLD_SIZE)));
 end RTL;
