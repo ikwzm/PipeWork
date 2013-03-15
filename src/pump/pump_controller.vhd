@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.4.0
+--!     @date    2013/3/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -328,11 +328,11 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_UP_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_DOWN_REGISTER;
+use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
+use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
+use     PIPEWORK.COMPONENTS.POOL_INTAKE_VALVE;
+use     PIPEWORK.COMPONENTS.POOL_OUTLET_VALVE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_INTAKE_VALVE;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_OUTLET_VALVE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PUMP_CONTROLLER is
     ------------------------------------------------------------------------------
@@ -387,7 +387,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    I_ADDR_REGS: PUMP_COUNT_UP_REGISTER
+    I_ADDR_REGS: COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => I_REQ_ADDR_VALID, -- 
             BITS            => I_REQ_ADDR_BITS , -- 
@@ -410,7 +410,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    I_SIZE_REGS: PUMP_COUNT_DOWN_REGISTER
+    I_SIZE_REGS: COUNT_DOWN_REGISTER
         generic map (                            -- 
             VALID           => I_REQ_SIZE_VALID, -- 
             BITS            => I_REQ_SIZE_BITS , -- 
@@ -433,7 +433,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    I_BUF_PTR: PUMP_COUNT_UP_REGISTER
+    I_BUF_PTR: COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => BUF_DEPTH       , --
@@ -522,7 +522,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    I_VALVE: PUMP_INTAKE_VALVE 
+    I_VALVE: POOL_INTAKE_VALVE 
         generic map (                            -- 
             COUNT_BITS      => SIZE_BITS       , -- 
             SIZE_BITS       => SIZE_BITS         -- 
@@ -531,10 +531,10 @@ begin
             CLK             => I_CLK           , -- In  :
             RST             => RST             , -- In  :
             CLR             => I_CLR           , -- In  :
-            BUFFER_SIZE     => BUFFER_SIZE     , -- In  :
+            POOL_SIZE       => BUFFER_SIZE     , -- In  :
             THRESHOLD_SIZE  => I_THRESHOLD_SIZE, -- In  :
-            I_OPEN          => i_valve_open    , -- In  :
-            O_OPEN          => o2i_valve_open  , -- In  :
+            INTAKE_OPEN     => i_valve_open    , -- In  :
+            OUTLET_OPEN     => o2i_valve_open  , -- In  :
             RESET           => i_reset         , -- In  :
             PAUSE           => i_pause         , -- In  :
             STOP            => i_stop          , -- In  :
@@ -555,7 +555,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    O_ADDR_REGS: PUMP_COUNT_UP_REGISTER
+    O_ADDR_REGS: COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => O_REQ_ADDR_VALID, -- 
             BITS            => O_REQ_ADDR_BITS , -- 
@@ -578,7 +578,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    O_SIZE_REGS: PUMP_COUNT_DOWN_REGISTER
+    O_SIZE_REGS: COUNT_DOWN_REGISTER
         generic map (                            -- 
             VALID           => O_REQ_SIZE_VALID, --
             BITS            => O_REQ_SIZE_BITS , --
@@ -601,7 +601,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    O_BUF_PTR: PUMP_COUNT_UP_REGISTER
+    O_BUF_PTR: COUNT_UP_REGISTER
         generic map (                            -- 
             VALID           => 1               , --
             BITS            => BUF_DEPTH       , --
@@ -690,7 +690,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    O_VALVE: PUMP_OUTLET_VALVE 
+    O_VALVE: POOL_OUTLET_VALVE 
         generic map (                            -- 
             COUNT_BITS      => SIZE_BITS       , -- 
             SIZE_BITS       => SIZE_BITS         -- 
@@ -700,8 +700,8 @@ begin
             RST             => RST             , -- In  :
             CLR             => O_CLR           , -- In  :
             THRESHOLD_SIZE  => O_THRESHOLD_SIZE, -- In  :
-            I_OPEN          => i2o_valve_open  , -- In  :
-            O_OPEN          => o_valve_open    , -- In  :
+            INTAKE_OPEN     => i2o_valve_open  , -- In  :
+            OUTLET_OPEN     => o_valve_open    , -- In  :
             RESET           => o_reset         , -- In  :
             PAUSE           => o_pause         , -- In  :
             STOP            => o_stop          , -- In  :
