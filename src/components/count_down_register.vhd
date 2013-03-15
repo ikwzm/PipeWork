@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------------
---!     @file    pump_count_up_register.vhd
---!     @brief   PUMP COUNT UP REGISTER
---!              転送したバイト数をカウントするレジスタ.
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @file    count_down_register.vhd
+--!     @brief   COUNT DOWN REGISTER
+--!              転送したバイト数をカウントダウンするレジスタ.
+--!     @version 1.4.0
+--!     @date    2013/3/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -38,15 +38,17 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PUMP COUNT UP REGISTER :
+--! @brief   COUNT DOWN REGISTER :
 --!          データを転送したバイト数をカウントするレジスタ.
---!        * カウンタに指定されたサイズ分だけ加算する.
+--!        * カウンタに指定されたサイズ分だけ減算する.
+--!        * カウンタに指定されたサイズ分だけ減算した時にカウンタの値が負になりそう
+--!          な場合は、カウンタの値は０になる. その際、NEGフラグをアサートする.
 --!        * カウンタに直接、初期値を設定するためのレジスタアクセスインターフェース
 --!          を持っている.
 --!        * レジスタアクセスインターフェースからカウンタに書き込む時は COUNT_ENA
 --!          信号が'0'でなければならない. '0'で無い場合は書き込みは無視される.
 -----------------------------------------------------------------------------------
-entity  PUMP_COUNT_UP_REGISTER is
+entity  COUNT_DOWN_REGISTER is
     generic (
         VALID       : --! @brief COUNTER VALID :
                       --! このカウンターを有効にするかどうかを指定する.
@@ -92,80 +94,104 @@ entity  PUMP_COUNT_UP_REGISTER is
     -------------------------------------------------------------------------------
     -- カウントインターフェース
     -------------------------------------------------------------------------------
-        UP_ENA      : --! @brief COUNT UP ENABLE :
-                      --! カウントアップ許可信号.
-                      --! * この信号が'1'の場合、UP_VAL信号およびUP_SIZE信号による
-                      --!   カウントアップが許可される.
+        DN_ENA      : --! @brief COUNT DOWN ENABLE :
+                      --! カウントダウン許可信号.
+                      --! * この信号が'1'の場合、DN_VAL信号およびDN_SIZE信号による
+                      --!   カウントダウンが許可される.
                       --! * この信号が'1'の場合、REGS_WEN信号およびREGS_WDATA信号に
                       --!   よるレジスタ書き込みは無視される.
-                      --! * この信号が'0'の場合、UP_VAL信号およびUP_SIZE信号による
-                      --!   カウントアップは無視される.
+                      --! * この信号が'0'の場合、DN_VAL信号およびDN_SIZE信号による
+                      --!   カウントダウンは無視される.
                       in  std_logic;
-        UP_VAL      : --! @brief COUNT UP SIZE VALID :
-                      --! カウントアップ有効信号.
-                      --! * この信号が'1'の場合、UP_SIZEで指定された数だけカウンタ
+        DN_VAL      : --! @brief COUNT DOWN SIZE VALID :
+                      --! カウントダウン有効信号.
+                      --! * この信号が'1'の場合、DN_SIZEで指定された数だけカウンタ
                       --!   ーの値がアップする.
                       in  std_logic;
-        UP_BEN      : --! @brief COUNT UP BIT ENABLE :
-                      --! カウントアップビット有効信号.
-                      --! * この信号が'1'の位置のビットのみ、カウンタアップを有効に
-                      --!   する.
-                      in  std_logic_vector;
-        UP_SIZE     : --! @brief COUNT UP SIZE :
-                      --! カウントアップサイズ信号.
+        DN_SIZE     : --! @brief COUNT DOWN SIZE :
+                      --! カウントダウンサイズ信号.
                       in  std_logic_vector;
     -------------------------------------------------------------------------------
     -- カウンター出力
     -------------------------------------------------------------------------------
         COUNTER     : --! @brief COUNTER OUTPUT :
                       --! カウンタの値を出力.
-                      out std_logic_vector
+                      out std_logic_vector;
+        ZERO        : --! @brief COUNTER ZERO FLAG :
+                      --! カウンタの値が0になったことを示すフラグ.
+                      out std_logic;
+        NEG         : --! @brief COUNTER ZERO FLAG :
+                      --! カウンタの値が負になりそうだったことを示すフラグ.
+                      --! * このフラグはDN_ENA信号が'1'の時のみ有効.
+                      --! * このフラグはDN_ENA信号が'0'の時はクリアされる.
+                      out std_logic
     );
-end PUMP_COUNT_UP_REGISTER;
+end COUNT_DOWN_REGISTER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
 library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
-architecture RTL of PUMP_COUNT_UP_REGISTER is
+architecture RTL of COUNT_DOWN_REGISTER is
 begin
     COUNTER_ENABLE:if (BITS > 0 and VALID /= 0) generate
-        signal count_regs : unsigned(BITS-1 downto 0);
+        signal count_regs : unsigned(BITS downto 0);
+        signal count_zero : boolean;
+        signal count_neg  : boolean;
     begin        
         process (CLK, RST)
-            variable next_count : unsigned(BITS-1 downto 0);
+            variable next_count : unsigned(BITS downto 0);
         begin
             if    (RST = '1') then 
                     count_regs <= (others => '0');
+                    count_zero <= FALSE;
+                    count_neg  <= FALSE;
             elsif (CLK'event and CLK = '1') then
                 if (CLR   = '1') then
                     count_regs <= (others => '0');
-                elsif (UP_ENA = '0') then
-                    for i in 0 to BITS-1 loop
-                        if (i >= REGS_WEN'low and i <= REGS_WEN'high) then
-                            if (REGS_WEN(i) = '1') then
-                                count_regs(i) <= REGS_WDATA(i);
+                    count_zero <= FALSE;
+                    count_neg  <= FALSE;
+                else
+                    if (DN_ENA = '0') then
+                        for i in 0 to BITS-1 loop
+                            if (i >= REGS_WEN'low and i <= REGS_WEN'high) then
+                                if (REGS_WEN(i) = '1') then
+                                    next_count(i) := REGS_WDATA(i);
+                                else
+                                    next_count(i) := count_regs(i);
+                                end if;
+                            else
+                                    next_count(i) := count_regs(i);
                             end if;
-                        end if;
-                    end loop;
-                elsif (UP_VAL = '1') then
-                    next_count := count_regs + RESIZE(unsigned(UP_SIZE),BITS);
-                    for i in 0 to BITS-1 loop
-                        if (i >= UP_BEN'low and i <= UP_BEN'high) then
-                            if (UP_BEN(i) = '1') then
-                                count_regs(i) <= next_count(i);
-                            end if;
-                        end if;
-                    end loop;
+                        end loop;
+                        next_count(BITS) := '0';
+                    elsif (DN_VAL = '1') then
+                        next_count := count_regs - RESIZE(unsigned(DN_SIZE), BITS+1);
+                    else
+                        next_count := count_regs;
+                    end if;
+                    if (next_count(BITS) = '1') then
+                        count_regs <= (others => '0');
+                        count_neg  <= TRUE;
+                        count_zero <= FALSE;
+                    else
+                        count_regs <= next_count;
+                        count_neg  <= FALSE;
+                        count_zero <= (next_count(BITS-1 downto 0) = 0);
+                    end if;
                 end if;
             end if;
         end process;
         REGS_RDATA <= std_logic_vector(RESIZE(count_regs, REGS_RDATA'length));
         COUNTER    <= std_logic_vector(RESIZE(count_regs, COUNTER   'length));
+        ZERO       <= '1' when (count_zero) else '0';
+        NEG        <= '1' when (count_neg ) else '0';
     end generate;
     COUNTER_DISABLE:if (BITS = 0 or VALID = 0) generate
         REGS_RDATA <= (REGS_RDATA'range => '0');
         COUNTER    <= (COUNTER   'range => '0');
+        ZERO       <= '1';
+        NEG        <= '0';
     end generate;
 end RTL;

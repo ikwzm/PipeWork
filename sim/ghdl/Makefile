@@ -16,12 +16,12 @@ COMPONENTS = components                             \
              sdpram_model                           \
              syncronizer                            \
              syncronizer_input_pending_register     \
+             count_up_register                      \
+             count_down_register                    \
+             pool_intake_valve                      \
+             pool_outlet_valve                      \
              pump_components                        \
-             pump_count_up_register                 \
-             pump_count_down_register               \
              pump_control_register                  \
-             pump_intake_valve                      \
-             pump_outlet_valve                      \
              pump_flow_syncronizer                  \
              pump_controller                        \
              pump_operation_processor               \
@@ -90,22 +90,22 @@ syncronizer.o                            : $(SRC_PATH)/components/syncronizer.vh
 syncronizer_input_pending_register.o     : $(SRC_PATH)/components/syncronizer_input_pending_register.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
+count_up_register.o                      : $(SRC_PATH)/components/count_up_register.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+count_down_register.o                    : $(SRC_PATH)/components/count_down_register.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pool_intake_valve.o                      : $(SRC_PATH)/components/pool_intake_valve.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pool_outlet_valve.o                      : $(SRC_PATH)/components/pool_outlet_valve.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
 pump_components.o                        : $(SRC_PATH)/pump/pump_components.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pump_count_up_register.o                 : $(SRC_PATH)/pump/pump_count_up_register.vhd
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pump_count_down_register.o               : $(SRC_PATH)/pump/pump_count_down_register.vhd
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
 pump_control_register.o                  : $(SRC_PATH)/pump/pump_control_register.vhd
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pump_intake_valve.o                      : $(SRC_PATH)/pump/pump_intake_valve.vhd
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pump_outlet_valve.o                      : $(SRC_PATH)/pump/pump_outlet_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_flow_syncronizer.o                  : $(SRC_PATH)/pump/pump_flow_syncronizer.vhd

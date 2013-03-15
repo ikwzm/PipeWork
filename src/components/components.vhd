@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.0.8                                                           --
---!     @date    2013/01/14                                                      --
+--!     @version 1.4.0                                                           --
+--!     @date    2013/03/15                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -950,6 +950,372 @@ component SDPRAM
         RDATA   : --! @brief READ DATA :
                   --! リードデータ信号
                   out std_logic_vector(2**RWIDTH-1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief COUNT_DOWN_REGISTER                                                   --
+-----------------------------------------------------------------------------------
+component COUNT_DOWN_REGISTER
+    generic (
+        VALID       : --! @brief COUNTER VALID :
+                      --! このカウンターを有効にするかどうかを指定する.
+                      --! * VALID =0 : このカウンターは常に無効.
+                      --! * VALID/=0 : このカウンターは常に有効.
+                      integer := 1;
+        BITS        : --! @brief  COUNTER BITS :
+                      --! カウンターのビット数を指定する.
+                      --! * BIT=0の場合、このカウンターは常に無効になる.
+                      integer := 32;
+        REGS_BITS   : --! @brief REGISTER ACCESS INTERFACE BITS :
+                      --! レジスタアクセスインターフェースのビット数を指定する.
+                      integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- レジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        REGS_WEN    : --! @brief REGISTER WRITE ENABLE :
+                      --! カウンタレジスタ書き込み制御信号.
+                      --! * 書き込みを行うビットに'1'をセットする.  
+                      --!   この信号に１がセットされたビットの位置に、REGS_DINの値
+                      --!   がカウンタレジスタにセットされる.
+                      in  std_logic_vector(REGS_BITS-1 downto 0);
+        REGS_WDATA  : --! @brief REGISTER WRITE DATA :
+                      --! カウンタレジスタ書き込みデータ.
+                      in  std_logic_vector(REGS_BITS-1 downto 0);
+        REGS_RDATA  : --! @brief REGISTER READ DATA :
+                      --! カウンタレジスタ読み出しデータ.
+                      out std_logic_vector(REGS_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- カウントインターフェース
+    -------------------------------------------------------------------------------
+        DN_ENA      : --! @brief COUNT DOWN ENABLE :
+                      --! カウントダウン許可信号.
+                      --! * この信号が'1'の場合、DN_VAL信号およびDN_SIZE信号による
+                      --!   カウントダウンが許可される.
+                      --! * この信号が'1'の場合、REGS_WEN信号およびREGS_WDATA信号に
+                      --!   よるレジスタ書き込みは無視される.
+                      --! * この信号が'0'の場合、DN_VAL信号およびDN_SIZE信号による
+                      --!   カウントダウンは無視される.
+                      in  std_logic;
+        DN_VAL      : --! @brief COUNT DOWN SIZE VALID :
+                      --! カウントダウン有効信号.
+                      --! * この信号が'1'の場合、DN_SIZEで指定された数だけカウンタ
+                      --!   ーの値がアップする.
+                      in  std_logic;
+        DN_SIZE     : --! @brief COUNT DOWN SIZE :
+                      --! カウントダウンサイズ信号.
+                      in  std_logic_vector;
+    -------------------------------------------------------------------------------
+    -- カウンター出力
+    -------------------------------------------------------------------------------
+        COUNTER     : --! @brief COUNTER OUTPUT :
+                      --! カウンタの値を出力.
+                      out std_logic_vector;
+        ZERO        : --! @brief COUNTER ZERO FLAG :
+                      --! カウンタの値が0になったことを示すフラグ.
+                      out std_logic;
+        NEG         : --! @brief COUNTER ZERO FLAG :
+                      --! カウンタの値が負になりそうだったことを示すフラグ.
+                      --! * このフラグはDN_ENA信号が'1'の時のみ有効.
+                      --! * このフラグはDN_ENA信号が'0'の時はクリアされる.
+                      out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief COUNT_UP_REGISTER                                                     --
+-----------------------------------------------------------------------------------
+component COUNT_UP_REGISTER
+    generic (
+        VALID       : --! @brief COUNTER VALID :
+                      --! このカウンターを有効にするかどうかを指定する.
+                      --! * VALID =0 : このカウンターは常に無効.
+                      --! * VALID/=0 : このカウンターは常に有効.
+                      integer := 1;
+        BITS        : --! @brief  COUNTER BITS :
+                      --! カウンターのビット数を指定する.
+                      --! * BIT=0の場合、このカウンターは常に無効になる.
+                      integer := 32;
+        REGS_BITS   : --! @brief REGISTER ACCESS INTERFACE BITS :
+                      --! レジスタアクセスインターフェースのビット数を指定する.
+                      integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- レジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        REGS_WEN    : --! @brief REGISTER WRITE ENABLE :
+                      --! カウンタレジスタ書き込み制御信号.
+                      --! * 書き込みを行うビットに'1'をセットする.  
+                      --!   この信号に１がセットされたビットの位置に、REGS_DINの値
+                      --!   がカウンタレジスタにセットされる.
+                      in  std_logic_vector(REGS_BITS-1 downto 0);
+        REGS_WDATA  : --! @brief REGISTER WRITE DATA :
+                      --! カウンタレジスタ書き込みデータ.
+                      in  std_logic_vector(REGS_BITS-1 downto 0);
+        REGS_RDATA  : --! @brief REGISTER READ DATA :
+                      --! カウンタレジスタ読み出しデータ.
+                      out std_logic_vector(REGS_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- カウントインターフェース
+    -------------------------------------------------------------------------------
+        UP_ENA      : --! @brief COUNT UP ENABLE :
+                      --! カウントアップ許可信号.
+                      --! * この信号が'1'の場合、UP_VAL信号およびUP_SIZE信号による
+                      --!   カウントアップが許可される.
+                      --! * この信号が'1'の場合、REGS_WEN信号およびREGS_WDATA信号に
+                      --!   よるレジスタ書き込みは無視される.
+                      --! * この信号が'0'の場合、UP_VAL信号およびUP_SIZE信号による
+                      --!   カウントアップは無視される.
+                      in  std_logic;
+        UP_VAL      : --! @brief COUNT UP SIZE VALID :
+                      --! カウントアップ有効信号.
+                      --! * この信号が'1'の場合、UP_SIZEで指定された数だけカウンタ
+                      --!   ーの値がアップする.
+                      in  std_logic;
+        UP_BEN      : --! @brief COUNT UP BIT ENABLE :
+                      --! カウントアップビット有効信号.
+                      --! * この信号が'1'の位置のビットのみ、カウンタアップを有効に
+                      --!   する.
+                      in  std_logic_vector;
+        UP_SIZE     : --! @brief COUNT UP SIZE :
+                      --! カウントアップサイズ信号.
+                      in  std_logic_vector;
+    -------------------------------------------------------------------------------
+    -- カウンター出力
+    -------------------------------------------------------------------------------
+        COUNTER     : --! @brief COUNTER OUTPUT :
+                      --! カウンタの値を出力.
+                      out std_logic_vector
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief POOL_INTAKE_VALVE                                                     --
+-----------------------------------------------------------------------------------
+component POOL_INTAKE_VALVE
+    generic (
+        COUNT_BITS      : --! @brief COUNTER BITS :
+                          --! 内部カウンタのビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! サイズ信号のビット数を指定する.
+                          integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- Clock & Reset Signals.
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic;
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic;
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic;
+        INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        POOL_SIZE       : --! @brief POOL SIZE :
+                          --! プールの大きさをバイト数で指定する.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! フローカウンタの値がこの値以下の時に転送を開始する.
+                          --! フローカウンタの値がこの値を越えた時に転送を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_VAL        : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VAL        : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic;
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Flow Control Signals.
+    -------------------------------------------------------------------------------
+        FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW INTAKE STOP :
+                          --! 転送の中止を指示する信号.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW INTAKE LAST :
+                          --! INTAKE側では未使用.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
+                          --! 入力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Flow Counter Signals.
+    -------------------------------------------------------------------------------
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief POOL_OUTLET_VALVE                                                     --
+-----------------------------------------------------------------------------------
+component POOL_OUTLET_VALVE
+    generic (
+        COUNT_BITS      : --! @brief COUNTER BITS :
+                          --! 内部カウンタのビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! サイズ信号のビット数を指定する.
+                          integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- Clock & Reset Signals.
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic;
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic;
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic;
+        INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! フローカウンタの値がこの値以上の時に転送を開始する.
+                          --! フローカウンタの値がこの値未満の時に転送を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_VAL        : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VAL        : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic;
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Flow Control Signals.
+    -------------------------------------------------------------------------------
+        FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW OUTLET STOP :
+                          --! 転送の中止を指示する信号.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW OUTLET LAST :
+                          --! 入力側から最後の入力を示すフラグがあったことを示す.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW OUTLET ENABLE SIZE :
+                          --! 出力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Flow Counter.
+    -------------------------------------------------------------------------------
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
     );
 end component;
 end COMPONENTS;

@@ -200,8 +200,8 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_UP_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_COUNT_DOWN_REGISTER;
+use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
+use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
 architecture RTL of RELAY_REQUEST_CONTROLLER is
     ------------------------------------------------------------------------------
@@ -270,7 +270,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    ADDR_REGS: PUMP_COUNT_UP_REGISTER            -- 
+    ADDR_REGS: COUNT_UP_REGISTER                 -- 
         generic map (                            -- 
             VALID           => ADDR_VALID      , -- 
             BITS            => ADDR_BITS       , -- 
@@ -293,7 +293,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    SIZE_REGS: PUMP_COUNT_DOWN_REGISTER          -- 
+    SIZE_REGS: COUNT_DOWN_REGISTER               -- 
         generic map (                            -- 
             VALID           => SIZE_VALID      , -- 
             BITS            => SIZE_BITS       , -- 
@@ -317,7 +317,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    BUF_PTR: PUMP_COUNT_UP_REGISTER              -- 
+    BUF_PTR: COUNT_UP_REGISTER                   -- 
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => BUF_DEPTH       , --
