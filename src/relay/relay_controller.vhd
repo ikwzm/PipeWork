@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    relay_base_unit.vhd
---!     @brief   RELAY BASE UNIT
+--!     @file    relay_controller.vhd
+--!     @brief   RELAY CONTROLLER
 --!     @version 0.0.1
---!     @date    2013/3/14
+--!     @date    2013/3/16
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   RELAY BASE UNIT
+--! @brief   RELAY CONTROLLER
 -----------------------------------------------------------------------------------
-entity  RELAY_BASE_UNIT is
+entity  RELAY_CONTROLLER is
     generic (
         T_CLK_RATE      : --! @brief RESPONDER CLOCK RATE :
                           --! M_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
@@ -289,7 +289,7 @@ entity  RELAY_BASE_UNIT is
         MR_RESV_ERROR   : in    std_logic;
         MR_RESV_SIZE    : in    std_logic_vector(SIZE_BITS-1 downto 0)
     );
-end RELAY_BASE_UNIT;
+end RELAY_CONTROLLER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -297,9 +297,10 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.RELAY_COMPONENTS.RELAY_REQUEST_CONTROLLER;
+use     PIPEWORK.RELAY_COMPONENTS.RELAY_REQUESTER_INTERFACE;
+use     PIPEWORK.RELAY_COMPONENTS.RELAY_RESPONDER_INTERFACE;
 use     PIPEWORK.RELAY_COMPONENTS.RELAY_REQUEST_SYNCRONIZER;
 use     PIPEWORK.RELAY_COMPONENTS.RELAY_RESPONSE_SYNCRONIZER;
-architecture RTL of RELAY_BASE_UNIT is
+architecture RTL of RELAY_CONTROLLER is
 begin
 end RTL;

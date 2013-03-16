@@ -1,5 +1,6 @@
-ENTITY_FILES = relay_base_unit.vhd              \
-               relay_request_controller.vhd     \
+ENTITY_FILES = relay_controller.vhd             \
+               relay_requester_interface.vhd    \
+               relay_responder_interface.vhd    \
                relay_request_syncronizer.vhd    \
                relay_response_syncronizer.vhd   \
                ${ENDLIST}

@@ -26,7 +26,9 @@ COMPONENTS = components                             \
              pump_controller                        \
              pump_operation_processor               \
              relay_components                       \
-             relay_request_controller               \
+             relay_controller                       \
+             relay_requester_interface              \
+             relay_responder_interface              \
              relay_request_syncronizer              \
              relay_response_syncronizer             \
              axi4_types                             \
@@ -120,13 +122,19 @@ pump_operation_processor.o               : $(SRC_PATH)/pump/pump_operation_proce
 relay_components.o                       : $(SRC_PATH)/relay/relay_components.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
+relay_controller.o                       : $(SRC_PATH)/relay/relay_controller.vhd           components.o relay_components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
 relay_request_syncronizer.o              : $(SRC_PATH)/relay/relay_request_syncronizer.vhd  components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-relay_request_controller.o               : $(SRC_PATH)/relay/relay_request_controller.vhd   components.o pump_components.o
+relay_response_syncronizer.o             : $(SRC_PATH)/relay/relay_response_syncronizer.vhd components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-relay_response_syncronizer.o             : $(SRC_PATH)/relay/relay_response_syncronizer.vhd components.o
+relay_requester_interface.o              : $(SRC_PATH)/relay/relay_requester_interface.vhd  components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+relay_responder_interface.o              : $(SRC_PATH)/relay/relay_responder_interface.vhd  components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 axi4_types.o                             : $(SRC_PATH)/axi4/axi4_types.vhd

@@ -2,7 +2,7 @@
 --!     @file    relay_components.vhd                                            --
 --!     @brief   PIPEWORK RELAY COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 0.0.1                                                           --
---!     @date    2013/03/15                                                      --
+--!     @date    2013/03/16                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -42,9 +42,9 @@ use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
 package RELAY_COMPONENTS is
 -----------------------------------------------------------------------------------
---! @brief RELAY_BASE_UNIT                                                       --
+--! @brief RELAY_CONTROLLER                                                      --
 -----------------------------------------------------------------------------------
-component RELAY_BASE_UNIT
+component RELAY_CONTROLLER
     generic (
         T_CLK_RATE      : --! @brief RESPONDER CLOCK RATE :
                           --! M_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
@@ -296,9 +296,9 @@ component RELAY_BASE_UNIT
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief RELAY_REQUEST_CONTROLLER                                              --
+--! @brief RELAY_REQUESTER_INTERFACE                                             --
 -----------------------------------------------------------------------------------
-component RELAY_REQUEST_CONTROLLER
+component RELAY_REQUESTER_INTERFACE
     generic (
         ADDR_BITS       : --! @brief Request Address Bits :
                           --! REQ_ADDR信号のビット数を指定する.
@@ -321,7 +321,10 @@ component RELAY_REQUEST_CONTROLLER
                           integer := 32;
         BUF_DEPTH       : --! @brief BUFFER DEPTH :
                           --! バッファの容量(バイト数)を２のべき乗値で指定する.
-                          integer := 12
+                          integer := 12;
+        XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
+                          --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
+                          integer := 4
     );
     port (
     ------------------------------------------------------------------------------
@@ -334,26 +337,26 @@ component RELAY_REQUEST_CONTROLLER
         CLR             : --! @brief Global syncrounos reset signal, active HIGH.
                           in    std_logic;
     -------------------------------------------------------------------------------
-    -- Command Request Signals.
+    -- Requester Request Signals.
     -------------------------------------------------------------------------------
-        M_REQ_ADDR      : --! @brief Request Address.
+        M_REQ_ADDR      : --! @brief Requester Request Address.
                           --! 転送開始アドレスを出力する.  
                           out   std_logic_vector(ADDR_BITS-1 downto 0);
-        M_REQ_SIZE      : --! @brief Request Transfer Size.
+        M_REQ_SIZE      : --! @brief Requester Request Transfer Size.
                           --! 転送したいバイト数を出力する. 
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
-        M_REQ_BUF_PTR   : --! @brief Request Buffer Pointer.
+        M_REQ_BUF_PTR   : --! @brief Requester Request Buffer Pointer.
                           --! 転送時のバッファポインタを出力する.
                           out   std_logic_vector(BUF_DEPTH-1 downto 0);
-        M_REQ_MODE      : --! @brief Request Mode Signals.
+        M_REQ_MODE      : --! @brief Requester Request Mode Signals.
                           --! 転送開始時に指定された各種情報を出力する.
                           out   std_logic_vector(MODE_BITS-1 downto 0);
-        M_REQ_FIRST     : --! @brief Request First Transaction.
+        M_REQ_FIRST     : --! @brief Requester Request First Transaction.
                           --! 最初のトランザクションであることを示す.
                           --! * REQ_FIRST=1の場合、内部状態を初期化してからトランザ
                           --!   クションを開始する.
                           out   std_logic;
-        M_REQ_LAST      : --! @brief Request Last Transaction.
+        M_REQ_LAST      : --! @brief Requester Request Last Transaction.
                           --! 最後のトランザクションであることを示す.
                           --! * REQ_LAST=1の場合、Acknowledge を返す際に、すべての
                           --!   トランザクションが終了していると、ACK_LAST 信号をア
@@ -362,19 +365,19 @@ component RELAY_REQUEST_CONTROLLER
                           --!   トランザクションが終了していると、ACK_NEXT 信号をア
                           --!   サートする.
                           out   std_logic;
-        M_REQ_VALID     : --! @brief Request Valid Signal.
+        M_REQ_VALID     : --! @brief Requester Request Valid Signal.
                           --! 上記の各種リクエスト信号が有効であることを示す.
                           --! * この信号のアサートでもってトランザクションを開始する.
                           --! * 一度この信号をアサートすると Acknowledge を返すまで、
                           --!   この信号はアサートされなくてはならない.
                           out   std_logic;
-        M_REQ_READY     : --! @brief Request Ready Signal.
+        M_REQ_READY     : --! @brief Requester Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           in    std_logic;
     -------------------------------------------------------------------------------
-    -- Command Acknowledge Signals.
+    -- Requester Acknowledge Signals.
     -------------------------------------------------------------------------------
-        M_ACK_VALID     : --! @brief Acknowledge Valid Signal.
+        M_ACK_VALID     : --! @brief Requester Acknowledge Valid Signal.
                           --! 上記の Command Request の応答信号.
                           --! 下記の 各種 Acknowledge 信号が有効である事を示す.
                           --! * この信号のアサートでもって、Command Request が受け
@@ -388,27 +391,27 @@ component RELAY_REQUEST_CONTROLLER
                           --!   げるか、REQ_VALをアサートしたままで次の Request 情
                           --!   報を用意しておかなければならない.
                           in    std_logic;
-        M_ACK_NEXT      : --! @brief Acknowledge with need Next transaction.
+        M_ACK_NEXT      : --! @brief Requester Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
                           --! この信号がアサートされる.
                           in    std_logic;
-        M_ACK_LAST      : --! @brief Acknowledge with Last transaction.
+        M_ACK_LAST      : --! @brief Requester Acknowledge with Last transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=1 の場合、
                           --! この信号がアサートされる.
                           in    std_logic;
-        M_ACK_ERROR     : --! @brief Acknowledge with Error.
+        M_ACK_ERROR     : --! @brief Requester Acknowledge with Error.
                           --! トランザクション中になんらかのエラーが発生した場合、
                           --! この信号がアサートされる.
                           in    std_logic;
-        M_ACK_STOP      : --! @brief Acknowledge with Stop operation.
+        M_ACK_STOP      : --! @brief Requester Acknowledge with Stop operation.
                           --! トランザクションが中止された場合、この信号がアサート
                           --! される.
                           in    std_logic;
-        M_ACK_NONE      : --! @brief Acknowledge with None Request transfer size.
+        M_ACK_NONE      : --! @brief Requester Acknowledge with None Request transfer size.
                           --! REQ_SIZE=0 の Request だった場合、この信号がアサート
                           --! される.
                           in    std_logic;
-        M_ACK_SIZE      : --! @brief Acknowledge transfer size.
+        M_ACK_SIZE      : --! @brief Requester Acknowledge transfer size.
                           --! 転送するバイト数を示す.
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
@@ -416,33 +419,164 @@ component RELAY_REQUEST_CONTROLLER
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-        T_REQ_ADDR      : --! @brief Request Address.
+        T_REQ_ADDR      : --! @brief Responder Request Address.
                           --! 転送開始アドレスを入力する.  
                           in    std_logic_vector(ADDR_BITS-1 downto 0);
-        T_REQ_SIZE      : --! @brief Request Transfer Size.
+        T_REQ_SIZE      : --! @brief Responder Request Transfer Size.
                           --! 転送したいバイト数を入力する. 
                           in    std_logic_vector(SIZE_BITS-1 downto 0);
-        T_REQ_BUF_PTR   : --! @brief Request Buffer Pointer.
+        T_REQ_BUF_PTR   : --! @brief Responder Request Buffer Pointer.
                           --! 転送時のバッファポインタを入力する.
                           in    std_logic_vector(BUF_DEPTH-1 downto 0);
-        T_REQ_MODE      : --! @brief Request Mode Signals.
+        T_REQ_MODE      : --! @brief Responder Request Mode Signals.
                           --! 転送開始時に指定された各種情報を入力する.
                           in    std_logic_vector(MODE_BITS-1 downto 0);
-        T_REQ_VALID     : --! @brief Request Valid Signal.
+        T_REQ_VALID     : --! @brief Responder Request Valid Signal.
                           --! 上記の各種リクエスト信号が有効であることを示す.
                           in    std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-        T_START         : --! @brief Request Start Signal.
+        T_RES_START     : --! @brief Request Start Signal.
                           --! 転送を開始したことを示す出力信号.
                           out   std_logic;
-        T_DONE          : --! @brief Transaction Done Signal.
+        T_RES_DONE      : --! @brief Transaction Done Signal.
                           --! 転送を終了したことを示す出力信号.
                           out   std_logic;
-        T_ERROR         : --! @brief Transaction Error Signal.
+        T_RES_ERROR     : --! @brief Transaction Error Signal.
                           --! 転送を異常終了したことを示す出力信号.
                           out   std_logic;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        VALVE_OPEN      : --!  @brief Valve Open Signal.
+                          out   std_logic
+
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief RELAY_RESPONDER_INTERFACE                                             --
+-----------------------------------------------------------------------------------
+component RELAY_RESPONDER_INTERFACE
+    generic (
+        ADDR_BITS       : --! @brief Request Address Bits :
+                          --! REQ_ADDR信号のビット数を指定する.
+                          integer := 32;
+        ADDR_VALID      : --! @brief Request Address Valid :
+                          --! REQ_ADDR信号を有効にするかどうかを指定する.
+                          --! * ADDR_VALID=0で無効.
+                          --! * ADDR_VALID>0で有効.
+                          integer :=  1;
+        SIZE_BITS       : --! @brief Transfer Size Bits :
+                          --! REQ_SIZE/ACK_SIZE信号のビット数を指定する.
+                          integer := 32;
+        SIZE_VALID      : --! @brief Request Size Valid :
+                          --! REQ_SIZE信号を有効にするかどうかを指定する.
+                          --! * SIZE_VALID=0で無効.
+                          --! * SIZE_VALID>0で有効.
+                          integer :=  1;
+        MODE_BITS       : --! @brief Request Mode Bits :
+                          --! REQ_MODE信号のビット数を指定する.
+                          integer := 32;
+        BUF_DEPTH       : --! @brief BUFFER DEPTH :
+                          --! バッファの容量(バイト数)を２のべき乗値で指定する.
+                          integer := 12;
+        XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
+                          --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
+                          integer := 4
+    );
+    port (
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
+        CLK             : --! @brief Global clock signal.  
+                          in    std_logic;
+        RST             : --! @brief Global asyncrounos reset signal, active HIGH.
+                          in    std_logic;
+        CLR             : --! @brief Global syncrounos reset signal, active HIGH.
+                          in    std_logic;
+    -------------------------------------------------------------------------------
+    -- Responder Request Signals.
+    -------------------------------------------------------------------------------
+        T_REQ_ADDR      : --! @brief Responder Request Address.
+                          --! 転送開始アドレスを入力する.  
+                          in    std_logic_vector(ADDR_BITS-1 downto 0);
+        T_REQ_SIZE      : --! @brief Responder Request Transfer Size.
+                          --! 転送したいバイト数を入力する. 
+                          in    std_logic_vector(SIZE_BITS-1 downto 0);
+        T_REQ_BUF_PTR   : --! @brief Responder Request Buffer Pointer.
+                          --! 転送時のバッファポインタを入力する.
+                          in    std_logic_vector(BUF_DEPTH-1 downto 0);
+        T_REQ_MODE      : --! @brief Responder Request Mode Signals.
+                          --! 転送開始時に指定された各種情報を入力する.
+                          out   std_logic_vector(MODE_BITS-1 downto 0);
+        T_REQ_VALID     : --! @brief Responder Request Valid Signal.
+                          --! 上記の各種リクエスト信号が有効であることを示す.
+                          --! * この信号のアサートでもってトランザクションを開始する.
+                          --! * 一度この信号をアサートすると Acknowledge を返すまで、
+                          --!   この信号はアサートされなくてはならない.
+                          in    std_logic;
+        T_REQ_READY     : --! @brief Responder Request Ready Signal.
+                          --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                          out   std_logic;
+    -------------------------------------------------------------------------------
+    -- Responder Acknowledge Signals.
+    -------------------------------------------------------------------------------
+        T_ACK_VALID     : --! @brief Responder Acknowledge Valid Signal.
+                          --! 上記の Command Request の応答信号.
+                          --! 下記の 各種 Acknowledge 信号が有効である事を示す.
+                          --! * この信号のアサートでもって、Command Request が受け
+                          --!   付けられたことを示す. ただし、あくまでも Request が
+                          --!   受け付けられただけであって、必ずしもトランザクショ
+                          --!   ンが完了したわけではないことに注意.
+                          --! * この信号は Request につき１クロックだけアサートされ
+                          --!   る.
+                          --! * この信号がアサートされたら、アプリケーション側は速
+                          --!   やかに REQ_VAL 信号をネゲートして Request を取り下
+                          --!   げるか、REQ_VALをアサートしたままで次の Request 情
+                          --!   報を用意しておかなければならない.
+                          out   std_logic;
+        T_ACK_ERROR     : --! @brief Responder Acknowledge with Error.
+                          --! トランザクション中になんらかのエラーが発生した場合、
+                          --! この信号がアサートされる.
+                          out   std_logic;
+        T_ACK_STOP      : --! @brief Responder Acknowledge with Stop operation.
+                          --! トランザクションが中止された場合、この信号がアサート
+                          --! される.
+                          out   std_logic;
+        T_ACK_SIZE      : --! @brief Responder Acknowledge transfer size.
+                          --! 転送するバイト数を示す.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        M_REQ_ADDR      : --! @brief Requester Request Address.
+                          --! 転送開始アドレスを出力する.  
+                          out   std_logic_vector(ADDR_BITS-1 downto 0);
+        M_REQ_SIZE      : --! @brief Requester Request Transfer Size.
+                          --! 転送したいバイト数を出力する. 
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        M_REQ_BUF_PTR   : --! @brief Requester Request Buffer Pointer.
+                          --! 転送時のバッファポインタを出力する.
+                          out   std_logic_vector(BUF_DEPTH-1 downto 0);
+        M_REQ_MODE      : --! @brief Requester Request Mode Signals.
+                          --! 転送開始時に指定された各種情報を出力する.
+                          out   std_logic_vector(MODE_BITS-1 downto 0);
+        M_REQ_VALID     : --! @brief Requester Request Valid Signal.
+                          --! 上記の各種リクエスト信号が有効であることを示す.
+                          out   std_logic;
+        M_RES_START     : --! @brief Requester Start Signals.
+                          --! リクエスタが処理を開始したことを示す.
+                          in    std_logic;
+        M_RES_DONE      : --! @brief Requester Done Signals.
+                          --! リクエスタが処理を終了したことを示す.
+                          in    std_logic;
+        M_RES_ERROR     : --! @brief Requester Done Signals.
+                          --! リクエスタが処理を終了したことを示す.
+                          in    std_logic;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
         VALVE_OPEN      : --!  @brief Valve Open Signal.
                           out   std_logic
 
