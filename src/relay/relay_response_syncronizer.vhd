@@ -3,7 +3,7 @@
 --!     @brief   RELAY RESPONSE SYNCRONIZER
 --!              Relay の Requester 側から Responder側 へ各種情報を伝達するモジュール.
 --!     @version 0.0.1
---!     @date    2013/3/14
+--!     @date    2013/3/16
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -85,6 +85,11 @@ entity  RELAY_RESPONSE_SYNCRONIZER is
                           --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時の
                           --!   み有効. それ以外は未使用.
                           in  std_logic;
+        I_DIR           : --! @brief INPUT DIRECTION :
+                          --! 転送方向(PUSH/PULL)を指定する.
+                          --! * I_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
+                          --! * I_DIR='0' : PULL(Requester側からResponder側へデータ転送)
+                          in  std_logic;
         I_START_VAL     : --! @brief INPUT START :
                           --! 入力側から出力側へ転送の開始を伝達する信号.
                           in  std_logic;
@@ -96,46 +101,26 @@ entity  RELAY_RESPONSE_SYNCRONIZER is
                           --! 入力側から出力側へ伝達する各種情報.
                           --! * 伝達の際、場合によっては DELAY_CYCLE分だけ遅延される.
                           in  std_logic_vector(INFO_BITS-1 downto 0);
-        I_PUSH_VAL      : --! @brief INPUT PUSH SIZE/LAST VALID :
-                          --! I_PUSH_LAST、I_PUSH_SIZE、が有効であることを示す信号.
-                          --! * この信号のアサートにより I_PUSH_LAST、I_PUSH_SIZE、
-                          --!   内容が出力側に伝達されて、O_PUSH_LAST、O_PUSH_SIZE
+        I_XFER_VAL      : --! @brief INPUT TRANSFER SIZE/LAST VALID :
+                          --! I_XFER_LAST、I_XFER_SIZE、が有効であることを示す信号.
+                          --! * この信号のアサートにより I_XFER_LAST、I_XFER_SIZE、
+                          --!   内容が出力側に伝達されて、O_XFER_LAST、O_XFER_SIZE
                           --!   から出力される.
-                          --! * 伝達の際、DELAY_CYCLE分だけ遅延される.
+                          --! * I_DIR='1'の場合、伝達の際にDELAY_CYCLE分だけ遅延される.
                           in  std_logic;
-        I_PUSH_LAST     : --! @brief INPUT PUSH LAST FLAG :
+        I_XFER_LAST     : --! @brief INPUT TRANSFER LAST FLAG :
                           in  std_logic;
-        I_PUSH_SIZE     : --! @brief INPUT PUSH SIZE :
+        I_XFER_SIZE     : --! @brief INPUT TRANSFER SIZE :
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_PULL_VAL      : --! @brief INPUT PULL SIZE/LAST VALID :
-                          --! I_PULL_LAST、I_PULL_SIZE、が有効であることを示す信号.
-                          --! * この信号のアサートにより I_PULL_LAST、I_PULL_SIZE、
-                          --!   内容が出力側に伝達されて、O_PULL_LAST、O_PULL_SIZE
+        I_RESV_VAL      : --! @brief INPUT RESERVE SIZE/LAST VALID :
+                          --! I_RESV_LAST、I_RESV_SIZE、が有効であることを示す信号.
+                          --! * この信号のアサートにより I_RESV_LAST、I_RESV_SIZE、
+                          --!   内容が出力側に伝達されて、O_RESV_LAST、O_RESV_SIZE
                           --!   から出力される.
                           in  std_logic;
-        I_PULL_LAST     : --! @brief INPUT PULL LAST FLAG :
+        I_RESV_LAST     : --! @brief INPUT RESERVE LAST FLAG :
                           in  std_logic;
-        I_PULL_SIZE     : --! @brief INPUT PULL SIZE :
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_RSV0_VAL      : --! @brief INPUT RESERVE(0) SIZE/LAST VALID :
-                          --! I_RSV0_LAST、I_RSV0_SIZE、が有効であることを示す信号.
-                          --! * この信号のアサートにより I_RSV0_LAST、I_RSV0_SIZE、
-                          --!   内容が出力側に伝達されて、O_RSV0_LAST、O_RSV0_SIZE
-                          --!   から出力される.
-                          in  std_logic;
-        I_RSV0_LAST     : --! @brief INPUT RESERVE(0) LAST FLAG :
-                          in  std_logic;
-        I_RSV0_SIZE     : --! @brief INPUT RESERVE(0) SIZE :
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_RSV1_VAL      : --! @brief INPUT RESERVE(1) SIZE/LAST VALID :
-                          --! I_RSV1_LAST、I_RSV1_SIZE、が有効であることを示す信号.
-                          --! * この信号のアサートにより I_RSV1_LAST、I_RSV1_SIZE、
-                          --!   内容が出力側に伝達されて、O_RSV1_LAST、O_RSV1_SIZE
-                          --!   から出力される.
-                          in  std_logic;
-        I_RSV1_LAST     : --! @brief INPUT RESERVE(1) LAST FLAG :
-                          in  std_logic;
-        I_RSV1_SIZE     : --! @brief INPUT RESERVE(1) SIZE :
+        I_RESV_SIZE     : --! @brief INPUT RESERVE SIZE :
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側の各種信号
@@ -158,38 +143,32 @@ entity  RELAY_RESPONSE_SYNCRONIZER is
         O_START_VAL     : --! @brief OUTPUT START :
                           --! 入力側から出力側へ転送の開始を伝達する信号.
                           out std_logic;
+        O_DIR           : --! @brief INPUT DIRECTION :
+                          --! 転送方向(PUSH/PULL)を出力する.
+                          out std_logic;
         O_RES_VAL       : --! @brief OUTPUT RESPONSE VALID :
                           --! O_RES_INFOが有効であることを示す信号.
                           out std_logic;
         O_RES_INFO      : --! @brief OUTPUT RESPONSE INFOMATION :
                           --! 入力側から出力側へ伝達された各種情報.
                           out std_logic_vector(INFO_BITS-1 downto 0);
-        O_PUSH_VAL      : --! @brief OUTPUT PUSH SIZE/LAST VALID :
-                          --! O_PUSH_LAST、O_PUSH_SIZE、が有効であることを示す信号.
+        O_XFER_VAL      : --! @brief OUTPUT TRANSFER SIZE/LAST VALID :
+                          --! O_XFER_LAST、O_XFER_SIZE、が有効であることを示す信号.
                           out  std_logic;
-        O_PUSH_LAST     : --! @brief OUTPUT PUSH LAST FLAG :
+        O_XFER_DIR      : --! @brief OUTPUT TRANSFER DIRECTION :
                           out std_logic;
-        O_PUSH_SIZE     : --! @brief OUTPUT PUSH SIZE :
+        O_XFER_LAST     : --! @brief OUTPUT TRANSFER LAST FLAG :
+                          out std_logic;
+        O_XFER_SIZE     : --! @brief OUTPUT TRANSFER SIZE :
                           out std_logic_vector(SIZE_BITS-1 downto 0);
-        O_PULL_VAL      : --! @brief OUTPUT PULL SIZE/LAST VALID :
-                          --! O_PULL_LAST、O_PULL_SIZE、が有効であることを示す信号.
+        O_RESV_VAL      : --! @brief OUTPUT RESERVE SIZE/LAST VALID :
+                          --! O_RESV_LAST、O_RESV_SIZE、が有効であることを示す信号.
                           out std_logic;
-        O_PULL_LAST     : --! @brief OUTPUT PULL LAST FLAG :
+        O_RESV_DIR      : --! @brief OUTPUT RESERVE DIRECTION :
                           out std_logic;
-        O_PULL_SIZE     : --! @brief OUTPUT PULL SIZE :
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
-        O_RSV0_VAL      : --! @brief OUTPUT RESERVE(0) SIZE/LAST VALID :
-                          --! O_RSV0_LAST、O_RSV0_SIZE、が有効であることを示す信号.
+        O_RESV_LAST     : --! @brief OUTPUT RESERVE LAST FLAG :
                           out std_logic;
-        O_RSV0_LAST     : --! @brief OUTPUT RESERVE(0) LAST FLAG :
-                          out std_logic;
-        O_RSV0_SIZE     : --! @brief OUTPUT RESERVE(0) SIZE :
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
-        O_RSV1_VAL      : --! @brief OUTPUT RESERVE(1) SIZE/LAST VALID :
-                          out std_logic;
-        O_RSV1_LAST     : --! @brief OUTPUT RESERVE(1) LAST FLAG :
-                          out std_logic;
-        O_RSV1_SIZE     : --! @brief OUTPUT RESERVE(1) SIZE :
+        O_RESV_SIZE     : --! @brief OUTPUT RESERVE SIZE :
                           out std_logic_vector(SIZE_BITS-1 downto 0)
     );
 end RELAY_RESPONSE_SYNCRONIZER;
@@ -210,32 +189,27 @@ architecture  RTL of RELAY_RESPONSE_SYNCRONIZER is
     constant  VALID_LO      : integer   := 0;
     constant  START_VAL_POS : integer   := 0;
     constant  RES_VAL_POS   : integer   := 1;
-    constant  PUSH_VAL_POS  : integer   := 2;
-    constant  PULL_VAL_POS  : integer   := 3;
-    constant  RSV0_VAL_POS  : integer   := 4;
-    constant  RSV1_VAL_POS  : integer   := 5;
-    constant  VALID_HI      : integer   := 5;
+    constant  XFER_VAL_POS  : integer   := 2;
+    constant  RESV_VAL_POS  : integer   := 3;
+    constant  VALID_HI      : integer   := 3;
     signal    i_valid       : std_logic_vector(VALID_HI downto VALID_LO);
     signal    o_valid       : std_logic_vector(VALID_HI downto VALID_LO);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     constant  DATA_LO       : integer   := 0;
-    constant  RES_INFO_LO   : integer   := DATA_LO       + 1;
+    constant  RES_DIR_POS   : integer   := DATA_LO       + 1;
+    constant  RES_INFO_LO   : integer   := RES_DIR_POS   + 1;
     constant  RES_INFO_HI   : integer   := RES_INFO_LO   + I_RES_INFO'length  - 1;
-    constant  PUSH_LAST_POS : integer   := RES_INFO_HI   + 1;
-    constant  PUSH_SIZE_LO  : integer   := PUSH_LAST_POS + 1;
-    constant  PUSH_SIZE_HI  : integer   := PUSH_SIZE_LO  + I_PUSH_SIZE'length - 1;
-    constant  PULL_LAST_POS : integer   := PUSH_SIZE_HI  + 1;
-    constant  PULL_SIZE_LO  : integer   := PULL_LAST_POS + 1;
-    constant  PULL_SIZE_HI  : integer   := PULL_SIZE_LO  + I_PULL_SIZE'length - 1;
-    constant  RSV0_LAST_POS : integer   := PULL_SIZE_HI  + 1;
-    constant  RSV0_SIZE_LO  : integer   := RSV0_LAST_POS + 1;
-    constant  RSV0_SIZE_HI  : integer   := RSV0_SIZE_LO  + I_RSV0_SIZE'length - 1;
-    constant  RSV1_LAST_POS : integer   := RSV0_SIZE_HI  + 1;
-    constant  RSV1_SIZE_LO  : integer   := RSV1_LAST_POS + 1;
-    constant  RSV1_SIZE_HI  : integer   := RSV1_SIZE_LO  + I_RSV1_SIZE'length - 1;
-    constant  DATA_HI       : integer   := RSV1_SIZE_HI;
+    constant  XFER_DIR_POS  : integer   := RES_INFO_HI   + 1;
+    constant  XFER_LAST_POS : integer   := XFER_DIR_POS  + 1;
+    constant  XFER_SIZE_LO  : integer   := XFER_LAST_POS + 1;
+    constant  XFER_SIZE_HI  : integer   := XFER_SIZE_LO  + I_XFER_SIZE'length - 1;
+    constant  RESV_DIR_POS  : integer   := XFER_SIZE_HI  + 1;
+    constant  RESV_LAST_POS : integer   := RESV_DIR_POS  + 1;
+    constant  RESV_SIZE_LO  : integer   := RESV_LAST_POS + 1;
+    constant  RESV_SIZE_HI  : integer   := RESV_SIZE_LO  + I_RESV_SIZE'length - 1;
+    constant  DATA_HI       : integer   := RESV_SIZE_HI;
     signal    i_data        : std_logic_vector(DATA_HI downto DATA_LO);
     signal    o_data        : std_logic_vector(DATA_HI downto DATA_LO);
     -------------------------------------------------------------------------------
@@ -247,14 +221,17 @@ architecture  RTL of RELAY_RESPONSE_SYNCRONIZER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  PUSH_DATA_LO  : integer   := PUSH_LAST_POS;
-    constant  PUSH_DATA_HI  : integer   := PUSH_SIZE_HI;
-    signal    d_push_data   : std_logic_vector(PUSH_DATA_HI downto PUSH_DATA_LO);
+    constant  XFER_DATA_LO  : integer   := XFER_DIR_POS;
+    constant  XFER_DATA_HI  : integer   := XFER_SIZE_HI;
+    signal    d_data        : std_logic_vector(XFER_DATA_HI downto XFER_DATA_LO);
+    signal    d_push_valid  : std_logic;
+    signal    o_push_valid  : std_logic;
+    signal    o_pull_valid  : std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     constant  DELAY_SEL     : std_logic_vector(DELAY_CYCLE downto DELAY_CYCLE) := (others => '1');
-    signal    d_valid       : std_logic_vector(DELAY_CYCLE downto 0);
+    signal    delay_valid   : std_logic_vector(DELAY_CYCLE downto 0);
 begin
     ------------------------------------------------------------------------------
     -- I_START_VAL信号を SYNCRONIZER の I_VAL  に入力.
@@ -268,12 +245,12 @@ begin
             CLK         => I_CLK                                      , -- In  :
             RST         => RST                                        , -- In  :
             CLR         => I_CLR                                      , -- In  :
-            I_DATA(0)   => I_START_VAL                                , -- In  :
+            I_DATA(0)   => I_DIR                                      , -- In  :
             I_VAL       => I_START_VAL                                , -- In  :
             I_PAUSE     => i_pause                                    , -- In  :
             P_DATA      => open                                       , -- Out :
             P_VAL       => open                                       , -- Out :
-            O_DATA      => open                                       , -- Out :
+            O_DATA      => i_data (RES_DIR_POS downto RES_DIR_POS)    , -- Out :
             O_VAL       => i_valid(START_VAL_POS)                     , -- Out :
             O_RDY       => i_ready                                      -- In  :
         );                                                              -- 
@@ -300,174 +277,92 @@ begin
             O_RDY       => i_ready                                      -- In  :
         );                                                              -- 
     ------------------------------------------------------------------------------
-    -- I_PUSH_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_PUSH_SIZE信号を SYNCRONIZER の I_DATA に入力.
+    -- I_XFER_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    -- I_XFER_SIZE信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
-    I_PUSH_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
+    I_XFER_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
         generic map (                                                   --
-            DATA_BITS   => I_PUSH_SIZE'length                         , -- 
+            DATA_BITS   => I_XFER_SIZE'length                         , -- 
             OPERATION   => 2                                            -- 
         )                                                               -- 
         port map (                                                      -- 
             CLK         => I_CLK                                      , -- In  :
             RST         => RST                                        , -- In  :
             CLR         => I_CLR                                      , -- In  :
-            I_DATA      => I_PUSH_SIZE                                , -- In  :
-            I_VAL       => I_PUSH_VAL                                 , -- In  :
+            I_DATA      => I_XFER_SIZE                                , -- In  :
+            I_VAL       => I_XFER_VAL                                 , -- In  :
             I_PAUSE     => i_pause                                    , -- In  :
             P_DATA      => open                                       , -- Out :
             P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (PUSH_SIZE_HI downto PUSH_SIZE_LO)  , -- Out :
-            O_VAL       => i_valid(PUSH_VAL_POS)                      , -- Out :
+            O_DATA      => i_data (XFER_SIZE_HI downto XFER_SIZE_LO)  , -- Out :
+            O_VAL       => i_valid(XFER_VAL_POS)                      , -- Out :
             O_RDY       => i_ready                                      -- In  :
         );                                                              --     
     ------------------------------------------------------------------------------
-    -- I_PUSH_LAST信号を SYNCRONIZER の I_DATA に入力.
+    -- I_DIR       信号を SYNCRONIZER の I_DATA(XFER_DIR_POS ) に入力.
+    -- I_XFER_LAST 信号を SYNCRONIZER の I_DATA(XFER_LAST_POS) に入力.
     ------------------------------------------------------------------------------
-    I_PUSH_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
+    I_XFER_FLAG_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
         generic map (                                                   --
-            DATA_BITS   => 1                                          , -- 
+            DATA_BITS   => 2                                          , -- 
             OPERATION   => 1                                            -- 
         )                                                               -- 
         port map (                                                      -- 
             CLK         => I_CLK                                      , -- In  :
             RST         => RST                                        , -- In  :
             CLR         => I_CLR                                      , -- In  :
-            I_DATA(0)   => I_PUSH_LAST                                , -- In  :
-            I_VAL       => I_PUSH_VAL                                 , -- In  :
+            I_DATA(0)   => I_DIR                                      , -- In  :
+            I_DATA(1)   => I_XFER_LAST                                , -- In  :
+            I_VAL       => I_XFER_VAL                                 , -- In  :
             I_PAUSE     => i_pause                                    , -- In  :
             P_DATA      => open                                       , -- Out :
             P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (PUSH_LAST_POS downto PUSH_LAST_POS), -- Out :
+            O_DATA      => i_data (XFER_LAST_POS downto XFER_DIR_POS) , -- Out :
             O_VAL       => open                                       , -- Out :
             O_RDY       => i_ready                                      -- In  :
         );                                                              -- 
     ------------------------------------------------------------------------------
-    -- I_PULL_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_PULL_SIZE信号を SYNCRONIZER の I_DATA に入力.
+    -- I_RESV_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    -- I_RESV_SIZE信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
-    I_PULL_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
+    I_RESV_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
         generic map (                                                   --
-            DATA_BITS   => I_PULL_SIZE'length                         , -- 
+            DATA_BITS   => I_RESV_SIZE'length                         , -- 
             OPERATION   => 2                                            -- 
         )                                                               -- 
         port map (                                                      -- 
             CLK         => I_CLK                                      , -- In  :
             RST         => RST                                        , -- In  :
             CLR         => I_CLR                                      , -- In  :
-            I_DATA      => I_PULL_SIZE                                , -- In  :
-            I_VAL       => I_PULL_VAL                                 , -- In  :
+            I_DATA      => I_RESV_SIZE                                , -- In  :
+            I_VAL       => I_RESV_VAL                                 , -- In  :
             I_PAUSE     => i_pause                                    , -- In  :
             P_DATA      => open                                       , -- Out :
             P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (PULL_SIZE_HI downto PULL_SIZE_LO)  , -- Out :
-            O_VAL       => i_valid(PULL_VAL_POS)                      , -- Out :
+            O_DATA      => i_data (RESV_SIZE_HI downto RESV_SIZE_LO)  , -- Out :
+            O_VAL       => i_valid(RESV_VAL_POS)                      , -- Out :
             O_RDY       => i_ready                                      -- In  :
         );                                                              --     
     ------------------------------------------------------------------------------
-    -- I_PULL_LAST信号を SYNCRONIZER の I_DATA に入力.
+    -- I_DIR       信号を SYNCRONIZER の I_DATA(RESV_DIR_POS ) に入力.
+    -- I_RESV_LAST 信号を SYNCRONIZER の I_DATA(RESV_LAST_POS) に入力.
     ------------------------------------------------------------------------------
-    I_PULL_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
+    I_RESV_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
         generic map (                                                   --
-            DATA_BITS   => 1                                          , -- 
+            DATA_BITS   => 2                                          , -- 
             OPERATION   => 1                                            -- 
         )                                                               -- 
         port map (                                                      -- 
             CLK         => I_CLK                                      , -- In  :
             RST         => RST                                        , -- In  :
             CLR         => I_CLR                                      , -- In  :
-            I_DATA(0)   => I_PULL_LAST                                , -- In  :
-            I_VAL       => I_PULL_VAL                                 , -- In  :
+            I_DATA(0)   => I_DIR                                      , -- In  :
+            I_DATA(1)   => I_RESV_LAST                                , -- In  :
+            I_VAL       => I_RESV_VAL                                 , -- In  :
             I_PAUSE     => i_pause                                    , -- In  :
             P_DATA      => open                                       , -- Out :
             P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (PULL_LAST_POS downto PULL_LAST_POS), -- Out :
-            O_VAL       => open                                       , -- Out :
-            O_RDY       => i_ready                                      -- In  :
-        );                                                              -- 
-    ------------------------------------------------------------------------------
-    -- I_RSV0_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_RSV0_SIZE信号を SYNCRONIZER の I_DATA に入力.
-    ------------------------------------------------------------------------------
-    I_RSV0_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
-        generic map (                                                   --
-            DATA_BITS   => I_RSV0_SIZE'length                         , -- 
-            OPERATION   => 2                                            -- 
-        )                                                               -- 
-        port map (                                                      -- 
-            CLK         => I_CLK                                      , -- In  :
-            RST         => RST                                        , -- In  :
-            CLR         => I_CLR                                      , -- In  :
-            I_DATA      => I_RSV0_SIZE                                , -- In  :
-            I_VAL       => I_RSV0_VAL                                 , -- In  :
-            I_PAUSE     => i_pause                                    , -- In  :
-            P_DATA      => open                                       , -- Out :
-            P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (RSV0_SIZE_HI downto RSV0_SIZE_LO)  , -- Out :
-            O_VAL       => i_valid(RSV0_VAL_POS)                      , -- Out :
-            O_RDY       => i_ready                                      -- In  :
-        );                                                              --     
-    ------------------------------------------------------------------------------
-    -- I_RSV0_LAST信号を SYNCRONIZER の I_DATA に入力.
-    ------------------------------------------------------------------------------
-    I_RSV0_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
-        generic map (                                                   --
-            DATA_BITS   => 1                                          , -- 
-            OPERATION   => 1                                            -- 
-        )                                                               -- 
-        port map (                                                      -- 
-            CLK         => I_CLK                                      , -- In  :
-            RST         => RST                                        , -- In  :
-            CLR         => I_CLR                                      , -- In  :
-            I_DATA(0)   => I_RSV0_LAST                                , -- In  :
-            I_VAL       => I_RSV0_VAL                                 , -- In  :
-            I_PAUSE     => i_pause                                    , -- In  :
-            P_DATA      => open                                       , -- Out :
-            P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (RSV0_LAST_POS downto RSV0_LAST_POS), -- Out :
-            O_VAL       => open                                       , -- Out :
-            O_RDY       => i_ready                                      -- In  :
-        );                                                              -- 
-    ------------------------------------------------------------------------------
-    -- I_RSV1_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_RSV1_SIZE信号を SYNCRONIZER の I_DATA に入力.
-    ------------------------------------------------------------------------------
-    I_RSV1_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
-        generic map (                                                   --
-            DATA_BITS   => I_RSV1_SIZE'length                         , -- 
-            OPERATION   => 2                                            -- 
-        )                                                               -- 
-        port map (                                                      -- 
-            CLK         => I_CLK                                      , -- In  :
-            RST         => RST                                        , -- In  :
-            CLR         => I_CLR                                      , -- In  :
-            I_DATA      => I_RSV1_SIZE                                , -- In  :
-            I_VAL       => I_RSV1_VAL                                 , -- In  :
-            I_PAUSE     => i_pause                                    , -- In  :
-            P_DATA      => open                                       , -- Out :
-            P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (RSV1_SIZE_HI downto RSV1_SIZE_LO)  , -- Out :
-            O_VAL       => i_valid(RSV1_VAL_POS)                      , -- Out :
-            O_RDY       => i_ready                                      -- In  :
-        );                                                              --     
-    ------------------------------------------------------------------------------
-    -- I_RSV1_LAST信号を SYNCRONIZER の I_DATA に入力.
-    ------------------------------------------------------------------------------
-    I_RSV1_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
-        generic map (                                                   --
-            DATA_BITS   => 1                                          , -- 
-            OPERATION   => 1                                            -- 
-        )                                                               -- 
-        port map (                                                      -- 
-            CLK         => I_CLK                                      , -- In  :
-            RST         => RST                                        , -- In  :
-            CLR         => I_CLR                                      , -- In  :
-            I_DATA(0)   => I_RSV1_LAST                                , -- In  :
-            I_VAL       => I_RSV1_VAL                                 , -- In  :
-            I_PAUSE     => i_pause                                    , -- In  :
-            P_DATA      => open                                       , -- Out :
-            P_VAL       => open                                       , -- Out :
-            O_DATA      => i_data (RSV1_LAST_POS downto RSV1_LAST_POS), -- Out :
+            O_DATA      => i_data (RESV_LAST_POS downto RESV_DIR_POS) , -- Out :
             O_VAL       => open                                       , -- Out :
             O_RDY       => i_ready                                      -- In  :
         );                                                              -- 
@@ -501,13 +396,13 @@ begin
             O_VAL       => o_valid                                      -- Out :
         );                                                              -- 
     ------------------------------------------------------------------------------
-    -- O_PUSH_VAL  : O_PUSH_SIZE/O_PUSH_LASTが有効であることを示す.
-    -- O_PUSH_SIZE : SYNCで同期をとった PUSH_SIZE を指定したクロックだけ遅延させて出力.
-    -- O_PUSH_LAST : SYNCで同期をとった PUSH_LAST を指定したクロックだけ遅延させて出力.
+    -- d_push_valid  : d_data が有効であることを示す.
+    -- d_data        : SYNCで同期をとった I_XFER_SIZE/LAST を指定したクロックだけ
+    --                 遅延させて出力.
     ------------------------------------------------------------------------------
-    O_PUSH_SIZE_REGS: DELAY_REGISTER                                    -- 
+    D_XFER_SIZE_REGS: DELAY_REGISTER                                    -- 
         generic map (                                                   -- 
-            DATA_BITS   => d_push_data'length                         , -- 
+            DATA_BITS   => d_data'length                              , -- 
             DELAY_MAX   => DELAY_CYCLE                                , -- 
             DELAY_MIN   => DELAY_CYCLE                                  -- 
         )                                                               --
@@ -516,14 +411,14 @@ begin
             RST         => RST                                        , -- In  :
             CLR         => O_CLR                                      , -- In  :
             SEL         => DELAY_SEL                                  , -- In  :
-            D_VAL       => d_valid                                    , -- Out :
-            I_DATA      => o_data (PUSH_DATA_HI downto PUSH_DATA_LO)  , -- In  :
-            I_VAL       => o_valid(PUSH_VAL_POS)                      , -- In  :
-            O_DATA      => d_push_data                                , -- Out :
-            O_VAL       => O_PUSH_VAL                                   -- Out :
-        );                                                              -- 
-    O_PUSH_SIZE <= d_push_data(PUSH_SIZE_HI downto PUSH_SIZE_LO);       -- 
-    O_PUSH_LAST <= d_push_data(PUSH_LAST_POS);                          --
+            D_VAL       => delay_valid                                , -- Out :
+            I_DATA      => o_data (XFER_DATA_HI downto XFER_DATA_LO)  , -- In  :
+            I_VAL       => o_push_valid                               , -- In  :
+            O_DATA      => d_data                                     , -- Out :
+            O_VAL       => d_push_valid                                 -- Out :
+        );                                                              --
+    o_push_valid <= '1' when (o_data(XFER_DIR_POS) = '0' and o_valid(XFER_VAL_POS) = '1') else '0';
+    o_pull_valid <= '1' when (o_data(XFER_DIR_POS) = '1' and o_valid(XFER_VAL_POS) = '1') else '0';
     ------------------------------------------------------------------------------
     -- O_RES_VAL   : SYNCで同期をとった I_RES_VAL  を、O_PUSH_SIZE/O_PUSH_LASTに
     --               合わせて遅延させる.
@@ -541,7 +436,7 @@ begin
             RST         => RST                                        , -- In  :
             CLR         => O_CLR                                      , -- In  :
             SEL         => DELAY_SEL                                  , -- In  :
-            D_VAL       => d_valid                                    , -- In  :
+            D_VAL       => delay_valid                                , -- In  :
             I_DATA      => o_data (RES_INFO_HI downto RES_INFO_LO)    , -- In  :
             I_VAL       => o_valid(RES_VAL_POS)                       , -- In  :
             O_DATA      => O_RES_INFO                                 , -- Out :
@@ -551,22 +446,22 @@ begin
     --
     -------------------------------------------------------------------------------
     O_START_VAL <= o_valid(START_VAL_POS);
+    O_DIR       <= o_data (RES_DIR_POS);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    O_PULL_VAL  <= o_valid(PULL_VAL_POS);
-    O_PULL_LAST <= o_data (PULL_LAST_POS);
-    O_PULL_SIZE <= o_data (PULL_SIZE_HI downto PULL_SIZE_LO);
+    O_XFER_VAL  <= '1' when (d_push_valid = '1' or o_pull_valid = '1') else '0';
+    O_XFER_DIR  <= d_data (XFER_DIR_POS )                    when (d_push_valid = '1') else
+                   o_data (XFER_DIR_POS );
+    O_XFER_LAST <= d_data (XFER_LAST_POS)                    when (d_push_valid = '1') else
+                   o_data (XFER_LAST_POS);
+    O_XFER_SIZE <= d_data (XFER_SIZE_HI downto XFER_SIZE_LO) when (d_push_valid = '1') else
+                   o_data (XFER_SIZE_HI downto XFER_SIZE_LO);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    O_RSV0_VAL  <= o_valid(RSV0_VAL_POS);
-    O_RSV0_LAST <= o_data (RSV0_LAST_POS);
-    O_RSV0_SIZE <= o_data (RSV0_SIZE_HI downto RSV0_SIZE_LO);
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    O_RSV1_VAL  <= o_valid(RSV1_VAL_POS);
-    O_RSV1_LAST <= o_data (RSV1_LAST_POS);
-    O_RSV1_SIZE <= o_data (RSV1_SIZE_HI downto RSV1_SIZE_LO);
+    O_RESV_VAL  <= o_valid(RESV_VAL_POS);
+    O_RESV_DIR  <= o_data (RESV_DIR_POS);
+    O_RESV_LAST <= o_data (RESV_LAST_POS);
+    O_RESV_SIZE <= o_data (RESV_SIZE_HI downto RESV_SIZE_LO);
 end RTL;
