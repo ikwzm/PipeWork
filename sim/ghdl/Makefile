@@ -27,6 +27,7 @@ COMPONENTS = components                             \
              pump_operation_processor               \
              relay_components                       \
              relay_controller                       \
+             relay_outlet_valve                     \
              relay_requester_interface              \
              relay_responder_interface              \
              relay_request_syncronizer              \
@@ -123,6 +124,9 @@ relay_components.o                       : $(SRC_PATH)/relay/relay_components.vh
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 relay_controller.o                       : $(SRC_PATH)/relay/relay_controller.vhd           components.o relay_components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+relay_outlet_valve.o                     : $(SRC_PATH)/relay/relay_outlet_valve.vhd         components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 relay_request_syncronizer.o              : $(SRC_PATH)/relay/relay_request_syncronizer.vhd  components.o

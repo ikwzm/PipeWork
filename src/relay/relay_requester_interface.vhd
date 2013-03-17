@@ -63,9 +63,12 @@ entity  RELAY_REQUESTER_INTERFACE is
         BUF_DEPTH       : --! @brief BUFFER DEPTH :
                           --! バッファの容量(バイト数)を２のべき乗値で指定する.
                           integer := 12;
+        BUF_WIDTH       : --! @brief BUFFER WIDTH :
+                          --! バッファのビット幅を２のべき乗値で指定する.
+                          integer :=  5;
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
-                          integer := 4
+                          integer :=  4
     );
     port (
     ------------------------------------------------------------------------------
@@ -158,6 +161,38 @@ entity  RELAY_REQUESTER_INTERFACE is
                           --! れるバイト数分を加算/減算すると良い.
                           in    std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Requester Outlet Flow Signals.
+    -------------------------------------------------------------------------------
+        M_O_FLOW_PAUSE  : out   std_logic;
+        M_O_FLOW_STOP   : out   std_logic;
+        M_O_FLOW_LAST   : out   std_logic;
+        M_O_FLOW_SIZE   : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_BUF_READY   : out   std_logic;
+        M_O_PULL_VALID  : in    std_logic;
+        M_O_PULL_LAST   : in    std_logic;
+        M_O_PULL_ERROR  : in    std_logic;
+        M_O_PULL_SIZE   : in    std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_RESV_VALID  : in    std_logic;
+        M_O_RESV_LAST   : in    std_logic;
+        M_O_RESV_ERROR  : in    std_logic;
+        M_O_RESV_SIZE   : in    std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Requester Intake Flow Signals.
+    -------------------------------------------------------------------------------
+        M_I_FLOW_PAUSE  : out   std_logic;
+        M_I_FLOW_STOP   : out   std_logic;
+        M_I_FLOW_LAST   : out   std_logic;
+        M_I_FLOW_SIZE   : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_BUF_READY   : out   std_logic;
+        M_I_PULL_VALID  : in    std_logic;
+        M_I_PULL_LAST   : in    std_logic;
+        M_I_PULL_ERROR  : in    std_logic;
+        M_I_PULL_SIZE   : in    std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_RESV_VALID  : in    std_logic;
+        M_I_RESV_LAST   : in    std_logic;
+        M_I_RESV_ERROR  : in    std_logic;
+        M_I_RESV_SIZE   : in    std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
         T_REQ_ADDR      : --! @brief Responder Request Address.
@@ -172,6 +207,11 @@ entity  RELAY_REQUESTER_INTERFACE is
         T_REQ_MODE      : --! @brief Responder Request Mode Signals.
                           --! 転送開始時に指定された各種情報を入力する.
                           in    std_logic_vector(MODE_BITS-1 downto 0);
+        T_REQ_DIR       : --! @brief Responder Request Direction Signals.
+                          --! 転送方向(PUSH/PULL)を指定する.
+                          --! * T_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
+                          --! * T_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
+                          in    std_logic;
         T_REQ_VALID     : --! @brief Responder Request Valid Signal.
                           --! 上記の各種リクエスト信号が有効であることを示す.
                           in    std_logic;
@@ -248,16 +288,19 @@ architecture RTL of RELAY_REQUESTER_INTERFACE is
     ------------------------------------------------------------------------------
     constant reset_load         : std_logic := '0';
     constant reset_data         : std_logic := '0';
+    signal   reset              : std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    constant stop_load          : std_logic := '0';
-    constant stop_data          : std_logic := '0';
+    signal   stop_load          : std_logic;
+    constant stop_data          : std_logic := '1';
+    signal   stop               : std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
     constant pause_load         : std_logic := '0';
     constant pause_data         : std_logic := '0';
+    signal   pause              : std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -353,16 +396,16 @@ begin
             CLR             => CLR             , -- In  :
             RESET_L         => reset_load      , -- In  :
             RESET_D         => reset_data      , -- In  :
-            RESET_Q         => open            , -- Out :
+            RESET_Q         => reset           , -- Out :
             START_L         => T_REQ_VALID     , -- In  :
             START_D         => start_data      , -- In  :
             START_Q         => open            , -- Out :
             STOP_L          => stop_load       , -- In  :
             STOP_D          => stop_data       , -- In  :
-            STOP_Q          => open            , -- Out :
+            STOP_Q          => stop            , -- Out :
             PAUSE_L         => pause_load      , -- In  :
             PAUSE_D         => pause_data      , -- In  :
-            PAUSE_Q         => open            , -- Out :
+            PAUSE_Q         => pause           , -- Out :
             FIRST_L         => T_REQ_VALID     , -- In  :
             FIRST_D         => first_data      , -- In  :
             FIRST_Q         => open            , -- Out :

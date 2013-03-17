@@ -2,7 +2,7 @@
 --!     @file    pool_outlet_valve.vhd
 --!     @brief   POOL OUTLET VALVE
 --!     @version 1.4.0
---!     @date    2013/3/15
+--!     @date    2013/3/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,7 +37,7 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   POOL OUT VALVE :
+--! @brief   POOL OUTLET VALVE :
 -----------------------------------------------------------------------------------
 entity  POOL_OUTLET_VALVE is
     generic (

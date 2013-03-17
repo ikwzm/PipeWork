@@ -1,4 +1,5 @@
 ENTITY_FILES = relay_controller.vhd             \
+               relay_outlet_valve.vhd           \
                relay_requester_interface.vhd    \
                relay_responder_interface.vhd    \
                relay_request_syncronizer.vhd    \
