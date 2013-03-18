@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.4.0                                                           --
---!     @date    2013/03/15                                                      --
+--!     @date    2013/03/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1114,9 +1114,9 @@ component COUNT_UP_REGISTER
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief POOL_INTAKE_VALVE                                                     --
+--! @brief FLOAT_INTAKE_VALVE                                                    --
 -----------------------------------------------------------------------------------
-component POOL_INTAKE_VALVE
+component FLOAT_INTAKE_VALVE
     generic (
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
@@ -1159,10 +1159,10 @@ component POOL_INTAKE_VALVE
         POOL_SIZE       : --! @brief POOL SIZE :
                           --! プールの大きさをバイト数で指定する.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
-        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+        FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以下の時に転送を開始する.
-                          --! フローカウンタの値がこの値を越えた時に転送を一時停止.
+                          --! フローカウンタの値がこの値以下の時に出力を開始する.
+                          --! フローカウンタの値がこの値を越えた時に出力を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Size Signals.
@@ -1191,11 +1191,19 @@ component POOL_INTAKE_VALVE
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
+        FLOW_READY      : --! @brief FLOW INTAKE READY :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_READY=1 : 再開.
+                          --! * FLOW_PAUSE=0 : 一時停止.
+                          out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_PAUSE=0 : 再開.
+                          --! * FLOW_PAUSE=1 : 一時停止.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
+                          --! * FLOW_PAUSE=1 : 中止.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW INTAKE LAST :
                           --! INTAKE側では未使用.
@@ -1218,9 +1226,9 @@ component POOL_INTAKE_VALVE
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief POOL_OUTLET_VALVE                                                     --
+--! @brief FLOAT_OUTLET_VALVE                                                    --
 -----------------------------------------------------------------------------------
-component POOL_OUTLET_VALVE
+component FLOAT_OUTLET_VALVE
     generic (
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
@@ -1260,7 +1268,7 @@ component POOL_OUTLET_VALVE
         OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
                           --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
-        THRESHOLD_SIZE  : --! @brief THRESHOLD SIZE :
+        FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
                           --! フローカウンタの値がこの値以上の時に転送を開始する.
                           --! フローカウンタの値がこの値未満の時に転送を一時停止.
@@ -1292,11 +1300,19 @@ component POOL_OUTLET_VALVE
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
+        FLOW_READY      : --! @brief FLOW OUTLET READY :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_READY=1 : 再開.
+                          --! * FLOW_PAUSE=0 : 一時停止.
+                          out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_PAUSE=0 : 再開.
+                          --! * FLOW_PAUSE=1 : 一時停止.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
+                          --! * FLOW_PAUSE=1 : 中止.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW OUTLET LAST :
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
@@ -1305,7 +1321,7 @@ component POOL_OUTLET_VALVE
                           --! 出力可能なバイト数
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Flow Counter.
+    -- Flow Counter Signals.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.

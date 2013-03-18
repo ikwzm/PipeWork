@@ -18,20 +18,13 @@ COMPONENTS = components                             \
              syncronizer_input_pending_register     \
              count_up_register                      \
              count_down_register                    \
-             pool_intake_valve                      \
-             pool_outlet_valve                      \
+             float_intake_valve                     \
+             float_outlet_valve                     \
              pump_components                        \
              pump_control_register                  \
              pump_flow_syncronizer                  \
              pump_controller                        \
              pump_operation_processor               \
-             relay_components                       \
-             relay_controller                       \
-             relay_outlet_valve                     \
-             relay_requester_interface              \
-             relay_responder_interface              \
-             relay_request_syncronizer              \
-             relay_response_syncronizer             \
              axi4_types                             \
              axi4_components                        \
              axi4_master_address_channel_controller \
@@ -40,14 +33,6 @@ COMPONENTS = components                             \
              axi4_register_write_interface          \
              axi4_register_read_interface           \
              axi4_register_interface                \
-             pci_target_select                      \
-             pcie_tlp_types                         \
-             pcie_tlp_components                    \
-             pcie_tlp_rx_stream_interface           \
-             pcie_tlp_tx_stream_interface           \
-             pcie_tlp_tx_arbiter                    \
-             pcie_tlp_rx_routing                    \
-             pcie_tlp_rx_router                     \
              $(END_LINE)
 
 OBJS      = $(addsuffix .o,$(COMPONENTS))
@@ -99,10 +84,10 @@ count_up_register.o                      : $(SRC_PATH)/components/count_up_regis
 count_down_register.o                    : $(SRC_PATH)/components/count_down_register.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pool_intake_valve.o                      : $(SRC_PATH)/components/pool_intake_valve.vhd
+float_intake_valve.o                     : $(SRC_PATH)/components/float_intake_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pool_outlet_valve.o                      : $(SRC_PATH)/components/pool_outlet_valve.vhd
+float_outlet_valve.o                     : $(SRC_PATH)/components/float_outlet_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_components.o                        : $(SRC_PATH)/pump/pump_components.vhd
@@ -123,22 +108,13 @@ pump_operation_processor.o               : $(SRC_PATH)/pump/pump_operation_proce
 relay_components.o                       : $(SRC_PATH)/relay/relay_components.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-relay_controller.o                       : $(SRC_PATH)/relay/relay_controller.vhd           components.o relay_components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_outlet_valve.o                     : $(SRC_PATH)/relay/relay_outlet_valve.vhd         components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
 relay_request_syncronizer.o              : $(SRC_PATH)/relay/relay_request_syncronizer.vhd  components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
+relay_request_controller.o               : $(SRC_PATH)/relay/relay_request_controller.vhd   components.o pump_components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
 relay_response_syncronizer.o             : $(SRC_PATH)/relay/relay_response_syncronizer.vhd components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_requester_interface.o              : $(SRC_PATH)/relay/relay_requester_interface.vhd  components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_responder_interface.o              : $(SRC_PATH)/relay/relay_responder_interface.vhd  components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 axi4_types.o                             : $(SRC_PATH)/axi4/axi4_types.vhd
@@ -165,26 +141,3 @@ axi4_register_read_interface.o           : $(SRC_PATH)/axi4/axi4_register_read_i
 axi4_register_interface.o                : $(SRC_PATH)/axi4/axi4_register_interface.vhd       components.o axi4_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pcie_tlp_types.o                         : $(SRC_PATH)/pcie/pcie_tlp_types.vhd
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pcie_tlp_components.o                    : $(SRC_PATH)/pcie/pcie_tlp_components.vhd pcie_tlp_types.o pcie_tlp_rx_routing.o pci_target_select.o 
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pcie_tlp_rx_stream_interface.o           : $(SRC_PATH)/pcie/pcie_tlp_rx_stream_interface.vhd pcie_tlp_types.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pcie_tlp_tx_stream_interface.o           : $(SRC_PATH)/pcie/pcie_tlp_tx_stream_interface.vhd pcie_tlp_types.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pcie_tlp_tx_arbiter.o                    : $(SRC_PATH)/pcie/pcie_tlp_tx_arbiter.vhd          pcie_tlp_types.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pcie_tlp_rx_routing.o                    : $(SRC_PATH)/pcie/pcie_tlp_rx_routing.vhd          pcie_tlp_types.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pcie_tlp_rx_router.o                     : $(SRC_PATH)/pcie/pcie_tlp_rx_router.vhd           pcie_tlp_types.o pcie_tlp_rx_routing.o pci_target_select.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-pci_target_select.o                      : $(SRC_PATH)/pcie/pci_target_select.vhd            
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
