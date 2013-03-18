@@ -98,7 +98,7 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! フローカウンタの値がこの値以上の時に転送を開始する.
                           --! フローカウンタの値がこの値未満の時に転送を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
-        POOL_READY_LEVLE: --! @brief POOL READY LEVEL :
+        POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
                           --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるフロー
                           --! カウンタの加算結果が、この値以上の時にPOOL_READY 信号
                           --! をアサートする.

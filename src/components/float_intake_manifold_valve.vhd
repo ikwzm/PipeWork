@@ -101,7 +101,7 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
                           --! フローカウンタの値がこの値以下の時に入力を開始する.
                           --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
-        POOL_READY_LEVLE: --! @brief POOL READY LEVEL :
+        POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
                           --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるフロー
                           --! カウンタの減算結果が、この値以下の時にPOOL_READY 信号
                           --! をアサートする.
@@ -377,9 +377,9 @@ begin
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_FIX_VAL    , -- In :
-                PULL_LAST       => PULL_FIX_LAST   , -- In :
-                PULL_SIZE       => PULL_FIX_SIZE   , -- In :
+                PULL_VAL        => PULL_FIN_VAL    , -- In :
+                PULL_LAST       => PULL_FIN_LAST   , -- In :
+                PULL_SIZE       => PULL_FIN_SIZE   , -- In :
             -----------------------------------------------------------------------
             -- Outlet Flow Control Signals.
             -----------------------------------------------------------------------
