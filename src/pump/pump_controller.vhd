@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.4.0
---!     @date    2013/3/15
+--!     @date    2013/3/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -330,8 +330,8 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
 use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
-use     PIPEWORK.COMPONENTS.POOL_INTAKE_VALVE;
-use     PIPEWORK.COMPONENTS.POOL_OUTLET_VALVE;
+use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_VALVE;
+use     PIPEWORK.COMPONENTS.FLOAT_OUTLET_VALVE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PUMP_CONTROLLER is
@@ -522,7 +522,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    I_VALVE: POOL_INTAKE_VALVE 
+    I_VALVE: FLOAT_INTAKE_VALVE 
         generic map (                            -- 
             COUNT_BITS      => SIZE_BITS       , -- 
             SIZE_BITS       => SIZE_BITS         -- 
@@ -532,7 +532,7 @@ begin
             RST             => RST             , -- In  :
             CLR             => I_CLR           , -- In  :
             POOL_SIZE       => BUFFER_SIZE     , -- In  :
-            THRESHOLD_SIZE  => I_THRESHOLD_SIZE, -- In  :
+            FLOW_READY_LEVEL=> I_THRESHOLD_SIZE, -- In  :
             INTAKE_OPEN     => i_valve_open    , -- In  :
             OUTLET_OPEN     => o2i_valve_open  , -- In  :
             RESET           => i_reset         , -- In  :
@@ -548,6 +548,7 @@ begin
             FLOW_STOP       => I_FLOW_STOP     , -- Out :
             FLOW_LAST       => I_FLOW_LAST     , -- Out :
             FLOW_SIZE       => I_FLOW_SIZE     , -- Out :
+            FLOW_READY      => open            , -- Out :
             FLOW_COUNT      => open            , -- Out :
             FLOW_NEG        => open            , -- Out :
             PAUSED          => open              -- Out :
@@ -690,7 +691,7 @@ begin
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
-    O_VALVE: POOL_OUTLET_VALVE 
+    O_VALVE: FLOAT_OUTLET_VALVE 
         generic map (                            -- 
             COUNT_BITS      => SIZE_BITS       , -- 
             SIZE_BITS       => SIZE_BITS         -- 
@@ -699,7 +700,7 @@ begin
             CLK             => O_CLK           , -- In  :
             RST             => RST             , -- In  :
             CLR             => O_CLR           , -- In  :
-            THRESHOLD_SIZE  => O_THRESHOLD_SIZE, -- In  :
+            FLOW_READY_LEVEL=> O_THRESHOLD_SIZE, -- In  :
             INTAKE_OPEN     => i2o_valve_open  , -- In  :
             OUTLET_OPEN     => o_valve_open    , -- In  :
             RESET           => o_reset         , -- In  :
@@ -715,6 +716,7 @@ begin
             FLOW_STOP       => O_FLOW_STOP     , -- Out :
             FLOW_LAST       => O_FLOW_LAST     , -- Out :
             FLOW_SIZE       => O_FLOW_SIZE     , -- Out :
+            FLOW_READY      => open            , -- Out :
             FLOW_COUNT      => open            , -- Out :
             FLOW_NEG        => open            , -- Out :
             PAUSED          => open              -- Out :
