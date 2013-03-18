@@ -18,8 +18,8 @@ COMPONENTS = components                             \
              syncronizer_input_pending_register     \
              count_up_register                      \
              count_down_register                    \
-             pool_intake_valve                      \
-             pool_outlet_valve                      \
+             float_intake_valve                     \
+             float_outlet_valve                     \
              pump_components                        \
              pump_control_register                  \
              pump_flow_syncronizer                  \
@@ -84,10 +84,10 @@ count_up_register.o                      : $(SRC_PATH)/components/count_up_regis
 count_down_register.o                    : $(SRC_PATH)/components/count_down_register.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pool_intake_valve.o                      : $(SRC_PATH)/components/pool_intake_valve.vhd
+float_intake_valve.o                     : $(SRC_PATH)/components/float_intake_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pool_outlet_valve.o                      : $(SRC_PATH)/components/pool_outlet_valve.vhd
+float_outlet_valve.o                     : $(SRC_PATH)/components/float_outlet_valve.vhd
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_components.o                        : $(SRC_PATH)/pump/pump_components.vhd

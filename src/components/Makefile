@@ -9,8 +9,8 @@ ENTITY_FILES = chopper.vhd                             \
                sdpram.vhd                              \
                count_down_register.vhd                 \
                count_up_register.vhd                   \
-               pool_intake_valve.vhd                   \
-               pool_outlet_valve.vhd                   \
+               float_intake_valve.vhd                  \
+               float_outlet_valve.vhd                  \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
