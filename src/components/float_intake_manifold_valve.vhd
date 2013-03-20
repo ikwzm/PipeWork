@@ -42,24 +42,24 @@ use     ieee.std_logic_1164.all;
 entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     generic (
         PRECEDE         : --! @brief PRECEDE ENABLE :
-                          --! ���(Precede)�⡼�ɤǥե��������椹�뤫�ɤ�������ꤹ��.
-                          --! * PRECEDE=0 : ����ԥ⡼��. �ե��������󥿤θ�����
-                          --!   PULL_FIN_SIZE(���Ϥ�����(FINAL)�����Х��ȿ�)��Ȥ�.
-                          --! * PRECEDE=1 : ��ԥ⡼�ɤǤϡ��ե��������󥿤θ����� 
-                          --!   PULL_RSV_SIZE(���Ϥ���ͽ��(RESERVE)�ΥХ��ȿ�)��Ȥ�.
+                          --! 先行(Precede)モードでフローを制御するかどうかを指定する.
+                          --! * PRECEDE=0 : 非先行モード. フローカウンタの減算に
+                          --!   PULL_FIN_SIZE(出力が確定(FINAL)したバイト数)を使う.
+                          --! * PRECEDE=1 : 先行モードでは、フローカウンタの減算に 
+                          --!   PULL_RSV_SIZE(出力する予定(RESERVE)のバイト数)を使う.
                           integer range 0 to 1 := 0;
         FIXED           : --! @brief FIXED VALVE OPEN/CLOSE :
-                          --! �ե��������󥿤ˤ��ե��������Ԥ鷺����˥Х�֤�
-                          --! �Ĥ������֤ޤ��ϳ��������֤ˤ��뤫�ݤ�����ꤹ��.
-                          --! * FIXED=0 : �ե��������󥿤ˤ��ե��������Ԥ�.
-                          --! * FIXED=1 : ��˥Х�֤��Ĥ������֤ˤ���.
-                          --! * FIXED=2 : ��˥Х�֤����������֤ˤ���.
+                          --! フローカウンタによるフロー制御を行わず、常にバルブが
+                          --! 閉じた状態または開いた状態にするか否かを指定する.
+                          --! * FIXED=0 : フローカウンタによるフロー制御を行う.
+                          --! * FIXED=1 : 常にバルブが閉じた状態にする.
+                          --! * FIXED=2 : 常にバルブが開いた状態にする.
                           integer range 0 to 2 := 0;
         COUNT_BITS      : --! @brief COUNTER BITS :
-                          --! ���������󥿤Υӥåȿ�����ꤹ��.
+                          --! 内部カウンタのビット数を指定する.
                           integer := 32;
         SIZE_BITS       : --! @brief SIZE BITS :
-                          --! ����������Υӥåȿ�����ꤹ��.
+                          --! サイズ信号のビット数を指定する.
                           integer := 32
     );
     port (
@@ -67,121 +67,121 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     -- Clock & Reset Signals.
     -------------------------------------------------------------------------------
         CLK             : --! @brief CLOCK :
-                          --! �����å�����
+                          --! クロック信号
                           in  std_logic; 
         RST             : --! @brief ASYNCRONOUSE RESET :
-                          --! ��Ʊ���ꥻ�åȿ���.�����ƥ��֥ϥ�.
+                          --! 非同期リセット信号.アクティブハイ.
                           in  std_logic;
         CLR             : --! @brief SYNCRONOUSE RESET :
-                          --! Ʊ���ꥻ�åȿ���.�����ƥ��֥ϥ�.
+                          --! 同期リセット信号.アクティブハイ.
                           in  std_logic;
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
         RESET           : --! @brief RESET REQUEST :
-                          --! ����Ū���������֤�ꥻ�åȤ������ؼ����뿮��.
+                          --! 強制的に内部状態をリセットする事を指示する信号.
                           in  std_logic;
         PAUSE           : --! @brief PAUSE REQUEST :
-                          --! ����Ū�˥ե�������Ū����ߤ������ؼ����뿮��.
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
                           in  std_logic;
         STOP            : --! @brief STOP  REQUEST :
-                          --! ����Ū�˥ե�������ߤ������ؼ����뿮��.
+                          --! 強制的にフローを中止する事を指示する信号.
                           in  std_logic;
         INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
-                          --! ����(INTAKE)¦�ΥХ�֤������Ƥ�����򼨤��ե饰.
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
         OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
-                          --! ����(OUTLET)¦�ΥХ�֤������Ƥ�����򼨤��ե饰.
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
         POOL_SIZE       : --! @brief POOL SIZE :
-                          --! �ס�����礭����Х��ȿ��ǻ��ꤹ��.
+                          --! プールの大きさをバイト数で指定する.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
-                          --! �����ߤ���/���ʤ���ؼ����뤿�������.
-                          --! �ե��������󥿤��ͤ������Ͱʲ��λ������Ϥ򳫻Ϥ���.
-                          --! �ե��������󥿤��ͤ������ͤ�ۤ����������Ϥ������.
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! フローカウンタの値がこの値以下の時に入力を開始する.
+                          --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
-                          --! ��ԥ⡼��(PRECEDE=1)�λ���PULL_FIN_SIZE�ˤ��ե���
-                          --! �����󥿤θ�����̤��������Ͱʲ��λ���POOL_READY ����
-                          --! �򥢥����Ȥ���.
+                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるフロー
+                          --! カウンタの減算結果が、この値以下の時にPOOL_READY 信号
+                          --! をアサートする.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VAL        : --! @brief PUSH VALID :
-                          --! PUSH_LAST/PUSH_SIZE��ͭ���Ǥ��뤳�Ȥ򼨤�����.
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
                           in  std_logic;
         PUSH_LAST       : --! @brief PUSH LAST :
-                          --! �Ǹ��PUSH���ϤǤ��뤳�Ȥ򼨤�����.
+                          --! 最後のPUSH入力であることを示す信号.
                           in  std_logic;
         PUSH_SIZE       : --! @brief PUSH SIZE :
-                          --! ���Ϥ����Х��ȿ�.
+                          --! 入力したバイト数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
         PULL_FIN_VAL    : --! @brief PULL FINAL VALID :
-                          --! PULL_FIN_LAST/PULL_FIN_SIZE��ͭ���Ǥ��뤳�Ȥ򼨤�����.
+                          --! PULL_FIN_LAST/PULL_FIN_SIZEが有効であることを示す信号.
                           in  std_logic;
         PULL_FIN_LAST   : --! @brief PULL FINAL LAST :
-                          --! �Ǹ��PULL_FIN���ϤǤ��뤳�Ȥ򼨤�����.
+                          --! 最後のPULL_FIN入力であることを示す信号.
                           in  std_logic;
         PULL_FIN_SIZE   : --! @brief PUSH RESERVE SIZE :
-                          --! ���Ϥ�����(FINAL)�����Х��ȿ�.
+                          --! 出力が確定(FINAL)したバイト数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
         PULL_RSV_VAL    : --! @brief PULL RESERVE VALID :
-                          --! PULL_RSV_LAST/PULL_RSV_SIZE��ͭ���Ǥ��뤳�Ȥ򼨤�����.
+                          --! PULL_RSV_LAST/PULL_RSV_SIZEが有効であることを示す信号.
                           in  std_logic;
         PULL_RSV_LAST   : --! @brief PULL RESERVE LAST :
-                          --! �Ǹ��PULL_RSV���ϤǤ��뤳�Ȥ򼨤�����.
+                          --! 最後のPULL_RSV入力であることを示す信号.
                           in  std_logic;
         PULL_RSV_SIZE   : --! @brief PULL RESERVE SIZE :
-                          --! ���Ϥ���ͽ��(RESERVE)�ΥХ��ȿ�.
+                          --! 出力する予定(RESERVE)のバイト数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW INTAKE READY :
-                          --! ž������Ū�˻ߤ᤿�ꡢ�Ƴ����뤳�Ȥ�ؼ����뿮��.
-                          --! * FLOW_READY=1 : �Ƴ�.
-                          --! * FLOW_PAUSE=0 : ������.
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_READY=1 : 再開.
+                          --! * FLOW_PAUSE=0 : 一時停止.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
-                          --! ž������Ū�˻ߤ᤿�ꡢ�Ƴ����뤳�Ȥ�ؼ����뿮��.
-                          --! * FLOW_PAUSE=0 : �Ƴ�.
-                          --! * FLOW_PAUSE=1 : ������.
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_PAUSE=0 : 再開.
+                          --! * FLOW_PAUSE=1 : 一時停止.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
-                          --! ž������ߤ�ؼ����뿮��.
-                          --! * FLOW_PAUSE=1 : ���.
+                          --! 転送の中止を指示する信号.
+                          --! * FLOW_PAUSE=1 : 中止.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW INTAKE LAST :
-                          --! ����¦����Ǹ�����Ϥ򼨤��ե饰�����ä����Ȥ򼨤�.
+                          --! 入力側から最後の入力を示すフラグがあったことを示す.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
-                          --! ���ϲ�ǽ�ʥХ��ȿ�
+                          --! 出力可能なバイト数
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
-                          --! ���ߤΥե��������󥿤��ͤ����.
+                          --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! ���ߤΥե��������󥿤��ͤ���ˤʤä��������ե饰.
+                          --! 現在のフローカウンタの値が負になった事示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
-                          --! ���߰�������Ǥ��뤳�Ȥ򼨤��ե饰.
+                          --! 現在一時停止中であることを示すフラグ.
                           out std_logic;
         POOL_COUNT      : --! @brief POOL COUNT :
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         POOL_READY      : --! @brief POOL READY :
-                          --! ���ߤΥס��륫���󥿤�READY_ON_SIZE�ʾ�Ǥ��뤳�Ȥ�
-                          --! ���ե饰.
+                          --! 現在のプールカウンタがREADY_ON_SIZE以上であることを示
+                          --! すフラグ.
                           out std_logic
     );
 end FLOAT_INTAKE_MANIFOLD_VALVE;
