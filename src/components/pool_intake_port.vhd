@@ -2,7 +2,7 @@
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
 --!     @version 1.5.0
---!     @date    2013/3/20
+--!     @date    2013/3/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -41,123 +41,143 @@ use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
 entity  POOL_INTAKE_PORT is
     generic (
-        WORD_BITS   : --! @brief WORD BITS :
-                      --! １ワードのデータのビット数を指定する.
-                      integer := 8;
-        ENBL_BITS   : --! @brief ENABLE BITS :
-                      --! ワードデータのうち有効なデータであることを示す信号の
-                      --! ビット数を指定する.
-                      integer := 1;
-        I_WIDTH     : --! @brief INPUT WORD WIDTH :
-                      --! 入力側のデータのワード数を指定する.
-                      integer := 4;
-        O_WIDTH     : --! @brief OUTPUT WORD WIDTH :
-                      --! 出力側のデータのワード数を指定する.
-                      integer := 4;
-        VAL_BITS    : --! @brief VALID BITS :
-                      --! REQ_VAL、ACK_VAL のビット数を指定する.
-                      integer := 1;
-        SIZE_BITS   : --! @brief SIZE BITS :
-                      --! 各種サイズカウンタのビット数を指定する.
-                      integer := 16;
-        PTR_BITS    : --! @brief BUF PTR BITS:
-                      integer := 16;
-        QUEUE_SIZE  : --! @brief QUEUE SIZE :
-                      --! キューの大きさをワード数で指定する.
-                      --! * 少なくともキューの大きさは、I_WIDTH+O_WIDTH-1以上で
-                      --!   なければならない.
-                      --! * ただしQUEUE_SIZE=0を指定した場合は、キューの深さは
-                      --!   自動的にI_WIDTH+O_WIDTH に設定される.
-                      integer := 0
+        UNIT_BITS       : --! @brief UNIT BITS :
+                          --! イネーブル信号(PORT_DVAL,POOL_DVAL)、
+                          --! ポインタ(POOL_PTR)のサイズカウンタ(PUSH_SIZE)の
+                          --! 基本単位をビット数で指定する.
+                          --! 普通はUNIT_BITS=8(８ビット単位)にしておく.
+                          integer := 8;
+        WORD_BITS       : --! @brief WORD BITS :
+                          --! １ワードのデータのビット数を指定する.
+                          integer := 8;
+        PORT_DATA_BITS  : --! @brief INTAKE PORT DATA BITS :
+                          --! PORT_DATA のビット数を指定する.
+                          integer := 32;
+        POOL_DATA_BITS  : --! @brief POOL BUFFER DATA BITS :
+                          --! POOL_DATA のビット数を指定する.
+                          integer := 32;
+        SEL_BITS        : --! @brief SELECT BITS :
+                          --! XFER_SEL、PUSH_VAL、POOL_WEN のビット数を指定する.
+                          integer := 1;
+        SIZE_BITS       : --! @brief POOL_SIZE BITS :
+                          --! POOL_SIZE のビット数を指定する.
+                          integer := 16;
+        PTR_BITS        : --! @brief POOL BUFFER POINTER BITS:
+                          --! START_PTR、POOL_PTR のビット数を指定する.
+                          integer := 16;
+        QUEUE_SIZE      : --! @brief QUEUE SIZE :
+                          --! キューの大きさをワード数で指定する.
+                          --! * 少なくともキューの大きさは、(PORT_DATA_BITS/WORD_BITS)+
+                          --!   (POOL_DATA_BITS/WORD_BITS)-1以上でなければならない.
+                          --! * QUEUE_SIZE=0を指定した場合はキューの深さは自動的に
+                          --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
+                          --!   に設定される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
     -- クロック&リセット信号
     -------------------------------------------------------------------------------
-        CLK         : --! @brief CLOCK :
-                      --! クロック信号
-                      in  std_logic; 
-        RST         : --! @brief ASYNCRONOUSE RESET :
-                      --! 非同期リセット信号.アクティブハイ.
-                      in  std_logic;
-        CLR         : --! @brief SYNCRONOUSE RESET :
-                      --! 同期リセット信号.アクティブハイ.
-                      in  std_logic;
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
     -------------------------------------------------------------------------------
-    -- 各種制御信号
+    -- Control Signals.
     -------------------------------------------------------------------------------
-        START       : --! @brief START :
-                      --! 開始信号.
-                      --! * この信号はSTART_PTRを内部に設定してキューを初期化する.
-                      --! * 最初にデータ入力と同時にアサートしても構わない.
-                      in  std_logic;
-        START_PTR   : --! @brief START POOL BUFFER POINTER :
-                      --! 書き込み開始ポインタ.
-                      in  std_logic_vector(PTR_BITS-1 downto 0);
+        START           : --! @brief START :
+                          --! 開始信号.
+                          --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
+                          --!   してこのモジュールを初期化しする.
+                          --! * 最初にデータ入力と同時にアサートしても構わない.
+                          in  std_logic;
+        START_PTR       : --! @brief START POOL BUFFER POINTER :
+                          --! 書き込み開始ポインタ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(PTR_BITS-1 downto 0);
+        XFER_LAST       : --! @brief TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic;
+        XFER_SEL        : --! @brief TRANSFER SELECT :
+                          --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(SEL_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 入力側 I/F
+    -- Intake Port Signals.
     -------------------------------------------------------------------------------
-        I_DATA      : --! @brief INTAKE WORD DATA :
-                      --! ワードデータ入力.
-                      in  std_logic_vector(I_WIDTH*WORD_BITS-1 downto 0);
-        I_ENBL      : --! @brief INTAKE WORD ENABLE :
-                      --! ワードイネーブル信号入力.
-                      in  std_logic_vector(I_WIDTH*ENBL_BITS-1 downto 0);
-        I_LAST      : --! @brief INTAKE WORD LAST :
-                      --! 最終ワード信号入力.
-                      --! * 最後の力ワードデータ入であることを示すフラグ.
-                      in  std_logic;
-        I_DONE      : --! @brief INTAKE TRANSFER DONE :
-                      in  std_logic;
-        I_ERR       : --! @brief INTAKE WORD ERROR :
-                      in  std_logic;
-        I_SEL       : --! @brief INTAKE VALID SELECT :
-                      in  std_logic_vector(VAL_BITS-1 downto 0);
-        I_VAL       : --! @brief INTAKE WORD VALID :
-                      --! 入力ワード有効信号.
-                      --! * I_DATA/I_ENBL/I_LAST/I_DONE/I_ERR/I_SELが有効であることを示す.
-                      --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
-                      in  std_logic;
-        I_RDY       : --! @brief INTAKE WORD READY :
-                      --! 入力レディ信号.
-                      --! * キューが次のワードデータを入力出来ることを示す.
-                      --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
-                      out std_logic;
+        PORT_DATA       : --! @brief INTAKE PORT DATA :
+                          --! ワードデータ入力.
+                          in  std_logic_vector(PORT_DATA_BITS-1 downto 0);
+        PORT_DVAL       : --! @brief INTAKE PORT DATA VALID :
+                          --! ポートからデータを入力する際のユニット単位での有効信号.
+                          in  std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+        PORT_ERROR      : --! @brief INTAKE PORT ERROR :
+                          --! データ入力中にエラーが発生したことを示すフラグ.
+                          in  std_logic;
+        PORT_LAST       : --! @brief INTAKE DATA LAST :
+                          --! 最終ワード信号入力.
+                          --! * 最後のワードデータ入力であることを示すフラグ.
+                          in  std_logic;
+        PORT_VAL        : --! @brief INTAKE PORT VALID :
+                          --! 入力ワード有効信号.
+                          --! * PORT_DATA/PORT_DVAL/PORT_LAST/PORT_ERRが有効であることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューに取り込まれる.
+                          in  std_logic;
+        PORT_RDY        : --! @brief INTAKE PORT READY :
+                          --! 入力レディ信号.
+                          --! * キューが次のワードデータを入力出来ることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューに取り込まれる.
+                          out std_logic;
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL    : --! @brief PUSH VALID: 
-                      --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
-                      out std_logic_vector(VAL_BITS-1 downto 0);
-        PUSH_LAST   : --! @brief PUSH LAST : 
-                      --! 最後の転送"した事"を示すフラグ.
-                      out std_logic;
-        PUSH_ERR    : --! @brief PUSH ERROR : 
-                      --! 転送"した事"がエラーだった事を示すフラグ.
-                      out std_logic;
-        PUSH_SIZE   : --! @brief PUSH SIZE :
-                      --! 転送"した"バイト数を出力する.
-                      out std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_VAL        : --! @brief PUSH VALID: 
+                          --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        PUSH_LAST       : --! @brief PUSH LAST : 
+                          --! 最後の転送"した事"を示すフラグ.
+                          out std_logic;
+        PUSH_ERROR      : --! @brief PUSH ERROR : 
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 転送"した"バイト数を出力する.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pool Buffer Interface Signals.
     -------------------------------------------------------------------------------
-        POOL_WEN    : --! @brief POOL BUFFER WRITE ENABLE :
-                      --! バッファにデータをライトすることを示す.
-                      out std_logic_vector(VAL_BITS-1 downto 0);
-        POOL_BEN    : --! @brief POOL BUFFER BYTE ENABLE :
-                      --! バッファにデータをライトする際のバイトイネーブル信号.
-                      --! * POOL_WEN='1'の場合にのみ有効.
-                      --! * POOL_WEN='0'の場合のこの信号の値は不定.
-                      out std_logic_vector(O_WIDTH*ENBL_BITS-1 downto 0);
-        POOL_DATA   : --! @brief POOL BUFFER WRITE DATA :
-                      --! バッファへライトするデータを出力する.
-                      out std_logic_vector(O_WIDTH*WORD_BITS-1 downto 0);
-        POOL_PTR    : --! @brief POOL BUFFER WRITE POINTER :
-                      --! ライト時にデータを書き込むバッファの位置を出力する.
-                      out std_logic_vector(PTR_BITS-1 downto 0);
-        POOL_RDY    : --! @brief POOL BUFFER WRITE READY :
-                      --! バッファにデータを書き込み可能な事をを示す.
-                      in  std_logic
+        POOL_WEN        : --! @brief POOL BUFFER WRITE ENABLE :
+                          --! バッファにデータをライトすることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
+                          --! バッファにデータをライトする際のユニット単位での有効
+                          --! 信号.
+                          --! * POOL_WEN='1'の場合にのみ有効.
+                          --! * POOL_WEN='0'の場合のこの信号の値は不定.
+                          out std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
+        POOL_DATA       : --! @brief POOL BUFFER WRITE DATA :
+                          --! バッファへライトするデータを出力する.
+                          out std_logic_vector(POOL_DATA_BITS-1 downto 0);
+        POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
+                          --! ライト時にデータを書き込むバッファの位置を出力する.
+                          out std_logic_vector(PTR_BITS-1 downto 0);
+        POOL_RDY        : --! @brief POOL BUFFER WRITE READY :
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY            : --! @brief QUEUE BUSY :
+                          --! キューが動作中であることを示す信号.
+                          --! * 最初にデータが入力されたときにアサートされる.
+                          --! * 最後のデータが出力し終えたらネゲートされる.
+                          out  std_logic
     );
 end POOL_INTAKE_PORT;
 -----------------------------------------------------------------------------------
@@ -169,46 +189,82 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.REDUCER;
 architecture RTL of POOL_INTAKE_PORT is
+    constant ENBL_BITS      : integer   := (WORD_BITS/UNIT_BITS);
+    constant I_WORDS        : integer   := (PORT_DATA'length/WORD_BITS);
+    constant O_WORDS        : integer   := (POOL_DATA'length/WORD_BITS);
     constant done           : std_logic := '0';
     constant flush          : std_logic := '0';
-    signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
-    signal   buf_busy       : std_logic;
+    signal   offset         : std_logic_vector(O_WORDS-1 downto 0);
+    signal   queue_busy     : std_logic;
+    signal   i_data_enable  : std_logic_vector(PORT_DVAL'length-1 downto 0);   
     signal   i_ready        : std_logic;
-    signal   o_size         : std_logic_vector(SIZE_BITS-1 downto 0);
-    signal   o_ben          : std_logic_vector(O_WIDTH*ENBL_BITS-1 downto 0);
+    signal   o_size         : std_logic_vector(PUSH_SIZE'length-1 downto 0);
+    signal   o_enable       : std_logic_vector(POOL_DVAL'length-1 downto 0);
+    signal   o_error        : std_logic;
     signal   o_last         : std_logic;
     signal   o_valid        : std_logic;
     signal   o_ready        : std_logic;
-    signal   xfer_last      : std_logic;
+    signal   i_xfer_last    : std_logic;
+    signal   i_xfer_select  : std_logic_vector(SEL_BITS-1 downto 0);
+    signal   o_xfer_last    : std_logic;
+    signal   o_xfer_select  : std_logic_vector(SEL_BITS-1 downto 0);
     signal   xfer_error     : std_logic;
-    signal   xfer_select    : std_logic_vector(VAL_BITS-1 downto 0);
     signal   write_ptr      : unsigned(PTR_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- offset : REDUCER にセットするオフセット値.
+    -- i_xfer_last   : XFER_LAST を START 信号で一旦保存する.
+    -- i_xfer_select : XFER_SEL  を START 信号で一旦保存する.
+    -------------------------------------------------------------------------------
+    process(CLK, RST) begin
+        if (RST = '1') then
+                i_xfer_last   <= '0';
+                i_xfer_select <= (others => '0');
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                i_xfer_last   <= '0';
+                i_xfer_select <= (others => '0');
+            elsif (START = '1') then
+                i_xfer_last   <= XFER_LAST;
+                i_xfer_select <= XFER_SEL;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- i_data_enable : エラー発生時はキューにデータを入れないようにする.
+    -------------------------------------------------------------------------------
+    i_data_enable <= PORT_DVAL when (PORT_ERROR = '0') else (others => '0');
+    -------------------------------------------------------------------------------
+    -- offset        : REDUCER にセットするオフセット値.
     -------------------------------------------------------------------------------
     process (START_PTR)
-        function CALC_O_DATA_BYTES return integer is
+        function CALC_WIDTH(BITS:integer) return integer is
             variable value : integer;
         begin
             value := 0;
-            while (2**(value+3) < O_WIDTH*WORD_BITS) loop
+            while (2**value < (BITS/UNIT_BITS)) loop
                 value := value + 1;
             end loop;
             return value;
         end function;
-        constant O_DATA_BYTES : integer := CALC_O_DATA_BYTES;
-        variable u_ptr        : unsigned(O_DATA_BYTES downto 0);
+        constant O_DATA_WIDTH : integer := CALC_WIDTH(O_WORDS*WORD_BITS);
+        constant WORD_WIDTH   : integer := CALC_WIDTH(WORD_BITS);
+        variable u_offset     : unsigned(O_DATA_WIDTH-WORD_WIDTH downto 0);
     begin
-        for i in u_ptr'range loop
-            if (i < O_DATA_BYTES and START_PTR(i) = '1') then
-                u_ptr(i) := '1';
+        for i in u_offset'range loop
+            if (i+WORD_WIDTH <  O_DATA_WIDTH  ) and
+               (i+WORD_WIDTH <= START_PTR'high) and
+               (i+WORD_WIDTH >= START_PTR'low ) then
+                if (START_PTR(i+WORD_WIDTH) = '1') then
+                    u_offset(i) := '1';
+                else
+                    u_offset(i) := '0';
+                end if;
             else
-                u_ptr(i) := '0';
+                    u_offset(i) := '0';
             end if;
         end loop;
         for i in offset'range loop
-            if (i < u_ptr) then
+            if (i < u_offset) then
                 offset(i) <= '1';
             else
                 offset(i) <= '0';
@@ -216,14 +272,14 @@ begin
         end loop;
     end process;
     -------------------------------------------------------------------------------
-    -- 
+    -- データーキュー
     -------------------------------------------------------------------------------
-    B: REDUCER                                  -- 
+    QUEUE: REDUCER                              -- 
         generic map (                           -- 
             WORD_BITS       => WORD_BITS      , -- 
             ENBL_BITS       => ENBL_BITS      , -- 
-            I_WIDTH         => I_WIDTH        , -- 
-            O_WIDTH         => O_WIDTH        , -- 
+            I_WIDTH         => I_WORDS        , -- 
+            O_WIDTH         => O_WORDS        , -- 
             QUEUE_SIZE      => QUEUE_SIZE     , -- 
             VALID_MIN       => 0              , -- 
             VALID_MAX       => 0              , -- 
@@ -244,34 +300,35 @@ begin
             OFFSET          => offset         , -- In  :
             DONE            => done           , -- In  :
             FLUSH           => flush          , -- In  :
-            BUSY            => buf_busy       , -- Out :
+            BUSY            => queue_busy     , -- Out :
             VALID           => open           , -- Out :
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_DATA          => I_DATA         , -- In  :
-            I_ENBL          => I_ENBL         , -- In  :
-            I_DONE          => I_LAST         , -- In  :
+            I_ENBL          => i_data_enable  , -- In  :
+            I_DATA          => PORT_DATA      , -- In  :
+            I_DONE          => PORT_LAST      , -- In  :
             I_FLUSH         => flush          , -- In  :
-            I_VAL           => I_VAL          , -- In  :
+            I_VAL           => PORT_VAL       , -- In  :
             I_RDY           => i_ready        , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
             O_DATA          => POOL_DATA      , -- Out :
-            O_ENBL          => o_ben          , -- Out :
+            O_ENBL          => o_enable       , -- Out :
             O_DONE          => o_last         , -- Out :
             O_FLUSH         => open           , -- Out :
             O_VAL           => o_valid        , -- Out :
             O_RDY           => o_ready          -- In  :
     );
-    I_RDY   <= i_ready;
-    o_ready <= POOL_RDY;
+    BUSY     <= queue_busy;
+    PORT_RDY <= i_ready;
+    o_ready  <= POOL_RDY;
     -------------------------------------------------------------------------------
     -- o_size : バッファの出力側のバイト数.
-    --          ここでは o_ben の'1'の数を数えている.
+    --          ここでは o_enable の'1'の数を数えている.
     -------------------------------------------------------------------------------
-    process (o_ben)
+    SIZE: process (o_enable)
         function count_assert_bit(ARG:std_logic_vector) return integer is
             variable n  : integer range 0 to ARG'length;
             variable nL : integer range 0 to ARG'length/2;
@@ -315,64 +372,65 @@ begin
             end case;
             return n;
         end function;
-        variable size : integer range 0 to o_ben'length;
+        variable size : integer range 0 to o_enable'length;
     begin
-        size   := count_assert_bit(o_ben);
+        size   := count_assert_bit(o_enable);
         o_size <= std_logic_vector(to_unsigned(size, o_size'length));
     end process;
     -------------------------------------------------------------------------------
-    -- I_DONE/I_ERR/I_SELをレジスタに保存しておく.
-    -- REDUCERを使う場合、REDUCER内部にデータが残っている時に次の START が来る可能性
-    -- があるので、I_DONE/I_ERR/I_SELECTをそのまま使うわけにはいかない.
+    -- PORT_ERR/i_xfer_last/i_xfer_selectをレジスタに保存しておく.
+    -- REDUCERを使う場合、REDUCER 内部にデータが残っている時に次の START が来る可能
+    -- 性があるので、PORT_ERR/i_xfer_last/i_xfer_select をそのまま使うわけにはいか
+    -- ない.
     -------------------------------------------------------------------------------
     process(CLK, RST) begin
         if (RST = '1') then
-                xfer_last   <= '0';
-                xfer_error  <= '0';
-                xfer_select <= (others => '0');
+                o_error       <= '0';
+                o_xfer_last   <= '0';
+                o_xfer_select <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
-                xfer_last   <= '0';
-                xfer_error  <= '0';
-                xfer_select <= (others => '0');
-            elsif (I_VAL = '1' and i_ready = '1') then
-                xfer_last   <= I_DONE;
-                xfer_error  <= I_ERR;
-                xfer_select <= I_SEL;
+                o_error       <= '0';
+                o_xfer_last   <= '0';
+                o_xfer_select <= (others => '0');
+            elsif (PORT_VAL = '1' and i_ready = '1') then
+                o_error       <= PORT_ERROR;
+                o_xfer_last   <= i_xfer_last;
+                o_xfer_select <= i_xfer_select;
             end if;
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- PUSH_SIZE : 何バイト書き込んだかを示す信号.
-    -- PUSH_LAST : 最後のデータ書き込みであることを示す信号.
-    -- PUSH_ERR  : エラーが発生したことを示す信号.
-    -- PUSH_VAL  : PUSH_LAST、PUSH_ERROR、PUSH_SIZE が有効であることを示す信号.
+    -- PUSH_SIZE  : 何バイト書き込んだかを示す信号.
+    -- PUSH_LAST  : 最後のデータ書き込みであることを示す信号.
+    -- PUSH_ERROR : エラーが発生したことを示す信号.
+    -- PUSH_VAL   : PUSH_LAST、PUSH_ERROR、PUSH_SIZE が有効であることを示す信号.
     -------------------------------------------------------------------------------
     PUSH: block
         signal error  : boolean;
         signal last   : boolean;
         signal valid  : boolean;
     begin
-        error     <= (o_valid = '1' and o_last  = '1' and xfer_error = '1');
-        last      <= (o_valid = '1' and o_last  = '1' and xfer_last  = '1');
-        valid     <= (o_valid = '1' and o_ready = '1');
-        PUSH_VAL  <= xfer_select     when (valid) else (others => '0');
-        PUSH_LAST <= '1'             when (last ) else '0';
-        PUSH_ERR  <= '1'             when (error) else '0';
-        PUSH_SIZE <= (others => '0') when (error) else o_size;
+        error      <= (o_valid = '1' and o_last  = '1' and o_error     = '1');
+        last       <= (o_valid = '1' and o_last  = '1' and o_xfer_last = '1');
+        valid      <= (o_valid = '1' and o_ready = '1');
+        PUSH_VAL   <= o_xfer_select   when (valid) else (others => '0');
+        PUSH_LAST  <= '1'             when (last ) else '0';
+        PUSH_ERROR <= '1'             when (error) else '0';
+        PUSH_SIZE  <= (others => '0') when (error) else o_size;
     end block;
     -------------------------------------------------------------------------------
     -- POOL_WEN   : 外部プールバッファへの書き込み信号.
     -------------------------------------------------------------------------------
-    POOL_WEN <= xfer_select when (o_valid = '1' and o_ready = '1') else (others => '0');
+    POOL_WEN  <= o_xfer_select when (o_valid = '1' and o_ready = '1') else (others => '0');
     -------------------------------------------------------------------------------
-    -- POOL_BEN   : 外部プールバッファへのバイトイネーブル信号.
+    -- POOL_DVAL  : 外部プールバッファへのイネーブル信号.
     -------------------------------------------------------------------------------
-    POOL_BEN <= o_ben;
+    POOL_DVAL <= o_enable;
     -------------------------------------------------------------------------------
     -- POOL_PTR   : 外部プールバッファへの書き込みポインタ.
     -------------------------------------------------------------------------------
-    process(CLK, RST) begin
+    PTR: process(CLK, RST) begin
         if (RST = '1') then
                 write_ptr <= (others => '0');
         elsif (CLK'event and CLK = '1') then

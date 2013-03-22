@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.0                                                           --
---!     @date    2013/03/20                                                      --
+--!     @date    2013/03/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1118,123 +1118,143 @@ end component;
 -----------------------------------------------------------------------------------
 component POOL_INTAKE_PORT
     generic (
-        WORD_BITS   : --! @brief WORD BITS :
-                      --! １ワードのデータのビット数を指定する.
-                      integer := 8;
-        ENBL_BITS   : --! @brief ENABLE BITS :
-                      --! ワードデータのうち有効なデータであることを示す信号の
-                      --! ビット数を指定する.
-                      integer := 1;
-        I_WIDTH     : --! @brief INPUT WORD WIDTH :
-                      --! 入力側のデータのワード数を指定する.
-                      integer := 4;
-        O_WIDTH     : --! @brief OUTPUT WORD WIDTH :
-                      --! 出力側のデータのワード数を指定する.
-                      integer := 4;
-        VAL_BITS    : --! @brief VALID BITS :
-                      --! REQ_VAL、ACK_VAL のビット数を指定する.
-                      integer := 1;
-        SIZE_BITS   : --! @brief SIZE BITS :
-                      --! 各種サイズカウンタのビット数を指定する.
-                      integer := 16;
-        PTR_BITS    : --! @brief BUF PTR BITS:
-                      integer := 16;
-        QUEUE_SIZE  : --! @brief QUEUE SIZE :
-                      --! キューの大きさをワード数で指定する.
-                      --! * 少なくともキューの大きさは、I_WIDTH+O_WIDTH-1以上で
-                      --!   なければならない.
-                      --! * ただしQUEUE_SIZE=0を指定した場合は、キューの深さは
-                      --!   自動的にI_WIDTH+O_WIDTH に設定される.
-                      integer := 0
+        UNIT_BITS       : --! @brief UNIT BITS :
+                          --! イネーブル信号(PORT_DVAL,POOL_DVAL)、
+                          --! ポインタ(POOL_PTR)のサイズカウンタ(PUSH_SIZE)の
+                          --! 基本単位をビット数で指定する.
+                          --! 普通はUNIT_BITS=8(８ビット単位)にしておく.
+                          integer := 8;
+        WORD_BITS       : --! @brief WORD BITS :
+                          --! １ワードのデータのビット数を指定する.
+                          integer := 8;
+        PORT_DATA_BITS  : --! @brief INTAKE PORT DATA BITS :
+                          --! PORT_DATA のビット数を指定する.
+                          integer := 32;
+        POOL_DATA_BITS  : --! @brief POOL BUFFER DATA BITS :
+                          --! POOL_DATA のビット数を指定する.
+                          integer := 32;
+        SEL_BITS        : --! @brief SELECT BITS :
+                          --! XFER_SEL、PUSH_VAL、POOL_WEN のビット数を指定する.
+                          integer := 1;
+        SIZE_BITS       : --! @brief POOL_SIZE BITS :
+                          --! POOL_SIZE のビット数を指定する.
+                          integer := 16;
+        PTR_BITS        : --! @brief POOL BUFFER POINTER BITS:
+                          --! START_PTR、POOL_PTR のビット数を指定する.
+                          integer := 16;
+        QUEUE_SIZE      : --! @brief QUEUE SIZE :
+                          --! キューの大きさをワード数で指定する.
+                          --! * 少なくともキューの大きさは、(PORT_DATA_BITS/WORD_BITS)+
+                          --!   (POOL_DATA_BITS/WORD_BITS)-1以上でなければならない.
+                          --! * QUEUE_SIZE=0を指定した場合はキューの深さは自動的に
+                          --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
+                          --!   に設定される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
     -- クロック&リセット信号
     -------------------------------------------------------------------------------
-        CLK         : --! @brief CLOCK :
-                      --! クロック信号
-                      in  std_logic; 
-        RST         : --! @brief ASYNCRONOUSE RESET :
-                      --! 非同期リセット信号.アクティブハイ.
-                      in  std_logic;
-        CLR         : --! @brief SYNCRONOUSE RESET :
-                      --! 同期リセット信号.アクティブハイ.
-                      in  std_logic;
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
     -------------------------------------------------------------------------------
-    -- 各種制御信号
+    -- Control Signals.
     -------------------------------------------------------------------------------
-        START       : --! @brief START :
-                      --! 開始信号.
-                      --! * この信号はSTART_PTRを内部に設定してキューを初期化する.
-                      --! * 最初にデータ入力と同時にアサートしても構わない.
-                      in  std_logic;
-        START_PTR   : --! @brief START POOL BUFFER POINTER :
-                      --! 書き込み開始ポインタ.
-                      in  std_logic_vector(PTR_BITS-1 downto 0);
+        START           : --! @brief START :
+                          --! 開始信号.
+                          --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
+                          --!   してこのモジュールを初期化しする.
+                          --! * 最初にデータ入力と同時にアサートしても構わない.
+                          in  std_logic;
+        START_PTR       : --! @brief START POOL BUFFER POINTER :
+                          --! 書き込み開始ポインタ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(PTR_BITS-1 downto 0);
+        XFER_LAST       : --! @brief TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic;
+        XFER_SEL        : --! @brief TRANSFER SELECT :
+                          --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(SEL_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 入力側 I/F
+    -- Intake Port Signals.
     -------------------------------------------------------------------------------
-        I_DATA      : --! @brief INTAKE WORD DATA :
-                      --! ワードデータ入力.
-                      in  std_logic_vector(I_WIDTH*WORD_BITS-1 downto 0);
-        I_ENBL      : --! @brief INTAKE WORD ENABLE :
-                      --! ワードイネーブル信号入力.
-                      in  std_logic_vector(I_WIDTH*ENBL_BITS-1 downto 0);
-        I_LAST      : --! @brief INTAKE WORD LAST :
-                      --! 最終ワード信号入力.
-                      --! * 最後の力ワードデータ入であることを示すフラグ.
-                      in  std_logic;
-        I_DONE      : --! @brief INTAKE TRANSFER DONE :
-                      in  std_logic;
-        I_ERR       : --! @brief INTAKE WORD ERROR :
-                      in  std_logic;
-        I_SEL       : --! @brief INTAKE VALID SELECT :
-                      in  std_logic_vector(VAL_BITS-1 downto 0);
-        I_VAL       : --! @brief INTAKE WORD VALID :
-                      --! 入力ワード有効信号.
-                      --! * I_DATA/I_ENBL/I_LAST/I_DONE/I_ERR/I_SELが有効であることを示す.
-                      --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
-                      in  std_logic;
-        I_RDY       : --! @brief INTAKE WORD READY :
-                      --! 入力レディ信号.
-                      --! * キューが次のワードデータを入力出来ることを示す.
-                      --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
-                      out std_logic;
+        PORT_DATA       : --! @brief INTAKE PORT DATA :
+                          --! ワードデータ入力.
+                          in  std_logic_vector(PORT_DATA_BITS-1 downto 0);
+        PORT_DVAL       : --! @brief INTAKE PORT DATA VALID :
+                          --! ポートからデータを入力する際のユニット単位での有効信号.
+                          in  std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+        PORT_ERROR      : --! @brief INTAKE PORT ERROR :
+                          --! データ入力中にエラーが発生したことを示すフラグ.
+                          in  std_logic;
+        PORT_LAST       : --! @brief INTAKE DATA LAST :
+                          --! 最終ワード信号入力.
+                          --! * 最後のワードデータ入力であることを示すフラグ.
+                          in  std_logic;
+        PORT_VAL        : --! @brief INTAKE PORT VALID :
+                          --! 入力ワード有効信号.
+                          --! * PORT_DATA/PORT_DVAL/PORT_LAST/PORT_ERRが有効であることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューに取り込まれる.
+                          in  std_logic;
+        PORT_RDY        : --! @brief INTAKE PORT READY :
+                          --! 入力レディ信号.
+                          --! * キューが次のワードデータを入力出来ることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューに取り込まれる.
+                          out std_logic;
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL    : --! @brief PUSH VALID: 
-                      --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
-                      out std_logic_vector(VAL_BITS-1 downto 0);
-        PUSH_LAST   : --! @brief PUSH LAST : 
-                      --! 最後の転送"した事"を示すフラグ.
-                      out std_logic;
-        PUSH_ERR    : --! @brief PUSH ERROR : 
-                      --! 転送"した事"がエラーだった事を示すフラグ.
-                      out std_logic;
-        PUSH_SIZE   : --! @brief PUSH SIZE :
-                      --! 転送"した"バイト数を出力する.
-                      out std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_VAL        : --! @brief PUSH VALID: 
+                          --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        PUSH_LAST       : --! @brief PUSH LAST : 
+                          --! 最後の転送"した事"を示すフラグ.
+                          out std_logic;
+        PUSH_ERROR      : --! @brief PUSH ERROR : 
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 転送"した"バイト数を出力する.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pool Buffer Interface Signals.
     -------------------------------------------------------------------------------
-        POOL_WEN    : --! @brief POOL BUFFER WRITE ENABLE :
-                      --! バッファにデータをライトすることを示す.
-                      out std_logic_vector(VAL_BITS-1 downto 0);
-        POOL_BEN    : --! @brief POOL BUFFER BYTE ENABLE :
-                      --! バッファにデータをライトする際のバイトイネーブル信号.
-                      --! * POOL_WEN='1'の場合にのみ有効.
-                      --! * POOL_WEN='0'の場合のこの信号の値は不定.
-                      out std_logic_vector(O_WIDTH*ENBL_BITS-1 downto 0);
-        POOL_DATA   : --! @brief POOL BUFFER WRITE DATA :
-                      --! バッファへライトするデータを出力する.
-                      out std_logic_vector(O_WIDTH*WORD_BITS-1 downto 0);
-        POOL_PTR    : --! @brief POOL BUFFER WRITE POINTER :
-                      --! ライト時にデータを書き込むバッファの位置を出力する.
-                      out std_logic_vector(PTR_BITS-1 downto 0);
-        POOL_RDY    : --! @brief POOL BUFFER WRITE READY :
-                      --! バッファにデータを書き込み可能な事をを示す.
-                      in  std_logic
+        POOL_WEN        : --! @brief POOL BUFFER WRITE ENABLE :
+                          --! バッファにデータをライトすることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
+                          --! バッファにデータをライトする際のユニット単位での有効
+                          --! 信号.
+                          --! * POOL_WEN='1'の場合にのみ有効.
+                          --! * POOL_WEN='0'の場合のこの信号の値は不定.
+                          out std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
+        POOL_DATA       : --! @brief POOL BUFFER WRITE DATA :
+                          --! バッファへライトするデータを出力する.
+                          out std_logic_vector(POOL_DATA_BITS-1 downto 0);
+        POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
+                          --! ライト時にデータを書き込むバッファの位置を出力する.
+                          out std_logic_vector(PTR_BITS-1 downto 0);
+        POOL_RDY        : --! @brief POOL BUFFER WRITE READY :
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY            : --! @brief QUEUE BUSY :
+                          --! キューが動作中であることを示す信号.
+                          --! * 最初にデータが入力されたときにアサートされる.
+                          --! * 最後のデータが出力し終えたらネゲートされる.
+                          out  std_logic
     );
 end component;
 -----------------------------------------------------------------------------------

@@ -474,7 +474,6 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     signal   xfer_beat_chop     : std_logic;
     signal   xfer_beat_last     : std_logic;
     signal   xfer_beat_size     : std_logic_vector(SIZE_BITS        -1 downto 0);
-    signal   xfer_beat_valid    : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -482,9 +481,8 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     signal   recv_data_valid    : std_logic;
     signal   recv_data_ready    : std_logic;
     signal   recv_data_ben      : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
-    signal   recv_data_done     : std_logic;
-    signal   recv_data_error    : boolean;
-    signal   response_error     : boolean;
+    signal   recv_data_error    : std_logic;
+    signal   response_error     : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -654,8 +652,8 @@ begin
         xfer_queue_empty  <= '1' when (xfer_queue_valid = Q_ALL_0) else '0';
     end block;
     -------------------------------------------------------------------------------
-    -- xfer_beat_valid : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
-    --                   ここで作っておく.
+    -- recv_data_ben : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
+    --                 ここで作っておく.
     -------------------------------------------------------------------------------
     BEN: CHOPPER
         generic map (
@@ -703,7 +701,7 @@ begin
         ---------------------------------------------------------------------------
         -- バイトイネーブル信号
         ---------------------------------------------------------------------------
-            VALID           => xfer_beat_valid       , -- Out :
+            VALID           => recv_data_ben         , -- Out :
             NEXT_VALID      => open                    -- Out :
         );
     -------------------------------------------------------------------------------
@@ -823,18 +821,9 @@ begin
     -------------------------------------------------------------------------------
     recv_data_valid <= '1' when (recv_enable = '1' and RVALID = '1') else '0';
     -------------------------------------------------------------------------------
-    -- recv_data_done   : レシーブバッファに最後のデータであることを示す信号.
-    -------------------------------------------------------------------------------
-    recv_data_done  <= '1' when (recv_data_valid  = '1' and RLAST  = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- recv_data_ben    : レシーブバッファへのバイトイネーブル信号.
-    --                    エラー時は書き込みが行われないようにしておく.
-    -------------------------------------------------------------------------------
-    recv_data_ben   <= (others => '0') when (recv_data_error) else xfer_beat_valid;
-    -------------------------------------------------------------------------------
     -- recv_data_error  : エラーレスンポンス
     -------------------------------------------------------------------------------
-    recv_data_error <= (RRESP = AXI4_RESP_SLVERR or RRESP = AXI4_RESP_DECERR);
+    recv_data_error <= '1' when (RRESP = AXI4_RESP_SLVERR or RRESP = AXI4_RESP_DECERR) else '0';
     -------------------------------------------------------------------------------
     -- xfer_ack_valid   : 
     -------------------------------------------------------------------------------
@@ -845,18 +834,18 @@ begin
     -------------------------------------------------------------------------------
     -- xfer_ack_error   : 
     -------------------------------------------------------------------------------
-    xfer_ack_error  <= '1' when (recv_data_error or response_error) else '0';
+    xfer_ack_error  <= '1' when (recv_data_error = '1' or response_error = '1') else '0';
     -------------------------------------------------------------------------------
-    -- read_res_error   : 
+    -- response_error   : 
     -------------------------------------------------------------------------------
     process(CLK, RST) begin
         if (RST = '1') then
-                response_error <= FALSE;
+                response_error <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1' or xfer_start = '1') then 
-                response_error <= FALSE;
-            elsif (recv_data_error) then
-                response_error <= TRUE;
+                response_error <= '0';
+            elsif (recv_data_error = '1') then
+                response_error <= '1';
             end if;
         end if;
     end process;
@@ -877,8 +866,8 @@ begin
         signal valid  : boolean;
     begin
         enable <= (curr_state = WAIT_RFIRST);
-        error  <= (enable and recv_data_error = TRUE);
-        last   <= (enable and xfer_ack_last   = '1' );
+        error  <= (enable and recv_data_error = '1');
+        last   <= (enable and xfer_ack_last   = '1');
         valid  <= (enable and recv_data_valid = '1' and recv_data_ready = '1');
         RESV_VAL   <= xfer_ack_select when (valid) else (others => '0');
         RESV_LAST  <= '1'             when (last ) else '0';
@@ -890,57 +879,61 @@ begin
     -- 入力ポート : 外部のリードバッファに書き込む前に、一旦このモジュールで受けて、
     --              バス幅の変換やバイトレーンの調整を行う.
     -------------------------------------------------------------------------------
-    INTAKE_PORT: POOL_INTAKE_PORT                -- 
-        generic map (                            -- 
-            WORD_BITS   => 8                   , -- 
-            ENBL_BITS   => 1                   , -- 
-            I_WIDTH     => AXI4_DATA_WIDTH/8   , -- 
-            O_WIDTH     =>  BUF_DATA_WIDTH/8   , -- 
-            VAL_BITS    => VAL_BITS            , -- 
-            SIZE_BITS   => SIZE_BITS           , --
-            PTR_BITS    => BUF_PTR_BITS        , -- 
-            QUEUE_SIZE  => 2*(AXI4_DATA_WIDTH/8) --
-                            + (BUF_DATA_WIDTH/8) --
-                            - 1                  -- 
-        )                                        -- 
-        port map (                               -- 
+    INTAKE_PORT: POOL_INTAKE_PORT                    -- 
+        generic map (                                --
+            UNIT_BITS       => 8                   , -- 
+            WORD_BITS       => 8                   , --
+            PORT_DATA_BITS  => AXI4_DATA_WIDTH     , --
+            POOL_DATA_BITS  => BUF_DATA_WIDTH      , -- 
+            SEL_BITS        => VAL_BITS            , -- 
+            SIZE_BITS       => SIZE_BITS           , --
+            PTR_BITS        => BUF_PTR_BITS        , -- 
+            QUEUE_SIZE      => 2*(AXI4_DATA_WIDTH/8) --
+                                + (BUF_DATA_WIDTH/8) --
+                                - 1                  -- 
+        )                                            -- 
+        port map (                                   -- 
         ---------------------------------------------------------------------------
         -- クロック&リセット信号
         ---------------------------------------------------------------------------
-            CLK         => CLK                 , -- In :
-            RST         => RST                 , -- In :
-            CLR         => CLR                 , -- In :
+            CLK             => CLK                 , -- In :
+            RST             => RST                 , -- In :
+            CLR             => CLR                 , -- In :
         ---------------------------------------------------------------------------
         -- 各種制御信号
         ---------------------------------------------------------------------------
-            START       => xfer_start          , -- In :
-            START_PTR   => xfer_queue_ptr      , -- In :
+            START           => xfer_start          , -- In :
+            START_PTR       => xfer_queue_ptr      , -- In :
+            XFER_LAST       => xfer_queue_last     , -- In :
+            XFER_SEL        => xfer_queue_select   , -- In :
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_DATA      => RDATA               , -- In :
-            I_ENBL      => recv_data_ben       , -- In :
-            I_LAST      => recv_data_done      , -- In :
-            I_DONE      => xfer_ack_last       , -- In :
-            I_ERR       => xfer_ack_error      , -- In :
-            I_SEL       => xfer_ack_select     , -- In :
-            I_VAL       => recv_data_valid     , -- In :
-            I_RDY       => recv_data_ready     , -- Out:
+            PORT_DATA       => RDATA               , -- In :
+            PORT_LAST       => RLAST               , -- In :
+            PORT_DVAL       => recv_data_ben       , -- In :
+            PORT_ERROR      => recv_data_error     , -- In :
+            PORT_VAL        => recv_data_valid     , -- In :
+            PORT_RDY        => recv_data_ready     , -- Out:
         ---------------------------------------------------------------------------
         -- Push Size Signals.
         ---------------------------------------------------------------------------
-            PUSH_VAL    => PUSH_VAL            , -- Out:
-            PUSH_LAST   => PUSH_LAST           , -- Out:
-            PUSH_ERR    => PUSH_ERROR          , -- Out:
-            PUSH_SIZE   => PUSH_SIZE           , -- Out:
+            PUSH_VAL        => PUSH_VAL            , -- Out:
+            PUSH_LAST       => PUSH_LAST           , -- Out:
+            PUSH_ERROR      => PUSH_ERROR          , -- Out:
+            PUSH_SIZE       => PUSH_SIZE           , -- Out:
         ---------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
         ---------------------------------------------------------------------------
-            POOL_WEN    => BUF_WEN             , -- Out:
-            POOL_BEN    => BUF_BEN             , -- Out:
-            POOL_DATA   => BUF_DATA            , -- Out:
-            POOL_PTR    => BUF_PTR             , -- Out:
-            POOL_RDY    => BUF_RDY               -- In :
+            POOL_WEN        => BUF_WEN             , -- Out:
+            POOL_DVAL       => BUF_BEN             , -- Out:
+            POOL_DATA       => BUF_DATA            , -- Out:
+            POOL_PTR        => BUF_PTR             , -- Out:
+            POOL_RDY        => BUF_RDY             , -- In :
+        ---------------------------------------------------------------------------
+        -- Status Signals.
+        ---------------------------------------------------------------------------
+            BUSY            => open                  -- Out:
         );
 end RTL;
 
