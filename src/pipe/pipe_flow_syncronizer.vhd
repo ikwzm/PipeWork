@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_flow_syncronizer.vhd
 --!     @brief   PIPE FLOW SYNCRONIZER
---!              Pipe ¤Î Requester Â¦¤«¤é Responder Â¦¤Ø¡¢¤Ş¤¿¤ÏResponder Â¦¤«¤é
---!              RequesterÂ¦ ¤Ø¡¢³Æ¼ï¾ğÊó¤òÅÁÃ£¤¹¤ë¥â¥¸¥å¡¼¥ë.
+--!              Pipe ã® Requester å´ã‹ã‚‰ Responder å´ã¸ã€ã¾ãŸã¯Responder å´ã‹ã‚‰
+--!              Requesterå´ ã¸ã€å„ç¨®æƒ…å ±ã‚’ä¼é”ã™ã‚‹ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«.
 --!     @version 0.0.1
 --!     @date    2013/3/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
@@ -44,51 +44,51 @@ use     ieee.std_logic_1164.all;
 entity  PIPE_FLOW_SYNCRONIZER is
     generic (
         I_CLK_RATE      : --! @brief INPUT CLOCK RATE :
-                          --! O_CLK_RATE¤È¥Ú¥¢¤ÇÆşÎÏÂ¦¤Î¥¯¥í¥Ã¥¯(I_CLK)¤È½ĞÎÏÂ¦¤Î
-                          --! ¥¯¥í¥Ã¥¯(O_CLK)¤È¤Î´Ø·¸¤ò»ØÄê¤¹¤ë.
-                          --! ¾ÜºÙ¤Ï PipeWork.Components ¤Î SYNCRONIZER ¤ò»²¾È.
+                          --! O_CLK_RATEã¨ãƒšã‚¢ã§å…¥åŠ›å´ã®ã‚¯ãƒ­ãƒƒã‚¯(I_CLK)ã¨å‡ºåŠ›å´ã®
+                          --! ã‚¯ãƒ­ãƒƒã‚¯(O_CLK)ã¨ã®é–¢ä¿‚ã‚’æŒ‡å®šã™ã‚‹.
+                          --! è©³ç´°ã¯ PipeWork.Components ã® SYNCRONIZER ã‚’å‚ç…§.
                           integer :=  1;
         O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
-                          --! I_CLK_RATE¤È¥Ú¥¢¤ÇÆşÎÏÂ¦¤Î¥¯¥í¥Ã¥¯(I_CLK)¤È½ĞÎÏÂ¦¤Î
-                          --! ¥¯¥í¥Ã¥¯(O_CLK)¤È¤Î´Ø·¸¤ò»ØÄê¤¹¤ë.
-                          --! ¾ÜºÙ¤Ï PipeWork.Components ¤Î SYNCRONIZER ¤ò»²¾È.
+                          --! I_CLK_RATEã¨ãƒšã‚¢ã§å…¥åŠ›å´ã®ã‚¯ãƒ­ãƒƒã‚¯(I_CLK)ã¨å‡ºåŠ›å´ã®
+                          --! ã‚¯ãƒ­ãƒƒã‚¯(O_CLK)ã¨ã®é–¢ä¿‚ã‚’æŒ‡å®šã™ã‚‹.
+                          --! è©³ç´°ã¯ PipeWork.Components ã® SYNCRONIZER ã‚’å‚ç…§.
                           integer :=  1;
         OPEN_INFO_BITS  : --! @brief OPEN INFOMATION BITS :
-                          --! I_OPEN_INFO/O_OPEN_INFO¤Î¥Ó¥Ã¥È¿ô¤ò»ØÄê¤¹¤ë.
+                          --! I_OPEN_INFO/O_OPEN_INFOã®ãƒ“ãƒƒãƒˆæ•°ã‚’æŒ‡å®šã™ã‚‹.
                           integer :=  1;
         CLOSE_INFO_BITS : --! @brief CLOSE INFOMATION BITS :
-                          --! I_CLOSE_INFO/O_CLOSE_INFO¤Î¥Ó¥Ã¥È¿ô¤ò»ØÄê¤¹¤ë.
+                          --! I_CLOSE_INFO/O_CLOSE_INFOã®ãƒ“ãƒƒãƒˆæ•°ã‚’æŒ‡å®šã™ã‚‹.
                           integer :=  1;
         SIZE_BITS       : --! @brief SIZE BITS :
-                          --! ³Æ¼ï¥µ¥¤¥º¿®¹æ¤Î¥Ó¥Ã¥È¿ô¤ò»ØÄê¤¹¤ë.
+                          --! å„ç¨®ã‚µã‚¤ã‚ºä¿¡å·ã®ãƒ“ãƒƒãƒˆæ•°ã‚’æŒ‡å®šã™ã‚‹.
                           integer :=  8;
         PUSH_FIN_VALID  : --! @brief PUSH FINAL SIZE VALID :
-                          --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST ¿®¹æ¤òÍ­¸ú¤Ë
-                          --! ¤¹¤ë¤«Èİ¤«¤ò»ØÄê¤¹¤ë.
-                          --! * PUSH_FIN_VALID = 1 : Í­¸ú. 
-                          --! * PUSH_FIN_VALID = 0 : Ìµ¸ú. ²óÏ©¤Ï¾ÊÎ¬¤µ¤ì¤ë.
+                          --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST ä¿¡å·ã‚’æœ‰åŠ¹ã«
+                          --! ã™ã‚‹ã‹å¦ã‹ã‚’æŒ‡å®šã™ã‚‹.
+                          --! * PUSH_FIN_VALID = 1 : æœ‰åŠ¹. 
+                          --! * PUSH_FIN_VALID = 0 : ç„¡åŠ¹. å›è·¯ã¯çœç•¥ã•ã‚Œã‚‹.
                           integer :=  1;
         PUSH_FIN_DELAY  : --! @brief PUSH FINAL SIZE DELAY CYCLE :
-                          --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST ¤òÃÙ±ä¤¹¤ë¥µ
-                          --! ¥¤¥¯¥ë¿ô¤ò»ØÄê¤¹¤ë.
+                          --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST ã‚’é…å»¶ã™ã‚‹ã‚µ
+                          --! ã‚¤ã‚¯ãƒ«æ•°ã‚’æŒ‡å®šã™ã‚‹.
                           integer :=  0;
         PUSH_RSV_VALID  : --! @brief PUSH RESERVE SIZE VALID :
-                          --! PUSH_RSV_VAL/PUSH_RSV_SIZE/PUSH_RSV_LAST ¿®¹æ¤òÍ­¸ú¤Ë
-                          --! ¤¹¤ë¤«Èİ¤«¤ò»ØÄê¤¹¤ë.
-                          --! * PUSH_RSV_VALID = 1 : Í­¸ú. 
-                          --! * PUSH_RSV_VALID = 0 : Ìµ¸ú. ²óÏ©¤Ï¾ÊÎ¬¤µ¤ì¤ë.
+                          --! PUSH_RSV_VAL/PUSH_RSV_SIZE/PUSH_RSV_LAST ä¿¡å·ã‚’æœ‰åŠ¹ã«
+                          --! ã™ã‚‹ã‹å¦ã‹ã‚’æŒ‡å®šã™ã‚‹.
+                          --! * PUSH_RSV_VALID = 1 : æœ‰åŠ¹. 
+                          --! * PUSH_RSV_VALID = 0 : ç„¡åŠ¹. å›è·¯ã¯çœç•¥ã•ã‚Œã‚‹.
                           integer :=  1;
         PULL_FIN_VALID  : --! @brief PULL FINAL SIZE VALID :
-                          --! PULL_FIN_VAL/PULL_FIN_SIZE/PULL_FIN_LAST ¿®¹æ¤òÍ­¸ú¤Ë
-                          --! ¤¹¤ë¤«Èİ¤«¤ò»ØÄê¤¹¤ë.
-                          --! * PULL_FIN_VALID = 1 : Í­¸ú. 
-                          --! * PULL_FIN_VALID = 0 : Ìµ¸ú. ²óÏ©¤Ï¾ÊÎ¬¤µ¤ì¤ë.
+                          --! PULL_FIN_VAL/PULL_FIN_SIZE/PULL_FIN_LAST ä¿¡å·ã‚’æœ‰åŠ¹ã«
+                          --! ã™ã‚‹ã‹å¦ã‹ã‚’æŒ‡å®šã™ã‚‹.
+                          --! * PULL_FIN_VALID = 1 : æœ‰åŠ¹. 
+                          --! * PULL_FIN_VALID = 0 : ç„¡åŠ¹. å›è·¯ã¯çœç•¥ã•ã‚Œã‚‹.
                           integer :=  1;
         PULL_RSV_VALID  : --! @brief PULL RESERVE SIZE VALID :
-                          --! PULL_RSV_VAL/PULL_RSV_SIZE/PULL_RSV_LAST ¿®¹æ¤òÍ­¸ú¤Ë
-                          --! ¤¹¤ë¤«Èİ¤«¤ò»ØÄê¤¹¤ë.
-                          --! * PULL_RSV_VALID = 1 : Í­¸ú. 
-                          --! * PULL_RSV_VALID = 0 : Ìµ¸ú. ²óÏ©¤Ï¾ÊÎ¬¤µ¤ì¤ë.
+                          --! PULL_RSV_VAL/PULL_RSV_SIZE/PULL_RSV_LAST ä¿¡å·ã‚’æœ‰åŠ¹ã«
+                          --! ã™ã‚‹ã‹å¦ã‹ã‚’æŒ‡å®šã™ã‚‹.
+                          --! * PULL_RSV_VALID = 1 : æœ‰åŠ¹. 
+                          --! * PULL_RSV_VALID = 0 : ç„¡åŠ¹. å›è·¯ã¯çœç•¥ã•ã‚Œã‚‹.
                           integer :=  1
     );
     port (
@@ -96,188 +96,188 @@ entity  PIPE_FLOW_SYNCRONIZER is
     -- Asyncronous Reset Signal.
     -------------------------------------------------------------------------------
         RST             : --! @brief RESET :
-                          --! ÈóÆ±´ü¥ê¥»¥Ã¥È¿®¹æ(¥Ï¥¤¡¦¥¢¥¯¥Æ¥£¥Ö).
+                          --! éåŒæœŸãƒªã‚»ãƒƒãƒˆä¿¡å·(ãƒã‚¤ãƒ»ã‚¢ã‚¯ãƒ†ã‚£ãƒ–).
                           in  std_logic;
     -------------------------------------------------------------------------------
     -- Input Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
         I_CLK           : --! @brief INPUT CLOCK :
-                          --! ÆşÎÏÂ¦¤Î¥¯¥í¥Ã¥¯¿®¹æ.
+                          --! å…¥åŠ›å´ã®ã‚¯ãƒ­ãƒƒã‚¯ä¿¡å·.
                           in  std_logic;
         I_CLR           : --! @brief INPUT CLEAR :
-                          --! ÆşÎÏÂ¦¤ÎÆ±´ü¥ê¥»¥Ã¥È¿®¹æ(¥Ï¥¤¡¦¥¢¥¯¥Æ¥£¥Ö).
+                          --! å…¥åŠ›å´ã®åŒæœŸãƒªã‚»ãƒƒãƒˆä¿¡å·(ãƒã‚¤ãƒ»ã‚¢ã‚¯ãƒ†ã‚£ãƒ–).
                           in  std_logic;
         I_CKE           : --! @brief INPUT CLOCK ENABLE :
-                          --! ÆşÎÏÂ¦¤Î¥¯¥í¥Ã¥¯(I_CLK)¤ÎÎ©¾å¤ê¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹¿®¹æ.
-                          --! * ¤³¤Î¿®¹æ¤Ï I_CLK_RATE > 1 ¤Î»ş¤Ë¡¢I_CLK ¤È O_CLK ¤Î
-                          --!   °ÌÁê´Ø·¸¤ò¼¨¤¹»ş¤Ë»ÈÍÑ¤¹¤ë.
-                          --! * I_CLK¤ÎÎ©¾å¤ê»ş¤ÈOCLK¤ÎÎ©¾å¤ê»ş¤¬Æ±¤¸»ş¤Ë¥¢¥µ¡¼¥È¤¹
-                          --!   ¤ë¤è¤¦¤ËÆşÎÏ¤µ¤ì¤Ê¤±¤ì¤Ğ¤Ê¤é¤Ê¤¤.
-                          --! * ¤³¤Î¿®¹æ¤Ï I_CLK_RATE > 1 ¤«¤Ä O_CLK_RATE = 1¤Î»ş¤Î
-                          --!   ¤ßÍ­¸ú. ¤½¤ì°Ê³°¤ÏÌ¤»ÈÍÑ.
+                          --! å…¥åŠ›å´ã®ã‚¯ãƒ­ãƒƒã‚¯(I_CLK)ã®ç«‹ä¸Šã‚ŠãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™ä¿¡å·.
+                          --! * ã“ã®ä¿¡å·ã¯ I_CLK_RATE > 1 ã®æ™‚ã«ã€I_CLK ã¨ O_CLK ã®
+                          --!   ä½ç›¸é–¢ä¿‚ã‚’ç¤ºã™æ™‚ã«ä½¿ç”¨ã™ã‚‹.
+                          --! * I_CLKã®ç«‹ä¸Šã‚Šæ™‚ã¨OCLKã®ç«‹ä¸Šã‚Šæ™‚ãŒåŒã˜æ™‚ã«ã‚¢ã‚µãƒ¼ãƒˆã™
+                          --!   ã‚‹ã‚ˆã†ã«å…¥åŠ›ã•ã‚Œãªã‘ã‚Œã°ãªã‚‰ãªã„.
+                          --! * ã“ã®ä¿¡å·ã¯ I_CLK_RATE > 1 ã‹ã¤ O_CLK_RATE = 1ã®æ™‚ã®
+                          --!   ã¿æœ‰åŠ¹. ãã‚Œä»¥å¤–ã¯æœªä½¿ç”¨.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- ÆşÎÏÂ¦¤«¤é¤ÎOPEN(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î³«»Ï)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
+    -- å…¥åŠ›å´ã‹ã‚‰ã®OPEN(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®é–‹å§‹)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
     -------------------------------------------------------------------------------
         I_OPEN_VAL      : --! @brief INPUT OPEN VALID :
-                          --! ÆşÎÏÂ¦¤«¤é¤ÎOPEN(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î³«»Ï)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
-                          --! * I_OPEN_INFO ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å…¥åŠ›å´ã‹ã‚‰ã®OPEN(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®é–‹å§‹)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
+                          --! * I_OPEN_INFO ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic;
         I_OPEN_INFO     : --! @brief INPUT OPEN INFOMATION DATA :
-                          --! OPEN(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î³«»Ï)»ş¤Ë½ĞÎÏÂ¦¤ËÅÁÃ£¤¹¤ë³Æ¼ï
-                          --! ¾ğÊóÆşÎÏ.
-                          --! * I_OPEN_VAL¤¬¥¢¥µ¡¼¥È¤µ¤ì¤Æ¤¤¤ë»ş¤Î¤ßÍ­¸ú.
+                          --! OPEN(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®é–‹å§‹)æ™‚ã«å‡ºåŠ›å´ã«ä¼é”ã™ã‚‹å„ç¨®
+                          --! æƒ…å ±å…¥åŠ›.
+                          --! * I_OPEN_VALãŒã‚¢ã‚µãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹æ™‚ã®ã¿æœ‰åŠ¹.
                           in  std_logic_vector(OPEN_INFO_BITS -1 downto 0);
     -------------------------------------------------------------------------------
-    -- ÆşÎÏÂ¦¤«¤é¤ÎCLOSE(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î½ªÎ»)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
+    -- å…¥åŠ›å´ã‹ã‚‰ã®CLOSE(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®çµ‚äº†)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
     -------------------------------------------------------------------------------
         I_CLOSE_VAL     : --! @brief INPUT CLOSE VALID :
-                          --! ÆşÎÏÂ¦¤«¤é¤ÎCLOSE(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î½ªÎ»)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
-                          --! * I_CLOSE_INFO ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å…¥åŠ›å´ã‹ã‚‰ã®CLOSE(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®çµ‚äº†)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
+                          --! * I_CLOSE_INFO ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic;
         I_CLOSE_INFO    : --! @brief INPUT CLOSE INFOMATION DATA :
-                          --! CLOSE(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î½ªÎ»)»ş¤Ë½ĞÎÏÂ¦¤ËÅÁÃ£¤¹¤ë³Æ¼ï
-                          --! ¾ğÊóÆşÎÏ.
-                          --! * I_CLOSE_VAL¤¬¥¢¥µ¡¼¥È¤µ¤ì¤Æ¤¤¤ë»ş¤Î¤ßÍ­¸ú.
+                          --! CLOSE(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®çµ‚äº†)æ™‚ã«å‡ºåŠ›å´ã«ä¼é”ã™ã‚‹å„ç¨®
+                          --! æƒ…å ±å…¥åŠ›.
+                          --! * I_CLOSE_VALãŒã‚¢ã‚µãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹æ™‚ã®ã¿æœ‰åŠ¹.
                           in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- ÆşÎÏÂ¦¤«¤é¤Î¡¢PUSH_FIN(ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å…¥åŠ›å´ã‹ã‚‰ã®ã€PUSH_FIN(å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€"ãŒç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         I_PUSH_FIN_VAL  : --! @brief INPUT PUSH FINAL VALID :
-                          --! * I_PUSH_FIN_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * I_PUSH_FIN_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PUSH_FIN_LAST : --! @brief INPUT PUSH FINAL LAST FLAG :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤ØºÇ¸å¤Î"³ÎÄê¤·¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸æœ€å¾Œã®"ç¢ºå®šã—ãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PUSH_FIN_SIZE : --! @brief INPUT PUSH FINAL SIZE :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷¤¬"³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô¤òÆşÎÏ.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€ãŒ"ç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å…¥åŠ›.
                           in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- ÆşÎÏÂ¦¤«¤é¤Î¡¢PUSH_RSV(ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å…¥åŠ›å´ã‹ã‚‰ã®ã€PUSH_RSV(å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€"ãŒäºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         I_PUSH_RSV_VAL  : --! @brief INPUT PUSH RESERVE VALID :
-                          --! * I_PUSH_RSV_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * I_PUSH_RSV_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PUSH_RSV_LAST : --! @brief INPUT PUSH RESERVE LAST FLAG :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤ØºÇ¸å¤Î"Í½Äê¤µ¤ì¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸æœ€å¾Œã®"äºˆå®šã•ã‚ŒãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PUSH_RSV_SIZE : --! @brief INPUT PUSH RESERVE SIZE :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷¤¬"Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô¤òÆşÎÏ.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€ãŒ"äºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å…¥åŠ›.
                           in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- ÆşÎÏÂ¦¤«¤é¤Î¡¢PULL_FIN(½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å…¥åŠ›å´ã‹ã‚‰ã®ã€PULL_FIN(å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€"ãŒç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         I_PULL_FIN_VAL  : --! @brief INPUT PULL FINAL VALID :
-                          --! * I_PULL_FIN_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * I_PULL_FIN_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PULL_FIN_LAST : --! @brief INPUT PULL FINAL LAST FLAG :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎºÇ¸å¤Î"³ÎÄê¤·¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®æœ€å¾Œã®"ç¢ºå®šã—ãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PULL_FIN_SIZE : --! @brief INPUT PULL FINAL SIZE :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷¤¬"³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô¤òÆşÎÏ.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€ãŒ"ç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å…¥åŠ›.
                           in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- ÆşÎÏÂ¦¤«¤é¤Î¡¢PULL_RSV(½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å…¥åŠ›å´ã‹ã‚‰ã®ã€PULL_RSV(å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€"ãŒäºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         I_PULL_RSV_VAL  : --! @brief INPUT PULL RESERVE VALID :
-                          --! * I_PULL_RSV_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * I_PULL_RSV_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PULL_RSV_LAST : --! @brief INPUT PULL FINAL LAST FLAG :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎºÇ¸å¤Î"Í½Äê¤µ¤ì¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®æœ€å¾Œã®"äºˆå®šã•ã‚ŒãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           in  std_logic := '0';
         I_PULL_RSV_SIZE : --! @brief INPUT PULL FINAL SIZE :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô¤òÆşÎÏ.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€"ãŒäºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å…¥åŠ›.
                           in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Output Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
         O_CLK           : --! @brief OUTPUT CLOCK :
-                          --! ÆşÎÏÂ¦¤Î¥¯¥í¥Ã¥¯¿®¹æ.
+                          --! å…¥åŠ›å´ã®ã‚¯ãƒ­ãƒƒã‚¯ä¿¡å·.
                           in  std_logic;
         O_CLR           : --! @brief OUTPUT CLEAR :
-                          --! ÆşÎÏÂ¦¤ÎÆ±´ü¥ê¥»¥Ã¥È¿®¹æ(¥Ï¥¤¡¦¥¢¥¯¥Æ¥£¥Ö).
+                          --! å…¥åŠ›å´ã®åŒæœŸãƒªã‚»ãƒƒãƒˆä¿¡å·(ãƒã‚¤ãƒ»ã‚¢ã‚¯ãƒ†ã‚£ãƒ–).
                           in  std_logic;
         O_CKE           : --! @brief OUTPUT CLOCK ENABLE :
-                          --! ½ĞÎÏÂ¦¤Î¥¯¥í¥Ã¥¯(O_CLK)¤ÎÎ©¾å¤ê¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹¿®¹æ.
-                          --! * ¤³¤Î¿®¹æ¤Ï I_CLK_RATE > 1 ¤Î»ş¤Ë¡¢I_CLK ¤È O_CLK ¤Î
-                          --!   °ÌÁê´Ø·¸¤ò¼¨¤¹»ş¤Ë»ÈÍÑ¤¹¤ë.
-                          --! * I_CLK¤ÎÎ©¾å¤ê»ş¤ÈO_CLK¤ÎÎ©¾å¤ê»ş¤¬Æ±¤¸»ş¤Ë¥¢¥µ¡¼¥È¤¹
-                          --!   ¤ë¤è¤¦¤ËÆşÎÏ¤µ¤ì¤Ê¤±¤ì¤Ğ¤Ê¤é¤Ê¤¤.
-                          --! * ¤³¤Î¿®¹æ¤Ï O_CLK_RATE > 1 ¤«¤Ä I_CLK_RATE = 1¤Î»ş¤Î¤ß
-                          --!   Í­¸ú. ¤½¤ì°Ê³°¤ÏÌ¤»ÈÍÑ.
+                          --! å‡ºåŠ›å´ã®ã‚¯ãƒ­ãƒƒã‚¯(O_CLK)ã®ç«‹ä¸Šã‚ŠãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™ä¿¡å·.
+                          --! * ã“ã®ä¿¡å·ã¯ I_CLK_RATE > 1 ã®æ™‚ã«ã€I_CLK ã¨ O_CLK ã®
+                          --!   ä½ç›¸é–¢ä¿‚ã‚’ç¤ºã™æ™‚ã«ä½¿ç”¨ã™ã‚‹.
+                          --! * I_CLKã®ç«‹ä¸Šã‚Šæ™‚ã¨O_CLKã®ç«‹ä¸Šã‚Šæ™‚ãŒåŒã˜æ™‚ã«ã‚¢ã‚µãƒ¼ãƒˆã™
+                          --!   ã‚‹ã‚ˆã†ã«å…¥åŠ›ã•ã‚Œãªã‘ã‚Œã°ãªã‚‰ãªã„.
+                          --! * ã“ã®ä¿¡å·ã¯ O_CLK_RATE > 1 ã‹ã¤ I_CLK_RATE = 1ã®æ™‚ã®ã¿
+                          --!   æœ‰åŠ¹. ãã‚Œä»¥å¤–ã¯æœªä½¿ç”¨.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- ½ĞÎÏÂ¦¤Ø¤ÎOPEN(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î³«»Ï)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
+    -- å‡ºåŠ›å´ã¸ã®OPEN(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®é–‹å§‹)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
     -------------------------------------------------------------------------------
         O_OPEN_VAL      : --! @brief OUTPUT OPEN VALID :
-                          --! ½ĞÎÏÂ¦¤Ø¤ÎOPEN(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î³«»Ï)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
-                          --! * O_OPEN_INFO ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å‡ºåŠ›å´ã¸ã®OPEN(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®é–‹å§‹)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
+                          --! * O_OPEN_INFO ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_OPEN_INFO     : --! @brief OUTPUT OPEN INFOMATION DATA :
-                          --! OPEN(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î³«»Ï)»ş¤Ë½ĞÎÏÂ¦¤ËÅÁÃ£¤¹¤ë³Æ¼ï
-                          --! ¾ğÊó½ĞÎÏ.
-                          --! * I_OPEN_VAL¤¬¥¢¥µ¡¼¥È¤µ¤ì¤Æ¤¤¤ë»ş¤Î¤ßÍ­¸ú.
+                          --! OPEN(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®é–‹å§‹)æ™‚ã«å‡ºåŠ›å´ã«ä¼é”ã™ã‚‹å„ç¨®
+                          --! æƒ…å ±å‡ºåŠ›.
+                          --! * I_OPEN_VALãŒã‚¢ã‚µãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹æ™‚ã®ã¿æœ‰åŠ¹.
                           out std_logic_vector(OPEN_INFO_BITS -1 downto 0);
     -------------------------------------------------------------------------------
-    -- ½ĞÎÏÂ¦¤Ø¤ÎCLOSE(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î½ªÎ»)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
+    -- å‡ºåŠ›å´ã¸ã®CLOSE(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®çµ‚äº†)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
     -------------------------------------------------------------------------------
         O_CLOSE_VAL     : --! @brief OUTPUT CLOSE VALID :
-                          --! ½ĞÎÏÂ¦¤ØCLOSE(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î½ªÎ»)¤ò»Ø¼¨¤¹¤ë¿®¹æ.
-                          --! * O_CLOSE_VAL/INFO ¤Ï O_PUSH_FIN_XXX ¤Î½ĞÎÏ¥¿¥¤¥ß¥ó¥°
-                          --!   ¤Ë¹ç¤ï¤»¤Æ½ĞÎÏ¤µ¤ì¤ë.
+                          --! å‡ºåŠ›å´ã¸CLOSE(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®çµ‚äº†)ã‚’æŒ‡ç¤ºã™ã‚‹ä¿¡å·.
+                          --! * O_CLOSE_VAL/INFO ã¯ O_PUSH_FIN_XXX ã®å‡ºåŠ›ã‚¿ã‚¤ãƒŸãƒ³ã‚°
+                          --!   ã«åˆã‚ã›ã¦å‡ºåŠ›ã•ã‚Œã‚‹.
                           out std_logic;
         O_CLOSE_INFO    : --! @brief OUTPUT CLOSE INFOMATION DATA :
-                          --! CLOSE(¥È¥é¥ó¥¶¥¯¥·¥ç¥ó¤Î½ªÎ»)»ş¤Ë½ĞÎÏÂ¦¤ËÅÁÃ£¤¹¤ë³Æ¼ï
-                          --! ¾ğÊó½ĞÎÏ.
-                          --! * I_CLOSE_VAL¤¬¥¢¥µ¡¼¥È¤µ¤ì¤Æ¤¤¤ë»ş¤Î¤ßÍ­¸ú.
+                          --! CLOSE(ãƒˆãƒ©ãƒ³ã‚¶ã‚¯ã‚·ãƒ§ãƒ³ã®çµ‚äº†)æ™‚ã«å‡ºåŠ›å´ã«ä¼é”ã™ã‚‹å„ç¨®
+                          --! æƒ…å ±å‡ºåŠ›.
+                          --! * I_CLOSE_VALãŒã‚¢ã‚µãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹æ™‚ã®ã¿æœ‰åŠ¹.
                           out std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- ½ĞÎÏÂ¦¤Ø¤Î¡¢PUSH_FIN(ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å‡ºåŠ›å´ã¸ã®ã€PUSH_FIN(å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€"ãŒç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         O_PUSH_FIN_VAL  : --! @brief OUTPUT PUSH FINAL VALID :
-                          --! * O_PUSH_FIN_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * O_PUSH_FIN_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PUSH_FIN_LAST : --! @brief OUTPUT PUSH FINAL LAST FLAG :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤ØºÇ¸å¤Î"³ÎÄê¤·¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸æœ€å¾Œã®"ç¢ºå®šã—ãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PUSH_FIN_SIZE : --! @brief OUTPUT PUSH FINAL SIZE :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷¤¬"³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô¤ò½ĞÎÏ.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€ãŒ"ç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å‡ºåŠ›.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- ½ĞÎÏÂ¦¤Ø¤Î¡¢PUSH_RSV(ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å‡ºåŠ›å´ã¸ã®ã€PUSH_RSV(å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€"ãŒäºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         O_PUSH_RSV_VAL  : --! @brief OUTPUT PUSH RESERVE VALID :
-                          --! * O_PUSH_RSV_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * O_PUSH_RSV_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PUSH_RSV_LAST : --! @brief OUTPUT PUSH RESERVE LAST FLAG :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤ØºÇ¸å¤Î"Í½Äê¤µ¤ì¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸æœ€å¾Œã®"äºˆå®šã•ã‚ŒãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PUSH_RSV_SIZE : --! @brief OUTPUT PUSH RESERVE SIZE :
-                          --! ÆşÎÏÂ¦¤«¤é½ĞÎÏÂ¦¤Ø¤ÎÅ¾Á÷¤¬"Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô¤ò½ĞÎÏ.
+                          --! å…¥åŠ›å´ã‹ã‚‰å‡ºåŠ›å´ã¸ã®è»¢é€ãŒ"äºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å‡ºåŠ›.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- ½ĞÎÏÂ¦¤Ø¤Î¡¢PULL_FIN(½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å‡ºåŠ›å´ã¸ã®ã€PULL_FIN(å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€"ãŒç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         O_PULL_FIN_VAL  : --! @brief OUTPUT PULL FINAL VALID :
-                          --! * O_PULL_FIN_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * O_PULL_FIN_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PULL_FIN_LAST : --! @brief OUTPUT PULL FINAL LAST FLAG :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎºÇ¸å¤Î"³ÎÄê¤·¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®æœ€å¾Œã®"ç¢ºå®šã—ãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PULL_FIN_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷¤¬"³ÎÄê¤·¤¿"¥Ğ¥¤¥È¿ô¤ò½ĞÎÏ.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€ãŒ"ç¢ºå®šã—ãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å‡ºåŠ›.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- ½ĞÎÏÂ¦¤Ø¤Î¡¢PULL_RSV(½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô)¿®¹æ.
+    -- å‡ºåŠ›å´ã¸ã®ã€PULL_RSV(å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€"ãŒäºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°)ä¿¡å·.
     -------------------------------------------------------------------------------
         O_PULL_RSV_VAL  : --! @brief OUTPUT PULL RESERVE VALID :
-                          --! * O_PULL_RSV_LAST/SIZE ¤¬Í­¸ú¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! * O_PULL_RSV_LAST/SIZE ãŒæœ‰åŠ¹ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PULL_RSV_LAST : --! @brief OUTPUT PULL FINAL LAST FLAG :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎºÇ¸å¤Î"Í½Äê¤µ¤ì¤¿"Å¾Á÷¤Ç¤¢¤ë¤³¤È¤ò¼¨¤¹.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®æœ€å¾Œã®"äºˆå®šã•ã‚ŒãŸ"è»¢é€ã§ã‚ã‚‹ã“ã¨ã‚’ç¤ºã™.
                           out std_logic;
         O_PULL_RSV_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
-                          --! ½ĞÎÏÂ¦¤«¤éÆşÎÏÂ¦¤Ø¤ÎÅ¾Á÷"¤¬Í½Äê¤µ¤ì¤¿"¥Ğ¥¤¥È¿ô¤ò½ĞÎÏ.
+                          --! å‡ºåŠ›å´ã‹ã‚‰å…¥åŠ›å´ã¸ã®è»¢é€"ãŒäºˆå®šã•ã‚ŒãŸ"ãƒã‚¤ãƒˆæ•°ã‚’å‡ºåŠ›.
                           out std_logic_vector(SIZE_BITS-1 downto 0)
     );
 end PIPE_FLOW_SYNCRONIZER;
@@ -293,55 +293,55 @@ use     PIPEWORK.COMPONENTS.DELAY_REGISTER;
 use     PIPEWORK.COMPONENTS.DELAY_ADJUSTER;
 architecture  RTL of PIPE_FLOW_SYNCRONIZER is
     -------------------------------------------------------------------------------
-    -- ¤³¤Î¥â¥¸¥å¡¼¥ë¤Ç»ÈÍÑ¤¹¤ëi_valid/o_valid/i_data/o_data¤Î¥Ó¥Ã¥È¤Î³ä¤êÅö¤Æ¤ò
-    -- Êİ»ı¤¹¤ëÄê¿ô¤Î¥¿¥¤¥×¤ÎÀë¸À.
+    -- ã“ã®ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã§ä½¿ç”¨ã™ã‚‹i_valid/o_valid/i_data/o_dataã®ãƒ“ãƒƒãƒˆã®å‰²ã‚Šå½“ã¦ã‚’
+    -- ä¿æŒã™ã‚‹å®šæ•°ã®ã‚¿ã‚¤ãƒ—ã®å®£è¨€.
     -------------------------------------------------------------------------------
     -------------------------------------------------------------------------------
-    --! @brief OPEN_INFO/CLOSE_INFO ¤Î i_valid/o_valid/i_data/o_data¤Î¥Ó¥Ã¥È¤Î
-    --!        ³ä¤êÅö¤Æ¤òÊİ»ı¤¹¤ëÄê¿ô.
+    --! @brief OPEN_INFO/CLOSE_INFO ã® i_valid/o_valid/i_data/o_dataã®ãƒ“ãƒƒãƒˆã®
+    --!        å‰²ã‚Šå½“ã¦ã‚’ä¿æŒã™ã‚‹å®šæ•°.
     -------------------------------------------------------------------------------
     type      INFO_RANGE_TYPE is record
-              VAL_POS           : integer;          -- i_valid/o_valid ¤Î *_VAL ¤Î¥Ó¥Ã¥È°ÌÃÖ
-              DATA_LO           : integer;          -- i_data/o_data   ¤Î *_INFO ¤ÎºÇ²¼°Ì¥Ó¥Ã¥È°ÌÃÖ
-              DATA_HI           : integer;          -- i_data/o_data   ¤Î *_INFO ¤ÎºÇ¾å°Ì¥Ó¥Ã¥È°ÌÃÖ
+              VAL_POS           : integer;          -- i_valid/o_valid ã® *_VAL ã®ãƒ“ãƒƒãƒˆä½ç½®
+              DATA_LO           : integer;          -- i_data/o_data   ã® *_INFO ã®æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆä½ç½®
+              DATA_HI           : integer;          -- i_data/o_data   ã® *_INFO ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆä½ç½®
     end record;
     -------------------------------------------------------------------------------
-    --! @brief PUSH_FIN_XXX/PUSH_RSV_XXX/PULL_FIN_XXX/PULL_RSV_XXX ¤Î 
-    --!        i_valid/o_valid/i_data/o_data¤Î¥Ó¥Ã¥È¤Î³ä¤êÅö¤Æ¤òÊİ»ı¤¹¤ëÄê¿ô.
+    --! @brief PUSH_FIN_XXX/PUSH_RSV_XXX/PULL_FIN_XXX/PULL_RSV_XXX ã® 
+    --!        i_valid/o_valid/i_data/o_dataã®ãƒ“ãƒƒãƒˆã®å‰²ã‚Šå½“ã¦ã‚’ä¿æŒã™ã‚‹å®šæ•°.
     -------------------------------------------------------------------------------
     type      SIZE_RANGE_TYPE is record
-              VAL_POS           : integer;          -- i_valid/o_valid ¤Î *_VAL ¤Î¥Ó¥Ã¥È°ÌÃÖ
-              DATA_LO           : integer;          -- i_data/o_data   ¤Î *_SIZE&LAST ¤ÎºÇ²¼°Ì¥Ó¥Ã¥È°ÌÃÖ
-              DATA_HI           : integer;          -- i_data/o_data   ¤Î *_SIZE&LAST ¤ÎºÇ¾å°Ì¥Ó¥Ã¥È°ÌÃÖ
-              SIZE_LO           : integer;          -- i_data/o_data   ¤Î *_SIZE ¤ÎºÇ²¼°Ì¥Ó¥Ã¥È°ÌÃÖ
-              SIZE_HI           : integer;          -- i_data/o_data   ¤Î *_SIZE ¤ÎºÇ¾å°Ì¥Ó¥Ã¥È°ÌÃÖ
-              LAST_POS          : integer;          -- i_data/o_data   ¤Î *_LAST ¤Î¥Ó¥Ã¥È°ÌÃÖ
+              VAL_POS           : integer;          -- i_valid/o_valid ã® *_VAL ã®ãƒ“ãƒƒãƒˆä½ç½®
+              DATA_LO           : integer;          -- i_data/o_data   ã® *_SIZE&LAST ã®æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆä½ç½®
+              DATA_HI           : integer;          -- i_data/o_data   ã® *_SIZE&LAST ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆä½ç½®
+              SIZE_LO           : integer;          -- i_data/o_data   ã® *_SIZE ã®æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆä½ç½®
+              SIZE_HI           : integer;          -- i_data/o_data   ã® *_SIZE ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆä½ç½®
+              LAST_POS          : integer;          -- i_data/o_data   ã® *_LAST ã®ãƒ“ãƒƒãƒˆä½ç½®
     end record;
     -------------------------------------------------------------------------------
-    --! @brief i_valid/o_valid/i_data/o_data¤Î¥Ó¥Ã¥È¤Î³ä¤êÅö¤Æ¤òÊİ»ı¤¹¤ëÄê¿ô.
+    --! @brief i_valid/o_valid/i_data/o_dataã®ãƒ“ãƒƒãƒˆã®å‰²ã‚Šå½“ã¦ã‚’ä¿æŒã™ã‚‹å®šæ•°.
     -------------------------------------------------------------------------------
     type      VEC_RANGE_TYPE is record
-              VAL_LO            : integer;          -- i_valid/o_valid ¤ÎºÇ²¼°Ì¥Ó¥Ã¥È°ÌÃÖ
-              VAL_HI            : integer;          -- i_valid/o_valid ¤ÎºÇ¾å°Ì¥Ó¥Ã¥È°ÌÃÖ
-              DATA_LO           : integer;          -- i_data/o_data ¤ÎºÇ²¼°Ì¥Ó¥Ã¥È°ÌÃÖ
-              DATA_HI           : integer;          -- i_data/o_data ¤ÎºÇ¾å°Ì¥Ó¥Ã¥È°ÌÃÖ
-              OPEN_INFO         : INFO_RANGE_TYPE;  -- OPEN_INFO¤Î³Æ¼ï¥Ó¥Ã¥È°ÌÃÖ
-              CLOSE_INFO        : INFO_RANGE_TYPE;  -- CLOSE_INFO¤Î³Æ¼ï¥Ó¥Ã¥È°ÌÃÖ
-              PUSH_FIN          : SIZE_RANGE_TYPE;  -- PUSH_FIN_XXX¤Î³Æ¼ï¥Ó¥Ã¥È°ÌÃÖ
-              PUSH_RSV          : SIZE_RANGE_TYPE;  -- PUSH_RSV_XXX¤Î³Æ¼ï¥Ó¥Ã¥È°ÌÃÖ
-              PULL_FIN          : SIZE_RANGE_TYPE;  -- PULL_FIN_XXX¤Î³Æ¼ï¥Ó¥Ã¥È°ÌÃÖ
-              PULL_RSV          : SIZE_RANGE_TYPE;  -- PULL_RSV_XXX¤Î³Æ¼ï¥Ó¥Ã¥È°ÌÃÖ
+              VAL_LO            : integer;          -- i_valid/o_valid ã®æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆä½ç½®
+              VAL_HI            : integer;          -- i_valid/o_valid ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆä½ç½®
+              DATA_LO           : integer;          -- i_data/o_data ã®æœ€ä¸‹ä½ãƒ“ãƒƒãƒˆä½ç½®
+              DATA_HI           : integer;          -- i_data/o_data ã®æœ€ä¸Šä½ãƒ“ãƒƒãƒˆä½ç½®
+              OPEN_INFO         : INFO_RANGE_TYPE;  -- OPEN_INFOã®å„ç¨®ãƒ“ãƒƒãƒˆä½ç½®
+              CLOSE_INFO        : INFO_RANGE_TYPE;  -- CLOSE_INFOã®å„ç¨®ãƒ“ãƒƒãƒˆä½ç½®
+              PUSH_FIN          : SIZE_RANGE_TYPE;  -- PUSH_FIN_XXXã®å„ç¨®ãƒ“ãƒƒãƒˆä½ç½®
+              PUSH_RSV          : SIZE_RANGE_TYPE;  -- PUSH_RSV_XXXã®å„ç¨®ãƒ“ãƒƒãƒˆä½ç½®
+              PULL_FIN          : SIZE_RANGE_TYPE;  -- PULL_FIN_XXXã®å„ç¨®ãƒ“ãƒƒãƒˆä½ç½®
+              PULL_RSV          : SIZE_RANGE_TYPE;  -- PULL_RSV_XXXã®å„ç¨®ãƒ“ãƒƒãƒˆä½ç½®
     end record;
     -------------------------------------------------------------------------------
-    --! @brief ¤³¤Î¥â¥¸¥å¡¼¥ë¤Ç»ÈÍÑ¤¹¤ëi_valid/o_valid/i_data/o_data¤Î¥Ó¥Ã¥È¤Î
-    --         ³ä¤êÅö¤Æ¤ò·è¤á¤ë´Ø¿ô.
+    --! @brief ã“ã®ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã§ä½¿ç”¨ã™ã‚‹i_valid/o_valid/i_data/o_dataã®ãƒ“ãƒƒãƒˆã®
+    --         å‰²ã‚Šå½“ã¦ã‚’æ±ºã‚ã‚‹é–¢æ•°.
     -------------------------------------------------------------------------------
     function  SET_VEC_RANGE return VEC_RANGE_TYPE is
         variable  v_pos         : integer;
         variable  d_pos         : integer;
         variable  v             : VEC_RANGE_TYPE;
         ---------------------------------------------------------------------------
-        --! @brief OPEN_INFO/CLOSE_INFO ¤Î¥Ó¥Ã¥È³ä¤êÅö¤Æ¤ò·è¤á¤ë¥×¥í¥·¡¼¥¸¥ã.
+        --! @brief OPEN_INFO/CLOSE_INFO ã®ãƒ“ãƒƒãƒˆå‰²ã‚Šå½“ã¦ã‚’æ±ºã‚ã‚‹ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£.
         ---------------------------------------------------------------------------
         procedure SET_INFO_RANGE(INFO_RANGE: inout INFO_RANGE_TYPE; BITS: in integer) is
         begin
@@ -352,8 +352,8 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
             d_pos := d_pos + BITS;
         end procedure;
         ---------------------------------------------------------------------------
-        --! @brief PUSH_FIN_SIZE/PUSH_RSV_SIZE/PULL_FIN_SIZE/PULL_RSV_SIZE ¤Î
-        --!        ¥Ó¥Ã¥È³ä¤êÅö¤Æ¤ò·è¤á¤ë¥×¥í¥·¡¼¥¸¥ã.
+        --! @brief PUSH_FIN_SIZE/PUSH_RSV_SIZE/PULL_FIN_SIZE/PULL_RSV_SIZE ã®
+        --!        ãƒ“ãƒƒãƒˆå‰²ã‚Šå½“ã¦ã‚’æ±ºã‚ã‚‹ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£.
         ---------------------------------------------------------------------------
         procedure SET_SIZE_RANGE(SIZE_RANGE: inout SIZE_RANGE_TYPE; BITS: in integer) is
         begin
@@ -389,12 +389,12 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
             SET_SIZE_RANGE(v.PULL_RSV, SIZE_BITS);
         end if;
         ---------------------------------------------------------------------------
-        -- ¤³¤ÎÃÊ³¬¤ÇÉ¬Í×¤ÊÊ¬¤Î¥Ó¥Ã¥È³ä¤êÅö¤Æ¤Ï½ªÎ».
+        -- ã“ã®æ®µéšã§å¿…è¦ãªåˆ†ã®ãƒ“ãƒƒãƒˆå‰²ã‚Šå½“ã¦ã¯çµ‚äº†.
         ---------------------------------------------------------------------------
         v.VAL_HI  := v_pos - 1;
         v.DATA_HI := d_pos - 1;
         ---------------------------------------------------------------------------
-        -- ¸å¤ÏÉ¬Í×Ìµ¤¤¤¬¡¢Êü¤Ã¤Æ¤ª¤¯¤Î¤âµ¤»ı¤Á°­¤¤¤Î¤Ç¡¢¥À¥ß¡¼¤ÎÃÍ¤ò¥»¥Ã¥È.
+        -- å¾Œã¯å¿…è¦ç„¡ã„ãŒã€æ”¾ã£ã¦ãŠãã®ã‚‚æ°—æŒã¡æ‚ªã„ã®ã§ã€ãƒ€ãƒŸãƒ¼ã®å€¤ã‚’ã‚»ãƒƒãƒˆ.
         ---------------------------------------------------------------------------
         if (PUSH_FIN_VALID = 0) then
             SET_SIZE_RANGE(v.PUSH_FIN, SIZE_BITS);
@@ -414,12 +414,12 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
         return v;
     end function;
     -------------------------------------------------------------------------------
-    --! @brief ¤³¤Î¥â¥¸¥å¡¼¥ë¤Ç»ÈÍÑ¤¹¤ëi_valid/o_valid/i_data/o_data ¤Î¥Ó¥Ã¥È¤Î
-    --!        ³ä¤êÅö¤Æ¤òÊİ»ı¤·¤Æ¤¤¤ëÄê¿ô.
+    --! @brief ã“ã®ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã§ä½¿ç”¨ã™ã‚‹i_valid/o_valid/i_data/o_data ã®ãƒ“ãƒƒãƒˆã®
+    --!        å‰²ã‚Šå½“ã¦ã‚’ä¿æŒã—ã¦ã„ã‚‹å®šæ•°.
     -------------------------------------------------------------------------------
     constant  VEC_RANGE      : VEC_RANGE_TYPE  := SET_VEC_RANGE;
     -------------------------------------------------------------------------------
-    -- ÆâÉô¿®¹æ¤¿¤Á.
+    -- å†…éƒ¨ä¿¡å·ãŸã¡.
     -------------------------------------------------------------------------------
     signal    i_valid        : std_logic_vector(VEC_RANGE.VAL_HI  downto VEC_RANGE.VAL_LO );
     signal    i_data         : std_logic_vector(VEC_RANGE.DATA_HI downto VEC_RANGE.DATA_LO);
@@ -429,9 +429,9 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
     signal    i_ready        : std_logic;
 begin
     ------------------------------------------------------------------------------
-    --! @brief I_OPEN_VAL/I_OPEN_INFO ÆşÎÏ¥ì¥¸¥¹¥¿.
-    --! * I_OPEN_VAL ¿®¹æ¤ò SYNCRONIZER ¤Î I_VAL  ¤ËÆşÎÏ.
-    --! * I_OPEN_INFO¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
+    --! @brief I_OPEN_VAL/I_OPEN_INFO å…¥åŠ›ãƒ¬ã‚¸ã‚¹ã‚¿.
+    --! * I_OPEN_VAL ä¿¡å·ã‚’ SYNCRONIZER ã® I_VAL  ã«å…¥åŠ›.
+    --! * I_OPEN_INFOä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
     ------------------------------------------------------------------------------
     I_OPEN_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                 --
         generic map (                                               --
@@ -452,9 +452,9 @@ begin
             O_RDY       => i_ready                                  -- In  :
         );                                                          -- 
     ------------------------------------------------------------------------------
-    --! @brief I_CLOSE_VAL/I_CLOSE_INFO ÆşÎÏ¥ì¥¸¥¹¥¿.
-    --! * I_CLOSE_VAL ¿®¹æ¤ò SYNCRONIZER ¤Î I_VAL  ¤ËÆşÎÏ.
-    --! * I_CLOSE_INFO¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
+    --! @brief I_CLOSE_VAL/I_CLOSE_INFO å…¥åŠ›ãƒ¬ã‚¸ã‚¹ã‚¿.
+    --! * I_CLOSE_VAL ä¿¡å·ã‚’ SYNCRONIZER ã® I_VAL  ã«å…¥åŠ›.
+    --! * I_CLOSE_INFOä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
     ------------------------------------------------------------------------------
     I_CLOSE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
         generic map (                                               --
@@ -475,10 +475,10 @@ begin
             O_RDY       => i_ready                                  -- In  :
         );                                                          -- 
     ------------------------------------------------------------------------------
-    --! @brief I_PUSH_FIN_VAL/I_PUSH_FIN_LAST/I_PUSH_FIN_SIZE ÆşÎÏ¥ì¥¸¥¹¥¿.
-    --! * I_PUSH_FIN_VAL ¿®¹æ¤ò SYNCRONIZER ¤Î I_VAL  ¤ËÆşÎÏ.
-    --! * I_PUSH_FIN_LAST¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
-    --! * I_PUSH_FIN_SIZE¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
+    --! @brief I_PUSH_FIN_VAL/I_PUSH_FIN_LAST/I_PUSH_FIN_SIZE å…¥åŠ›ãƒ¬ã‚¸ã‚¹ã‚¿.
+    --! * I_PUSH_FIN_VAL ä¿¡å·ã‚’ SYNCRONIZER ã® I_VAL  ã«å…¥åŠ›.
+    --! * I_PUSH_FIN_LASTä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
+    --! * I_PUSH_FIN_SIZEä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
     ------------------------------------------------------------------------------
     I_PUSH_FIN_REGS: if (PUSH_FIN_VALID /= 0) generate              --
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -519,10 +519,10 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    --! @brief I_PUSH_RSV_VAL/I_PUSH_RSV_LAST/I_PUSH_RSV_SIZE ÆşÎÏ¥ì¥¸¥¹¥¿.
-    --! * I_PUSH_RSV_VAL ¿®¹æ¤ò SYNCRONIZER ¤Î I_VAL  ¤ËÆşÎÏ.
-    --! * I_PUSH_RSV_LAST¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
-    --! * I_PUSH_RSV_SIZE¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
+    --! @brief I_PUSH_RSV_VAL/I_PUSH_RSV_LAST/I_PUSH_RSV_SIZE å…¥åŠ›ãƒ¬ã‚¸ã‚¹ã‚¿.
+    --! * I_PUSH_RSV_VAL ä¿¡å·ã‚’ SYNCRONIZER ã® I_VAL  ã«å…¥åŠ›.
+    --! * I_PUSH_RSV_LASTä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
+    --! * I_PUSH_RSV_SIZEä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
     ------------------------------------------------------------------------------
     I_PUSH_RSV_REGS: if (PUSH_RSV_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -563,10 +563,10 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    --! @brief I_PULL_FIN_VAL/I_PULL_FIN_LAST/I_PULL_FIN_SIZE ÆşÎÏ¥ì¥¸¥¹¥¿.
-    --! * I_PULL_FIN_VAL ¿®¹æ¤ò SYNCRONIZER ¤Î I_VAL  ¤ËÆşÎÏ.
-    --! * I_PULL_FIN_LAST¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
-    --! * I_PULL_FIN_SIZE¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
+    --! @brief I_PULL_FIN_VAL/I_PULL_FIN_LAST/I_PULL_FIN_SIZE å…¥åŠ›ãƒ¬ã‚¸ã‚¹ã‚¿.
+    --! * I_PULL_FIN_VAL ä¿¡å·ã‚’ SYNCRONIZER ã® I_VAL  ã«å…¥åŠ›.
+    --! * I_PULL_FIN_LASTä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
+    --! * I_PULL_FIN_SIZEä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
     ------------------------------------------------------------------------------
     I_PULL_FIN_REGS: if (PULL_FIN_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -607,10 +607,10 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    --! @brief I_PULL_RSV_VAL/I_PULL_RSV_LAST/I_PULL_RSV_SIZE ÆşÎÏ¥ì¥¸¥¹¥¿.    
-    --! * I_PULL_RSV_VAL ¿®¹æ¤ò SYNCRONIZER ¤Î I_VAL  ¤ËÆşÎÏ.
-    --! * I_PULL_RSV_LAST¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
-    --! * I_PULL_RSV_SIZE¿®¹æ¤ò SYNCRONIZER ¤Î I_DATA ¤ËÆşÎÏ.
+    --! @brief I_PULL_RSV_VAL/I_PULL_RSV_LAST/I_PULL_RSV_SIZE å…¥åŠ›ãƒ¬ã‚¸ã‚¹ã‚¿.    
+    --! * I_PULL_RSV_VAL ä¿¡å·ã‚’ SYNCRONIZER ã® I_VAL  ã«å…¥åŠ›.
+    --! * I_PULL_RSV_LASTä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
+    --! * I_PULL_RSV_SIZEä¿¡å·ã‚’ SYNCRONIZER ã® I_DATA ã«å…¥åŠ›.
     ------------------------------------------------------------------------------
     I_PULL_RSV_REGS: if (PULL_RSV_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -651,7 +651,7 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    --! @brief ÆşÎÏÂ¦¤È½ĞÎÏÂ¦¤ÇÆ±´ü¤¹¤ë.
+    --! @brief å…¥åŠ›å´ã¨å‡ºåŠ›å´ã§åŒæœŸã™ã‚‹.
     ------------------------------------------------------------------------------
     SYNC: SYNCRONIZER                                               --
         generic map (                                               --
@@ -680,16 +680,16 @@ begin
             O_VAL       => o_valid                                  -- Out :
         );                                                          -- 
     ------------------------------------------------------------------------------
-    --! @brief O_OPEN_VAL/O_OPEN_INFO ¤ò½ĞÎÏ. 
+    --! @brief O_OPEN_VAL/O_OPEN_INFO ã‚’å‡ºåŠ›. 
     ------------------------------------------------------------------------------
     O_OPEN_VAL  <= o_valid(VEC_RANGE.OPEN_INFO.VAL_POS);
     O_OPEN_INFO <= o_data (VEC_RANGE.OPEN_INFO.DATA_HI downto VEC_RANGE.OPEN_INFO.DATA_LO);
     ------------------------------------------------------------------------------
-    --! @brief O_PUSH_FIN_XXX/O_CLOSE_VAL/O_CLOSE_INFO ¤ò½ĞÎÏ.
-    --! * PUSH_FIN_VALID /= 0 ¤Î¾ì¹ç¤Ï¡¢O_PUSH_FIN ¤Ï PUSH_FIN_DELAY ¤Ç»ØÄê¤µ¤ì¤¿
-    --!   ¥µ¥¤¥¯¥ëÊ¬¤À¤±ÃÙ±ä¤·¤Æ½ĞÎÏ¤¹¤ë.     
-    --!   ¤½¤Îºİ O_CLOSE_VAL/INFO ¤Ï O_PUSH_FIN ¤Î½ĞÎÏ¥¿¥¤¥ß¥ó¥°¤Ë¹ç¤ï¤»¤Æ½ĞÎÏ.
-    --! * PUSH_FIN_VALID  = 0 ¤Î¾ì¹ç¤Ï¡¢O_PUSH_FIN ¤ÏÁ´¤Æ'0'¤ò½ĞÎÏ.
+    --! @brief O_PUSH_FIN_XXX/O_CLOSE_VAL/O_CLOSE_INFO ã‚’å‡ºåŠ›.
+    --! * PUSH_FIN_VALID /= 0 ã®å ´åˆã¯ã€O_PUSH_FIN ã¯ PUSH_FIN_DELAY ã§æŒ‡å®šã•ã‚ŒãŸ
+    --!   ã‚µã‚¤ã‚¯ãƒ«åˆ†ã ã‘é…å»¶ã—ã¦å‡ºåŠ›ã™ã‚‹.     
+    --!   ãã®éš› O_CLOSE_VAL/INFO ã¯ O_PUSH_FIN ã®å‡ºåŠ›ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã«åˆã‚ã›ã¦å‡ºåŠ›.
+    --! * PUSH_FIN_VALID  = 0 ã®å ´åˆã¯ã€O_PUSH_FIN ã¯å…¨ã¦'0'ã‚’å‡ºåŠ›.
     ------------------------------------------------------------------------------
     O_PUSH_FIN_VALID: if (PUSH_FIN_VALID /= 0) generate
         signal    d_data         : std_logic_vector(VEC_RANGE.PUSH_FIN.DATA_HI downto VEC_RANGE.PUSH_FIN.DATA_LO);
@@ -741,7 +741,7 @@ begin
         O_CLOSE_INFO    <= o_data (VEC_RANGE.CLOSE_INFO.DATA_HI downto VEC_RANGE.CLOSE_INFO.DATA_LO);
     end generate;
     -------------------------------------------------------------------------------
-    --! @brief O_PUSH_RSV_VAL/LAST/SIZE ¤ò½ĞÎÏ.
+    --! @brief O_PUSH_RSV_VAL/LAST/SIZE ã‚’å‡ºåŠ›.
     -------------------------------------------------------------------------------
     O_PUSH_RSV_VALID: if (PUSH_RSV_VALID /= 0) generate
         O_PUSH_RSV_VAL  <= o_valid(VEC_RANGE.PUSH_RSV.VAL_POS);
@@ -754,7 +754,7 @@ begin
         O_PUSH_RSV_SIZE <= (others => '0');
     end generate;
     -------------------------------------------------------------------------------
-    --! @brief O_PULL_FIN_VAL/LAST/SIZE ¤ò½ĞÎÏ.
+    --! @brief O_PULL_FIN_VAL/LAST/SIZE ã‚’å‡ºåŠ›.
     -------------------------------------------------------------------------------
     O_PULL_FIN_VALID: if (PULL_FIN_VALID /= 0) generate
         O_PULL_FIN_VAL  <= o_valid(VEC_RANGE.PULL_FIN.VAL_POS);
@@ -767,7 +767,7 @@ begin
         O_PULL_FIN_SIZE <= (others => '0');
     end generate;
     -------------------------------------------------------------------------------
-    --! @brief O_PULL_RSV_VAL/LAST/SIZE ¤ò½ĞÎÏ.
+    --! @brief O_PULL_RSV_VAL/LAST/SIZE ã‚’å‡ºåŠ›.
     -------------------------------------------------------------------------------
     O_PULL_RSV_VALID: if (PULL_RSV_VALID /= 0) generate
         O_PULL_RSV_VAL  <= o_valid(VEC_RANGE.PULL_RSV.VAL_POS);
