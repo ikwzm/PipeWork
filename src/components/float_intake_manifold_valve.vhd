@@ -123,24 +123,33 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
         PULL_FIN_VAL    : --! @brief PULL FINAL VALID :
                           --! PULL_FIN_LAST/PULL_FIN_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
         PULL_FIN_LAST   : --! @brief PULL FINAL LAST :
                           --! 最後のPULL_FIN入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
         PULL_FIN_SIZE   : --! @brief PUSH RESERVE SIZE :
                           --! 出力が確定(FINAL)したバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
         PULL_RSV_VAL    : --! @brief PULL RESERVE VALID :
                           --! PULL_RSV_LAST/PULL_RSV_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic;
         PULL_RSV_LAST   : --! @brief PULL RESERVE LAST :
                           --! 最後のPULL_RSV入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic;
         PULL_RSV_SIZE   : --! @brief PULL RESERVE SIZE :
                           --! 出力する予定(RESERVE)のバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
@@ -163,7 +172,7 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
-                          --! 出力可能なバイト数
+                          --! 入力可能なバイト数
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.

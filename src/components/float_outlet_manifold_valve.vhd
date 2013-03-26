@@ -108,24 +108,33 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
         PUSH_FIN_VAL    : --! @brief PUSH FINAL VALID :
                           --! PUSH_FIN_LAST/PUSH_FIN_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
         PUSH_FIN_LAST   : --! @brief PUSH FINAL LAST :
                           --! 最後のPUSH_FIN入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
         PUSH_FIN_SIZE   : --! @brief PUSH FINAL SIZE :
                           --! 入力が確定(FINAL)したバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
         PUSH_RSV_VAL    : --! @brief PUSH RESERVE VALID :
                           --! PUSH_RSV_LAST/PUSH_RSV_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic;
         PUSH_RSV_LAST   : --! @brief PUSH RESERVE LAST :
                           --! 最後のPUSH_RSV入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic;
         PUSH_RSV_SIZE   : --! @brief PUSH RESERVE SIZE :
                           --! 入力する予定(RESERVE)のバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
