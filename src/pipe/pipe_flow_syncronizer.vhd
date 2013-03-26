@@ -4,7 +4,7 @@
 --!              Pipe の Requester 側から Responder 側へ、またはResponder 側から
 --!              Requester側 へ、各種情報を伝達するモジュール.
 --!     @version 0.0.1
---!     @date    2013/3/25
+--!     @date    2013/3/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -53,9 +53,6 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           --! クロック(O_CLK)との関係を指定する.
                           --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                           integer :=  1;
-        DELAY_CYCLE     : --! @brief DELAY CYCLE :   
-                          --! 入力側から出力側への転送する際の遅延サイクルを指定する.
-                          integer :=  0;
         OPEN_INFO_BITS  : --! @brief OPEN INFOMATION BITS :
                           --! I_OPEN_INFO/O_OPEN_INFOのビット数を指定する.
                           integer :=  1;
@@ -102,7 +99,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           --! 非同期リセット信号(ハイ・アクティブ).
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Intake Clock and Clock Enable and Syncronous reset.
+    -- Input Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
         I_CLK           : --! @brief INPUT CLOCK :
                           --! 入力側のクロック信号.
@@ -120,41 +117,79 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           --!   み有効. それ以外は未使用.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Intake Open Signals.
+    -- 入力側からのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
-        I_OPEN_VAL      : in  std_logic;
-        I_OPEN_INFO     : in  std_logic_vector(OPEN_INFO_BITS -1 downto 0);
+        I_OPEN_VAL      : --! @brief INPUT OPEN VALID :
+                          --! 入力側からのOPEN(トランザクションの開始)を指示する信号.
+                          --! * I_OPEN_INFO が有効であることを示す.
+                          in  std_logic;
+        I_OPEN_INFO     : --! @brief INPUT OPEN INFOMATION DATA :
+                          --! OPEN(トランザクションの開始)時に出力側に伝達する各種
+                          --! 情報入力.
+                          --! * I_OPEN_VALがアサートされている時のみ有効.
+                          in  std_logic_vector(OPEN_INFO_BITS -1 downto 0);
     -------------------------------------------------------------------------------
-    -- Intake Close Signals.
+    -- 入力側からのCLOSE(トランザクションの終了)を指示する信号.
     -------------------------------------------------------------------------------
-        I_CLOSE_VAL     : in  std_logic;
-        I_CLOSE_INFO    : in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
+        I_CLOSE_VAL     : --! @brief INPUT CLOSE VALID :
+                          --! 入力側からのCLOSE(トランザクションの終了)を指示する信号.
+                          --! * I_CLOSE_INFO が有効であることを示す.
+                          in  std_logic;
+        I_CLOSE_INFO    : --! @brief INPUT CLOSE INFOMATION DATA :
+                          --! CLOSE(トランザクションの終了)時に出力側に伝達する各種
+                          --! 情報入力.
+                          --! * I_CLOSE_VALがアサートされている時のみ有効.
+                          in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Intake Push Final Size Signals.
+    -- 入力側からの、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
-        I_PUSH_FIN_VAL  : in  std_logic := '0';
-        I_PUSH_FIN_LAST : in  std_logic := '0';
-        I_PUSH_FIN_SIZE : in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+        I_PUSH_FIN_VAL  : --! @brief INPUT PUSH FINAL VALID :
+                          --! * I_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_FIN_LAST : --! @brief INPUT PUSH FINAL LAST FLAG :
+                          --! 入力側から出力側へ最後の"確定した"転送であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_FIN_SIZE : --! @brief INPUT PUSH FINAL SIZE :
+                          --! 入力側から出力側への転送が"確定した"バイト数を入力.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- Intake Push Reserve Size Signals.
+    -- 入力側からの、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
-        I_PUSH_RSV_VAL  : in  std_logic := '0';
-        I_PUSH_RSV_LAST : in  std_logic := '0';
-        I_PUSH_RSV_SIZE : in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+        I_PUSH_RSV_VAL  : --! @brief INPUT PUSH RESERVE VALID :
+                          --! * I_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_RSV_LAST : --! @brief INPUT PUSH RESERVE LAST FLAG :
+                          --! 入力側から出力側へ最後の"予定された"転送であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_RSV_SIZE : --! @brief INPUT PUSH RESERVE SIZE :
+                          --! 入力側から出力側への転送が"予定された"バイト数を入力.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- Intake Pull Final Size Signals.
+    -- 入力側からの、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
-        I_PULL_FIN_VAL  : in  std_logic := '0';
-        I_PULL_FIN_LAST : in  std_logic := '0';
-        I_PULL_FIN_SIZE : in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+        I_PULL_FIN_VAL  : --! @brief INPUT PULL FINAL VALID :
+                          --! * I_PULL_FIN_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PULL_FIN_LAST : --! @brief INPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"確定した"転送であることを示す.
+                          in  std_logic := '0';
+        I_PULL_FIN_SIZE : --! @brief INPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送が"確定した"バイト数を入力.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- Intake Pull Reserve Size Signals.
+    -- 入力側からの、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
-        I_PULL_RSV_VAL  : in  std_logic := '0';
-        I_PULL_RSV_LAST : in  std_logic := '0';
-        I_PULL_RSV_SIZE : in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+        I_PULL_RSV_VAL  : --! @brief INPUT PULL RESERVE VALID :
+                          --! * I_PULL_RSV_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PULL_RSV_LAST : --! @brief INPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"予定された"転送であることを示す.
+                          in  std_logic := '0';
+        I_PULL_RSV_SIZE : --! @brief INPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送"が予定された"バイト数を入力.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- Outlet Clock and Clock Enable and Syncronous reset.
+    -- Output Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
         O_CLK           : --! @brief OUTPUT CLOCK :
                           --! 入力側のクロック信号.
@@ -172,39 +207,78 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           --!   有効. それ以外は未使用.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Outlet Open Signals.
+    -- 出力側へのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
-        O_OPEN_VAL      : out std_logic;
-        O_OPEN_INFO     : out std_logic_vector(OPEN_INFO_BITS -1 downto 0);
+        O_OPEN_VAL      : --! @brief OUTPUT OPEN VALID :
+                          --! 出力側へのOPEN(トランザクションの開始)を指示する信号.
+                          --! * O_OPEN_INFO が有効であることを示す.
+                          out std_logic;
+        O_OPEN_INFO     : --! @brief OUTPUT OPEN INFOMATION DATA :
+                          --! OPEN(トランザクションの開始)時に出力側に伝達する各種
+                          --! 情報出力.
+                          --! * I_OPEN_VALがアサートされている時のみ有効.
+                          out std_logic_vector(OPEN_INFO_BITS -1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Close Signals.
+    -- 出力側へのCLOSE(トランザクションの終了)を指示する信号.
     -------------------------------------------------------------------------------
-        O_CLOSE_VAL     : out std_logic;
-        O_CLOSE_INFO    : out std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
+        O_CLOSE_VAL     : --! @brief OUTPUT CLOSE VALID :
+                          --! 出力側へCLOSE(トランザクションの終了)を指示する信号.
+                          --! * O_CLOSE_VAL/INFO は O_PUSH_FIN_XXX の出力タイミング
+                          --!   に合わせて出力される.
+                          out std_logic;
+        O_CLOSE_INFO    : --! @brief OUTPUT CLOSE INFOMATION DATA :
+                          --! CLOSE(トランザクションの終了)時に出力側に伝達する各種
+                          --! 情報出力.
+                          --! * I_CLOSE_VALがアサートされている時のみ有効.
+                          out std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Push Final Size Signals.
+    -- 出力側への、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
-        O_PUSH_FIN_VAL  : out std_logic;
-        O_PUSH_FIN_LAST : out std_logic;
-        O_PUSH_FIN_SIZE : out std_logic_vector(SIZE_BITS-1 downto 0);
+        O_PUSH_FIN_VAL  : --! @brief OUTPUT PUSH FINAL VALID :
+                          --! * O_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PUSH_FIN_LAST : --! @brief OUTPUT PUSH FINAL LAST FLAG :
+                          --! 入力側から出力側へ最後の"確定した"転送であることを示す.
+                          out std_logic;
+        O_PUSH_FIN_SIZE : --! @brief OUTPUT PUSH FINAL SIZE :
+                          --! 入力側から出力側への転送が"確定した"バイト数を出力.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Push Reserve Size Signals.
+    -- 出力側への、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
-        O_PUSH_RSV_VAL  : out std_logic;
-        O_PUSH_RSV_LAST : out std_logic;
-        O_PUSH_RSV_SIZE : out std_logic_vector(SIZE_BITS-1 downto 0);
+        O_PUSH_RSV_VAL  : --! @brief OUTPUT PUSH RESERVE VALID :
+                          --! * O_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PUSH_RSV_LAST : --! @brief OUTPUT PUSH RESERVE LAST FLAG :
+                          --! 入力側から出力側へ最後の"予定された"転送であることを示す.
+                          out std_logic;
+        O_PUSH_RSV_SIZE : --! @brief OUTPUT PUSH RESERVE SIZE :
+                          --! 入力側から出力側への転送が"予定された"バイト数を出力.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Pull Final Size Signals.
+    -- 出力側への、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
-        O_PULL_FIN_VAL  : out std_logic;
-        O_PULL_FIN_LAST : out std_logic;
-        O_PULL_FIN_SIZE : out std_logic_vector(SIZE_BITS-1 downto 0);
+        O_PULL_FIN_VAL  : --! @brief OUTPUT PULL FINAL VALID :
+                          --! * O_PULL_FIN_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PULL_FIN_LAST : --! @brief OUTPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"確定した"転送であることを示す.
+                          out std_logic;
+        O_PULL_FIN_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送が"確定した"バイト数を出力.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Pull Reserve Size Signals.
+    -- 出力側への、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
-        O_PULL_RSV_VAL  : out std_logic;
-        O_PULL_RSV_LAST : out std_logic;
-        O_PULL_RSV_SIZE : out std_logic_vector(SIZE_BITS-1 downto 0)
+        O_PULL_RSV_VAL  : --! @brief OUTPUT PULL RESERVE VALID :
+                          --! * O_PULL_RSV_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PULL_RSV_LAST : --! @brief OUTPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"予定された"転送であることを示す.
+                          out std_logic;
+        O_PULL_RSV_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送"が予定された"バイト数を出力.
+                          out std_logic_vector(SIZE_BITS-1 downto 0)
     );
 end PIPE_FLOW_SYNCRONIZER;
 -----------------------------------------------------------------------------------
@@ -222,41 +296,52 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
     -- このモジュールで使用するi_valid/o_valid/i_data/o_dataのビットの割り当てを
     -- 保持する定数のタイプの宣言.
     -------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    --! @brief OPEN_INFO/CLOSE_INFO の i_valid/o_valid/i_data/o_dataのビットの
+    --!        割り当てを保持する定数.
+    -------------------------------------------------------------------------------
     type      INFO_RANGE_TYPE is record
-              VAL_POS           : integer;          -- i_valid/o_valid の ????_VAL のビット位置
-              DATA_LO           : integer;          -- i_data/o_data   の ????_INFO の最下位ビット位置
-              DATA_HI           : integer;          -- i_data/o_data   の ????_INFO の最上位ビット位置
+              VAL_POS           : integer;          -- i_valid/o_valid の *_VAL のビット位置
+              DATA_LO           : integer;          -- i_data/o_data   の *_INFO の最下位ビット位置
+              DATA_HI           : integer;          -- i_data/o_data   の *_INFO の最上位ビット位置
     end record;
+    -------------------------------------------------------------------------------
+    --! @brief PUSH_FIN_XXX/PUSH_RSV_XXX/PULL_FIN_XXX/PULL_RSV_XXX の 
+    --!        i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数.
+    -------------------------------------------------------------------------------
     type      SIZE_RANGE_TYPE is record
-              VAL_POS           : integer;          -- i_valid/o_valid の ????_???_VAL のビット位置
-              DATA_LO           : integer;          -- i_data/o_data   の ????_???_SIZE&LAST の最下位ビット位置
-              DATA_HI           : integer;          -- i_data/o_data   の ????_???_SIZE&LAST の最上位ビット位置
-              SIZE_LO           : integer;          -- i_data/o_data   の ????_???_SIZE の最下位ビット位置
-              SIZE_HI           : integer;          -- i_data/o_data   の ????_???_SIZE の最上位ビット位置
-              LAST_POS          : integer;          -- i_data/o_data   の ????_???_LAST のビット位置
+              VAL_POS           : integer;          -- i_valid/o_valid の *_VAL のビット位置
+              DATA_LO           : integer;          -- i_data/o_data   の *_SIZE&LAST の最下位ビット位置
+              DATA_HI           : integer;          -- i_data/o_data   の *_SIZE&LAST の最上位ビット位置
+              SIZE_LO           : integer;          -- i_data/o_data   の *_SIZE の最下位ビット位置
+              SIZE_HI           : integer;          -- i_data/o_data   の *_SIZE の最上位ビット位置
+              LAST_POS          : integer;          -- i_data/o_data   の *_LAST のビット位置
     end record;
+    -------------------------------------------------------------------------------
+    --! @brief i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数.
+    -------------------------------------------------------------------------------
     type      VEC_RANGE_TYPE is record
               VAL_LO            : integer;          -- i_valid/o_valid の最下位ビット位置
               VAL_HI            : integer;          -- i_valid/o_valid の最上位ビット位置
               DATA_LO           : integer;          -- i_data/o_data の最下位ビット位置
               DATA_HI           : integer;          -- i_data/o_data の最上位ビット位置
               OPEN_INFO         : INFO_RANGE_TYPE;  -- OPEN_INFOの各種ビット位置
-              CLOSE_INFO        : INFO_RANGE_TYPE;  -- OPEN_INFOの各種ビット位置
+              CLOSE_INFO        : INFO_RANGE_TYPE;  -- CLOSE_INFOの各種ビット位置
               PUSH_FIN          : SIZE_RANGE_TYPE;  -- PUSH_FIN_XXXの各種ビット位置
               PUSH_RSV          : SIZE_RANGE_TYPE;  -- PUSH_RSV_XXXの各種ビット位置
               PULL_FIN          : SIZE_RANGE_TYPE;  -- PULL_FIN_XXXの各種ビット位置
               PULL_RSV          : SIZE_RANGE_TYPE;  -- PULL_RSV_XXXの各種ビット位置
     end record;
     -------------------------------------------------------------------------------
-    -- このモジュールで使用するi_valid/o_valid/i_data/o_dataのビットの割り当てを
-    -- 決める関数の定義.
+    --! @brief このモジュールで使用するi_valid/o_valid/i_data/o_dataのビットの
+    --         割り当てを決める関数.
     -------------------------------------------------------------------------------
     function  SET_VEC_RANGE return VEC_RANGE_TYPE is
         variable  v_pos         : integer;
         variable  d_pos         : integer;
         variable  v             : VEC_RANGE_TYPE;
         ---------------------------------------------------------------------------
-        -- OPEN_INFO/CLOSE_INFO のビット割り当てを決めるプロシージャ.
+        --! @brief OPEN_INFO/CLOSE_INFO のビット割り当てを決めるプロシージャ.
         ---------------------------------------------------------------------------
         procedure SET_INFO_RANGE(INFO_RANGE: inout INFO_RANGE_TYPE; BITS: in integer) is
         begin
@@ -267,8 +352,8 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
             d_pos := d_pos + BITS;
         end procedure;
         ---------------------------------------------------------------------------
-        -- PUSH_FIN_SIZE/PUSH_RSV_SIZE/PULL_FIN_SIZE/PULL_RSV_SIZE のビット割り当て
-        -- を決めるプロシージャ.
+        --! @brief PUSH_FIN_SIZE/PUSH_RSV_SIZE/PULL_FIN_SIZE/PULL_RSV_SIZE の
+        --!        ビット割り当てを決めるプロシージャ.
         ---------------------------------------------------------------------------
         procedure SET_SIZE_RANGE(SIZE_RANGE: inout SIZE_RANGE_TYPE; BITS: in integer) is
         begin
@@ -287,7 +372,7 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
         v.VAL_LO  := v_pos;
         v.DATA_LO := d_pos;
         ---------------------------------------------------------------------------
-        --
+        -- 
         ---------------------------------------------------------------------------
         SET_INFO_RANGE(v.OPEN_INFO , OPEN_INFO_BITS );
         SET_INFO_RANGE(v.CLOSE_INFO, CLOSE_INFO_BITS);
@@ -304,12 +389,12 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
             SET_SIZE_RANGE(v.PULL_RSV, SIZE_BITS);
         end if;
         ---------------------------------------------------------------------------
-        --
+        -- この段階で必要な分のビット割り当ては終了.
         ---------------------------------------------------------------------------
         v.VAL_HI  := v_pos - 1;
         v.DATA_HI := d_pos - 1;
         ---------------------------------------------------------------------------
-        --
+        -- 後は必要無いが、放っておくのも気持ち悪いので、ダミーの値をセット.
         ---------------------------------------------------------------------------
         if (PUSH_FIN_VALID = 0) then
             SET_SIZE_RANGE(v.PUSH_FIN, SIZE_BITS);
@@ -329,8 +414,8 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
         return v;
     end function;
     -------------------------------------------------------------------------------
-    -- このモジュールで使用するi_valid/o_valid/i_data/o_dataのビットの割り当てを
-    -- 保持している定数.
+    --! @brief このモジュールで使用するi_valid/o_valid/i_data/o_data のビットの
+    --!        割り当てを保持している定数.
     -------------------------------------------------------------------------------
     constant  VEC_RANGE      : VEC_RANGE_TYPE  := SET_VEC_RANGE;
     -------------------------------------------------------------------------------
@@ -344,8 +429,9 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
     signal    i_ready        : std_logic;
 begin
     ------------------------------------------------------------------------------
-    -- I_OPEN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_OPEN_INFO信号を SYNCRONIZER の I_DATA に入力.
+    --! @brief I_OPEN_VAL/I_OPEN_INFO 入力レジスタ.
+    --! * I_OPEN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    --! * I_OPEN_INFO信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
     I_OPEN_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                 --
         generic map (                                               --
@@ -366,8 +452,9 @@ begin
             O_RDY       => i_ready                                  -- In  :
         );                                                          -- 
     ------------------------------------------------------------------------------
-    -- I_CLOSE_VAL 信号を SYNCRONIZER の I_VAL   に入力.
-    -- I_CLOSE_INFO信号を SYNCRONIZER の I_DATA  に入力.
+    --! @brief I_CLOSE_VAL/I_CLOSE_INFO 入力レジスタ.
+    --! * I_CLOSE_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    --! * I_CLOSE_INFO信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
     I_CLOSE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                --
         generic map (                                               --
@@ -388,9 +475,10 @@ begin
             O_RDY       => i_ready                                  -- In  :
         );                                                          -- 
     ------------------------------------------------------------------------------
-    -- I_PUSH_FIN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_PUSH_FIN_LAST信号を SYNCRONIZER の I_DATA に入力.
-    -- I_PUSH_FIN_SIZE信号を SYNCRONIZER の I_DATA に入力.
+    --! @brief I_PUSH_FIN_VAL/I_PUSH_FIN_LAST/I_PUSH_FIN_SIZE 入力レジスタ.
+    --! * I_PUSH_FIN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    --! * I_PUSH_FIN_LAST信号を SYNCRONIZER の I_DATA に入力.
+    --! * I_PUSH_FIN_SIZE信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
     I_PUSH_FIN_REGS: if (PUSH_FIN_VALID /= 0) generate              --
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -431,9 +519,10 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    -- I_PUSH_RSV_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_PUSH_RSV_LAST信号を SYNCRONIZER の I_DATA に入力.
-    -- I_PUSH_RSV_SIZE信号を SYNCRONIZER の I_DATA に入力.
+    --! @brief I_PUSH_RSV_VAL/I_PUSH_RSV_LAST/I_PUSH_RSV_SIZE 入力レジスタ.
+    --! * I_PUSH_RSV_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    --! * I_PUSH_RSV_LAST信号を SYNCRONIZER の I_DATA に入力.
+    --! * I_PUSH_RSV_SIZE信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
     I_PUSH_RSV_REGS: if (PUSH_RSV_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -474,9 +563,10 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    -- I_PULL_FIN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_PULL_FIN_LAST信号を SYNCRONIZER の I_DATA に入力.
-    -- I_PULL_FIN_SIZE信号を SYNCRONIZER の I_DATA に入力.
+    --! @brief I_PULL_FIN_VAL/I_PULL_FIN_LAST/I_PULL_FIN_SIZE 入力レジスタ.
+    --! * I_PULL_FIN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    --! * I_PULL_FIN_LAST信号を SYNCRONIZER の I_DATA に入力.
+    --! * I_PULL_FIN_SIZE信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
     I_PULL_FIN_REGS: if (PULL_FIN_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -517,9 +607,10 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    -- I_PULL_RSV_VAL 信号を SYNCRONIZER の I_VAL  に入力.
-    -- I_PULL_RSV_LAST信号を SYNCRONIZER の I_DATA に入力.
-    -- I_PULL_RSV_SIZE信号を SYNCRONIZER の I_DATA に入力.
+    --! @brief I_PULL_RSV_VAL/I_PULL_RSV_LAST/I_PULL_RSV_SIZE 入力レジスタ.    
+    --! * I_PULL_RSV_VAL 信号を SYNCRONIZER の I_VAL  に入力.
+    --! * I_PULL_RSV_LAST信号を SYNCRONIZER の I_DATA に入力.
+    --! * I_PULL_RSV_SIZE信号を SYNCRONIZER の I_DATA に入力.
     ------------------------------------------------------------------------------
     I_PULL_RSV_REGS: if (PULL_RSV_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
@@ -560,7 +651,7 @@ begin
             );                                                      -- 
     end generate;                                                   -- 
     ------------------------------------------------------------------------------
-    -- SYNC : 入力側と出力側で同期をとるモジュール
+    --! @brief 入力側と出力側で同期する.
     ------------------------------------------------------------------------------
     SYNC: SYNCRONIZER                                               --
         generic map (                                               --
@@ -589,23 +680,27 @@ begin
             O_VAL       => o_valid                                  -- Out :
         );                                                          -- 
     ------------------------------------------------------------------------------
-    -- 
+    --! @brief O_OPEN_VAL/O_OPEN_INFO を出力. 
     ------------------------------------------------------------------------------
     O_OPEN_VAL  <= o_valid(VEC_RANGE.OPEN_INFO.VAL_POS);
     O_OPEN_INFO <= o_data (VEC_RANGE.OPEN_INFO.DATA_HI downto VEC_RANGE.OPEN_INFO.DATA_LO);
     ------------------------------------------------------------------------------
-    -- 
+    --! @brief O_PUSH_FIN_XXX/O_CLOSE_VAL/O_CLOSE_INFO を出力.
+    --! * PUSH_FIN_VALID /= 0 の場合は、O_PUSH_FIN は PUSH_FIN_DELAY で指定された
+    --!   サイクル分だけ遅延して出力する.     
+    --!   その際 O_CLOSE_VAL/INFO は O_PUSH_FIN の出力タイミングに合わせて出力.
+    --! * PUSH_FIN_VALID  = 0 の場合は、O_PUSH_FIN は全て'0'を出力.
     ------------------------------------------------------------------------------
     O_PUSH_FIN_VALID: if (PUSH_FIN_VALID /= 0) generate
         signal    d_data         : std_logic_vector(VEC_RANGE.PUSH_FIN.DATA_HI downto VEC_RANGE.PUSH_FIN.DATA_LO);
-        constant  DELAY_SEL      : std_logic_vector(DELAY_CYCLE downto DELAY_CYCLE) := (others => '1');
-        signal    delay_valid    : std_logic_vector(DELAY_CYCLE downto 0);
+        constant  DELAY_SEL      : std_logic_vector(PUSH_FIN_DELAY downto PUSH_FIN_DELAY) := (others => '1');
+        signal    delay_valid    : std_logic_vector(PUSH_FIN_DELAY downto 0);
     begin 
         PUSH_FIN_REGS: DELAY_REGISTER                               -- 
             generic map (                                           -- 
                 DATA_BITS   => d_data'length                      , -- 
-                DELAY_MAX   => DELAY_CYCLE                        , -- 
-                DELAY_MIN   => DELAY_CYCLE                          -- 
+                DELAY_MAX   => PUSH_FIN_DELAY                     , -- 
+                DELAY_MIN   => PUSH_FIN_DELAY                       -- 
             )                                                       --
             port map (                                              -- 
                 CLK         => O_CLK                              , -- In  :
@@ -621,8 +716,8 @@ begin
         CLOSE_REGS: DELAY_ADJUSTER                                  -- 
             generic map (                                           -- 
                 DATA_BITS   => 1                                  , -- 
-                DELAY_MAX   => DELAY_CYCLE                        , -- 
-                DELAY_MIN   => DELAY_CYCLE                          -- 
+                DELAY_MAX   => PUSH_FIN_DELAY                     , -- 
+                DELAY_MIN   => PUSH_FIN_DELAY                       -- 
             )                                                       --
             port map (                                              -- 
                 CLK         => O_CLK                              , -- In  :
@@ -646,7 +741,7 @@ begin
         O_CLOSE_INFO    <= o_data (VEC_RANGE.CLOSE_INFO.DATA_HI downto VEC_RANGE.CLOSE_INFO.DATA_LO);
     end generate;
     -------------------------------------------------------------------------------
-    --
+    --! @brief O_PUSH_RSV_VAL/LAST/SIZE を出力.
     -------------------------------------------------------------------------------
     O_PUSH_RSV_VALID: if (PUSH_RSV_VALID /= 0) generate
         O_PUSH_RSV_VAL  <= o_valid(VEC_RANGE.PUSH_RSV.VAL_POS);
@@ -659,7 +754,7 @@ begin
         O_PUSH_RSV_SIZE <= (others => '0');
     end generate;
     -------------------------------------------------------------------------------
-    --
+    --! @brief O_PULL_FIN_VAL/LAST/SIZE を出力.
     -------------------------------------------------------------------------------
     O_PULL_FIN_VALID: if (PULL_FIN_VALID /= 0) generate
         O_PULL_FIN_VAL  <= o_valid(VEC_RANGE.PULL_FIN.VAL_POS);
@@ -672,7 +767,7 @@ begin
         O_PULL_FIN_SIZE <= (others => '0');
     end generate;
     -------------------------------------------------------------------------------
-    --
+    --! @brief O_PULL_RSV_VAL/LAST/SIZE を出力.
     -------------------------------------------------------------------------------
     O_PULL_RSV_VALID: if (PULL_RSV_VALID /= 0) generate
         O_PULL_RSV_VAL  <= o_valid(VEC_RANGE.PULL_RSV.VAL_POS);

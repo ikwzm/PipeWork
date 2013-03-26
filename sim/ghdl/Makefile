@@ -24,6 +24,7 @@ COMPONENTS = components                             \
              float_intake_manifold_valve            \
              float_outlet_manifold_valve            \
              pipe_flow_syncronizer                  \
+             pipe_requester_interface               \
              pump_components                        \
              pump_control_register                  \
              pump_flow_syncronizer                  \
@@ -103,10 +104,10 @@ float_intake_manifold_valve.o            : $(SRC_PATH)/components/float_intake_m
 float_outlet_manifold_valve.o            : $(SRC_PATH)/components/float_outlet_manifold_valve.vhd components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pipe_flow_syncronizer.o                  : $(SRC_PATH)/pipe/pipe_flow_syncronizer.vhd
+pipe_flow_syncronizer.o                  : $(SRC_PATH)/pipe/pipe_flow_syncronizer.vhd             components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
-pipe_requester_interface.o               : $(SRC_PATH)/pipe/pipe_requester_interface.vhd
+pipe_requester_interface.o               : $(SRC_PATH)/pipe/pipe_requester_interface.vhd          components.o pump_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_components.o                        : $(SRC_PATH)/pump/pump_components.vhd
@@ -122,18 +123,6 @@ pump_controller.o                        : $(SRC_PATH)/pump/pump_controller.vhd 
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_operation_processor.o               : $(SRC_PATH)/pump/pump_operation_processor.vhd  pump_components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_components.o                       : $(SRC_PATH)/relay/relay_components.vhd
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_request_syncronizer.o              : $(SRC_PATH)/relay/relay_request_syncronizer.vhd  components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_request_controller.o               : $(SRC_PATH)/relay/relay_request_controller.vhd   components.o pump_components.o
-	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
-
-relay_response_syncronizer.o             : $(SRC_PATH)/relay/relay_response_syncronizer.vhd components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 axi4_types.o                             : $(SRC_PATH)/axi4/axi4_types.vhd
