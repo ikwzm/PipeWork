@@ -298,7 +298,7 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
     -------------------------------------------------------------------------------
     -------------------------------------------------------------------------------
     --! @brief OPEN_INFO/CLOSE_INFO の i_valid/o_valid/i_data/o_dataのビットの
-    --!        割り当てを保持する定数.
+    --!        割り当てを保持する定数の型.
     -------------------------------------------------------------------------------
     type      INFO_RANGE_TYPE is record
               VAL_POS           : integer;          -- i_valid/o_valid の *_VAL のビット位置
@@ -307,7 +307,7 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
     end record;
     -------------------------------------------------------------------------------
     --! @brief PUSH_FIN_XXX/PUSH_RSV_XXX/PULL_FIN_XXX/PULL_RSV_XXX の 
-    --!        i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数.
+    --!        i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数の型.
     -------------------------------------------------------------------------------
     type      SIZE_RANGE_TYPE is record
               VAL_POS           : integer;          -- i_valid/o_valid の *_VAL のビット位置
@@ -318,7 +318,7 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
               LAST_POS          : integer;          -- i_data/o_data   の *_LAST のビット位置
     end record;
     -------------------------------------------------------------------------------
-    --! @brief i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数.
+    --! @brief i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数の型.
     -------------------------------------------------------------------------------
     type      VEC_RANGE_TYPE is record
               VAL_LO            : integer;          -- i_valid/o_valid の最下位ビット位置

@@ -23,8 +23,10 @@ COMPONENTS = components                             \
              float_outlet_valve                     \
              float_intake_manifold_valve            \
              float_outlet_manifold_valve            \
+             pipe_components                        \
              pipe_flow_syncronizer                  \
              pipe_requester_interface               \
+             pipe_core_unit                         \
              pump_components                        \
              pump_control_register                  \
              pump_flow_syncronizer                  \
@@ -104,10 +106,16 @@ float_intake_manifold_valve.o            : $(SRC_PATH)/components/float_intake_m
 float_outlet_manifold_valve.o            : $(SRC_PATH)/components/float_outlet_manifold_valve.vhd components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
+pipe_components.o                        : $(SRC_PATH)/pipe/pipe_components.vhd
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
 pipe_flow_syncronizer.o                  : $(SRC_PATH)/pipe/pipe_flow_syncronizer.vhd             components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pipe_requester_interface.o               : $(SRC_PATH)/pipe/pipe_requester_interface.vhd          components.o pump_components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pipe_core_unit.o                         : $(SRC_PATH)/pipe/pipe_core_unit.vhd pump_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pump_components.o                        : $(SRC_PATH)/pump/pump_components.vhd
