@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_outlet_manifold_valve.vhd
 --!     @brief   FLOAT OUTLET MANIFOLD VALVE
---!     @version 1.4.0
---!     @date    2013/3/18
+--!     @version 1.5.0
+--!     @date    2013/3/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -106,7 +106,7 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
     -- Push Final Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_FIN_VAL    : --! @brief PUSH FINAL VALID :
+        PUSH_FIN_VALID  : --! @brief PUSH FINAL VALID :
                           --! PUSH_FIN_LAST/PUSH_FIN_SIZEが有効であることを示す信号.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
@@ -121,7 +121,7 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
     -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_RSV_VAL    : --! @brief PUSH RESERVE VALID :
+        PUSH_RSV_VALID  : --! @brief PUSH RESERVE VALID :
                           --! PUSH_RSV_LAST/PUSH_RSV_SIZEが有効であることを示す信号.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
@@ -139,7 +139,7 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief PULL VALID :
+        PULL_VALID      : --! @brief PULL VALID :
                           --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
                           in  std_logic;
         PULL_LAST       : --! @brief PULL LAST :
@@ -264,13 +264,13 @@ begin
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
-                PUSH_VAL        => PUSH_FIN_VAL    , -- In :
+                PUSH_VALID      => PUSH_FIN_VALID  , -- In :
                 PUSH_LAST       => PUSH_FIN_LAST   , -- In :
                 PUSH_SIZE       => PUSH_FIN_SIZE   , -- In :
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_VAL        , -- In :
+                PULL_VALID      => PULL_VALID      , -- In :
                 PULL_LAST       => PULL_LAST       , -- In :
                 PULL_SIZE       => PULL_SIZE       , -- In :
             -----------------------------------------------------------------------
@@ -323,13 +323,13 @@ begin
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
-                PUSH_VAL        => PUSH_RSV_VAL    , -- In :
+                PUSH_VALID      => PUSH_RSV_VALID  , -- In :
                 PUSH_LAST       => PUSH_RSV_LAST   , -- In :
                 PUSH_SIZE       => PUSH_RSV_SIZE   , -- In :
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_VAL        , -- In :
+                PULL_VALID      => PULL_VALID      , -- In :
                 PULL_LAST       => PULL_LAST       , -- In :
                 PULL_SIZE       => PULL_SIZE       , -- In :
             -----------------------------------------------------------------------
@@ -374,13 +374,13 @@ begin
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
-                PUSH_VAL        => PUSH_FIN_VAL    , -- In :
+                PUSH_VALID      => PUSH_FIN_VALID  , -- In :
                 PUSH_LAST       => PUSH_FIN_LAST   , -- In :
                 PUSH_SIZE       => PUSH_FIN_SIZE   , -- In :
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_VAL        , -- In :
+                PULL_VALID      => PULL_VALID      , -- In :
                 PULL_LAST       => PULL_LAST       , -- In :
                 PULL_SIZE       => PULL_SIZE       , -- In :
             -----------------------------------------------------------------------

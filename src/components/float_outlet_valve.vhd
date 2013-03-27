@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_outlet_valve.vhd
 --!     @brief   FLOAT OUTLET VALVE
---!     @version 1.4.0
---!     @date    2013/3/17
+--!     @version 1.5.0
+--!     @date    2013/3/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -87,7 +87,7 @@ entity  FLOAT_OUTLET_VALVE is
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief PUSH VALID :
+        PUSH_VALID      : --! @brief PUSH VALID :
                           --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
                           in  std_logic;
         PUSH_LAST       : --! @brief PUSH LAST :
@@ -99,7 +99,7 @@ entity  FLOAT_OUTLET_VALVE is
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief PULL VALID :
+        PULL_VALID      : --! @brief PULL VALID :
                           --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
                           in  std_logic;
         PULL_LAST       : --! @brief PULL LAST :
@@ -188,7 +188,7 @@ begin
         elsif (CLK'event and CLK = '1') then
             if    (CLR   = '1' or RESET = '1' or io_open = FALSE) then
                 io_last <= FALSE;
-            elsif (PUSH_VAL = '1' and PUSH_LAST = '1') then
+            elsif (PUSH_VALID = '1' and PUSH_LAST = '1') then
                 io_last <= TRUE;
             end if;
         end if;
@@ -213,10 +213,10 @@ begin
             else
                 if (io_open) then
                     next_counter := "0" & flow_counter;
-                    if (PUSH_VAL = '1') then
+                    if (PUSH_VALID = '1') then
                         next_counter := next_counter + resize(unsigned(PUSH_SIZE),next_counter'length);
                     end if;
-                    if (PULL_VAL = '1') then
+                    if (PULL_VALID = '1') then
                         next_counter := next_counter - resize(unsigned(PULL_SIZE),next_counter'length);
                     end if;
                 else

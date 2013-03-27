@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_intake_manifold_valve.vhd
 --!     @brief   FLOAT INTAKE MANIFOLD VALVE
---!     @version 1.4.0
---!     @date    2013/3/18
+--!     @version 1.5.0
+--!     @date    2013/3/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -109,7 +109,7 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief PUSH VALID :
+        PUSH_VALID      : --! @brief PUSH VALID :
                           --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
                           in  std_logic;
         PUSH_LAST       : --! @brief PUSH LAST :
@@ -121,7 +121,7 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
     -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
-        PULL_FIN_VAL    : --! @brief PULL FINAL VALID :
+        PULL_FIN_VALID  : --! @brief PULL FINAL VALID :
                           --! PULL_FIN_LAST/PULL_FIN_SIZEが有効であることを示す信号.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
@@ -136,7 +136,7 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
     -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
-        PULL_RSV_VAL    : --! @brief PULL RESERVE VALID :
+        PULL_RSV_VALID  : --! @brief PULL RESERVE VALID :
                           --! PULL_RSV_LAST/PULL_RSV_SIZEが有効であることを示す信号.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
@@ -268,13 +268,13 @@ begin
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
-                PUSH_VAL        => PUSH_VAL        , -- In :
+                PUSH_VALID      => PUSH_VALID      , -- In :
                 PUSH_LAST       => PUSH_LAST       , -- In :
                 PUSH_SIZE       => PUSH_SIZE       , -- In :
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_FIN_VAL    , -- In :
+                PULL_VALID      => PULL_FIN_VALID  , -- In :
                 PULL_LAST       => PULL_FIN_LAST   , -- In :
                 PULL_SIZE       => PULL_FIN_SIZE   , -- In :
             -----------------------------------------------------------------------
@@ -328,13 +328,13 @@ begin
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
-                PUSH_VAL        => PUSH_VAL        , -- In :
+                PUSH_VALID      => PUSH_VALID      , -- In :
                 PUSH_LAST       => PUSH_LAST       , -- In :
                 PUSH_SIZE       => PUSH_SIZE       , -- In :
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_RSV_VAL    , -- In :
+                PULL_VALID      => PULL_RSV_VALID  , -- In :
                 PULL_LAST       => PULL_RSV_LAST   , -- In :
                 PULL_SIZE       => PULL_RSV_SIZE   , -- In :
             -----------------------------------------------------------------------
@@ -380,13 +380,13 @@ begin
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
-                PUSH_VAL        => PUSH_VAL        , -- In :
+                PUSH_VALID      => PUSH_VALID      , -- In :
                 PUSH_LAST       => PUSH_LAST       , -- In :
                 PUSH_SIZE       => PUSH_SIZE       , -- In :
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VAL        => PULL_FIN_VAL    , -- In :
+                PULL_VALID      => PULL_FIN_VALID  , -- In :
                 PULL_LAST       => PULL_FIN_LAST   , -- In :
                 PULL_SIZE       => PULL_FIN_SIZE   , -- In :
             -----------------------------------------------------------------------

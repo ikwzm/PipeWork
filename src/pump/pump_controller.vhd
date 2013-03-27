@@ -538,10 +538,10 @@ begin
             RESET           => i_reset         , -- In  :
             PAUSE           => i_pause         , -- In  :
             STOP            => i_stop          , -- In  :
-            PUSH_VAL        => I_ACK_VALID     , -- In  :
+            PUSH_VALID      => I_ACK_VALID     , -- In  :
             PUSH_LAST       => I_ACK_LAST      , -- In  :
             PUSH_SIZE       => I_ACK_SIZE      , -- In  :
-            PULL_VAL        => o2i_pull_valid  , -- In  :
+            PULL_VALID      => o2i_pull_valid  , -- In  :
             PULL_LAST       => o2i_pull_last   , -- In  :
             PULL_SIZE       => o2i_pull_size   , -- In  :
             FLOW_PAUSE      => I_FLOW_PAUSE    , -- Out :
@@ -706,10 +706,10 @@ begin
             RESET           => o_reset         , -- In  :
             PAUSE           => o_pause         , -- In  :
             STOP            => o_stop          , -- In  :
-            PUSH_VAL        => i2o_push_valid  , -- In  :
+            PUSH_VALID      => i2o_push_valid  , -- In  :
             PUSH_LAST       => i2o_push_last   , -- In  :
             PUSH_SIZE       => i2o_push_size   , -- In  :
-            PULL_VAL        => O_ACK_VALID     , -- In  :
+            PULL_VALID      => O_ACK_VALID     , -- In  :
             PULL_LAST       => O_ACK_LAST      , -- In  :
             PULL_SIZE       => O_ACK_SIZE      , -- In  :
             FLOW_PAUSE      => O_FLOW_PAUSE    , -- Out :
