@@ -2,7 +2,7 @@
 --!     @file    float_intake_valve.vhd
 --!     @brief   FLOAT INTAKE VALVE
 --!     @version 1.5.0
---!     @date    2013/3/27
+--!     @date    2013/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -140,8 +140,14 @@ entity  FLOAT_INTAKE_VALVE is
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
+                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          out std_logic;
+        FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
+                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! 現在のフローカウンタの値が負(<0)になった事示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
@@ -158,7 +164,7 @@ architecture RTL of FLOAT_INTAKE_VALVE is
     signal   flow_counter       : unsigned(COUNT_BITS-1 downto 0);
     signal   flow_negative      : boolean;
     signal   flow_positive      : boolean;
-    signal   flow_zero          : boolean;
+    signal   flow_eq_zero       : boolean;
     signal   io_open            : boolean;
     signal   pause_flag         : boolean;
 begin
@@ -190,13 +196,13 @@ begin
                 flow_counter  <= (others => '0');
                 flow_positive <= FALSE;
                 flow_negative <= FALSE;
-                flow_zero     <= TRUE;
+                flow_eq_zero  <= TRUE;
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1' or RESET = '1') then
                 flow_counter  <= (others => '0');
                 flow_positive <= FALSE;
                 flow_negative <= FALSE;
-                flow_zero     <= TRUE;
+                flow_eq_zero  <= TRUE;
             else
                 if (io_open) then
                     next_counter := "0" & flow_counter;
@@ -212,16 +218,16 @@ begin
                 if    (next_counter(next_counter'high) = '1') then
                     flow_positive <= FALSE;
                     flow_negative <= TRUE;
-                    flow_zero     <= FALSE;
+                    flow_eq_zero  <= FALSE;
                     next_counter  := (others => '0');
                 elsif (next_counter > 0) then
                     flow_positive <= TRUE;
                     flow_negative <= FALSE;
-                    flow_zero     <= FALSE;
+                    flow_eq_zero  <= FALSE;
                 else
                     flow_positive <= FALSE;
                     flow_negative <= FALSE;
-                    flow_zero     <= TRUE;
+                    flow_eq_zero  <= TRUE;
                 end if;
                 flow_counter <= next_counter(flow_counter'range);
             end if;
@@ -231,6 +237,8 @@ begin
     -- FLOW_COUNT : flow_counter の値を出力.
     -------------------------------------------------------------------------------
     FLOW_COUNT <= std_logic_vector(flow_counter);
+    FLOW_ZERO  <= '1' when (flow_eq_zero ) else '0';
+    FLOW_POS   <= '1' when (flow_positive) else '0';
     FLOW_NEG   <= '1' when (flow_negative) else '0';
     -------------------------------------------------------------------------------
     -- FLOW_STOP  : 転送の中止を指示する信号.

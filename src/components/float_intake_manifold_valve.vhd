@@ -2,7 +2,7 @@
 --!     @file    float_intake_manifold_valve.vhd
 --!     @brief   FLOAT INTAKE MANIFOLD VALVE
 --!     @version 1.5.0
---!     @date    2013/3/27
+--!     @date    2013/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -180,6 +180,12 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
+                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          out std_logic;
+        FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
+                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
                           --! 現在のフローカウンタの値が負になった事示すフラグ.
                           out std_logic;
@@ -213,6 +219,8 @@ begin
         FLOW_PAUSE <= '0';
         FLOW_STOP  <= '0';
         FLOW_LAST  <= '0';
+        FLOW_ZERO  <= '0';
+        FLOW_POS   <= '1';
         FLOW_NEG   <= '0';
         FLOW_SIZE  <= (others => '1');
         FLOW_COUNT <= (others => '0');
@@ -228,6 +236,8 @@ begin
         FLOW_PAUSE <= '1';
         FLOW_STOP  <= '1';
         FLOW_LAST  <= '1';
+        FLOW_ZERO  <= '1';
+        FLOW_POS   <= '0';
         FLOW_NEG   <= '0';
         FLOW_SIZE  <= (others => '0');
         FLOW_COUNT <= (others => '0');
@@ -289,6 +299,8 @@ begin
             -- Flow Counter.
             -----------------------------------------------------------------------
                 FLOW_COUNT      => count           , -- Out:
+                FLOW_ZERO       => FLOW_ZERO       , -- Out:
+                FLOW_POS        => FLOW_POS        , -- Out:
                 FLOW_NEG        => FLOW_NEG        , -- Out:
                 PAUSED          => PAUSED            -- Out:
             );
@@ -349,6 +361,8 @@ begin
             -- Flow Counter.
             -----------------------------------------------------------------------
                 FLOW_COUNT      => FLOW_COUNT      , -- Out:
+                FLOW_ZERO       => FLOW_ZERO       , -- Out:
+                FLOW_POS        => FLOW_POS        , -- Out:
                 FLOW_NEG        => FLOW_NEG        , -- Out:
                 PAUSED          => PAUSED            -- Out:
             );                                       --
