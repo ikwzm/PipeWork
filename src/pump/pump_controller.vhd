@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 1.4.0
---!     @date    2013/3/18
+--!     @version 1.5.0
+--!     @date    2013/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -550,6 +550,8 @@ begin
             FLOW_SIZE       => I_FLOW_SIZE     , -- Out :
             FLOW_READY      => open            , -- Out :
             FLOW_COUNT      => open            , -- Out :
+            FLOW_ZERO       => open            , -- Out :
+            FLOW_POS        => open            , -- Out :
             FLOW_NEG        => open            , -- Out :
             PAUSED          => open              -- Out :
         );
@@ -718,6 +720,8 @@ begin
             FLOW_SIZE       => O_FLOW_SIZE     , -- Out :
             FLOW_READY      => open            , -- Out :
             FLOW_COUNT      => open            , -- Out :
+            FLOW_ZERO       => open            , -- Out :
+            FLOW_POS        => open            , -- Out :
             FLOW_NEG        => open            , -- Out :
             PAUSED          => open              -- Out :
         );
