@@ -2,7 +2,7 @@
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
 --!     @version 1.5.0
---!     @date    2013/3/22
+--!     @date    2013/4/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -111,6 +111,13 @@ entity  POOL_INTAKE_PORT is
     -------------------------------------------------------------------------------
     -- Intake Port Signals.
     -------------------------------------------------------------------------------
+        PORT_ENABLE     : --! @brief INTAKE PORT ENABLE :
+                          --! 動作許可信号.
+                          --! * この信号がアサートされている場合、キューの入出力を
+                          --!   許可する.
+                          --! * この信号がネゲートされている場合、PORT_RDY はアサー
+                          --!   トされない.
+                          in  std_logic := '1';
         PORT_DATA       : --! @brief INTAKE PORT DATA :
                           --! ワードデータ入力.
                           in  std_logic_vector(PORT_DATA_BITS-1 downto 0);
@@ -189,17 +196,18 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.REDUCER;
 architecture RTL of POOL_INTAKE_PORT is
-    constant ENBL_BITS      : integer   := (WORD_BITS/UNIT_BITS);
+    constant STRB_BITS      : integer   := (WORD_BITS/UNIT_BITS);
     constant I_WORDS        : integer   := (PORT_DATA'length/WORD_BITS);
     constant O_WORDS        : integer   := (POOL_DATA'length/WORD_BITS);
     constant done           : std_logic := '0';
     constant flush          : std_logic := '0';
     signal   offset         : std_logic_vector(O_WORDS-1 downto 0);
     signal   queue_busy     : std_logic;
-    signal   i_data_enable  : std_logic_vector(PORT_DVAL'length-1 downto 0);   
+    signal   i_strobe       : std_logic_vector(PORT_DVAL'length-1 downto 0);   
     signal   i_ready        : std_logic;
+    constant o_enable       : std_logic := '1';
     signal   o_size         : std_logic_vector(PUSH_SIZE'length-1 downto 0);
-    signal   o_enable       : std_logic_vector(POOL_DVAL'length-1 downto 0);
+    signal   o_strobe       : std_logic_vector(POOL_DVAL'length-1 downto 0);
     signal   o_error        : std_logic;
     signal   o_last         : std_logic;
     signal   o_valid        : std_logic;
@@ -230,9 +238,9 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- i_data_enable : エラー発生時はキューにデータを入れないようにする.
+    -- i_strobe : エラー発生時はキューにデータを入れないようにする.
     -------------------------------------------------------------------------------
-    i_data_enable <= PORT_DVAL when (PORT_ERROR = '0') else (others => '0');
+    i_strobe <= PORT_DVAL when (PORT_ERROR = '0') else (others => '0');
     -------------------------------------------------------------------------------
     -- offset        : REDUCER にセットするオフセット値.
     -------------------------------------------------------------------------------
@@ -277,7 +285,7 @@ begin
     QUEUE: REDUCER                              -- 
         generic map (                           -- 
             WORD_BITS       => WORD_BITS      , -- 
-            ENBL_BITS       => ENBL_BITS      , -- 
+            STRB_BITS       => STRB_BITS      , -- 
             I_WIDTH         => I_WORDS        , -- 
             O_WIDTH         => O_WORDS        , -- 
             QUEUE_SIZE      => QUEUE_SIZE     , -- 
@@ -305,7 +313,8 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_ENBL          => i_data_enable  , -- In  :
+            I_ENABLE        => PORT_ENABLE    , -- In  :
+            I_STRB          => i_strobe       , -- In  :
             I_DATA          => PORT_DATA      , -- In  :
             I_DONE          => PORT_LAST      , -- In  :
             I_FLUSH         => flush          , -- In  :
@@ -314,8 +323,9 @@ begin
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
+            O_ENABLE        => o_enable       , -- In  :
             O_DATA          => POOL_DATA      , -- Out :
-            O_ENBL          => o_enable       , -- Out :
+            O_STRB          => o_strobe       , -- Out :
             O_DONE          => o_last         , -- Out :
             O_FLUSH         => open           , -- Out :
             O_VAL           => o_valid        , -- Out :
@@ -326,9 +336,9 @@ begin
     o_ready  <= POOL_RDY;
     -------------------------------------------------------------------------------
     -- o_size : バッファの出力側のバイト数.
-    --          ここでは o_enable の'1'の数を数えている.
+    --          ここでは o_strobe の'1'の数を数えている.
     -------------------------------------------------------------------------------
-    SIZE: process (o_enable)
+    SIZE: process (o_strobe)
         function count_assert_bit(ARG:std_logic_vector) return integer is
             variable n  : integer range 0 to ARG'length;
             variable nL : integer range 0 to ARG'length/2;
@@ -372,9 +382,9 @@ begin
             end case;
             return n;
         end function;
-        variable size : integer range 0 to o_enable'length;
+        variable size : integer range 0 to o_strobe'length;
     begin
-        size   := count_assert_bit(o_enable);
+        size   := count_assert_bit(o_strobe);
         o_size <= std_logic_vector(to_unsigned(size, o_size'length));
     end process;
     -------------------------------------------------------------------------------
@@ -424,9 +434,9 @@ begin
     -------------------------------------------------------------------------------
     POOL_WEN  <= o_xfer_select when (o_valid = '1' and o_ready = '1') else (others => '0');
     -------------------------------------------------------------------------------
-    -- POOL_DVAL  : 外部プールバッファへのイネーブル信号.
+    -- POOL_DVAL  : 外部プールバッファへのストローブ信号.
     -------------------------------------------------------------------------------
-    POOL_DVAL <= o_enable;
+    POOL_DVAL <= o_strobe;
     -------------------------------------------------------------------------------
     -- POOL_PTR   : 外部プールバッファへの書き込みポインタ.
     -------------------------------------------------------------------------------

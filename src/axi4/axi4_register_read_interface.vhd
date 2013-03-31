@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 1.3.1
---!     @date    2013/3/2
+--!     @version 1.5.0
+--!     @date    2013/4/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -428,9 +428,11 @@ begin
     -------------------------------------------------------------------------------
     RBUF: block
         constant WORD_BITS      : integer := 8;
-        constant ENBL_BITS      : integer := 1;
+        constant STRB_BITS      : integer := 1;
         constant I_WIDTH        : integer := REGS_DATA_WIDTH/WORD_BITS;
         constant O_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
+        constant i_enable       : std_logic := '1';
+        constant o_enable       : std_logic := '1';
         constant done           : std_logic := '0';
         constant flush          : std_logic := '0';
         signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
@@ -632,7 +634,7 @@ begin
         B: REDUCER
             generic map (
                 WORD_BITS       => WORD_BITS      ,
-                ENBL_BITS       => ENBL_BITS      ,
+                STRB_BITS       => STRB_BITS      ,
                 I_WIDTH         => I_WIDTH        ,
                 O_WIDTH         => O_WIDTH        ,
                 QUEUE_SIZE      => 0              ,
@@ -660,8 +662,9 @@ begin
             -----------------------------------------------------------------------
             -- 入力側 I/F
             -----------------------------------------------------------------------
+                I_ENABLE        => i_enable       , -- In  :
                 I_DATA          => REGS_DATA      , -- In  :
-                I_ENBL          => xfer_beat_ben  , -- In  :
+                I_STRB          => xfer_beat_ben  , -- In  :
                 I_DONE          => xfer_beat_done , -- In  :
                 I_FLUSH         => flush          , -- In  :
                 I_VAL           => xfer_beat_valid, -- In  :
@@ -669,8 +672,9 @@ begin
             -----------------------------------------------------------------------
             -- 出力側 I/F
             -----------------------------------------------------------------------
+                O_ENABLE        => o_enable       , -- In  :
                 O_DATA          => RDATA          , -- Out :
-                O_ENBL          => open           , -- Out :
+                O_STRB          => open           , -- Out :
                 O_DONE          => b_done         , -- Out :
                 O_FLUSH         => open           , -- Out :
                 O_VAL           => b_valid        , -- Out :

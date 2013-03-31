@@ -159,6 +159,7 @@ architecture RTL of PCIe_TLP_RX_STREAM_INTERFACE is
     signal   rx_data_valid  : std_logic;
     signal   rx_data_ready  : std_logic;
     signal   rx_data_start  : std_logic;
+    constant rx_data_enable : std_logic := '1';
     constant rx_data_flush  : std_logic := '0';
     constant rx_data_done   : std_logic := '0';
     signal   rx_data_offset : std_logic_vector(TLP_DATA_BITS/WORD_BITS-1 downto 0);
@@ -670,6 +671,7 @@ begin
             CLK         => CLK             , -- In  :
             RST         => RST             , -- In  :
             CLR         => CLR             , -- In  :
+            ENABLE      => rx_data_enable  , -- In  :
             START       => rx_data_start   , -- In  :
             OFFSET      => rx_data_offset  , -- In  :
             DONE        => rx_data_done    , -- In  :

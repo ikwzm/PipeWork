@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.0                                                           --
---!     @date    2013/03/31                                                      --
+--!     @date    2013/04/01                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -220,9 +220,9 @@ component REDUCER
         WORD_BITS   : --! @brief WORD BITS :
                       --! １ワードのデータのビット数を指定する.
                       integer := 8;
-        ENBL_BITS   : --! @brief ENABLE BITS :
-                      --! ワードデータのうち有効なデータであることを示す信号の
-                      --! ビット数を指定する.
+        STRB_BITS   : --! @brief ENABLE BITS :
+                      --! ワードデータのうち有効なデータであることを示す信号(STRB)
+                      --! のビット数を指定する.
                       integer := 1;
         I_WIDTH     : --! @brief INPUT WORD WIDTH :
                       --! 入力側のデータのワード数を指定する.
@@ -254,7 +254,7 @@ component REDUCER
                       --! 指定する.
                       --! * FLUSHとDONEとの違いは、DONEは最後のデータの出力時に
                       --!   キューの状態をすべてクリアするのに対して、
-                      --!   FLUSHは最後のデータの出力時にENBLだけをクリアしてVALは
+                      --!   FLUSHは最後のデータの出力時にSTRBだけをクリアしてVALは
                       --!   クリアしない.
                       --!   そのため次の入力データは、最後のデータの次のワード位置
                       --!   から格納される.
@@ -282,7 +282,7 @@ component REDUCER
                       --! 開始信号.
                       --! * この信号はOFFSETを内部に設定してキューを初期化する.
                       --! * 最初にデータ入力と同時にアサートしても構わない.
-                      in  std_logic;
+                      in  std_logic := '0';
         OFFSET      : --! @brief OFFSET :
                       --! 最初のワードの出力位置を指定する.
                       --! * START信号がアサートされた時のみ有効.
@@ -297,21 +297,21 @@ component REDUCER
                       --!   3バイト目から出力される.    
                       --!   OFFSET="0111"に設定すると、最初に入力したバイトデータは
                       --!   4バイト目から出力される.    
-                      in  std_logic_vector(O_WIDTH-1 downto 0);
+                      in  std_logic_vector(O_WIDTH-1 downto 0) := (others => '0');
         DONE        : --! @brief DONE :
                       --! 終了信号.
                       --! * この信号をアサートすることで、キューに残っているデータ
                       --!   を掃き出す.
                       --!   その際、最後のワードと同時にO_DONE信号がアサートされる.
                       --! * FLUSH信号との違いは、FLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         FLUSH       : --! @brief FLUSH :
                       --! フラッシュ信号.
                       --! * この信号をアサートすることで、キューに残っているデータ
                       --!   を掃き出す.
                       --!   その際、最後のワードと同時にO_FLUSH信号がアサートされる.
                       --! * DONE信号との違いは、FLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         BUSY        : --! @brief BUSY :
                       --! ビジー信号.
                       --! * 最初にデータが入力されたときにアサートされる.
@@ -325,29 +325,34 @@ component REDUCER
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
+        I_ENABLE    : --! @brief INPUT ENABLE :
+                      --! 入力許可信号.
+                      --! * この信号がアサートされている場合、キューの入力を許可する.
+                      --! * この信号がネゲートされている場合、I_RDY アサートされない.
+                      in  std_logic := '1';
         I_DATA      : --! @brief INPUT WORD DATA :
                       --! ワードデータ入力.
                       in  std_logic_vector(I_WIDTH*WORD_BITS-1 downto 0);
-        I_ENBL      : --! @brief INPUT WORD ENABLE :
-                      --! ワードイネーブル信号入力.
-                      in  std_logic_vector(I_WIDTH*ENBL_BITS-1 downto 0);
+        I_STRB      : --! @brief INPUT WORD ENABLE :
+                      --! ワードストローブ信号入力.
+                      in  std_logic_vector(I_WIDTH*STRB_BITS-1 downto 0);
         I_DONE      : --! @brief INPUT WORD DONE :
                       --! 最終ワード信号入力.
                       --! * 最後の力ワードデータ入であることを示すフラグ.
                       --! * 基本的にはDONE信号と同じ働きをするが、I_DONE信号は
                       --!   最後のワードデータを入力する際に同時にアサートする.
                       --! * I_FLUSH信号との違いはFLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         I_FLUSH     : --! @brief INPUT WORD FLUSH :
                       --! 最終ワード信号入力.
                       --! * 最後のワードデータ入力であることを示すフラグ.
                       --! * 基本的にはFLUSH信号と同じ働きをするが、I_FLUSH信号は
                       --!   最後のワードデータを入力する際に同時にアサートする.
                       --! * I_DONE信号との違いはFLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         I_VAL       : --! @brief INPUT WORD VALID :
                       --! 入力ワード有効信号.
-                      --! * I_DATA/I_ENBL/I_DONE/I_FLUSHが有効であることを示す.
+                      --! * I_DATA/I_STRB/I_DONE/I_FLUSHが有効であることを示す.
                       --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
                       in  std_logic;
         I_RDY       : --! @brief INPUT WORD READY :
@@ -358,12 +363,17 @@ component REDUCER
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
+        O_ENABLE    : --! @brief OUTPUT ENABLE :
+                      --! 出力許可信号.
+                      --! * この信号がアサートされている場合、キューの出力を許可する.
+                      --! * この信号がネゲートされている場合、O_VAL アサートされない.
+                      in  std_logic := '1';
         O_DATA      : --! @brief OUTPUT WORD DATA :
                       --! ワードデータ出力.
                       out std_logic_vector(O_WIDTH*WORD_BITS-1 downto 0);
-        O_ENBL      : --! @brief OUTPUT WORD ENABLE :
-                      --! ワードイネーブル信号出力.
-                      out std_logic_vector(O_WIDTH*ENBL_BITS-1 downto 0);
+        O_STRB      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワードストローブ信号出力.
+                      out std_logic_vector(O_WIDTH*STRB_BITS-1 downto 0);
         O_DONE      : --! @brief OUTPUT WORD DONE :
                       --! 最終ワード信号出力.
                       --! * 最後のワードデータ出力であることを示すフラグ.
@@ -376,7 +386,7 @@ component REDUCER
                       out std_logic;
         O_VAL       : --! @brief OUTPUT WORD VALID :
                       --! 出力ワード有効信号.
-                      --! * O_DATA/O_ENBL/O_DONE/O_FLUSHが有効であることを示す.
+                      --! * O_DATA/O_STRB/O_DONE/O_FLUSHが有効であることを示す.
                       --! * O_VAL='1'and O_RDY='1'でワードデータがキューから取り除かれる.
                       out std_logic;
         O_RDY       : --! @brief OUTPUT WORD READY :
@@ -1188,6 +1198,13 @@ component POOL_INTAKE_PORT
     -------------------------------------------------------------------------------
     -- Intake Port Signals.
     -------------------------------------------------------------------------------
+        PORT_ENABLE     : --! @brief INTAKE PORT ENABLE :
+                          --! 動作許可信号.
+                          --! * この信号がアサートされている場合、キューの入出力を
+                          --!   許可する.
+                          --! * この信号がネゲートされている場合、PORT_RDY はアサー
+                          --!   トされない.
+                          in  std_logic := '1';
         PORT_DATA       : --! @brief INTAKE PORT DATA :
                           --! ワードデータ入力.
                           in  std_logic_vector(PORT_DATA_BITS-1 downto 0);

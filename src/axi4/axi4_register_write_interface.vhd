@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 1.3.1
---!     @date    2013/3/2
+--!     @version 1.5.0
+--!     @date    2013/4/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -201,7 +201,7 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -- 内部信号
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH-1 downto 0);
-    signal   wbuf_enable        : boolean;
+    signal   wbuf_enable        : std_logic;
     signal   wbuf_busy          : std_logic;
     signal   wbuf_valid         : std_logic;
     signal   wbuf_ready         : std_logic;
@@ -209,6 +209,7 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     signal   wbuf_offset        : std_logic_vector(REGS_DATA_WIDTH/8-1 downto 0);
     constant wbuf_flush         : std_logic := '0';
     constant wbuf_done          : std_logic := '0';
+    constant regs_enable        : std_logic := '1';
     signal   regs_valid         : std_logic;
     signal   regs_ready         : std_logic;
     signal   regs_last          : std_logic;
@@ -228,7 +229,6 @@ begin
                 BVALID      <= '0';
                 BRESP       <= AXI4_RESP_OKAY;
                 BID         <= (others => '0');
-                wbuf_enable <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 curr_state  <= IDLE;
@@ -236,7 +236,6 @@ begin
                 BVALID      <= '0';
                 BRESP       <= AXI4_RESP_OKAY;
                 BID         <= (others => '0');
-                wbuf_enable <= FALSE;
             else
                 case curr_state is
                     when IDLE =>
@@ -299,8 +298,6 @@ begin
                 if (curr_state = IDLE and AWVALID = '1') then
                     BID     <= AWID;
                 end if;
-                wbuf_enable <= (next_state = XFER_DATA  or
-                                next_state = SKIP_ERR  );
             end if;
         end if;
     end process;
@@ -342,13 +339,14 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    REGS_ADDR  <= xfer_req_addr;
-    REGS_REQ   <= '1' when (curr_state = XFER_DATA and regs_valid = '1') else '0';
-    regs_ready <= '1' when (curr_state = XFER_DATA and REGS_ACK   = '1') or
-                           (curr_state = SKIP_ERR                      ) else '0';
-    WREADY     <= '1' when (wbuf_enable = TRUE     and wbuf_ready = '1') else '0';
-    wbuf_valid <= '1' when (wbuf_enable = TRUE     and WVALID     = '1') else '0';
-    wbuf_start <= '1' when (wbuf_enable = FALSE    and AWVALID    = '1') else '0';
+    REGS_ADDR   <= xfer_req_addr;
+    REGS_REQ    <= '1' when (curr_state = XFER_DATA and regs_valid = '1') else '0';
+    regs_ready  <= '1' when (curr_state = XFER_DATA and REGS_ACK   = '1') or
+                            (curr_state = SKIP_ERR                      ) else '0';
+    wbuf_enable <= '1' when (curr_state = IDLE and AWVALID = '1') or
+                            (curr_state = XFER_DATA) or
+                            (curr_state = SKIP_ERR ) else '0';
+    wbuf_start  <= '1' when (wbuf_enable = '0' and AWVALID = '1') else '0';
     -------------------------------------------------------------------------------
     -- wbuf_offset : 
     -------------------------------------------------------------------------------
@@ -376,7 +374,7 @@ begin
     WBUF: REDUCER
         generic map (
             WORD_BITS       => 8                 ,
-            ENBL_BITS       => 1                 ,
+            STRB_BITS       => 1                 ,
             I_WIDTH         => AXI4_DATA_WIDTH/8 ,
             O_WIDTH         => REGS_DATA_WIDTH/8 ,
             QUEUE_SIZE      => 0                 ,
@@ -404,17 +402,19 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
+            I_ENABLE        => wbuf_enable    , -- In  :
             I_DATA          => WDATA          , -- In  :
-            I_ENBL          => WSTRB          , -- In  :
+            I_STRB          => WSTRB          , -- In  :
             I_DONE          => WLAST          , -- In  :
             I_FLUSH         => wbuf_flush     , -- In  :
-            I_VAL           => wbuf_valid     , -- In  :
-            I_RDY           => wbuf_ready     , -- Out :
+            I_VAL           => WVALID         , -- In  :
+            I_RDY           => WREADY         , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
+            O_ENABLE        => regs_enable    , -- In  :
             O_DATA          => REGS_DATA      , -- Out :
-            O_ENBL          => REGS_BEN       , -- Out :
+            O_STRB          => REGS_BEN       , -- Out :
             O_DONE          => regs_last      , -- Out :
             O_FLUSH         => open           , -- Out :
             O_VAL           => regs_valid     , -- Out :
