@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------
---!     @file    pipe_requester_interface.vhd
---!     @brief   PIPE REQUESTER INTERFACE
+--!     @file    pipe_responder_interface.vhd
+--!     @brief   PIPE RESPONDER INTERFACE
 --!     @version 0.0.1
 --!     @date    2013/3/30
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
@@ -37,12 +37,24 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PIPE REQUESTER INTERFACE
+--! @brief   PIPE RESPONDER INTERFACE
 -----------------------------------------------------------------------------------
-entity  PIPE_REQUESTER_INTERFACE is
+entity  PIPE_RESPONDER_INTERFACE is
     generic (
+        PUSH_VALID          : --! @brief PUSH VALID :
+                              --! レスポンダ側からリクエスタ側へのデータ転送を行うか
+                              --! どうかを指定する.
+                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=0でデータ転送を行わない.
+                              integer :=  1;
+        PULL_VALID          : --! @brief PUSH VALID :
+                              --! リクエスタ側からレスポンダ側へのデータ転送を行うか
+                              --! どうかを指定する.
+                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=0でデータ転送を行わない.
+                              integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
-                              --! REQ_ADDR信号のビット数を指定する.
+                             --! REQ_ADDR信号のビット数を指定する.
                           integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
@@ -66,12 +78,6 @@ entity  PIPE_REQUESTER_INTERFACE is
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
-        T_XFER_MAX_SIZE     : --! @brief Transfer Maximum Size from responder :
-                              --! レスポンダ側が想定している一回の転送時の最大
-                              --! バイト数を２のべき乗で指定する.
-                              --! リクエスタ側で想定している一回の転送時の最大
-                              --! バイト数ではない事に注意.
-                              integer :=  4;
         O_VALVE_FIXED       : --! @brief Outlet Valve Fixed Mode :
                               --! 出力用バルブのモードを指定する.
                               --! * O_VALVE_FIXED=0 : フローカウンタによるフロー制
@@ -121,93 +127,111 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! 同期リセット信号.アクティブハイ.
                               in  std_logic;
     -------------------------------------------------------------------------------
-    -- Request to Requester Signals.
+    -- Request from Responder Signals.
     -------------------------------------------------------------------------------
-        M_REQ_ADDR          : --! @brief Request Address to requester :
-                              --! 転送開始アドレスを出力する.  
-                              out std_logic_vector(ADDR_BITS-1 downto 0);
-        M_REQ_SIZE          : --! @brief Request transfer Size to requester :
-                              --! 転送したいバイト数を出力する. 
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
-        M_REQ_BUF_PTR       : --! @brief Request Buffer Pointer to requester :
-                              --! 転送時のバッファポインタを出力する.
-                              out std_logic_vector(BUF_DEPTH-1 downto 0);
-        M_REQ_MODE          : --! @brief Request Mode signals to requester : 
-                              --! 転送開始時に指定された各種情報を出力する.
-                              out std_logic_vector(MODE_BITS-1 downto 0);
-        M_REQ_DIR           : --! @brief Request Direction to requester : 
+        T_REQ_ADDR          : --! @brief Request Address from responder :
+                              --! 転送開始アドレスを入力する.  
+                              in  std_logic_vector(ADDR_BITS-1 downto 0);
+        T_REQ_SIZE          : --! @brief Request transfer Size from responder :
+                              --! 転送したいバイト数を入力する. 
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_REQ_BUF_PTR       : --! @brief Request Buffer Pointer from responder :
+                              --! 転送時のバッファポインタを入力する.
+                              in  std_logic_vector(BUF_DEPTH-1 downto 0);
+        T_REQ_MODE          : --! @brief Request Mode signals from responder :
+                              --! 転送開始時に指定された各種情報を入力する.
+                              in  std_logic_vector(MODE_BITS-1 downto 0);
+        T_REQ_DIR           : --! @brief Request Direction from responder :
                               --! 転送方向(PUSH/PULL)を指定する.
-                              --! * M_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
-                              --! * M_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
-                              out std_logic;
-        M_REQ_FIRST         : --! @brief Request First transaction to requester :
+                              --! * T_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
+                              --! * T_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
+                              in  std_logic;
+        T_REQ_FIRST         : --! @brief Request First transaction from responder :
                               --! 最初のトランザクションであることを示す.
-                              --! * REQ_FIRST=1の場合、内部状態を初期化してから
+                              --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
                               --!   トランザクションを開始する.
-                              out std_logic;
-        M_REQ_LAST          : --! @brief Request Last transaction to requester :
+                              in  std_logic;
+        T_REQ_LAST          : --! @brief Request Last transaction from responder :
                               --! 最後のトランザクションであることを示す.
-                              --! * REQ_LAST=1の場合、Acknowledge を返す際に、
+                              --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_LAST 信号をアサートする.
-                              --! * REQ_LAST=0の場合、Acknowledge を返す際に、
+                              --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
-                              out std_logic;
-        M_REQ_VALID         : --! @brief Request Valid signal to requester  :
+                              in  std_logic;
+        T_REQ_VALID         : --! @brief Request Valid signal from responder  :
                               --! 上記の各種リクエスト信号が有効であることを示す.
                               --! * この信号のアサートでもってトランザクションを開始する.
                               --! * 一度この信号をアサートすると Acknowledge を返す
                               --!   まで、この信号はアサートされなくてはならない.
-                              out std_logic;
-        M_REQ_READY         : --! @brief Request Ready signal from requester :
-                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                               in  std_logic;
+        T_REQ_READY         : --! @brief Request Ready signal from requester :
+                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                              out std_logic;
     -------------------------------------------------------------------------------
-    -- Acknowledge from Requester Signals.
+    -- Acknowledge to Responder Signals.
     -------------------------------------------------------------------------------
-        M_ACK_VALID         : --! @brief Acknowledge Valid signal from requester :
+        T_ACK_VALID         : --! @brief Acknowledge Valid signal to responder :
                               --! 上記の Command Request の応答信号.
                               --! 下記の 各種 Acknowledge 信号が有効である事を示す.
-                              --! * この信号のアサートでもって、Command Request が
-                              --!   受け付けられたことを示す. ただし、あくまでも 
-                              --!   Request が受け付けられただけであって、必ずしも
-                              --!   トランザクションが完了したわけではないことに注意.
-                              --! * この信号は Request につき１クロックだけアサート
-                              --!   される.
-                              --! * この信号がアサートされたら、アプリケーション側
-                              --!   は速やかに REQ_VAL 信号をネゲートして Request 
-                              --!   を取り下げるか、REQ_VALをアサートしたままで次の 
-                              --!   Request 情報を用意しておかなければならない.
-                              in  std_logic;
-        M_ACK_NEXT          : --! @brief Acknowledge with need Next transaction from requester :
+                              out std_logic;
+        T_ACK_NEXT          : --! @brief Acknowledge with need Next transaction to responder :
                               --! すべてのトランザクションが終了かつ REQ_LAST=0 の
                               --! 場合、この信号がアサートされる.
-                              in  std_logic;
-        M_ACK_LAST          : --! @brief Acknowledge with Last transaction from requester :
+                              out std_logic;
+        T_ACK_LAST          : --! @brief Acknowledge with Last transaction to responder :
                               --! すべてのトランザクションが終了かつ REQ_LAST=1 の
                               --! 場合、この信号がアサートされる.
-                              in  std_logic;
-        M_ACK_ERROR         : --! @brief Acknowledge with Error from requester :
+                              out std_logic;
+        T_ACK_ERROR         : --! @brief Acknowledge with Error to responder :
                               --! トランザクション中になんらかのエラーが発生した場
                               --! 合、この信号がアサートされる.
-                              in  std_logic;
-        M_ACK_STOP          : --! @brief Acknowledge with Stop operation from requester :
+                              out std_logic;
+        T_ACK_STOP          : --! @brief Acknowledge with Stop operation to responder :
                               --! トランザクションが中止された場合、この信号がアサ
                               --! ートされる.
+                              out std_logic;
+        T_ACK_SIZE          : --! @brief Acknowledge transfer Size to responder :
+                              --! 転送したバイト数を示す.
+                              out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Valve Signals from Responder.
+    -------------------------------------------------------------------------------
+        T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
+                              --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic;
-        M_ACK_NONE          : --! @brief Acknowledge with None transfer from requester :
-                              --! REQ_SIZE=0 の Request だった場合、この信号がアサ
-                              --! ートされる.
+        T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
+                              --! レスポンダ側からの最後の"確定した"データ入力であ
+                              --! ることを示す.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic;
-        M_ACK_SIZE          : --! @brief Acknowledge transfer Size from requester :
-                              --! 転送するバイト数を示す.
-                              --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で
-                              --! 示されるバイト数分を加算/減算すると良い.
+        T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
+                              --! レスポンダ側からの"確定した"入力バイト数.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Valve Signals to Requester.
+    -- Outlet Valve Signals from Requester.
     -------------------------------------------------------------------------------
+        T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
+                              --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic;
+        T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
+                              --! レスポンダ側からの最後の"確定した"データ出力で
+                              --! あることを示す.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic;
+        T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
+                              --! レスポンダ側からの"確定した"出力バイト数.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Valve Signals to Responder.
+    -------------------------------------------------------------------------------
+        O_VALVE_OPEN        : --! @brief Outlet Vavle Open :
+                              in  std_logic;
         O_FLOW_PAUSE        : --! @brief Outlet Valve Flow Pause :
                               --! 出力を一時的に止めたり、再開することを指示する信号.
                               --! プールバッファに O_FLOW_READY_LEVEL 未満のデータしか無い
@@ -241,8 +265,10 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! O_POOL_READY 信号をアサートする.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Intake Valve Signals to Requester.
+    -- Intake Valve Signals to Responder.
     -------------------------------------------------------------------------------
+        I_VALVE_OPEN        : --! @brief Intake Vavle Open :
+                              in  std_logic;
         I_FLOW_PAUSE        : --! @brief Intake Valve Flow Pause :
                               --! 入力を一時的に止めたり、再開することを指示する信号.
                               --! プールバッファに I_FLOW_READY_LEVEL を越えるデータが溜っ
@@ -271,7 +297,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
         I_POOL_READY_LEVEL  : --! @brief Intake Valve Pool Ready Level :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZE に
+                              --! 先行モード(I_VALVE_PRECEDE=1)の時、M_PULL_FIN_SIZE に
                               --! よるフローカウンタの減算結果が、この値以下の時に
                               --! I_POOL_READY 信号をアサートする.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
@@ -280,150 +306,126 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! I_FLOW_SIZE を求めるのに使用する.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Request from Responder.
+    -- Request to Requester Signals.
     -------------------------------------------------------------------------------
-        T_REQ_START         : --! @brief Request Valid signal from responder :
+        M_REQ_START         : --! @brief Request Start signal to requester :
                               --! 転送開始を指示する.
-                              in  std_logic;
-        T_REQ_ADDR          : --! @brief Request Address from responder :
-                              --! 転送開始アドレスを入力する.  
-                              in  std_logic_vector(ADDR_BITS-1 downto 0);
-        T_REQ_SIZE          : --! @brief Request Transfer Size from responder :
-                              --! 転送したいバイト数を入力する. 
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_REQ_BUF_PTR       : --! @brief Request Buffer Pointer from responder :
-                              --! 転送時のバッファポインタを入力する.
-                              in  std_logic_vector(BUF_DEPTH-1 downto 0);
-        T_REQ_MODE          : --! @brief Request Mode signals from responder :
-                              --! 転送開始時に指定された各種情報を入力する.
-                              in  std_logic_vector(MODE_BITS-1 downto 0);
-        T_REQ_DIR           : --! @brief Request Direction signals from responder :
+                              out std_logic;
+        M_REQ_ADDR          : --! @brief Request Address to requester :
+                              --! 転送開始アドレスを出力する.  
+                              out std_logic_vector(ADDR_BITS-1 downto 0);
+        M_REQ_SIZE          : --! @brief Request transfer Size to requester :
+                              --! 転送したいバイト数を出力する. 
+                              out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_REQ_BUF_PTR       : --! @brief Request Buffer Pointer to requester :
+                              --! 転送時のバッファポインタを出力する.
+                              out std_logic_vector(BUF_DEPTH-1 downto 0);
+        M_REQ_MODE          : --! @brief Request Mode signals to requester :
+                              --! 転送開始時に指定された各種情報を出力する.
+                              out std_logic_vector(MODE_BITS-1 downto 0);
+        M_REQ_DIR           : --! @brief Request Direction to requester :
                               --! 転送方向(PUSH/PULL)を指定する.
-                              --! * T_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
-                              --! * T_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
-                              in  std_logic;
-        T_REQ_FIRST         : --! @brief Request First transaction from responder :
+                              --! * M_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
+                              --! * M_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
+                              out std_logic;
+        M_REQ_FIRST         : --! @brief Request First transaction to requester :
                               --! 最初のトランザクションであることを示す.
-                              --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
+                              --! * REQ_FIRST=1の場合、内部状態を初期化してから
                               --!   トランザクションを開始する.
-                              in  std_logic;
-        T_REQ_LAST          : --! @brief Request Last transaction from responder :
+                              out std_logic;
+        M_REQ_LAST          : --! @brief Request Last transaction to requester :
                               --! 最後のトランザクションであることを示す.
-                              --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
-                              --!   すべてのトランザクションが終了していると、
-                              --!   ACK_LAST 信号をアサートする.
-                              --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
-                              --!   すべてのトランザクションが終了していると、
-                              --!   ACK_NEXT 信号をアサートする.
+                              out std_logic;
+        M_REQ_VALID         : --! @brief Request Valid signal to requester :
+                              --! 上記の各種リクエスト信号が有効であることを示す.
+                              out std_logic;
+        M_REQ_READY         : --! @brief Request Ready signal from requester :
+                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                               in  std_logic;
     -------------------------------------------------------------------------------
-    -- Response to Responder.
+    -- Response from Requester Signals.
     -------------------------------------------------------------------------------
-        T_RES_START         : --! @brief Request Start signal to responder :
-                              --! 転送を開始したことを示す出力信号.
-                              out std_logic;
-        T_RES_DONE          : --! @brief Transaction Done signal to responder :
-                              --! 転送を終了したことを示す出力信号.
-                              out std_logic;
-        T_RES_ERROR         : --! @brief Transaction Error signal to responder :
-                              --! 転送を異常終了したことを示す出力信号.
-                              out std_logic;
+        M_RES_START         : --! @brief Request Start signal from requester :
+                              --! 転送を開始したことを示す入力信号.
+                              in  std_logic;
+        M_RES_DONE          : --! @brief Transaction Done signal from requester :
+                              --! 転送を終了したことを示す入力信号.
+                              in  std_logic;
+        M_RES_ERROR         : --! @brief Transaction Error signal from requester :
+                              --! 転送を異常終了したことを示す入力信号.
+                              in  std_logic;
     -------------------------------------------------------------------------------
-    -- Outlet Valve Signals from Responder.
+    -- Outlet Valve Signals from Requester.
     -------------------------------------------------------------------------------
-        T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
-                              --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
+        M_PUSH_FIN_VALID    : --! @brief Push Final Valid from requester :
+                              --! M_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic;
-        T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
+        M_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic;
-        T_PUSH_FIN_ERR      : --! @brief Push Final Error flags :
-                              --! レスポンダ側からのデータ入力中にエラーが発生した
-                              --! ことを示す.
-                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
-        T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
+        M_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
-                              --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
+        M_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from requester :
+                              --! M_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
                               in  std_logic;
-        T_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
+        M_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ入力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
                               in  std_logic;
-        T_PUSH_RSV_ERR      : --! @brief Push Reserve Error flags :
-                              --! レスポンダ側からのデータ入力中にエラーが発生した
-                              --! ことを示す.
-                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
-                              --!   の場合は未使用.
-                              in  std_logic;
-        T_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
+        M_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
                               --! レスポンダ側からの"予定された"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Intake Valve Signals from Responder.
+    -- Intake Valve Signals from requester.
     -------------------------------------------------------------------------------
-        T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
-                              --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
+        M_PULL_FIN_VALID    : --! @brief Pull Final Valid from requester :
+                              --! M_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic;
-        T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
+        M_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic;
-        T_PULL_FIN_ERR      : --! @brief Pull Final Error flags :
-                              --! レスポンダ側からのデータ出力中にエラーが発生した
-                              --! ことを示す.
-                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
-        T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
+        M_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
-                              --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
+        M_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from requester :
+                              --! M_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが先行(Precede)モードで無い場合は
                               --!   未使用.
                               in  std_logic;
-        T_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
+        M_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
                               in  std_logic;
-        T_PULL_RSV_ERR      : --! @brief Pull Reserve Error flags :
-                              --! レスポンダ側からのデータ出力中にエラーが発生した
-                              --! ことを示す.
-                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
-                              --!   の場合は未使用.
-                              in  std_logic;
-        T_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
+        M_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
                               --! レスポンダ側からの"予定された"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0)
     );
-end PIPE_REQUESTER_INTERFACE;
+end PIPE_RESPONDER_INTERFACE;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -434,102 +436,116 @@ library PIPEWORK;
 use     PIPEWORK.COMPONENTS.FLOAT_OUTLET_MANIFOLD_VALVE;
 use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_MANIFOLD_VALVE;
 use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
-use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-architecture RTL of PIPE_REQUESTER_INTERFACE is
-    ------------------------------------------------------------------------------
-    -- アドレスレジスタ関連の信号.
-    ------------------------------------------------------------------------------
-    signal   addr_load          : std_logic_vector(ADDR_BITS-1 downto 0);
-    function ADDR_UP_BEN return std_logic_vector is
-        variable up_ben    : std_logic_vector(ADDR_BITS-1 downto 0);
-    begin
-        for i in up_ben'range loop
-            if (i <= T_XFER_MAX_SIZE) then
-                up_ben(i) := '1';
-            else
-                up_ben(i) := '0';
-            end if;
-        end loop;
-        return up_ben;
-    end function;
-    ------------------------------------------------------------------------------
-    -- サイズレジスタ関連の信号.
-    ------------------------------------------------------------------------------
-    signal   size_load          : std_logic_vector(SIZE_BITS-1 downto 0);
-    ------------------------------------------------------------------------------
-    -- バッファポインタ関連の信号.
-    ------------------------------------------------------------------------------
-    signal   buf_ptr_load       : std_logic_vector(BUF_DEPTH-1 downto 0);
-    constant buf_ptr_up         : std_logic_vector(BUF_DEPTH-1 downto 0) := (others => '1');
+architecture RTL of PIPE_RESPONDER_INTERFACE is
     -------------------------------------------------------------------------------
-    -- モードレジスタ関連の信号.
+    -- 
     -------------------------------------------------------------------------------
-    signal   mode_load          : std_logic_vector(MODE_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    -- ステータスレジスタ関連の信号.
-    -------------------------------------------------------------------------------
-    constant STAT_BITS          : integer := 1;
-    signal   stat_load          : std_logic_vector(STAT_BITS-1 downto 0);
-    constant stat_all0          : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
-    signal   stat_i             : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
-    signal   stat_o             : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
-    ------------------------------------------------------------------------------
-    -- リセットコントロールレジスタ関連の信号.
-    ------------------------------------------------------------------------------
-    constant reset_load         : std_logic := '0';
-    constant reset_data         : std_logic := '0';
-    signal   reset              : std_logic;
-    ------------------------------------------------------------------------------
-    -- ストップコントロールレジスタ関連の信号.
-    ------------------------------------------------------------------------------
-    signal   stop_load          : std_logic;
-    constant stop_data          : std_logic := '1';
-    signal   stop               : std_logic;
-    signal   push_stop          : boolean;
-    signal   pull_stop          : boolean;
-    ------------------------------------------------------------------------------
-    -- 一時停止コントロールレジスタ関連の信号.
-    ------------------------------------------------------------------------------
-    constant pause_load         : std_logic := '0';
-    constant pause_data         : std_logic := '0';
-    signal   pause              : std_logic;
-    -------------------------------------------------------------------------------
-    -- その他コントロールレジスタ関連の信号.
-    -------------------------------------------------------------------------------
-    signal   xfer_running       : std_logic;
-    signal   valve_open         : std_logic;
+    constant  reset             : std_logic := '0';
+    constant  pause             : std_logic := '0';
+    constant  stop              : std_logic := '0';
+    signal    start             : std_logic;
+    type      STATE_TYPE    is  ( IDLE_STATE, REQ_STATE, ACK_STATE );
+    signal    curr_state        : STATE_TYPE;
+    signal    xfer_dir          : std_logic;
+    signal    xfer_last         : std_logic;
+    signal    ack_error         : std_logic;
+    signal    ack_last          : std_logic;
+    signal    push_mode         : boolean;
+    signal    pull_mode         : boolean;
+    constant  size_all_clr      : std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    constant  size_all_set      : std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
+    signal    size_load         : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    size_up_size      : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    size_up_valid     : std_logic;
+    signal    size_up_select    : boolean;
+    signal    m_valve_open      : std_logic;
+    signal    m_res_open        : std_logic;
 begin
-    ------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
     -- 
-    ------------------------------------------------------------------------------
-    ADDR_REGS: COUNT_UP_REGISTER                     -- 
-        generic map (                                -- 
-            VALID           => ADDR_VALID          , -- 
-            BITS            => ADDR_BITS           , -- 
-            REGS_BITS       => ADDR_BITS             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => CLK                 , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => CLR                 , -- In  :
-            REGS_WEN        => addr_load           , -- In  :
-            REGS_WDATA      => T_REQ_ADDR          , -- In  :
-            REGS_RDATA      => open                , -- Out :
-            UP_ENA          => xfer_running        , -- In  :
-            UP_VAL          => M_ACK_VALID         , -- In  :
-            UP_BEN          => ADDR_UP_BEN         , -- In  :
-            UP_SIZE         => M_ACK_SIZE          , -- In  :
-            COUNTER         => M_REQ_ADDR            -- Out :
-        );
-    addr_load   <= (others => '1') when (T_REQ_START = '1') else (others => '0');
-    ------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------
+    start <= '1' when (curr_state = IDLE_STATE and T_REQ_VALID = '1' and M_REQ_READY = '1') else '0';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    process (CLK, RST)
+        variable next_state : STATE_TYPE;
+    begin
+        if (RST = '1') then
+                curr_state <= IDLE_STATE;
+                xfer_dir   <= '0';
+                xfer_last  <= '1';
+                ack_error  <= '0';
+                ack_last   <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                curr_state <= IDLE_STATE;
+                xfer_dir   <= '0';
+                xfer_last  <= '1';
+                ack_error  <= '0';
+                ack_last   <= '0';
+            else
+                case curr_state is
+                    when IDLE_STATE =>
+                        if (start = '1') then
+                            next_state := REQ_STATE;
+                        else
+                            next_state := IDLE_STATE;
+                        end if;
+                    when REQ_STATE =>
+                        if    (M_RES_DONE = '1') then
+                            next_state := ACK_STATE;
+                        else
+                            next_state := REQ_STATE;
+                        end if;
+                    when ACK_STATE =>
+                            next_state := IDLE_STATE;
+                    when others =>
+                            next_state := IDLE_STATE;
+                end case;
+                curr_state <= next_state;
+                if (start = '1') then
+                    xfer_dir  <= T_REQ_DIR;
+                    xfer_last <= T_REQ_LAST;
+                end if;
+                if (curr_state = REQ_STATE and M_RES_DONE = '1') then
+                    if    (M_RES_ERROR = '1') then
+                        ack_error <= '1';
+                        ack_last  <= '0';
+                    elsif (xfer_last = '1') then
+                        ack_error <= '0';
+                        ack_last  <= '1';
+                    else
+                        ack_error <= '0';
+                        ack_last  <= '0';
+                    end if;
+                end if;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
     -- 
-    ------------------------------------------------------------------------------
-    SIZE_REGS: COUNT_DOWN_REGISTER                   -- 
+    -------------------------------------------------------------------------------
+    push_mode   <= (PUSH_VALID /= 0 and PULL_VALID  = 0) or
+                   (PUSH_VALID /= 0 and PULL_VALID /= 0 and xfer_dir  = '1');
+    pull_mode   <= (PULL_VALID /= 0 and PUSH_VALID  = 0) or
+                   (PULL_VALID /= 0 and PUSH_VALID /= 0 and xfer_dir  = '0');
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    T_REQ_READY <= '1' when (curr_state = IDLE_STATE and M_REQ_READY = '1') else '0';
+    T_ACK_VALID <= '1' when (curr_state = ACK_STATE) else '0';
+    T_ACK_ERROR <= '1' when (curr_state = ACK_STATE  and ack_error   = '1') else '0';
+    T_ACK_NEXT  <= '1' when (curr_state = ACK_STATE  and ack_last    = '0') else '0';
+    T_ACK_LAST  <= '1' when (curr_state = ACK_STATE  and ack_last    = '1') else '0';
+    T_ACK_STOP  <= '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    SIZE_REGS: COUNT_UP_REGISTER                     -- 
         generic map (                                -- 
-            VALID           => SIZE_VALID          , -- 
-            BITS            => SIZE_BITS           , -- 
+            VALID           => 1                   , -- 
+            BITS            => SIZE_BITS           , --
             REGS_BITS       => SIZE_BITS             -- 
         )                                            -- 
         port map (                                   -- 
@@ -537,128 +553,47 @@ begin
             RST             => RST                 , -- In  :
             CLR             => CLR                 , -- In  :
             REGS_WEN        => size_load           , -- In  :
-            REGS_WDATA      => T_REQ_SIZE          , -- In  :
+            REGS_WDATA      => size_all_clr        , -- In  :
             REGS_RDATA      => open                , -- Out :
-            DN_ENA          => xfer_running        , -- In  :
-            DN_VAL          => M_ACK_VALID         , -- In  :
-            DN_SIZE         => M_ACK_SIZE          , -- In  :
-            COUNTER         => M_REQ_SIZE          , -- Out :
-            ZERO            => open                , -- Out :
-            NEG             => open                  -- Out :
+            UP_ENA          => m_valve_open        , -- In  :
+            UP_VAL          => size_up_valid       , -- In  :
+            UP_BEN          => size_all_set        , -- In  :
+            UP_SIZE         => size_up_size        , -- In  :
+            COUNTER         => T_ACK_SIZE            -- Out :
        );
-    size_load <= (others => '1') when (T_REQ_START = '1') else (others => '0');
-    ------------------------------------------------------------------------------
-    -- 
-    ------------------------------------------------------------------------------
-    BUF_PTR: COUNT_UP_REGISTER                       -- 
-        generic map (                                -- 
-            VALID           => 1                   , -- 
-            BITS            => BUF_DEPTH           , --
-            REGS_BITS       => BUF_DEPTH             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => CLK                 , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => CLR                 , -- In  :
-            REGS_WEN        => buf_ptr_load        , -- In  :
-            REGS_WDATA      => T_REQ_BUF_PTR       , -- In  :
-            REGS_RDATA      => open                , -- Out :
-            UP_ENA          => xfer_running        , -- In  :
-            UP_VAL          => M_ACK_VALID         , -- In  :
-            UP_BEN          => buf_ptr_up          , -- In  :
-            UP_SIZE         => M_ACK_SIZE          , -- In  :
-            COUNTER         => M_REQ_BUF_PTR         -- Out :
-       );
-    buf_ptr_load <= (others => '1') when (T_REQ_START = '1') else (others => '0');
-    ------------------------------------------------------------------------------
-    -- 
-    ------------------------------------------------------------------------------
-    CTRL_REGS: PUMP_CONTROL_REGISTER                 -- 
-        generic map (                                -- 
-            MODE_BITS       => MODE_BITS           , -- 
-            STAT_BITS       => STAT_BITS             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => CLK                 , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => CLR                 , -- In  :
-            RESET_L         => reset_load          , -- In  :
-            RESET_D         => reset_data          , -- In  :
-            RESET_Q         => reset               , -- Out :
-            START_L         => T_REQ_START         , -- In  :
-            START_D         => T_REQ_START         , -- In  :
-            START_Q         => open                , -- Out :
-            STOP_L          => stop_load           , -- In  :
-            STOP_D          => stop_data           , -- In  :
-            STOP_Q          => stop                , -- Out :
-            PAUSE_L         => pause_load          , -- In  :
-            PAUSE_D         => pause_data          , -- In  :
-            PAUSE_Q         => pause               , -- Out :
-            FIRST_L         => T_REQ_START         , -- In  :
-            FIRST_D         => T_REQ_FIRST         , -- In  :
-            FIRST_Q         => open                , -- Out :
-            LAST_L          => T_REQ_START         , -- In  :
-            LAST_D          => T_REQ_LAST          , -- In  :
-            LAST_Q          => open                , -- Out :
-            DONE_EN_L       => T_REQ_START         , -- In  :
-            DONE_EN_D       => stat_all0(0)        , -- In  :
-            DONE_EN_Q       => open                , -- Out :
-            DONE_ST_L       => T_REQ_START         , -- In  :
-            DONE_ST_D       => stat_all0(0)        , -- In  :
-            DONE_ST_Q       => open                , -- Out :
-            ERR_ST_L        => T_REQ_START         , -- In  :
-            ERR_ST_D        => stat_all0(0)        , -- In  :
-            ERR_ST_Q        => open                , -- Out :
-            MODE_L          => mode_load           , -- In  :
-            MODE_D          => T_REQ_MODE          , -- In  :
-            MODE_Q          => M_REQ_MODE          , -- Out :
-            STAT_L          => stat_load           , -- In  :
-            STAT_D          => stat_all0           , -- In  :
-            STAT_Q          => stat_o              , -- Out :
-            STAT_I          => stat_i              , -- In  :
-            REQ_VALID       => M_REQ_VALID         , -- Out :
-            REQ_FIRST       => M_REQ_FIRST         , -- Out :
-            REQ_LAST        => M_REQ_LAST          , -- Out :
-            REQ_READY       => M_REQ_READY         , -- In  :
-            ACK_VALID       => M_ACK_VALID         , -- In  :
-            ACK_ERROR       => M_ACK_ERROR         , -- In  :
-            ACK_NEXT        => M_ACK_NEXT          , -- In  :
-            ACK_LAST        => M_ACK_LAST          , -- In  :
-            ACK_STOP        => M_ACK_STOP          , -- In  :
-            ACK_NONE        => M_ACK_NONE          , -- In  :
-            VALVE_OPEN      => valve_open          , -- Out :
-            XFER_DONE       => T_RES_DONE          , -- Out :
-            XFER_ERROR      => T_RES_ERROR         , -- Out :
-            XFER_RUNNING    => xfer_running          -- Out :
-        );
-    push_stop <= (O_VALVE_FIXED /= 0) and
-                 ((                         T_PUSH_FIN_ERR = '1' and T_PUSH_FIN_VALID = '1') or
-                  (O_VALVE_PRECEDE /= 0 and T_PUSH_RSV_ERR = '1' and T_PUSH_RSV_VALID = '1'));
-    pull_stop <= (I_VALVE_FIXED /= 0) and
-                 ((                         T_PULL_FIN_ERR = '1' and T_PULL_FIN_VALID = '1') or
-                  (I_VALVE_PRECEDE /= 0 and T_PULL_RSV_ERR = '1' and T_PULL_RSV_VALID = '1'));
-    stop_load <= '1' when (push_stop or pull_stop) else '0';
-    mode_load <= (others => '1') when (T_REQ_START = '1') else (others => '0');
-    stat_load <= (others => '1') when (T_REQ_START = '1') else (others => '0');
-    stat_i    <= (others => '0');
+    size_load     <= size_all_set     when (start = '1') else size_all_clr;
+    size_up_valid <= M_PULL_FIN_VALID when (push_mode  ) else M_PUSH_FIN_VALID;
+    size_up_size  <= M_PULL_FIN_SIZE  when (push_mode  ) else M_PUSH_FIN_SIZE;
     -------------------------------------------------------------------------------
     --
+    -------------------------------------------------------------------------------
+    M_REQ_START   <= start;
+    M_REQ_VALID   <= '1' when (curr_state = REQ_STATE) else '0';
+    M_REQ_ADDR    <= T_REQ_ADDR;
+    M_REQ_SIZE    <= T_REQ_SIZE;
+    M_REQ_BUF_PTR <= T_REQ_BUF_PTR;
+    M_REQ_MODE    <= T_REQ_MODE;
+    M_REQ_FIRST   <= T_REQ_FIRST;
+    M_REQ_LAST    <= T_REQ_LAST;
+    M_REQ_DIR     <= '1' when (PUSH_VALID /= 0 and PULL_VALID  = 0) else
+                     '0' when (PUSH_VALID  = 0 and PULL_VALID /= 0) else T_REQ_DIR;
+    -------------------------------------------------------------------------------
+    -- 
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                M_REQ_DIR <= '0';
+                m_res_open <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
-                M_REQ_DIR <= '0';
-            elsif (T_REQ_START = '1') then
-                M_REQ_DIR <= T_REQ_DIR;
+                m_res_open <= '0';
+            elsif (M_RES_START = '1' and M_RES_DONE = '0') then
+                m_res_open <= '1';
+            elsif (m_res_open  = '1' and M_RES_DONE = '1') then
+                m_res_open <= '0';
             end if;
         end if;
     end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    T_RES_START   <= T_REQ_START;
+    m_valve_open <= '1' when (M_RES_START = '1' or m_res_open = '1') else '0';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -682,28 +617,28 @@ begin
             RESET           => reset               , -- In  :
             PAUSE           => pause               , -- In  :
             STOP            => stop                , -- In  :
-            INTAKE_OPEN     => valve_open          , -- In  :
-            OUTLET_OPEN     => valve_open          , -- In  :
+            INTAKE_OPEN     => m_valve_open        , -- In  :
+            OUTLET_OPEN     => O_VALVE_OPEN        , -- In  :
             FLOW_READY_LEVEL=> O_FLOW_READY_LEVEL  , -- In  :
             POOL_READY_LEVEL=> O_POOL_READY_LEVEL  , -- In  :
         ---------------------------------------------------------------------------
         -- Push Final Size Signals.
         ---------------------------------------------------------------------------
-            PUSH_FIN_VALID  => T_PUSH_FIN_VALID    , -- In  :
-            PUSH_FIN_LAST   => T_PUSH_FIN_LAST     , -- In  :
-            PUSH_FIN_SIZE   => T_PUSH_FIN_SIZE     , -- In  :
+            PUSH_FIN_VALID  => M_PUSH_FIN_VALID    , -- In  :
+            PUSH_FIN_LAST   => M_PUSH_FIN_LAST     , -- In  :
+            PUSH_FIN_SIZE   => M_PUSH_FIN_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Push Reserve Size Signals.
         ---------------------------------------------------------------------------
-            PUSH_RSV_VALID  => T_PUSH_RSV_VALID    , -- In  :
-            PUSH_RSV_LAST   => T_PUSH_RSV_LAST     , -- In  :
-            PUSH_RSV_SIZE   => T_PUSH_RSV_SIZE     , -- In  :
+            PUSH_RSV_VALID  => M_PUSH_RSV_VALID    , -- In  :
+            PUSH_RSV_LAST   => M_PUSH_RSV_LAST     , -- In  :
+            PUSH_RSV_SIZE   => M_PUSH_RSV_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PULL_VALID      => M_ACK_VALID         , -- In  :
-            PULL_LAST       => M_ACK_LAST          , -- In  :
-            PULL_SIZE       => M_ACK_SIZE          , -- In  :
+            PULL_VALID      => T_PULL_FIN_VALID    , -- In  :
+            PULL_LAST       => T_PULL_FIN_LAST     , -- In  :
+            PULL_SIZE       => T_PULL_FIN_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Flow Control Signals.
         ---------------------------------------------------------------------------
@@ -716,8 +651,6 @@ begin
         -- Flow Counter.
         ---------------------------------------------------------------------------
             FLOW_COUNT      => open                , -- Out :
-            FLOW_ZERO       => open                , -- Out :
-            FLOW_POS        => open                , -- Out :
             FLOW_NEG        => open                , -- Out :
             PAUSED          => open                , -- Out :
             POOL_COUNT      => open                , -- Out :
@@ -746,29 +679,29 @@ begin
             RESET           => reset               , -- In  :
             PAUSE           => pause               , -- In  :
             STOP            => stop                , -- In  :
-            INTAKE_OPEN     => valve_open          , -- In  :
-            OUTLET_OPEN     => valve_open          , -- In  :
+            INTAKE_OPEN     => I_VALVE_OPEN        , -- In  :
+            OUTLET_OPEN     => m_valve_open        , -- In  :
             POOL_SIZE       => I_POOL_SIZE         , -- In  :
             FLOW_READY_LEVEL=> I_FLOW_READY_LEVEL  , -- In  :
             POOL_READY_LEVEL=> I_POOL_READY_LEVEL  , -- In  :
         ---------------------------------------------------------------------------
         -- Push Final Size Signals.
         ---------------------------------------------------------------------------
-            PULL_FIN_VALID  => T_PULL_FIN_VALID    , -- In  :
-            PULL_FIN_LAST   => T_PULL_FIN_LAST     , -- In  :
-            PULL_FIN_SIZE   => T_PULL_FIN_SIZE     , -- In  :
+            PULL_FIN_VALID  => M_PULL_FIN_VALID    , -- In  :
+            PULL_FIN_LAST   => M_PULL_FIN_LAST     , -- In  :
+            PULL_FIN_SIZE   => M_PULL_FIN_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Push Reserve Size Signals.
         ---------------------------------------------------------------------------
-            PULL_RSV_VALID  => T_PULL_RSV_VALID    , -- In  :
-            PULL_RSV_LAST   => T_PULL_RSV_LAST     , -- In  :
-            PULL_RSV_SIZE   => T_PULL_RSV_SIZE     , -- In  :
+            PULL_RSV_VALID  => M_PULL_RSV_VALID    , -- In  :
+            PULL_RSV_LAST   => M_PULL_RSV_LAST     , -- In  :
+            PULL_RSV_SIZE   => M_PULL_RSV_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PUSH_VALID      => M_ACK_VALID         , -- In  :
-            PUSH_LAST       => M_ACK_LAST          , -- In  :
-            PUSH_SIZE       => M_ACK_SIZE          , -- In  :
+            PUSH_VALID      => T_PUSH_FIN_VALID    , -- In  :
+            PUSH_LAST       => T_PUSH_FIN_LAST     , -- In  :
+            PUSH_SIZE       => T_PUSH_FIN_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Flow Control Signals.
         ---------------------------------------------------------------------------
@@ -781,8 +714,6 @@ begin
         -- Flow Counter.
         ---------------------------------------------------------------------------
             FLOW_COUNT      => open                , -- Out :
-            FLOW_ZERO       => open                , -- Out :
-            FLOW_POS        => open                , -- Out :
             FLOW_NEG        => open                , -- Out :
             PAUSED          => open                , -- Out :
             POOL_COUNT      => open                , -- Out :

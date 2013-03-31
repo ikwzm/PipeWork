@@ -26,6 +26,7 @@ COMPONENTS = components                             \
              pipe_components                        \
              pipe_flow_syncronizer                  \
              pipe_requester_interface               \
+             pipe_responder_interface               \
              pipe_core_unit                         \
              pump_components                        \
              pump_control_register                  \
@@ -113,6 +114,9 @@ pipe_flow_syncronizer.o                  : $(SRC_PATH)/pipe/pipe_flow_syncronize
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pipe_requester_interface.o               : $(SRC_PATH)/pipe/pipe_requester_interface.vhd          components.o pump_components.o
+	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
+
+pipe_responder_interface.o               : $(SRC_PATH)/pipe/pipe_responder_interface.vhd          components.o pump_components.o
 	 $(GHDL) -a $(GHDLFLAGS) --work=$(WORK) $<
 
 pipe_core_unit.o                         : $(SRC_PATH)/pipe/pipe_core_unit.vhd pump_components.o
