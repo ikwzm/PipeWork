@@ -202,6 +202,7 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH-1 downto 0);
     signal   wbuf_enable        : std_logic;
+    signal   wbuf_intake        : std_logic;
     signal   wbuf_busy          : std_logic;
     signal   wbuf_valid         : std_logic;
     signal   wbuf_ready         : std_logic;
@@ -343,10 +344,25 @@ begin
     REGS_REQ    <= '1' when (curr_state = XFER_DATA and regs_valid = '1') else '0';
     regs_ready  <= '1' when (curr_state = XFER_DATA and REGS_ACK   = '1') or
                             (curr_state = SKIP_ERR                      ) else '0';
-    wbuf_enable <= '1' when (curr_state = IDLE and AWVALID = '1') or
-                            (curr_state = XFER_DATA) or
-                            (curr_state = SKIP_ERR ) else '0';
-    wbuf_start  <= '1' when (wbuf_enable = '0' and AWVALID = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                wbuf_intake <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if    (CLR = '1') then
+                wbuf_intake <= '0';
+            elsif (wbuf_start = '1') then
+                wbuf_intake <= '1';
+            elsif (curr_state = IDLE) or
+                  (WVALID = '1' and WLAST = '1' and wbuf_ready = '1') then
+                wbuf_intake <= '0';
+            end if;
+        end if;
+    end process;
+    wbuf_start  <= '1' when (curr_state = IDLE and AWVALID = '1' ) else '0';
+    wbuf_enable <= '1' when (wbuf_start = '1' or wbuf_intake ='1') else '0';
     -------------------------------------------------------------------------------
     -- wbuf_offset : 
     -------------------------------------------------------------------------------
@@ -408,7 +424,7 @@ begin
             I_DONE          => WLAST          , -- In  :
             I_FLUSH         => wbuf_flush     , -- In  :
             I_VAL           => WVALID         , -- In  :
-            I_RDY           => WREADY         , -- Out :
+            I_RDY           => wbuf_ready     , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
@@ -420,4 +436,5 @@ begin
             O_VAL           => regs_valid     , -- Out :
             O_RDY           => regs_ready       -- In  :
     );
+    WREADY <= wbuf_ready;
 end RTL;
