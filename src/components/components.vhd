@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.0                                                           --
---!     @date    2013/04/01                                                      --
+--!     @date    2013/04/02                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ component CHOPPER
                       --!   定され、CHOP信号が一回アサートされた時点でカウンタは停止
                       --!   する. つまり、最初のピースのサイズしか生成されない.
                       --! * 当然 BURST=0 の方が回路規模は小さくなる.
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         MIN_PIECE   : --! @brief MINIMUM PIECE SIZE :
                       --! １ピースの大きさの最小値を2のべき乗値で指定する.
                       --! * 例えば、大きさの単位がバイトの場合次のようになる.
@@ -114,7 +114,7 @@ component CHOPPER
                       --!   論理合成ツールによっては、コンパイルに膨大な時間を
                       --!   要することがある.
                       --!   その場合はこの変数を０にすることで解決出来る場合がある.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -248,7 +248,7 @@ component REDUCER
                       --! 示すフラグ.
                       --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
                       --!   ため回路が簡単になる.
-                      integer := 0;
+                      integer range 0 to 1 := 0;
         FLUSH_ENABLE: --! @brief FLUSH ENABLE :
                       --! FLUSH/I_FLUSHによるフラッシュ処理を有効にするかどうかを
                       --! 指定する.
@@ -260,7 +260,7 @@ component REDUCER
                       --!   から格納される.
                       --! * フラッシュ処理を行わない場合は、0を指定すると回路が若干
                       --!   簡単になる.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -608,7 +608,7 @@ component QUEUE_REGISTER
                       --! レジスタが不必要にトグルすることを防いで消費電力を
                       --! 下げるようにする.
                       --! ただし、回路が若干増える.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -720,7 +720,7 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい。
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
@@ -728,29 +728,30 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい.
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         I_CLK_FALL  : --! @brief USE INPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のクロック(I_CLK)の立ち下がりを使うかどう
                       --! かを指定する.
+                      --! * この変数は後方互換性のために存在する. 現在は未使用.
                       --! * I_CLK_FALL = 0 の場合は使わない.
-                      --! * I_CLK_FALL > 0 の場合は使う.
-                      integer :=  0;
+                      --! * I_CLK_FALL = 1 の場合は使う.
+                      integer range 0 to 1 :=  0;
         O_CLK_FALL  : --! @brief USE OUTPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、出力側のクロック(OCLK)の立ち下がりを使うかどう
                       --! かを指定する.
                       --! * O_CLK_FALL = 0 の場合は使わない.
-                      --! * O_CLK_FALL > 0 の場合は使う.
-                      integer :=  0;
+                      --! * O_CLK_FALL = 1 の場合は使う.
+                      integer range 0 to 1 :=  0;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_VAL/O_DATA)をレジスタ出力するかどうか
                       --! を指定する.
                       --! * この変数は I_CLK_RATE > 0 の場合のみ有効. 
                       --!   I_CLK_RATE = 0 の場合は、常にレジスタ出力になる.
                       --! * O_CLK_REGS = 0 の場合はレジスタ出力しない.
-                      --! * O_CLK_REGS > 0 の場合はレジスタ出力する.
-                      integer :=  0
+                      --! * O_CLK_REGS = 1 の場合はレジスタ出力する.
+                      integer range 0 to 1 :=  0
     );
     port (
     -------------------------------------------------------------------------------
@@ -969,9 +970,9 @@ component COUNT_DOWN_REGISTER
     generic (
         VALID       : --! @brief COUNTER VALID :
                       --! このカウンターを有効にするかどうかを指定する.
-                      --! * VALID =0 : このカウンターは常に無効.
-                      --! * VALID/=0 : このカウンターは常に有効.
-                      integer := 1;
+                      --! * VALID=0 : このカウンターは常に無効.
+                      --! * VALID=1 : このカウンターは常に有効.
+                      integer range 0 to 1 := 1;
         BITS        : --! @brief  COUNTER BITS :
                       --! カウンターのビット数を指定する.
                       --! * BIT=0の場合、このカウンターは常に無効になる.
@@ -1051,9 +1052,9 @@ component COUNT_UP_REGISTER
     generic (
         VALID       : --! @brief COUNTER VALID :
                       --! このカウンターを有効にするかどうかを指定する.
-                      --! * VALID =0 : このカウンターは常に無効.
-                      --! * VALID/=0 : このカウンターは常に有効.
-                      integer := 1;
+                      --! * VALID=0 : このカウンターは常に無効.
+                      --! * VALID=1 : このカウンターは常に有効.
+                      integer range 0 to 1 := 1;
         BITS        : --! @brief  COUNTER BITS :
                       --! カウンターのビット数を指定する.
                       --! * BIT=0の場合、このカウンターは常に無効になる.
@@ -1354,20 +1355,28 @@ component FLOAT_INTAKE_VALVE
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW INTAKE READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_PAUSE='0' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
-                          --! * FLOW_PAUSE=1 : 中止.
+                          --! * FLOW_STOP='1' : 中止を指示.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW INTAKE LAST :
-                          --! INTAKE側では未使用.
+                          --! INTAKE側では未使用. 常に'0'が出力.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
                           --! 入力可能なバイト数
@@ -1379,13 +1388,13 @@ component FLOAT_INTAKE_VALVE
                           --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          --! フローカウンタの値が0になったことを示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負(<0)になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
@@ -1458,7 +1467,7 @@ component FLOAT_INTAKE_MANIFOLD_VALVE
                           --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
-                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるフロー
+                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるプール
                           --! カウンタの減算結果が、この値以下の時にPOOL_READY 信号
                           --! をアサートする.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
@@ -1512,47 +1521,74 @@ component FLOAT_INTAKE_MANIFOLD_VALVE
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW INTAKE READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
                           --! * FLOW_PAUSE=1 : 中止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW INTAKE LAST :
-                          --! 入力側から最後の入力を示すフラグがあったことを示す.
+                          --! INTAKE側では未使用. 常に'0'を出力.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
                           --! 入力可能なバイト数
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          --! フローカウンタの値が0になったことを示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
                           out std_logic;
         POOL_COUNT      : --! @brief POOL COUNT :
+                          --! 現在のプールカウンタの値を出力.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合はFLOW_COUNTと
+                          --!   同じ値を出力する.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         POOL_READY      : --! @brief POOL READY :
-                          --! 現在のプールカウンタがREADY_ON_SIZE以上であることを示
-                          --! すフラグ.
+                          --! プールカウンタの値が POOL_READY_LEVEL 以下であること
+                          --! を示すフラグ.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は常に'1'を出
+                          --!   力する.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
     );
 end component;
@@ -1633,17 +1669,25 @@ component FLOAT_OUTLET_VALVE
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW OUTLET READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
-                          --! * FLOW_PAUSE=1 : 中止.
+                          --! * FLOW_STOP='1' : 中止を指示.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW OUTLET LAST :
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
@@ -1658,13 +1702,13 @@ component FLOAT_OUTLET_VALVE
                           --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          --! フローカウンタの値が0になったことを示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
@@ -1788,47 +1832,74 @@ component FLOAT_OUTLET_MANIFOLD_VALVE
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW OUTLET READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
                           --! * FLOW_PAUSE=1 : 中止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW OUTLET LAST :
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW OUTLET ENABLE SIZE :
                           --! 出力可能なバイト数
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          --! フローカウンタの値が0になったことを示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
                           out std_logic;
         POOL_COUNT      : --! @brief POOL COUNT :
+                          --! 現在のプールカウンタの値を出力.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合はFLOW_COUNTと
+                          --!   同じ値を出力する.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         POOL_READY      : --! @brief POOL READY :
-                          --! 現在のプールカウンタがREADY_ON_SIZE以上であることを示
-                          --! すフラグ.
+                          --! プールカウンタの値が POOL_READY_LEVEL 以上であること
+                          --! を示すフラグ.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は常に'1'を出
+                          --!   力する.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
     );
 end component;

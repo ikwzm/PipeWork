@@ -52,7 +52,7 @@ entity  COUNT_UP_REGISTER is
                       --! このカウンターを有効にするかどうかを指定する.
                       --! * VALID=0 : このカウンターは常に無効.
                       --! * VALID=1 : このカウンターは常に有効.
-                      integer := range 0 to 1;
+                      integer range 0 to 1 := 1;
         BITS        : --! @brief  COUNTER BITS :
                       --! カウンターのビット数を指定する.
                       --! * BIT=0の場合、このカウンターは常に無効になる.
