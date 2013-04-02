@@ -658,7 +658,7 @@ begin
     D: REDUCER
         generic map (
             WORD_BITS   => WORD_BITS       ,
-            ENBL_BITS   => 1               ,
+            STRB_BITS   => 1               ,
             I_WIDTH     =>  RX_DATA_BITS/WORD_BITS,
             O_WIDTH     => TLP_DATA_BITS/WORD_BITS,
             QUEUE_SIZE  => 0               ,
@@ -671,21 +671,22 @@ begin
             CLK         => CLK             , -- In  :
             RST         => RST             , -- In  :
             CLR         => CLR             , -- In  :
-            ENABLE      => rx_data_enable  , -- In  :
             START       => rx_data_start   , -- In  :
             OFFSET      => rx_data_offset  , -- In  :
             DONE        => rx_data_done    , -- In  :
             FLUSH       => rx_data_flush   , -- In  :
             BUSY        => data_busy       , -- Out :
             VALID       => open            , -- Out :
+            I_ENABLE    => rx_data_enable  , -- In  :
             I_DATA      => rx_data_word    , -- In  :
-            I_ENBL      => rx_data_wen     , -- In  :
+            I_STRB      => rx_data_wen     , -- In  :
             I_DONE      => RX_EOP          , -- In  :
             I_FLUSH     => rx_data_flush   , -- In  :
             I_VAL       => rx_data_valid   , -- In  :
             I_RDY       => rx_data_ready   , -- Out :
+            O_ENABLE    => rx_data_enable  , -- In  :
             O_DATA      => TLP_DATA        , -- Out :
-            O_ENBL      => open            , -- Out :
+            O_STRB      => open            , -- Out :
             O_DONE      => tlp_data_last   , -- Out :
             O_FLUSH     => open            , -- Out :
             O_VAL       => tlp_data_valid  , -- Out :
