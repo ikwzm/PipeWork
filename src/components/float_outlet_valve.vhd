@@ -113,17 +113,25 @@ entity  FLOAT_OUTLET_VALVE is
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW OUTLET READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
-                          --! * FLOW_PAUSE=1 : 中止.
+                          --! * FLOW_STOP='1' : 中止を指示.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW OUTLET LAST :
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
@@ -138,13 +146,13 @@ entity  FLOAT_OUTLET_VALVE is
                           --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事を示すフラグ.
+                          --! フローカウンタの値が0になったことを示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事を示すフラグ.
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事を示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
