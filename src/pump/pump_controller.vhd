@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.5.0
---!     @date    2013/3/31
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -48,9 +48,9 @@ entity  PUMP_CONTROLLER is
                           integer :=  1;
         I_REQ_ADDR_VALID: --! @brief INTAKE REQUEST ADDRESS VALID :
                           --! I_REQ_ADDR信号を有効にするか否かを指示する.
-                          --! * I_ADDR_VAL=0で無効.
-                          --! * I_ADDR_VAL>0で有効.
-                          integer :=  1;
+                          --! * I_REQ_ADDR_VAL=0で無効.
+                          --! * I_REQ_ADDR_VAL=1で有効.
+                          integer range 0 to 1 :=  1;
         I_REQ_ADDR_BITS : --! @brief INTAKE REQUEST ADDRESS BITS :
                           --! I_REQ_ADDR信号のビット数を指定する.
                           --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
@@ -63,9 +63,9 @@ entity  PUMP_CONTROLLER is
                           integer := 32;
         I_REQ_SIZE_VALID: --! @brief INTAKE REQUEST SIZE VALID :
                           --! I_REQ_SIZE信号を有効にするか否かを指示する.
-                          --! * I_SIZE_VAL=0で無効.
-                          --! * I_SIZE_VAL>0で有効.
-                          integer :=  1;
+                          --! * I_REQ_SIZE_VAL=0で無効.
+                          --! * I_REQ_SIZE_VAL=1で有効.
+                          integer range 0 to 1 :=  1;
         I_REQ_SIZE_BITS : --! @brief INTAKE REQUEST SIZE BITS :
                           --! I_REQ_SIZE信号のビット数を指定する.
                           --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
@@ -89,9 +89,9 @@ entity  PUMP_CONTROLLER is
                           integer :=  1;
         O_REQ_ADDR_VALID: --! @brief OUTLET REQUEST ADDRESS VALID :
                           --! O_REQ_ADDR信号を有効にするか否かを指示する.
-                          --! * O_ADDR_VAL=0で無効.
-                          --! * O_ADDR_VAL>0で有効.
-                          integer :=  1;
+                          --! * O_REQ_ADDR_VAL=0で無効.
+                          --! * O_REQ_ADDR_VAL=1で有効.
+                          integer range 0 to 1 :=  1;
         O_REQ_ADDR_BITS : --! @brief OUTLET REQUEST ADDRESS BITS :
                           --! O_REQ_ADDR信号のビット数を指定する.
                           --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
@@ -104,9 +104,9 @@ entity  PUMP_CONTROLLER is
                           integer := 32;
         O_REQ_SIZE_VALID: --! @brief OUTLET REQUEST SIZE VALID :
                           --! O_REQ_SIZE信号を有効にするか否かを指示する.
-                          --! * O_SIZE_VAL=0で無効.
-                          --! * O_SIZE_VAL>0で有効.
-                          integer :=  1;
+                          --! * O_REQ_SIZE_VAL=0で無効.
+                          --! * O_REQ_SIZE_VAL=1で有効.
+                          integer range 0 to 1 :=  1;
         O_REQ_SIZE_BITS : --! @brief OUTLET REQUEST SIZE BITS :
                           --! O_REQ_SIZE信号のビット数を指定する.
                           --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
