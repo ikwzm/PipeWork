@@ -2,7 +2,7 @@
 --!     @file    float_intake_valve.vhd
 --!     @brief   FLOAT INTAKE VALVE
 --!     @version 1.5.0
---!     @date    2013/3/31
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -141,13 +141,13 @@ entity  FLOAT_INTAKE_VALVE is
                           --! 現在のフローカウンタの値を出力.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          --! 現在のフローカウンタの値が0になった事を示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          --! 現在のフローカウンタの値が正(>0)になった事を示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負(<0)になった事示すフラグ.
+                          --! 現在のフローカウンタの値が負(<0)になった事を示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
