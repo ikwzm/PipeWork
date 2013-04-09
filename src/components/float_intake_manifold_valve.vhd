@@ -2,7 +2,7 @@
 --!     @file    float_intake_manifold_valve.vhd
 --!     @brief   FLOAT INTAKE MANIFOLD VALVE
 --!     @version 1.5.0
---!     @date    2013/3/31
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -102,7 +102,7 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
                           --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
-                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるフロー
+                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるプール
                           --! カウンタの減算結果が、この値以下の時にPOOL_READY 信号
                           --! をアサートする.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
@@ -156,47 +156,74 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW INTAKE READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
                           --! * FLOW_PAUSE=1 : 中止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW INTAKE LAST :
-                          --! 入力側から最後の入力を示すフラグがあったことを示す.
+                          --! INTAKE側では未使用. 常に'0'を出力.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
                           --! 入力可能なバイト数
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
-                          --! 現在のフローカウンタの値が0になった事示すフラグ.
+                          --! フローカウンタの値が0になったことを示すフラグ.
                           out std_logic;
         FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
-                          --! 現在のフローカウンタの値が正(>0)になった事示すフラグ.
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
                           out std_logic;
         POOL_COUNT      : --! @brief POOL COUNT :
+                          --! 現在のプールカウンタの値を出力.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合はFLOW_COUNTと
+                          --!   同じ値を出力する.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
         POOL_READY      : --! @brief POOL READY :
-                          --! 現在のプールカウンタがREADY_ON_SIZE以上であることを示
-                          --! すフラグ.
+                          --! プールカウンタの値が POOL_READY_LEVEL 以下であること
+                          --! を示すフラグ.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は常に'1'を出
+                          --!   力する.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
     );
 end FLOAT_INTAKE_MANIFOLD_VALVE;
@@ -223,8 +250,8 @@ begin
         FLOW_POS   <= '1';
         FLOW_NEG   <= '0';
         FLOW_SIZE  <= (others => '1');
-        FLOW_COUNT <= (others => '0');
-        POOL_COUNT <= (others => '0');
+        FLOW_COUNT <= (others => '1');
+        POOL_COUNT <= (others => '1');
         POOL_READY <= '1';
     end generate;
     -------------------------------------------------------------------------------

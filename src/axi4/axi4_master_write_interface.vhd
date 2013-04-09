@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.3.1
---!     @date    2013/3/2
+--!     @version 1.5.0
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -68,14 +68,14 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
                           --! * REQ_SIZE_VALID=0で無効.
-                          --! * REQ_SIZE_VALID>0で有効.
-                          integer :=  1;
+                          --! * REQ_SIZE_VALID=1で有効.
+                          integer range 0 to 1 :=  1;
         FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
                           --! * FLOW_VALID=0で無効.
-                          --! * FLOW_VALID>0で有効.
-                          integer := 1;
+                          --! * FLOW_VALID=1で有効.
+                          integer range 0 to 1 := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
                           integer := 32;
@@ -821,10 +821,12 @@ begin
     -------------------------------------------------------------------------------
     SBUF: block
         constant WORD_BITS      : integer := 8;
-        constant ENBL_BITS      : integer := 1;
+        constant STRB_BITS      : integer := 1;
         constant I_WIDTH        : integer :=  BUF_DATA_WIDTH/WORD_BITS;
         constant O_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
         constant QUEUE_SIZE     : integer := O_WIDTH+I_WIDTH+I_WIDTH-1;
+        constant i_enable       : std_logic := '1';
+        constant o_enable       : std_logic := '1';
         constant done           : std_logic := '0';
         constant flush          : std_logic := '0';
         signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
@@ -856,7 +858,7 @@ begin
         B: REDUCER
             generic map (
                 WORD_BITS       => WORD_BITS      ,
-                ENBL_BITS       => ENBL_BITS      ,
+                STRB_BITS       => STRB_BITS      ,
                 I_WIDTH         => I_WIDTH        ,
                 O_WIDTH         => O_WIDTH        ,
                 QUEUE_SIZE      => QUEUE_SIZE     ,
@@ -884,8 +886,9 @@ begin
             -----------------------------------------------------------------------
             -- 入力側 I/F
             -----------------------------------------------------------------------
+                I_ENABLE        => i_enable       , -- In  :
                 I_DATA          => BUF_DATA       , -- In  :
-                I_ENBL          => buf_push_ben   , -- In  :
+                I_STRB          => buf_push_ben   , -- In  :
                 I_DONE          => buf_push_last  , -- In  :
                 I_FLUSH         => flush          , -- In  :
                 I_VAL           => buf_push_valid , -- In  :
@@ -893,8 +896,9 @@ begin
             -----------------------------------------------------------------------
             -- 出力側 I/F
             -----------------------------------------------------------------------
+                O_ENABLE        => o_enable       , -- In  :
                 O_DATA          => WDATA          , -- Out :
-                O_ENBL          => WSTRB          , -- Out :
+                O_STRB          => WSTRB          , -- Out :
                 O_DONE          => data_last      , -- Out :
                 O_FLUSH         => open           , -- Out :
                 O_VAL           => data_valid     , -- Out :
