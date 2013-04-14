@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/4/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -327,6 +327,7 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable next_state : STATE_TYPE;
+        variable busy       : boolean;
     begin
         if (RST = '1') then
                 curr_state <= IDLE_STATE;
@@ -368,12 +369,12 @@ begin
                         end if;
                     when RESP_STATE =>
                         if (BREADY = '1') then
-                            next_state := IDLE;
+                            next_state := IDLE_STATE;
                         else
-                            next_state := RESP_OK;
+                            next_state := RESP_STATE;
                         end if;
                     when others =>
-                            next_state := IDLE;
+                            next_state := IDLE_STATE;
                 end case;
                 curr_state <= next_state;
                 -------------------------------------------------------------------
@@ -405,7 +406,7 @@ begin
                 -------------------------------------------------------------------
                 -- BID    : 
                 -------------------------------------------------------------------
-                if (curr_state = IDLE and AWVALID = '1') then
+                if (curr_state = IDLE_STATE and AWVALID = '1') then
                     BID     <= AWID;
                 end if;
             end if;
@@ -414,14 +415,15 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    xfer_start <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
-    VALVE_OPEN <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
-    XFER_BUSY  <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
-    AWREADY    <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1') else '0';
-    BRESP      <= AXI4_RESP_SLVERR when (xfer_error = '1') else AXI4_RESP_OKAY;
+    xfer_start  <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
+    VALVE_OPEN  <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
+    XFER_BUSY   <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
+    AWREADY     <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1') else '0';
+    BRESP       <= AXI4_RESP_SLVERR when (xfer_error = '1') else AXI4_RESP_OKAY;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    REQ_VAL     <= '1' when (curr_state = IDLE_STATE and AWVALID = '1') else '0';
     REQ_ADDR    <= AWADDR;
     REQ_BURST   <= AWBURST;
     REQ_ID      <= AWID;
@@ -432,7 +434,7 @@ begin
     --
     -------------------------------------------------------------------------------
     INTAKE_PORT: POOL_INTAKE_PORT                -- 
-        generic (                                -- 
+        generic map (                            -- 
             UNIT_BITS       => 8               , -- 
             WORD_BITS       => 8               , -- 
             PORT_DATA_BITS  => AXI4_DATA_WIDTH , -- 

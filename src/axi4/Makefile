@@ -1,6 +1,7 @@
 ENTITY_FILES = axi4_master_address_channel_controller.vhd \
                axi4_master_read_interface.vhd             \
                axi4_master_write_interface.vhd            \
+               axi4_slave_write_interface.vhd             \
                axi4_register_write_interface.vhd          \
                axi4_register_read_interface.vhd           \
                axi4_register_interface.vhd                \
