@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
 --!     @version 1.5.0
---!     @date    2013/4/15
+--!     @date    2013/4/16
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -307,7 +307,7 @@ architecture RTL of AXI4_SLAVE_WRITE_INTERFACE is
     -- 各種定数
     -------------------------------------------------------------------------------
     constant sig0               : std_logic := '0';
-    constant sig1               : std_logic := '0';
+    constant sig1               : std_logic := '1';
     -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
