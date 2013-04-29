@@ -3,7 +3,7 @@
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/4/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -70,10 +70,10 @@ entity  REDUCER is
                       integer := 4;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
-                      --! * 少なくともキューの大きさは、I_WIDTH+O_WIDTH-1以上で
-                      --!   なければならない.
-                      --! * ただしQUEUE_SIZE=0を指定した場合は、キューの深さは
-                      --!   自動的にI_WIDTH+O_WIDTH に設定される.
+                      --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
+                      --!   O_WIDTH+I_WIDTH+I_WIDTH-1 に設定される.
+                      --! * QUEUE_SIZE<O_WIDTH+I_WIDTH-1の場合は、キューの深さは
+                      --!   自動的にO_WIDTH+I_WIDTH-1に設定される.
                       integer := 0;
         VALID_MIN   : --! @brief BUFFER VALID MINIMUM NUMBER :
                       --! VALID信号の配列の最小値を指定する.
@@ -300,10 +300,10 @@ architecture RTL of REDUCER is
             else
                 assert (QUEUE_SIZE >= I_WIDTH+O_WIDTH-1)
                     report "require QUEUE_SIZE >= I_WIDTH+O_WIDTH-1" severity WARNING;
-                return I_WIDTH+O_WIDTH;
+                return O_WIDTH+I_WIDTH-1;
             end if;
         else
-                return I_WIDTH+O_WIDTH;
+                return O_WIDTH+I_WIDTH+I_WIDTH-1;
         end if;
     end function;
     -------------------------------------------------------------------------------

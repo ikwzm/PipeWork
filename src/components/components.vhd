@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.0                                                           --
---!     @date    2013/04/02                                                      --
+--!     @date    2013/04/29                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -232,10 +232,10 @@ component REDUCER
                       integer := 4;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
-                      --! * 少なくともキューの大きさは、I_WIDTH+O_WIDTH-1以上で
-                      --!   なければならない.
-                      --! * ただしQUEUE_SIZE=0を指定した場合は、キューの深さは
-                      --!   自動的にI_WIDTH+O_WIDTH に設定される.
+                      --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
+                      --!   O_WIDTH+I_WIDTH+I_WIDTH-1 に設定される.
+                      --! * QUEUE_SIZE<O_WIDTH+I_WIDTH-1の場合は、キューの深さは
+                      --!   自動的にO_WIDTH+I_WIDTH-1に設定される.
                       integer := 0;
         VALID_MIN   : --! @brief BUFFER VALID MINIMUM NUMBER :
                       --! VALID信号の配列の最小値を指定する.
