@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/4/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -889,9 +889,7 @@ begin
             SEL_BITS        => VAL_BITS            , -- 
             SIZE_BITS       => SIZE_BITS           , --
             PTR_BITS        => BUF_PTR_BITS        , -- 
-            QUEUE_SIZE      => 2*(AXI4_DATA_WIDTH/8) --
-                                + (BUF_DATA_WIDTH/8) --
-                                - 1                  -- 
+            QUEUE_SIZE      => 0                     -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------

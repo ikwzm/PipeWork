@@ -1155,9 +1155,7 @@ component POOL_INTAKE_PORT
                           integer := 16;
         QUEUE_SIZE      : --! @brief QUEUE SIZE :
                           --! キューの大きさをワード数で指定する.
-                          --! * 少なくともキューの大きさは、(PORT_DATA_BITS/WORD_BITS)+
-                          --!   (POOL_DATA_BITS/WORD_BITS)-1以上でなければならない.
-                          --! * QUEUE_SIZE=0を指定した場合はキューの深さは自動的に
+                          --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0

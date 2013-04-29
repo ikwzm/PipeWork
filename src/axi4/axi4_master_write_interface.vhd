@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/4/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -824,7 +824,6 @@ begin
         constant STRB_BITS      : integer := 1;
         constant I_WIDTH        : integer :=  BUF_DATA_WIDTH/WORD_BITS;
         constant O_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
-        constant QUEUE_SIZE     : integer := O_WIDTH+I_WIDTH+I_WIDTH-1;
         constant i_enable       : std_logic := '1';
         constant o_enable       : std_logic := '1';
         constant done           : std_logic := '0';
@@ -861,7 +860,7 @@ begin
                 STRB_BITS       => STRB_BITS      ,
                 I_WIDTH         => I_WIDTH        ,
                 O_WIDTH         => O_WIDTH        ,
-                QUEUE_SIZE      => QUEUE_SIZE     ,
+                QUEUE_SIZE      => 0              ,
                 VALID_MIN       => 0              ,
                 VALID_MAX       => 0              ,
                 I_JUSTIFIED     => 0              ,
