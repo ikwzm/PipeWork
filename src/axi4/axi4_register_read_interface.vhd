@@ -159,8 +159,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.AXI4_TYPES.all;
-use     PIPEWORK.COMPONENTS.REDUCER;
-use     PIPEWORK.COMPONENTS.CHOPPER;
+use     PIPEWORK.AXI4_COMPONENTS.AXI4_DATA_OUTLET_PORT;
 architecture RTL of AXI4_REGISTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- データバスのバイト数の２のべき乗値を計算する関数.
@@ -187,6 +186,17 @@ architecture RTL of AXI4_REGISTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     constant XFER_MAX_SIZE      : integer := AXI4_ALEN_WIDTH + AXI4_DATA_SIZE;
     -------------------------------------------------------------------------------
+    -- アライメントのビット数
+    -------------------------------------------------------------------------------
+    function CALC_ALIGNMENT_BITS return integer is begin
+        if (AXI4_DATA_WIDTH <= REGS_DATA_WIDTH) then
+            return AXI4_DATA_WIDTH;
+        else
+            return REGS_DATA_WIDTH;
+        end if;
+    end function;
+    constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
+    -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
@@ -203,13 +213,16 @@ architecture RTL of AXI4_REGISTER_READ_INTERFACE is
     signal   xfer_beat_valid    : std_logic;
     signal   xfer_beat_ready    : std_logic;
     signal   xfer_beat_last     : std_logic;
+    signal   xfer_beat_error    : std_logic;
     signal   xfer_beat_done     : std_logic;
     signal   xfer_beat_none     : std_logic;
     signal   xfer_beat_ben      : std_logic_vector(REGS_DATA_WIDTH/8-1 downto 0);
     signal   xfer_beat_size     : std_logic_vector(REGS_DATA_SIZE downto 0);
-    constant xfer_beat_sel      : std_logic_vector(REGS_DATA_SIZE downto REGS_DATA_SIZE) := "1";
     signal   rbuf_busy          : std_logic;
+    signal   outlet_error       : std_logic;
     signal   size_error         : boolean;
+    constant TRAN_SEL           : std_logic_vector(0 downto 0) := "1";
+    constant TRAN_LAST          : std_logic := '1';
     type     STATE_TYPE        is (IDLE, PREPARE, XFER_DATA, TURN_AR);
     signal   curr_state         : STATE_TYPE;
 begin
@@ -367,322 +380,85 @@ begin
     REGS_BEN        <= xfer_beat_ben;
     REGS_REQ        <= '1' when (curr_state = XFER_DATA and xfer_beat_ready = '1') else '0';
     xfer_beat_valid <= '1' when (curr_state = XFER_DATA and REGS_ACK        = '1') else '0';
-    xfer_beat_chop  <= '1' when (xfer_beat_valid = '1'  and xfer_beat_ready = '1') else '0';
-    xfer_beat_done  <= '1' when (xfer_beat_last  = '1'  or  REGS_ERR        = '1') else '0';
+    xfer_beat_done  <= '1' when (xfer_beat_last = '1' or xfer_beat_error = '1') else '0';
     -------------------------------------------------------------------------------
-    -- xfer_beat_ben  : バイトイネーブル信号.
-    -- xfer_beat_size : １ワード毎のリードバイト数.
-    -- xfer_beat_last : 最後のワードであることを示すフラグ.
+    --
     -------------------------------------------------------------------------------
-    BEN: CHOPPER
-        generic map (
-            BURST           => 1                     ,
-            MIN_PIECE       => REGS_DATA_SIZE        ,
-            MAX_PIECE       => REGS_DATA_SIZE        ,
-            MAX_SIZE        => XFER_MAX_SIZE         ,
-            ADDR_BITS       => xfer_req_addr'length  ,
-            SIZE_BITS       => xfer_req_size'length  ,
-            COUNT_BITS      => 1                     ,
-            PSIZE_BITS      => xfer_beat_size'length ,
-            GEN_VALID       => 1
-        )
-        port map (
+    OUTLET_PORT: AXI4_DATA_OUTLET_PORT           -- 
+        generic map (                            -- 
+            PORT_DATA_BITS  => AXI4_DATA_WIDTH , -- 
+            POOL_DATA_BITS  => REGS_DATA_WIDTH , -- 
+            TRAN_ADDR_BITS  => REGS_ADDR_WIDTH , -- 
+            TRAN_SIZE_BITS  => XFER_MAX_SIZE+1 , --
+            TRAN_SEL_BITS   => TRAN_SEL'length , -- 
+            BURST_LEN_BITS  => AXI4_ALEN_WIDTH , -- 
+            ALIGNMENT_BITS  => ALIGNMENT_BITS  , --
+            PULL_SIZE_BITS  => REGS_DATA_SIZE+1, --
+            EXIT_SIZE_BITS  => REGS_DATA_SIZE+1, --
+            POOL_PTR_BITS   => REGS_ADDR_WIDTH , --
+            USE_BURST_SIZE  => 1               , --
+            PORT_REGS_SIZE  => 0                 --
+        )                                        -- 
+        port map (                               -- 
         ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
+        -- クロック&リセット信号
         ---------------------------------------------------------------------------
-            CLK             => CLK                   , -- In  :
-            RST             => RST                   , -- In  :
-            CLR             => CLR                   , -- In  :
+            CLK             => CLK             , -- In  :
+            RST             => RST             , -- In  :
+            CLR             => CLR             , -- In  :
         ---------------------------------------------------------------------------
-        -- 各種初期値
+        -- Control Signals.
         ---------------------------------------------------------------------------
-            ADDR            => xfer_req_addr         , -- In  :
-            SIZE            => xfer_req_size         , -- In  :
-            SEL             => xfer_beat_sel         , -- In  :
-            LOAD            => xfer_prepare          , -- In  :
+            TRAN_START      => xfer_start      , -- In  :
+            TRAN_ADDR       => xfer_req_addr   , -- In  :
+            TRAN_SIZE       => xfer_req_size   , -- In  :
+            BURST_LEN       => burst_length    , -- In  :
+            BURST_SIZE      => word_size       , -- In  :
+            START_PTR       => xfer_req_addr   , -- In  :
+            TRAN_LAST       => TRAN_LAST       , -- In  :
+            TRAN_SEL        => TRAN_SEL        , -- In  :
+            XFER_VAL        => open            , -- Out :
+            XFER_DVAL       => xfer_beat_ben   , -- Out :
+            XFER_LAST       => open            , -- Out :
+            XFER_NONE       => xfer_beat_none  , -- Out :
         ---------------------------------------------------------------------------
-        -- 制御信号
+        -- AXI4 Outlet Port Signals.
         ---------------------------------------------------------------------------
-            CHOP            => xfer_beat_chop        , -- In  :
+            PORT_DATA       => RDATA           , -- Out :
+            PORT_STRB       => open            , -- Out :
+            PORT_LAST       => RLAST           , -- Out :
+            PORT_ERROR      => outlet_error    , -- Out :
+            PORT_VAL        => RVALID          , -- Out :
+            PORT_RDY        => RREADY          , -- In  :
         ---------------------------------------------------------------------------
-        -- ピースカウンタ/フラグ出力
+        -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            COUNT           => open                  , -- Out :
-            NONE            => open                  , -- Out :
-            LAST            => xfer_beat_last        , -- Out :
-            NEXT_NONE       => xfer_beat_none        , -- Out :
-            NEXT_LAST       => open                  , -- Out :
+            PULL_VAL(0)     => xfer_beat_chop  , -- Out :
+            PULL_LAST       => xfer_beat_last  , -- Out :
+            PULL_ERROR      => xfer_beat_error , -- Out :
+            PULL_SIZE       => xfer_beat_size  , -- Out :
         ---------------------------------------------------------------------------
-        -- １ワードのバイト数
+        -- Outlet Size Signals.
         ---------------------------------------------------------------------------
-            PSIZE           => xfer_beat_size        , -- Out :
-            NEXT_PSIZE      => open                  , -- Out :
+            EXIT_VAL        => open            , -- Out :
+            EXIT_LAST       => open            , -- Out :
+            EXIT_ERROR      => open            , -- Out :
+            EXIT_SIZE       => open            , -- Out :
         ---------------------------------------------------------------------------
-        -- バイトイネーブル信号
+        -- Pool Buffer Interface Signals.
         ---------------------------------------------------------------------------
-            VALID           => xfer_beat_ben         , -- Out :
-            NEXT_VALID      => open                    -- Out :
+            POOL_REN        => open            , -- Out :
+            POOL_PTR        => open            , -- Out :
+            POOL_DVAL       => open            , -- Out :
+            POOL_ERROR      => REGS_ERR        , -- In  :
+            POOL_DATA       => REGS_DATA       , -- In  :
+            POOL_VAL        => xfer_beat_valid , -- In  :
+            POOL_RDY        => xfer_beat_ready , -- Out :
+        ---------------------------------------------------------------------------
+        -- Status Signals.
+        ---------------------------------------------------------------------------
+            BUSY            => rbuf_busy         -- Out :
         );
-    -------------------------------------------------------------------------------
-    -- リードバッファ
-    -------------------------------------------------------------------------------
-    RBUF: block
-        constant WORD_BITS      : integer := 8;
-        constant STRB_BITS      : integer := 1;
-        constant I_WIDTH        : integer := REGS_DATA_WIDTH/WORD_BITS;
-        constant O_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
-        constant i_enable       : std_logic := '1';
-        constant o_enable       : std_logic := '1';
-        constant done           : std_logic := '0';
-        constant flush          : std_logic := '0';
-        signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
-        signal   init_pos       : unsigned(AXI4_DATA_SIZE downto 0);
-        signal   curr_pos       : unsigned(AXI4_DATA_SIZE downto 0);
-        signal   next_pos       : unsigned(AXI4_DATA_SIZE downto 0);
-        signal   word_bytes     : integer range 1 to 128;
-        signal   word_last      : boolean;
-        signal   r_resp         : AXI4_RESP_TYPE;
-        signal   r_valid        : std_logic;
-        signal   r_last         : std_logic;
-        signal   r_busy         : std_logic;
-        signal   r_length       : unsigned(AXI4_ALEN_WIDTH-1 downto 0);
-        signal   r_state        : std_logic_vector(1 downto 0);
-        constant R_IDLE         : std_logic_vector(1 downto 0) := "00";
-        constant R_XFER         : std_logic_vector(1 downto 0) := "11";
-        constant R_SKIP         : std_logic_vector(1 downto 0) := "01";
-        constant R_DONE         : std_logic_vector(1 downto 0) := "10";
-        signal   b_valid        : std_logic;
-        signal   b_ready        : std_logic;
-        signal   b_done         : std_logic;
-        signal   b_clear        : std_logic;
-    begin
-        ---------------------------------------------------------------------------
-        -- リードバッファ用のステートマシン.
-        ---------------------------------------------------------------------------
-        process (CLK, RST) begin
-            if (RST = '1') then
-                    r_state <= R_IDLE;
-                    r_resp  <= AXI4_RESP_OKAY;
-            elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then 
-                    r_state <= R_IDLE;
-                    r_resp  <= AXI4_RESP_OKAY;
-                else
-                    case r_state is
-                        when R_IDLE =>
-                            if    (xfer_start = '1') then
-                                r_state <= R_XFER;
-                                r_resp  <= AXI4_RESP_OKAY;
-                            elsif (xfer_error = '1') then
-                                r_state <= R_SKIP;
-                                r_resp  <= AXI4_RESP_SLVERR;
-                            else
-                                r_state <= R_IDLE;
-                                r_resp  <= AXI4_RESP_OKAY;
-                            end if;
-                        when R_XFER =>
-                            if    (r_valid = '1' and RREADY = '1' and r_last = '1') then
-                                r_state <= R_DONE;
-                            elsif (r_valid = '1' and RREADY = '1' and b_done = '1') then
-                                r_state <= R_SKIP;
-                            else
-                                r_state <= R_XFER;
-                            end if;
-                        when R_SKIP =>
-                            if    (r_valid = '1' and RREADY = '1' and r_last = '1') then
-                                r_state <= R_DONE;
-                            else
-                                r_state <= R_SKIP;
-                            end if;
-                        when R_DONE =>
-                                r_state <= R_IDLE;
-                        when others =>
-                                r_state <= R_IDLE;
-                    end case;
-                end if;
-            end if;
-        end process;
-        ---------------------------------------------------------------------------
-        -- リードバッファが動作中であることを示すフラグ.  
-        -- curr_state が TURN_AR から抜け出して IDLE に戻るめに使う.  
-        -- １クロック早めに(r_state = R_DONE を含んでいない)この信号をネゲートして
-        -- いること注意.
-        ---------------------------------------------------------------------------
-        rbuf_busy <= '1' when (r_state = R_XFER or r_state = R_SKIP) else '0';
-        ---------------------------------------------------------------------------
-        -- 転送の最後に B:REDUCER を初期化してしまうためのクリア信号.
-        -- これが無いと、B:REDUCER 内部にデータが残ってしまう.
-        ---------------------------------------------------------------------------
-        b_clear   <= '1' when (r_state = R_DONE or CLR = '1') else '0';
-        ---------------------------------------------------------------------------
-        -- RVALID の内部信号
-        ---------------------------------------------------------------------------
-        r_valid   <= '1' when (r_state = R_XFER and b_valid = '1') or
-                              (r_state = R_SKIP) else '0';
-        ---------------------------------------------------------------------------
-        -- r_length : バースト長カウンタ.
-        -- r_last   : 最後の転送である事を示すフラグ.
-        ---------------------------------------------------------------------------
-        process (CLK, RST)
-            variable next_length : unsigned(AXI4_ALEN_WIDTH-1 downto 0);
-        begin
-            if (RST = '1') then
-                    r_length <= (others => '0');
-                    r_last   <= '1';
-            elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then 
-                    r_length <= (others => '0');
-                    r_last   <= '1';
-                else
-                    if    (xfer_prepare = '1') then
-                        next_length := unsigned(burst_length);
-                    elsif (r_valid = '1' and RREADY = '1' and r_last = '0') then
-                        next_length := r_length - 1;
-                    else
-                        next_length := r_length;
-                    end if;
-                    if (next_length > 0) then
-                        r_length <= next_length;
-                        r_last   <= '0';
-                    else
-                        r_length <= (others => '0');
-                        r_last   <= '1';
-                    end if;
-                end if;
-            end if;
-        end process;
-        ---------------------------------------------------------------------------
-        -- init_pos : 出力するバイト位置(curr_pos)の初期値.
-        -- offset   : バッファの使用開始時に設定するオフセット量.
-        ---------------------------------------------------------------------------
-        process (xfer_req_addr)
-            variable addr : unsigned(AXI4_DATA_SIZE downto 0);
-        begin
-            for i in addr'range loop
-                if (i < AXI4_DATA_SIZE and xfer_req_addr(i) = '1') then
-                    addr(i) := '1';
-                else
-                    addr(i) := '0';
-                end if;
-            end loop;
-            init_pos <= addr;
-            for i in offset'range loop
-                if (i < addr) then
-                    offset(i) <= '1';
-                else
-                    offset(i) <= '0';
-                end if;
-            end loop;
-        end process;
-        ---------------------------------------------------------------------------
-        -- curr_pos   : 現在出力しているバイト位置.
-        -- word_bytes : 一回の転送で何バイト転送するかを示す.
-        ---------------------------------------------------------------------------
-        process (CLK, RST) begin
-            if (RST = '1') then
-                    curr_pos   <= (others => '0');
-                    word_bytes <= 1;
-            elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then 
-                    curr_pos   <= (others => '0');
-                    word_bytes <= 1;
-                elsif (xfer_prepare = '1') then
-                    curr_pos   <= init_pos;
-                    case word_size is
-                        when AXI4_ASIZE_128BYTE => word_bytes <= 128;
-                        when AXI4_ASIZE_64BYTE  => word_bytes <=  64;
-                        when AXI4_ASIZE_32BYTE  => word_bytes <=  32;
-                        when AXI4_ASIZE_16BYTE  => word_bytes <=  16;
-                        when AXI4_ASIZE_8BYTE   => word_bytes <=   8;
-                        when AXI4_ASIZE_4BYTE   => word_bytes <=   4;
-                        when AXI4_ASIZE_2BYTE   => word_bytes <=   2;
-                        when AXI4_ASIZE_1BYTE   => word_bytes <=   1;
-                        when others             => word_bytes <=   1;
-                    end case;
-                else
-                    curr_pos   <= next_pos;
-                end if;
-            end if;
-        end process;
-        ---------------------------------------------------------------------------
-        -- next_pos  : 次に出力する予定のバイト位置.
-        -- word_last : バイト位置が１ワードの最後の位置であることを示すフラグ.
-        ---------------------------------------------------------------------------
-        process(curr_pos, word_bytes, r_valid, RREADY)
-            variable temp_pos : unsigned(AXI4_DATA_SIZE downto 0);
-        begin
-            if (r_valid = '1' and RREADY = '1') then
-                temp_pos := curr_pos + word_bytes;
-            else
-                temp_pos := curr_pos;
-            end if;
-            if (to_01(temp_pos) >= 2**AXI4_DATA_SIZE) then
-                next_pos  <= (others => '0');
-                word_last <= TRUE;
-            else
-                next_pos  <= temp_pos;
-                word_last <= FALSE;
-            end if;
-        end process;
-        ---------------------------------------------------------------------------
-        -- B:REDUCER からデータを取り出すための信号.
-        ---------------------------------------------------------------------------
-        b_ready <= '1' when (r_valid = '1' and RREADY = '1' and word_last) else '0';
-        ---------------------------------------------------------------------------
-        -- 内部バッファ 兼 幅変換 兼 バイトレーン調整 回路
-        ---------------------------------------------------------------------------
-        B: REDUCER
-            generic map (
-                WORD_BITS       => WORD_BITS      ,
-                STRB_BITS       => STRB_BITS      ,
-                I_WIDTH         => I_WIDTH        ,
-                O_WIDTH         => O_WIDTH        ,
-                QUEUE_SIZE      => 0              ,
-                VALID_MIN       => 0              ,
-                VALID_MAX       => 0              ,
-                I_JUSTIFIED     => 0              ,
-                FLUSH_ENABLE    => 0                     
-            )
-            port map (
-            -----------------------------------------------------------------------
-            -- クロック&リセット信号
-            -----------------------------------------------------------------------
-                CLK             => CLK            , -- In  :
-                RST             => RST            , -- In  :
-                CLR             => b_clear        , -- In  :
-            -----------------------------------------------------------------------
-            -- 各種制御信号
-            -----------------------------------------------------------------------
-                START           => xfer_start     , -- In  :
-                OFFSET          => offset         , -- In  :
-                DONE            => done           , -- In  :
-                FLUSH           => flush          , -- In  :
-                BUSY            => r_busy         , -- Out :
-                VALID           => open           , -- Out :
-            -----------------------------------------------------------------------
-            -- 入力側 I/F
-            -----------------------------------------------------------------------
-                I_ENABLE        => i_enable       , -- In  :
-                I_DATA          => REGS_DATA      , -- In  :
-                I_STRB          => xfer_beat_ben  , -- In  :
-                I_DONE          => xfer_beat_done , -- In  :
-                I_FLUSH         => flush          , -- In  :
-                I_VAL           => xfer_beat_valid, -- In  :
-                I_RDY           => xfer_beat_ready, -- Out :
-            -----------------------------------------------------------------------
-            -- 出力側 I/F
-            -----------------------------------------------------------------------
-                O_ENABLE        => o_enable       , -- In  :
-                O_DATA          => RDATA          , -- Out :
-                O_STRB          => open           , -- Out :
-                O_DONE          => b_done         , -- Out :
-                O_FLUSH         => open           , -- Out :
-                O_VAL           => b_valid        , -- Out :
-                O_RDY           => b_ready          -- In  :
-        );
-        RVALID <= r_valid;
-        RLAST  <= r_last;
-        RRESP  <= r_resp;
-        RID    <= identifier;
-    end block;
+    RID   <= identifier;
+    RRESP <= AXI4_RESP_SLVERR when (outlet_error = '1') else AXI4_RESP_OKAY;
 end RTL;

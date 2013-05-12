@@ -340,7 +340,7 @@ begin
         function count_assert_bit(ARG:std_logic_vector) return integer is
             variable n  : integer range 0 to ARG'length;
             variable nL : integer range 0 to ARG'length/2;
-            variable nH : integer range 0 to ARG'length/2;
+            variable nH : integer range 0 to ARG'length-ARG'length/2;
             alias    a  : std_logic_vector(ARG'length-1 downto 0) is ARG;
         begin
             case a'length is
@@ -357,20 +357,20 @@ begin
                     end if;
                 when 4 =>
                     if    (a = "1111") then n := 4;
-                    elsif (a = "1101") then n := 3;
                     elsif (a = "1110") then n := 3;
+                    elsif (a = "1101") then n := 3;
                     elsif (a = "1100") then n := 2;
                     elsif (a = "1011") then n := 3;
-                    elsif (a = "1001") then n := 2;
                     elsif (a = "1010") then n := 2;
+                    elsif (a = "1001") then n := 2;
                     elsif (a = "1000") then n := 1;
                     elsif (a = "0111") then n := 3;
-                    elsif (a = "0101") then n := 2;
                     elsif (a = "0110") then n := 2;
+                    elsif (a = "0101") then n := 2;
                     elsif (a = "0100") then n := 1;
                     elsif (a = "0011") then n := 2;
-                    elsif (a = "0001") then n := 1;
                     elsif (a = "0010") then n := 1;
+                    elsif (a = "0001") then n := 1;
                     else                    n := 0;
                     end if;
                 when others =>

@@ -10,6 +10,7 @@ ENTITY_FILES = chopper.vhd                             \
                count_down_register.vhd                 \
                count_up_register.vhd                   \
                pool_intake_port.vhd                    \
+               pool_outlet_port.vhd                    \
                float_intake_valve.vhd                  \
                float_intake_manifold_valve.vhd         \
                float_outlet_valve.vhd                  \

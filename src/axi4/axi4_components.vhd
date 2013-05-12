@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.0                                                           --
---!     @date    2013/04/29                                                      --
+--!     @date    2013/05/12                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1593,6 +1593,391 @@ component AXI4_REGISTER_INTERFACE
                           out std_logic_vector(REGS_DATA_WIDTH  -1 downto 0);
         REGS_RDATA      : --! @brief レジスタリードデータ入力信号.
                           in  std_logic_vector(REGS_DATA_WIDTH  -1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief AXI4_DATA_PORT                                                        --
+-----------------------------------------------------------------------------------
+component AXI4_DATA_PORT
+    generic (
+        DATA_BITS       : --! @brief DATA BITS :
+                          --! I_DATA/O_DATA のビット数を指定する.
+                          --! * DATA_BITSで指定できる値は 8,16,32,64,128,256,512,
+                          --!   1024
+                          integer := 32;
+        ADDR_BITS       : --! @brief ADDRESS BITS :
+                          --! ADDR のビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! O_SIZE/I_SIZE のビット数を指定する.
+                          integer := 12;
+        USER_BITS       : --! @brief USER INFOMATION BITS :
+                          --! O_USER/I_USER のビット数を指定する.
+                          integer := 1;
+        ALEN_BITS       : --! @brief BURST LENGTH BITS :
+                          --! BURST_LEN のビット数を指定する.
+                          integer := 12;
+        USE_ASIZE       : --! @brief USE BURST SIZE :
+                          --! ASIZE による Narrow transfers をサポートするか否かを
+                          --! 指定する.
+                          --! * USE_ASIZE=0を指定した場合、Narrow transfers をサポ
+                          --!   ートしない.
+                          --! * USE_ASIZE=1を指定した場合、Narrow transfers をサポ
+                          --!   ートする. その際の１ワード毎の転送バイト数は
+                          --!   ASIZE で指定される.
+                          integer range 0 to 1 := 1;
+        I_REGS_SIZE     : --! @brief PORT INTAKE REGS SIZE :
+                          --! 入力側に挿入するパイプラインレジスタの段数を指定する.
+                          --! * I_REGS_SIZE=0を指定した場合、パイプラインレジスタは
+                          --!   挿入しない.
+                          --! * I_REGS_SIZE=1を指定した場合、パイプラインレジスタを
+                          --!   １段挿入するが、この場合バースト転送時に１ワード転送
+                          --!   毎に１サイクルのウェイトが発生する.
+                          --! * I_REGS_SIZE>1を指定した場合、パイプラインレジスタを
+                          --!   指定された段数挿入する. この場合、バースト転送時
+                          --!   にウェイトは発生しない.
+                          integer := 0;
+        O_REGS_SIZE     : --! @brief PORT OUTLET REGS SIZE :
+                          --! 出力側に挿入するパイプラインレジスタの段数を指定する.
+                          --! * O_REGS_SIZE=0を指定した場合、パイプラインレジスタは
+                          --!   挿入しない.
+                          --! * O_REGS_SIZE=1を指定した場合、パイプラインレジスタを
+                          --!   １段挿入するが、この場合バースト転送時に１ワード
+                          --!   転送毎に１サイクルのウェイトが発生する.
+                          --! * O_REGS_SIZE>1を指定した場合、パイプラインレジスタを
+                          --!   指定された段数挿入する. この場合、バースト転送時
+                          --!   にウェイトは発生しない.
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        START           : --! @brief START :
+                          --! 開始信号.
+                          --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
+                          --!   してこのモジュールを初期化しする.
+                          --! * 最初にデータ入力と同時にアサートしても構わない.
+                          in  std_logic;
+        ASIZE           : --! @brief AXI4 BURST SIZE :
+                          in  AXI4_ASIZE_TYPE;
+        ALEN            : --! @brief AXI4 BURST LENGTH :
+                          in  std_logic_vector(ALEN_BITS-1 downto 0);
+        ADDR            : --! @brief START TRANSFER ADDRESS :
+                          --! 出力側のアドレス.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(ADDR_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Port Signals.
+    -------------------------------------------------------------------------------
+        I_DATA          : --! @brief INTAKE PORT DATA :
+                          --! ワードデータ入力.
+                          in  std_logic_vector(DATA_BITS  -1 downto 0);
+        I_STRB          : --! @brief INTAKE PORT DATA STROBE :
+                          --! バイト単位での有効信号.
+                          in  std_logic_vector(DATA_BITS/8-1 downto 0);
+        I_SIZE          : --! @brief INTAKE PORT DATA SIZE :
+                          --! 入力ワードデータのバイト数.
+                          in  std_logic_vector(SIZE_BITS  -1 downto 0);
+        I_USER          : --! @brief INTAKE PORT USER DATA :
+                          --! 入力ユーザー定義信号.
+                          in  std_logic_vector(USER_BITS  -1 downto 0);
+        I_ERROR         : --! @brief INTAKE PORT ERROR :
+                          --! エラー入力.
+                          --! * 入力時にエラーが発生した事を示すフラグ.
+                          in  std_logic;
+        I_LAST          : --! @brief INTAKE PORT DATA LAST :
+                          --! 最終ワード信号入力.
+                          --! * 最後のワードデータ入力であることを示すフラグ.
+                          in  std_logic;
+        I_VALID         : --! @brief INTAKE PORT VALID :
+                          --! 入力ワード有効信号.
+                          --! * I_DATA/I_STRB/I_LAST/I_USER/I_SIZEが有効であること
+                          --!   を示す.
+                          --! * I_VALID='1'and I_READY='1'で上記信号がキューに取り
+                          --!   込まれる.
+                          in  std_logic;
+        I_READY         : --! @brief INTAKE PORT READY :
+                          --! 入力レディ信号.
+                          --! * キューが次のワードデータを入力出来ることを示す.
+                          --! * I_VALID='1'and I_READY='1'で上記信号がキューから
+                          --!   取り出される.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Port Signals.
+    -------------------------------------------------------------------------------
+        O_DATA          : --! @brief OUTLET PORT DATA :
+                          --! ワードデータ出力.
+                          out std_logic_vector(DATA_BITS  -1 downto 0);
+        O_STRB          : --! @brief OUTLET PORT DATA STROBE :
+                          --! ポートへデータを出力する際のバイト単位での有効信号.
+                          out std_logic_vector(DATA_BITS/8-1 downto 0);
+        O_SIZE          : --! @brief OUTLET PORT DATA SIZE :
+                          --! ポートへデータを出力する際のバイト数.
+                          out std_logic_vector(SIZE_BITS  -1 downto 0);
+        O_USER          : --! @brief OUTLET PORT USER DATA :
+                          --! ポートへデータを出力する際のユーザー定義信号.
+                          out std_logic_vector(USER_BITS  -1 downto 0);
+        O_ERROR         : --! @brief OUTLET PORT ERROR :
+                          --! エラー出力.
+                          --! * エラーが発生した事を示すフラグ.
+                          out std_logic;
+        O_LAST          : --! @brief OUTLET PORT DATA LAST :
+                          --! 最終ワード信号出力.
+                          --! * 最後のワードデータ出力であることを示すフラグ.
+                          out std_logic;
+        O_VALID         : --! @brief OUTLET PORT VALID :
+                          --! 出力ワード有効信号.
+                          --! * O_DATA/O_STRB/O_LASTが有効であることを示す.
+                          --! * O_VALID='1'and O_READY='1'で上記信号がキューから取
+                          --!   り出される.
+                          out std_logic;
+        O_READY         : --! @brief OUTLET PORT READY :
+                          --! 出力レディ信号.
+                          --! * キューが次のワードデータを入力出来ることを示す.
+                          --! * O_VALID='1'and O_READY='1'で上記信号がキューから
+                          --!   取り出される.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY            : --! @brief QUEUE BUSY :
+                          --! キューが動作中であることを示す信号.
+                          --! * 最初にデータが入力されたときにアサートされる.
+                          --! * 最後のデータが出力し終えたらネゲートされる.
+                          out  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief AXI4_DATA_OUTLET_PORT                                                 --
+-----------------------------------------------------------------------------------
+component AXI4_DATA_OUTLET_PORT
+    generic (
+        PORT_DATA_BITS  : --! @brief INTAKE PORT DATA BITS :
+                          --! PORT_DATA のビット数を指定する.
+                          --! * PORT_DATA_BITSで指定できる値は 8,16,32,64,128,256,
+                          --!   512,1024
+                          integer := 32;
+        POOL_DATA_BITS  : --! @brief POOL BUFFER DATA BITS :
+                          --! POOL_DATA のビット数を指定する.
+                          integer := 32;
+        TRAN_ADDR_BITS  : --! @brief TRANSACTION ADDRESS BITS :
+                          --! TRAN_ADDR のビット数を指定する.
+                          integer := 32;
+        TRAN_SIZE_BITS  : --! @brief TRANSACTION SIZE BITS :
+                          --! TRAN_SIZE のビット数を指定する.
+                          integer := 32;
+        TRAN_SEL_BITS   : --! @brief TRANSACTION SELECT BITS :
+                          --! TRAN_SEL、PULL_VAL、POOL_REN のビット数を指定する.
+                          integer := 1;
+        BURST_LEN_BITS  : --! @brief BURST LENGTH BITS :
+                          --! BURST_LEN のビット数を指定する.
+                          integer := 12;
+        ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
+                          --! アライメント調整を行うビット数を指定する.
+                          --! * ALIGNMENT_BITS=8を指定した場合、バイト単位でアライ
+                          --!   メント調整する.
+                          integer := 8;
+        PULL_SIZE_BITS  : --! @brief PULL_SIZE BITS :
+                          --! PULL_SIZE のビット数を指定する.
+                          integer := 16;
+        EXIT_SIZE_BITS  : --! @brief EXIT_SIZE BITS :
+                          --! EXIT_SIZE のビット数を指定する.
+                          integer := 16;
+        POOL_PTR_BITS   : --! @brief POOL BUFFER POINTER BITS:
+                          --! START_PTR、POOL_PTR のビット数を指定する.
+                          integer := 16;
+        USE_BURST_SIZE  : --! @brief USE BURST SIZE :
+                          --! BURST_SIZE による Narrow transfers をサポートするか
+                          --! 否かを指定する.
+                          --! * USE_BURST_SIZE=0を指定した場合、Narrow transfers を
+                          --!   サポートしない.
+                          --! * USE_BURST_SIZE=1を指定した場合、Narrow transfers を
+                          --!   サポートする. その際の１ワード毎の転送バイト数は
+                          --!   BURST_SIZE で指定される.
+                          integer range 0 to 1 := 1;
+        PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
+                          --! 出力側に挿入するパイプラインレジスタの段数を指定する.
+                          --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
+                          --!   は挿入しない.
+                          --! * PORT_REGS_SIZE=1を指定した場合、パイプラインレジスタ
+                          --!   を１段挿入するが、この場合バースト転送時に１ワード
+                          --!   転送毎に１サイクルのウェイトが発生する.
+                          --! * PORT_REGS_SIZE>1を指定した場合、パイプラインレジスタ
+                          --!   を指定された段数挿入する. この場合、バースト転送時
+                          --!   にウェイトは発生しない.
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        TRAN_START      : --! @brief TRANSACTION START :
+                          --! 開始信号.
+                          --! * この信号はTRAN_ADDR/TRAN_SIZE/BURST_LEN/BURST_SIZE/
+                          --!   START_PTR/XFER_LAST/XFER_SELを内部に設定して
+                          --!   このモジュールを初期化した後、転送を開始する.
+                          in  std_logic;
+        TRAN_ADDR       : --! @brief TRANSACTION ADDRESS :
+                          --! 転送開始アドレス.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  std_logic_vector(TRAN_ADDR_BITS  -1 downto 0);
+        TRAN_SIZE       : --! @brief START TRANSFER SIZE :
+                          --! 転送バイト数.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  std_logic_vector(TRAN_SIZE_BITS  -1 downto 0);
+        BURST_LEN       : --! @brief Burst length.  
+                          --! AXI4 バースト長.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  std_logic_vector(BURST_LEN_BITS  -1 downto 0);
+        BURST_SIZE      : --! @brief Burst size.
+                          --! AXI4 バーストサイズ信号.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  AXI4_ASIZE_TYPE;
+        START_PTR       : --! @brief START POOL BUFFER POINTER :
+                          --! 読み込み開始ポインタ.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  std_logic_vector(POOL_PTR_BITS   -1 downto 0);
+        TRAN_LAST       : --! @brief TRANSACTION LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  std_logic;
+        TRAN_SEL        : --! @brief TRANSACTION SELECT :
+                          --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
+                          --! * TRAN_START 信号により内部に取り込まれる.
+                          in  std_logic_vector(TRAN_SEL_BITS   -1 downto 0);
+        XFER_VAL        : --! @brief TRANSFER VALID :
+                          --! 転送応答信号.
+                          out std_logic;
+        XFER_DVAL       : --! @brief TRANSFER DATA VALID :
+                          --! バッファからデータをリードする際のユニット単位での有効
+                          --! 信号.
+                          out std_logic_vector(POOL_DATA_BITS/8-1 downto 0);
+        XFER_LAST       : --! @brief TRANSFER NONE :
+                          --! 最終転送信号.
+                          --! * 最後の転送であることを出力する.
+                          out std_logic;
+        XFER_NONE       : --! @brief TRANSFER NONE :
+                          --! 転送終了信号.
+                          --! * これ以上転送が無いことを出力する.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- AXI4 Outlet Port Signals.
+    -------------------------------------------------------------------------------
+        PORT_DATA       : --! @brief OUTLET PORT DATA :
+                          --! ワードデータ出力.
+                          out std_logic_vector(PORT_DATA_BITS-1   downto 0);
+        PORT_STRB       : --! @brief OUTLET PORT DATA VALID :
+                          --! ポートへデータを出力する際のユニット単位での有効信号.
+                          out std_logic_vector(PORT_DATA_BITS/8-1 downto 0);
+        PORT_LAST       : --! @brief OUTLET DATA LAST :
+                          --! 最終ワード信号出力.
+                          --! * 最後のワードデータ出力であることを示すフラグ.
+                          out std_logic;
+        PORT_ERROR      : --! @brief OUTLET RESPONSE :
+                          --! エラーが発生したことを示すフラグ.
+                          out std_logic;
+        PORT_VAL        : --! @brief OUTLET PORT VALID :
+                          --! 出力ワード有効信号.
+                          --! * PORT_DATA/PORT_DVAL/PORT_LASTが有効であることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューから
+                          --!   取り出される.
+                          out std_logic;
+        PORT_RDY        : --! @brief OUTLET PORT READY :
+                          --! 出力レディ信号.
+                          --! * キューが次のワードデータを入力出来ることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューから
+                          --!   取り出される.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VAL        : --! @brief PULL VALID: 
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す.
+                          out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
+        PULL_LAST       : --! @brief PULL LAST : 
+                          --! 最後の転送"する事"を示すフラグ.
+                          out std_logic;
+        PULL_ERROR      : --! @brief PULL ERROR : 
+                          --! エラーが発生したことを示すフラグ.
+                          out std_logic;
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 転送"する"バイト数を出力する.
+                          out std_logic_vector(PULL_SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Size Signals.
+    -------------------------------------------------------------------------------
+        EXIT_VAL        : --! @brief EXIT VALID: 
+                          --! EXIT_LAST/EXIT_SIZEが有効であることを示す.
+                          out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
+        EXIT_LAST       : --! @brief EXIT LAST : 
+                          --! 最後の出力"した事"を示すフラグ.
+                          out std_logic;
+        EXIT_ERROR      : --! @brief EXIT ERROR : 
+                          --! エラーが発生したことを示すフラグ.
+                          out std_logic;
+        EXIT_SIZE       : --! @brief EXIT SIZE :
+                          --! 出力"した"バイト数を出力する.
+                          out std_logic_vector(EXIT_SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pool Buffer Interface Signals.
+    -------------------------------------------------------------------------------
+        POOL_REN        : --! @brief POOL BUFFER READ ENABLE :
+                          --! バッファからデータをリードすることを示す.
+                          out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
+        POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
+                          --! ライト時にデータを書き込むバッファの位置を出力する.
+                          out std_logic_vector(POOL_PTR_BITS-1 downto 0);
+        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
+                          --! バッファからデータをリードする際のユニット単位での有効
+                          --! 信号.
+                          --! * POOL_REN='1'の場合にのみ有効.
+                          --! * POOL_REN='0'の場合のこの信号の値は不定.
+                          out std_logic_vector(POOL_DATA_BITS/8-1 downto 0);
+        POOL_ERROR      : --! @brief EXIT ERROR : 
+                          --! エラーが発生したことを示すフラグ.
+                          in  std_logic;
+        POOL_DATA       : --! @brief POOL BUFFER READ DATA :
+                          --! バッファからのリードデータ入力.
+                          in  std_logic_vector(POOL_DATA_BITS  -1 downto 0);
+        POOL_VAL        : --! @brief POOL BUFFER WRITE READY :
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in  std_logic;
+        POOL_RDY        : --! @brief POOL BUFFER WRITE READY :
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY            : --! @brief QUEUE BUSY :
+                          --! キューが動作中であることを示す信号.
+                          --! * 最初にデータが入力されたときにアサートされる.
+                          --! * 最後のデータが出力し終えたらネゲートされる.
+                          out  std_logic
     );
 end component;
 end AXI4_COMPONENTS;

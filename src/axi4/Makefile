@@ -5,6 +5,8 @@ ENTITY_FILES = axi4_master_address_channel_controller.vhd \
                axi4_register_write_interface.vhd          \
                axi4_register_read_interface.vhd           \
                axi4_register_interface.vhd                \
+               axi4_data_port.vhd                         \
+               axi4_data_outlet_port.vhd                  \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
