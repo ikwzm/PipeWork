@@ -2,7 +2,7 @@
 --!     @file    axi4_data_port.vhd
 --!     @brief   AXI4 DATA PORT
 --!     @version 1.5.0
---!     @date    2013/5/11
+--!     @date    2013/5/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -282,6 +282,7 @@ architecture RTL of AXI4_DATA_PORT is
     --
     -------------------------------------------------------------------------------
     signal   i_enable   : std_logic;
+    signal   o_busy     : std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -678,7 +679,7 @@ begin
     -- OUTLET_CTRL
     -------------------------------------------------------------------------------
     OUTLET_CTRL: block
-        type     STATE_TYPE  is (IDLE_STATE, XFER_STATE, DUMMY_STATE, SKIP_STATE, DONE_STATE);
+        type     STATE_TYPE  is (IDLE_STATE, XFER_STATE, DUMMY_STATE, SKIP_STATE);
         signal   curr_state  : STATE_TYPE;
         signal   curr_length : std_logic_vector(ALEN'range);
     begin
@@ -708,7 +709,7 @@ begin
                         when XFER_STATE =>
                             if (n_valid = '1' and n_ready = '1') then
                                 if    (n_last = '1' and m_done = TRUE ) then
-                                    curr_state <= DONE_STATE;
+                                    curr_state <= IDLE_STATE;
                                 elsif (n_last = '0' and m_done = TRUE ) then
                                     curr_state <= DUMMY_STATE;
                                 elsif (n_last = '1' and m_done = FALSE) then
@@ -722,7 +723,7 @@ begin
                         when DUMMY_STATE =>
                             if (n_valid = '1' and n_ready = '1') then
                                 if (n_last = '1') then
-                                    curr_state <= DONE_STATE;
+                                    curr_state <= IDLE_STATE;
                                 else
                                     curr_state <= DUMMY_STATE;
                                 end if;
@@ -731,11 +732,11 @@ begin
                             end if;
                         when SKIP_STATE =>
                             if (m_valid = '1' and m_done = TRUE) then
-                                    curr_state <= DONE_STATE;
+                                    curr_state <= IDLE_STATE;
                             else
                                     curr_state <= SKIP_STATE;
                             end if;
-                        when DONE_STATE =>
+                        when others  =>
                             curr_state <= IDLE_STATE;
                     end case;
                 end if;
@@ -771,7 +772,7 @@ begin
         BUSY     <= '1'    when (curr_state = XFER_STATE ) or
                                 (curr_state = DUMMY_STATE) or
                                 (curr_state = SKIP_STATE ) or
-                                (curr_state = DONE_STATE ) else '0';
+                                (o_busy     = '1'        ) else '0';
     end block;
     -------------------------------------------------------------------------------
     -- OUTLET PORT
@@ -821,6 +822,7 @@ begin
                 Q_VAL       => o_val       , -- Out :
                 Q_RDY       => O_READY       -- In  :
             );
+        o_busy  <= o_val(0);
         o_valid <= o_val(0);
         O_DATA  <= o_word(REGS_DATA_HI downto REGS_DATA_LO);
         O_STRB  <= o_word(REGS_STRB_HI downto REGS_STRB_LO);

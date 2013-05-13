@@ -2,7 +2,7 @@
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
 --!     @version 1.5.0
---!     @date    2013/4/29
+--!     @date    2013/5/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -308,15 +308,27 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    function CALC_I_REGS_SIZE return integer is begin
-        if (PORT_DATA_BITS = ALIGNMENT_BITS) or
+    type     SETTING_TYPE   is record
+             Q_Q_SIZE       : integer;  -- Q:POOL_OUTLET_PORT の QUEUE_SIZE
+             O_I_SIZE       : integer;  -- O:AXI4_DATA_PORT の I_REGS_SIZE
+             O_O_SIZE       : integer;  -- O:AXI4_DATA_PORT の O_REGS_SIZE
+    end record;
+    function SET_SETTING return SETTING_TYPE is
+        variable setting : SETTING_TYPE;
+    begin
+        setting.O_O_SIZE := PORT_REGS_SIZE;
+        if (USE_BURST_SIZE /= 0) and 
+           (PORT_DATA_BITS = ALIGNMENT_BITS) and
            (POOL_DATA_BITS = ALIGNMENT_BITS) then
-            return 2;
+            setting.Q_Q_SIZE := -1;
+            setting.O_I_SIZE :=  2;
         else
-            return 0;
+            setting.Q_Q_SIZE :=  0;
+            setting.O_I_SIZE :=  0;
         end if;
+        return setting;
     end function;
-    constant I_REGS_SIZE    : integer := CALC_I_REGS_SIZE;
+    constant SET            : SETTING_TYPE := SET_SETTING;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -447,7 +459,7 @@ begin
             SEL_BITS        => TRAN_SEL_BITS   , --
             SIZE_BITS       => SIZE_BITS       , --
             POOL_SIZE_VALID => 1               , --
-            QUEUE_SIZE      => 0                 -- 
+            QUEUE_SIZE      => SET.Q_Q_SIZE      -- 
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------
@@ -525,8 +537,8 @@ begin
             USER_BITS       => USER_BITS       , --
             ALEN_BITS       => BURST_LEN_BITS  , --
             USE_ASIZE       => USE_BURST_SIZE  , --
-            I_REGS_SIZE     => I_REGS_SIZE     , --
-            O_REGS_SIZE     => PORT_REGS_SIZE    --
+            I_REGS_SIZE     => SET.O_I_SIZE    , --
+            O_REGS_SIZE     => SET.O_O_SIZE      --
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------

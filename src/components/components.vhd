@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.0                                                           --
---!     @date    2013/05/12                                                      --
+--!     @date    2013/05/13                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1313,6 +1313,8 @@ component POOL_OUTLET_PORT
                           integer := 1;
         QUEUE_SIZE      : --! @brief QUEUE SIZE :
                           --! キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE<0 かつ PORT_DATA_BITS=WORD_BITS かつ
+                          --!   POOL_DATA_BITS=WORD_BITS の場合、キューは生成しない.
                           --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.

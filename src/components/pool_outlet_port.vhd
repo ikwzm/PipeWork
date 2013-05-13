@@ -2,7 +2,7 @@
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
 --!     @version 1.5.0
---!     @date    2013/5/12
+--!     @date    2013/5/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -76,6 +76,8 @@ entity  POOL_OUTLET_PORT is
                           integer := 1;
         QUEUE_SIZE      : --! @brief QUEUE SIZE :
                           --! キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE<0 かつ PORT_DATA_BITS=WORD_BITS かつ
+                          --!   POOL_DATA_BITS=WORD_BITS の場合、キューは生成しない.
                           --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
@@ -359,8 +361,16 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    ADJ_ALIGN: if (POOL_DATA_BITS /= WORD_BITS) or
+    ADJ_ALIGN: if (QUEUE_SIZE >= 0) or
+                  (POOL_DATA_BITS /= WORD_BITS) or
                   (PORT_DATA_BITS /= WORD_BITS) generate
+        function  Q_SIZE return integer is begin
+            if (QUEUE_SIZE >= 0) then
+                return QUEUE_SIZE;
+            else
+                return 0;
+            end if;
+        end function;
         constant  STRB_BITS     : integer   := WORD_BITS/UNIT_BITS;
         constant  I_WORDS       : integer   := POOL_DATA_BITS/WORD_BITS;
         constant  O_WORDS       : integer   := PORT_DATA_BITS/WORD_BITS;
@@ -432,7 +442,7 @@ begin
                 STRB_BITS       => STRB_BITS      , -- 
                 I_WIDTH         => I_WORDS        , -- 
                 O_WIDTH         => O_WORDS        , -- 
-                QUEUE_SIZE      => 0              , -- 
+                QUEUE_SIZE      => Q_SIZE         , -- 
                 VALID_MIN       => 0              , -- 
                 VALID_MAX       => 0              , -- 
                 I_JUSTIFIED     => 0              , -- 
@@ -484,7 +494,8 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    NON_ALIGN: if (POOL_DATA_BITS = WORD_BITS) and
+    NON_ALIGN: if (QUEUE_SIZE < 0) and 
+                  (POOL_DATA_BITS = WORD_BITS) and
                   (PORT_DATA_BITS = WORD_BITS) generate
     begin
         PORT_DATA    <= POOL_DATA;
