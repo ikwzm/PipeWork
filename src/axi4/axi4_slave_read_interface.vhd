@@ -136,10 +136,13 @@ entity  AXI4_SLAVE_READ_INTERFACE is
     -------------------------------------------------------------------------------
         REQ_ADDR        : --! @brief Request Address.
                           --! 転送開始アドレスを指定する.  
-                          out   std_logic_vector(AXI4_ADDR_WIDTH  -1 downto 0);
+                          out   std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
+        REQ_SIZE        : --! @brief Request Size.
+                          --! 転送要求バイト数を指定する.  
+                          out   std_logic_vector(SIZE_BITS      -1 downto 0);
         REQ_ID          : --! @brief Request ID.
                           --! ARID の値を指定する.
-                          out   std_logic_vector(AXI4_ID_WIDTH    -1 downto 0);
+                          out   std_logic_vector(AXI4_ID_WIDTH  -1 downto 0);
         REQ_BURST       : --! @brief Request Burst type.
                           --! バーストタイプを指定する.  
                           --! * このモジュールでは AXI4_ABURST_INCR と AXI4_ABURST_FIXED
@@ -149,7 +152,7 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           --! ライトバッファの先頭ポインタの値を指定する.
                           --! * ライトバッファのこのポインタの位置からRDATAを書き込
                           --!   む.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
+                          out   std_logic_vector(BUF_PTR_BITS   -1 downto 0);
         REQ_FIRST       : --! @brief Request First Transaction.
                           --! 最初のトランザクションであることを示す.
                           --! * REQ_FIRST=1の場合、内部状態を初期化してからトランザ
@@ -281,9 +284,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.AXI4_TYPES.all;
-use     PIPEWORK.COMPONENTS.CHOPPER;
-use     PIPEWORK.COMPONENTS.POOL_OUTLET_PORT;
-use     PIPEWORK.AXI4_COMPONENTS.AXI4_DATA_PORT;
+use     PIPEWORK.AXI4_COMPONENTS.AXI4_DATA_OUTLET_PORT;
 architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- データバスのバイト数の２のべき乗値を計算する関数.
@@ -300,251 +301,323 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- AXI4 データバスのバイト数の２のべき乗値.
     -------------------------------------------------------------------------------
-    constant AXI4_DATA_SIZE : integer := CALC_DATA_SIZE(AXI4_DATA_WIDTH);
-    -------------------------------------------------------------------------------
-    -- レジスタインターフェース側のデータバスのバイト数の２のべき乗値.
-    -------------------------------------------------------------------------------
-    constant BUF_DATA_SIZE  : integer := CALC_DATA_SIZE( BUF_DATA_WIDTH);
+    constant AXI4_DATA_SIZE     : integer := CALC_DATA_SIZE(AXI4_DATA_WIDTH);
     -------------------------------------------------------------------------------
     -- 最大転送バイト数
     -------------------------------------------------------------------------------
-    constant XFER_MAX_SIZE  : integer := AXI4_ALEN_WIDTH + AXI4_DATA_SIZE;
+    constant XFER_MAX_SIZE      : integer := AXI4_ALEN_WIDTH + AXI4_DATA_SIZE;
     -------------------------------------------------------------------------------
-    --
+    -- アライメントのビット数
     -------------------------------------------------------------------------------
-    signal   x_start        : std_logic;
-    signal   x_size         : std_logic_vector(XFER_MAX_SIZE  downto 0);
-    signal   x_ptr          : std_logic_vector(BUF_PTR_BITS-1 downto 0);
-    signal   x_last         : std_logic;
-    constant x_xfer_sel     : std_logic_vector(0 downto 0) := "1";
-    constant x_beat_sel     : std_logic_vector(XFER_MAX_SIZE downto XFER_MAX_SIZE) := "1";
+    function CALC_ALIGNMENT_BITS return integer is begin
+        if (AXI4_DATA_WIDTH <= BUF_DATA_WIDTH) then
+            return AXI4_DATA_WIDTH;
+        else
+            return BUF_DATA_WIDTH;
+        end if;
+    end function;
+    constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
+    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS);
     -------------------------------------------------------------------------------
-    --
+    -- 内部信号
     -------------------------------------------------------------------------------
-    signal   i_busy         : std_logic;
-    signal   i_chop         : std_logic;
-    signal   i_valid        : std_logic;
-    signal   i_ready        : std_logic;
-    signal   i_error        : std_logic;
-    signal   i_last         : std_logic;
-    signal   i_none         : std_logic;
-    signal   i_size         : std_logic_vector(SIZE_BITS-1 downto 0);
-    signal   i_ben          : std_logic_vector(BUF_DATA_WIDTH/8-1 downto 0);
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal   o_pull_valid   : std_logic;
-    signal   o_pull_last    : std_logic;
-    signal   o_pull_error   : std_logic;
-    signal   o_pull_size    : std_logic_vector(SIZE_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal   r_data         : std_logic_vector(AXI4_DATA_WIDTH  -1 downto 0);
-    signal   r_strb         : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
-    signal   r_size         : std_logic_vector(SIZE_BITS-1 downto 0);
-    signal   r_user         : std_logic_vector(0 downto 0);
-    signal   r_last         : std_logic;
-    signal   r_error        : std_logic;
-    signal   r_valid        : std_logic;
-    signal   r_ready        : std_logic;
-    signal   r_busy         : std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal   o_error        : std_logic;
+    signal   xfer_start         : std_logic;
+    signal   xfer_error         : std_logic;
+    signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
+    signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
+    signal   identifier         : std_logic_vector(AXI4_ID_WIDTH  -1 downto 0);
+    signal   start_ptr          : std_logic_vector(BUF_PTR_BITS   -1 downto 0);
+    signal   burst_type         : AXI4_ABURST_TYPE;
+    signal   burst_length       : AXI4_ALEN_TYPE;
+    signal   word_size          : AXI4_ASIZE_TYPE;
+    signal   xfer_valid         : std_logic;
+    signal   xfer_ready         : std_logic;
+    signal   xfer_none          : std_logic;
+    signal   rbuf_busy          : std_logic;
+    signal   outlet_error       : std_logic;
+    signal   exit_valid         : std_logic;
+    signal   exit_error         : std_logic;
+    signal   exit_last          : std_logic;
+    signal   exit_size          : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal   size_error         : boolean;
+    constant TRAN_SEL           : std_logic_vector(0 downto 0) := "1";
+    constant TRAN_LAST          : std_logic := '1';
+    type     STATE_TYPE        is (IDLE_STATE, REQ_STATE, ACK_STATE, ERR_STATE, TURN_AR);
+    signal   curr_state         : STATE_TYPE;
 begin
     -------------------------------------------------------------------------------
+    -- ステートマシン
+    -------------------------------------------------------------------------------
+    process (CLK, RST)
+        variable next_state : STATE_TYPE;
+    begin
+        if (RST = '1') then
+                curr_state <= IDLE_STATE;
+                ARREADY    <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then 
+                curr_state <= IDLE_STATE;
+                ARREADY    <= '0';
+            else
+                case curr_state is
+                    when IDLE_STATE =>
+                        if (REQ_RDY = '1' and ARVALID = '1') then
+                            next_state := REQ_STATE;
+                        else
+                            next_state := IDLE_STATE;
+                        end if;
+                    when REQ_STATE =>
+                        if (size_error = FALSE) then
+                            next_state := ACK_STATE;
+                        else
+                            next_state := ERR_STATE;
+                        end if;
+                    when ACK_STATE =>
+                        if (ACK_VAL = '1') then
+                            next_state := TURN_AR;
+                        else
+                            next_state := ACK_STATE;
+                        end if;
+                    when ERR_STATE =>
+                            next_state := TURN_AR;
+                    when TURN_AR =>
+                        if (rbuf_busy = '0') then
+                            next_state := IDLE_STATE;
+                        else
+                            next_state := TURN_AR;
+                        end if;
+                    when others =>
+                            next_state := IDLE_STATE;
+                end case;
+                curr_state <= next_state;
+                if (next_state = REQ_STATE) then
+                    ARREADY <= '1';
+                else
+                    ARREADY <= '0';
+                end if;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- xfer_start    : この信号がトリガーとなっていろいろと処理を開始する.
+    -------------------------------------------------------------------------------
+    xfer_start <= '1' when (curr_state = REQ_STATE) else '0';
+    xfer_error <= '1' when (curr_state = ERR_STATE) else '0';
+    xfer_valid <= '1' when (BUF_RDY = '1') or
+                           (curr_state = ERR_STATE) else '0';
+    VALVE_OPEN <= '1' when (curr_state = REQ_STATE) or
+                           (curr_state = ACK_STATE) or
+                           (curr_state = TURN_AR  ) else '0';
+    -------------------------------------------------------------------------------
+    -- ARVALID='1' and ARREADY='1'の時に、各種情報をレジスタに保存しておく.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                identifier    <= (others => '0');
+                burst_length  <= (others => '0');
+                burst_type    <= AXI4_ABURST_FIXED;
+                word_size     <= AXI4_ASIZE_1BYTE;
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then 
+                identifier    <= (others => '0');
+                burst_length  <= (others => '0');
+                burst_type    <= AXI4_ABURST_FIXED;
+                word_size     <= AXI4_ASIZE_1BYTE;
+            elsif (curr_state = IDLE_STATE and ARVALID = '1' and REQ_RDY = '1') then
+                burst_length  <= ARLEN;
+                burst_type    <= ARBURST;
+                word_size     <= ARSIZE;
+                identifier    <= ARID;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- xfer_req_addr : 転送要求アドレス.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                xfer_req_addr <= (others => '0');
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then 
+                xfer_req_addr <= (others => '0');
+            elsif (curr_state = IDLE_STATE and ARVALID = '1' and REQ_RDY = '1') then
+                for i in xfer_req_addr'range loop
+                    if (ARADDR'low <= i and i <= ARADDR'high) then
+                        xfer_req_addr(i) <= ARADDR(i);
+                    else
+                        xfer_req_addr(i) <= '0';
+                    end if;
+                end loop;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- xfer_req_size : リードするバイト数.
+    -------------------------------------------------------------------------------
+    process (xfer_req_addr, burst_length, word_size)
+        constant u_zero      : unsigned(              6 downto 0) := (6 downto 0 => '0');
+        variable u_addr      : unsigned(              6 downto 0);
+        variable dt_len      : unsigned(AXI4_ALEN_WIDTH downto 0);
+        variable others_size : unsigned(XFER_MAX_SIZE   downto 0);
+        variable first_size  : unsigned(              6 downto 0);
+    begin
+        dt_len := RESIZE(to_01(unsigned(burst_length )), dt_len'length);
+        u_addr := RESIZE(to_01(unsigned(xfer_req_addr)), u_addr'length);
+        if    (word_size = AXI4_ASIZE_128BYTE and AXI4_DATA_WIDTH >= 128*8) then
+            first_size  := RESIZE(     not u_addr(6 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(6 downto 0), others_size'length);
+        elsif (word_size = AXI4_ASIZE_64BYTE  and AXI4_DATA_WIDTH >=  64*8) then
+            first_size  := RESIZE(     not u_addr(5 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(5 downto 0), others_size'length);
+        elsif (word_size = AXI4_ASIZE_32BYTE  and AXI4_DATA_WIDTH >=  32*8) then
+            first_size  := RESIZE(     not u_addr(4 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(4 downto 0), others_size'length);
+        elsif (word_size = AXI4_ASIZE_16BYTE  and AXI4_DATA_WIDTH >=  16*8) then
+            first_size  := RESIZE(     not u_addr(3 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(3 downto 0), others_size'length);
+        elsif (word_size = AXI4_ASIZE_8BYTE   and AXI4_DATA_WIDTH >=   8*8) then
+            first_size  := RESIZE(     not u_addr(2 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(2 downto 0), others_size'length);
+        elsif (word_size = AXI4_ASIZE_4BYTE   and AXI4_DATA_WIDTH >=   4*8) then
+            first_size  := RESIZE(     not u_addr(1 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(1 downto 0), others_size'length);
+        elsif (word_size = AXI4_ASIZE_2BYTE   and AXI4_DATA_WIDTH >=   2*8) then
+            first_size  := RESIZE(     not u_addr(0 downto 0),  first_size'length);
+            others_size := RESIZE(dt_len & u_zero(0 downto 0), others_size'length);
+        else
+            first_size  := (others => '0');
+            others_size := RESIZE(dt_len                     , others_size'length);
+        end if;
+        xfer_req_size <= std_logic_vector(others_size + first_size + 1);
+    end process;
+    -------------------------------------------------------------------------------
+    -- 不正なサイズを指定された事を示すフラグ.
+    -------------------------------------------------------------------------------
+    size_error <= (word_size = AXI4_ASIZE_128BYTE and AXI4_DATA_WIDTH < 128*8) or
+                  (word_size = AXI4_ASIZE_64BYTE  and AXI4_DATA_WIDTH <  64*8) or
+                  (word_size = AXI4_ASIZE_32BYTE  and AXI4_DATA_WIDTH <  32*8) or
+                  (word_size = AXI4_ASIZE_16BYTE  and AXI4_DATA_WIDTH <  16*8) or
+                  (word_size = AXI4_ASIZE_8BYTE   and AXI4_DATA_WIDTH <   8*8) or
+                  (word_size = AXI4_ASIZE_4BYTE   and AXI4_DATA_WIDTH <   4*8) or
+                  (word_size = AXI4_ASIZE_2BYTE   and AXI4_DATA_WIDTH <   2*8);
+    -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    PULL_VAL   <= o_pull_valid;
-    PULL_LAST  <= o_pull_last;
-    PULL_ERROR <= o_pull_error;
-    PULL_SIZE  <= o_pull_size;
+    process (xfer_req_addr) begin
+        for i in start_ptr'range loop
+            if (i < ALIGNMENT_SIZE) then
+                start_ptr(i) <= xfer_req_addr(i);
+            else
+                start_ptr(i) <= '0';
+            end if;
+        end loop;
+    end process;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    RESV_VAL   <= o_pull_valid;
-    RESV_LAST  <= o_pull_last;
-    RESV_ERROR <= o_pull_error;
-    RESV_SIZE  <= o_pull_size;
+    REQ_VAL     <= '1' when (xfer_start = '1' and size_error = FALSE) else '0';
+    REQ_ADDR    <= xfer_req_addr;
+    REQ_SIZE    <= std_logic_vector(resize(unsigned(xfer_req_size),SIZE_BITS));
+    REQ_ID      <= identifier;
+    REQ_BURST   <= burst_type;
+    REQ_BUF_PTR <= start_ptr;
+    REQ_FIRST   <= '1';
+    REQ_LAST    <= '1';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    i_chop     <= '1' when (i_valid = '1' and i_ready = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- i_ben  : バイトイネーブル信号.
-    -- i_size : １ワード毎のリードバイト数.
-    -- i_last : 最後のワードであることを示すフラグ.
-    -------------------------------------------------------------------------------
-    BEN: CHOPPER
-        generic map (
-            BURST           => 1               ,
-            MIN_PIECE       => BUF_DATA_SIZE   ,
-            MAX_PIECE       => BUF_DATA_SIZE   ,
-            MAX_SIZE        => XFER_MAX_SIZE   ,
-            ADDR_BITS       => x_ptr'length    ,
-            SIZE_BITS       => x_size'length   ,
-            COUNT_BITS      => 1               ,
-            PSIZE_BITS      => i_size'length   ,
-            GEN_VALID       => 1
-        )
-        port map (
-        ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        ---------------------------------------------------------------------------
-            CLK             => CLK             , -- In  :
-            RST             => RST             , -- In  :
-            CLR             => CLR             , -- In  :
-        ---------------------------------------------------------------------------
-        -- 各種初期値
-        ---------------------------------------------------------------------------
-            ADDR            => x_ptr           , -- In  :
-            SIZE            => x_size          , -- In  :
-            SEL             => x_beat_sel      , -- In  :
-            LOAD            => x_start         , -- In  :
-        ---------------------------------------------------------------------------
-        -- 制御信号
-        ---------------------------------------------------------------------------
-            CHOP            => i_chop          , -- In  :
-        ---------------------------------------------------------------------------
-        -- ピースカウンタ/フラグ出力
-        ---------------------------------------------------------------------------
-            COUNT           => open            , -- Out :
-            NONE            => open            , -- Out :
-            LAST            => i_last          , -- Out :
-            NEXT_NONE       => i_none          , -- Out :
-            NEXT_LAST       => open            , -- Out :
-        ---------------------------------------------------------------------------
-        -- １ワードのバイト数
-        ---------------------------------------------------------------------------
-            PSIZE           => i_size          , -- Out :
-            NEXT_PSIZE      => open            , -- Out :
-        ---------------------------------------------------------------------------
-        -- バイトイネーブル信号
-        ---------------------------------------------------------------------------
-            VALID           => i_ben           , -- Out :
-            NEXT_VALID      => open              -- Out :
-        );
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    O: POOL_OUTLET_PORT                          -- 
+    OUTLET_PORT: AXI4_DATA_OUTLET_PORT           -- 
         generic map (                            -- 
-            UNIT_BITS       => 8               , --
-            WORD_BITS       => 8               , --
-            PORT_DATA_BITS  => AXI4_DATA_WIDTH , --
-            POOL_DATA_BITS  => BUF_DATA_WIDTH  , --
-            PORT_PTR_BITS   => AXI4_ADDR_WIDTH , --
+            PORT_DATA_BITS  => AXI4_DATA_WIDTH , -- 
+            POOL_DATA_BITS  =>  BUF_DATA_WIDTH , -- 
+            TRAN_ADDR_BITS  => AXI4_ADDR_WIDTH , -- 
+            TRAN_SIZE_BITS  => XFER_MAX_SIZE+1 , --
+            TRAN_SEL_BITS   => TRAN_SEL'length , -- 
+            BURST_LEN_BITS  => AXI4_ALEN_WIDTH , -- 
+            ALIGNMENT_BITS  => ALIGNMENT_BITS  , --
+            PULL_SIZE_BITS  => SIZE_BITS       , --
+            EXIT_SIZE_BITS  => SIZE_BITS       , --
             POOL_PTR_BITS   => BUF_PTR_BITS    , --
-            SEL_BITS        => 1               , --
-            SIZE_BITS       => SIZE_BITS       , --
-            POOL_SIZE_VALID => 1               , --
-            QUEUE_SIZE      => 0                 -- 
+            USE_BURST_SIZE  => 1               , --
+            PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
         -- クロック&リセット信号
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
             CLK             => CLK             , -- In  :
             RST             => RST             , -- In  :
             CLR             => CLR             , -- In  :
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
         -- Control Signals.
-        -------------------------------------------------------------------------------
-            START           => x_start         , -- In  :
-            START_POOL_PTR  => x_ptr           , -- In  :
-            START_PORT_PTR  => ARADDR          , -- In  :
-            XFER_LAST       => x_last          , -- In  :
-            XFER_SEL        => x_xfer_sel      , -- In  :
-        -------------------------------------------------------------------------------
-        -- Outlet Port Signals.
-        -------------------------------------------------------------------------------
-            PORT_DATA       => r_data          , -- Out :
-            PORT_DVAL       => r_strb          , -- Out :
-            PORT_ERROR      => r_error         , -- Out :
-            PORT_LAST       => r_last          , -- Out :
-            PORT_SIZE       => r_size          , -- Out :
-            PORT_VAL        => r_valid         , -- Out :
-            PORT_RDY        => r_ready         , -- In  :
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+            TRAN_START      => xfer_start      , -- In  :
+            TRAN_ADDR       => xfer_req_addr   , -- In  :
+            TRAN_SIZE       => xfer_req_size   , -- In  :
+            BURST_LEN       => burst_length    , -- In  :
+            BURST_SIZE      => word_size       , -- In  :
+            START_PTR       => start_ptr       , -- In  :
+            TRAN_LAST       => TRAN_LAST       , -- In  :
+            TRAN_SEL        => TRAN_SEL        , -- In  :
+            XFER_VAL        => open            , -- Out :
+            XFER_DVAL       => open            , -- Out :
+            XFER_LAST       => open            , -- Out :
+            XFER_NONE       => xfer_none       , -- Out :
+        ---------------------------------------------------------------------------
+        -- AXI4 Outlet Port Signals.
+        ---------------------------------------------------------------------------
+            PORT_DATA       => RDATA           , -- Out :
+            PORT_STRB       => open            , -- Out :
+            PORT_LAST       => RLAST           , -- Out :
+            PORT_ERROR      => outlet_error    , -- Out :
+            PORT_VAL        => RVALID          , -- Out :
+            PORT_RDY        => RREADY          , -- In  :
+        ---------------------------------------------------------------------------
         -- Pull Size Signals.
-        -------------------------------------------------------------------------------
-            PULL_VAL(0)     => o_pull_valid    , -- Out :
-            PULL_LAST       => o_pull_last     , -- Out :
-            PULL_ERROR      => o_pull_error    , -- Out :
-            PULL_SIZE       => o_pull_size     , -- Out :
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
+            PULL_VAL(0)     => exit_valid      , -- Out :
+            PULL_LAST       => exit_last       , -- Out :
+            PULL_ERROR      => exit_error      , -- Out :
+            PULL_SIZE       => exit_size       , -- Out :
+        ---------------------------------------------------------------------------
+        -- Outlet Size Signals.
+        ---------------------------------------------------------------------------
+            EXIT_VAL        => open            , -- Out :
+            EXIT_LAST       => open            , -- Out :
+            EXIT_ERROR      => open            , -- Out :
+            EXIT_SIZE       => open            , -- Out :
+        ---------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
             POOL_REN(0)     => BUF_REN         , -- Out :
             POOL_PTR        => BUF_PTR         , -- Out :
+            POOL_DVAL       => open            , -- Out :
             POOL_DATA       => BUF_DATA        , -- In  :
-            POOL_ERROR      => i_error         , -- In  :
-            POOL_DVAL       => i_ben           , -- In  :
-            POOL_SIZE       => i_size          , -- In  :
-            POOL_LAST       => i_last          , -- In  :
-            POOL_VAL        => i_valid         , -- In  :
-            POOL_RDY        => i_ready         , -- Out :
-        -------------------------------------------------------------------------------
+            POOL_ERROR      => xfer_error      , -- In  :
+            POOL_VAL        => xfer_valid      , -- In  :
+            POOL_RDY        => xfer_ready      , -- Out :
+        ---------------------------------------------------------------------------
         -- Status Signals.
-        -------------------------------------------------------------------------------
-            BUSY            => i_busy            -- Out :
+        ---------------------------------------------------------------------------
+            BUSY            => rbuf_busy         -- Out :
         );
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    R: AXI4_DATA_PORT                            -- 
-        generic map (                            -- 
-            DATA_BITS       => AXI4_DATA_WIDTH , --
-            ADDR_BITS       => AXI4_ADDR_WIDTH , --
-            SIZE_BITS       => SIZE_BITS       , --
-            USER_BITS       => 1               , --
-            ALEN_BITS       => AXI4_ALEN_WIDTH , --
-            USE_ASIZE       => 1               , --
-            I_REGS_SIZE     => 0               , --
-            O_REGS_SIZE     => 0                 --
-        )                                        -- 
-        port map (                               -- 
-        ---------------------------------------------------------------------------
-        -- クロック&リセット信号
-        ---------------------------------------------------------------------------
-            CLK             => CLK             , -- In  :
-            RST             => RST             , -- In  :
-            CLR             => CLR             , -- In  :
-        ---------------------------------------------------------------------------
-        -- Control Signals.
-        ---------------------------------------------------------------------------
-            START           => x_start         , -- In  :
-            ASIZE           => ARSIZE          , -- In  :
-            ALEN            => ARLEN           , -- In  :
-            ADDR            => ARADDR          , -- In  :
-        ---------------------------------------------------------------------------
-        -- Intake Port Signals.
-        ---------------------------------------------------------------------------
-            I_DATA          => r_data          , -- In  :
-            I_STRB          => r_strb          , -- In  :
-            I_SIZE          => r_size          , -- In  :
-            I_USER          => r_user          , -- In  :
-            I_LAST          => r_last          , -- In  :
-            I_ERROR         => r_error         , -- In  :
-            I_VALID         => r_valid         , -- In  :
-            I_READY         => r_ready         , -- Out :
-        ---------------------------------------------------------------------------
-        -- Outlet Port Signals.
-        ---------------------------------------------------------------------------
-            O_DATA          => RDATA           , -- Out :
-            O_STRB          => open            , -- Out :
-            O_SIZE          => open            , -- Out :
-            O_USER          => open            , -- Out :
-            O_ERROR         => o_error         , -- Out :
-            O_LAST          => RLAST           , -- Out :
-            O_VALID         => RVALID          , -- Out :
-            O_READY         => RREADY          , -- In  :
-        ---------------------------------------------------------------------------
-        -- Status Signals.
-        ---------------------------------------------------------------------------
-            BUSY            => r_busy            -- Out :
-        );
-    RRESP <= AXI4_RESP_SLVERR when (o_error = '1') else AXI4_RESP_OKAY;
+    RID   <= identifier;
+    RRESP <= AXI4_RESP_SLVERR when (outlet_error = '1') else AXI4_RESP_OKAY;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    PULL_VAL   <= exit_valid;
+    PULL_LAST  <= exit_last;
+    PULL_ERROR <= exit_error;
+    PULL_SIZE  <= exit_size;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    RESV_VAL   <= exit_valid;
+    RESV_LAST  <= exit_last;
+    RESV_ERROR <= exit_error;
+    RESV_SIZE  <= exit_size;
 end RTL;
