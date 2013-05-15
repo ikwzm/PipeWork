@@ -745,8 +745,8 @@ begin
     -------------------------------------------------------------------------------
     O_PUSH_RSV_VALID: if (PUSH_RSV_VALID /= 0) generate
         O_PUSH_RSV_VAL  <= o_valid(VEC_RANGE.PUSH_RSV.VAL_POS);
-        O_PUSH_RSV_LAST <= o_valid(VEC_RANGE.PUSH_RSV.LAST_POS);
-        O_PUSH_RSV_SIZE <= o_valid(VEC_RANGE.PUSH_RSV.SIZE_HI downto VEC_RANGE.PUSH_RSV.SIZE_LO);
+        O_PUSH_RSV_LAST <= o_data (VEC_RANGE.PUSH_RSV.LAST_POS);
+        O_PUSH_RSV_SIZE <= o_data (VEC_RANGE.PUSH_RSV.SIZE_HI downto VEC_RANGE.PUSH_RSV.SIZE_LO);
     end generate;
     O_PUSH_RSV_NONE : if (PUSH_RSV_VALID  = 0) generate
         O_PUSH_RSV_VAL  <= '0';
@@ -758,8 +758,8 @@ begin
     -------------------------------------------------------------------------------
     O_PULL_FIN_VALID: if (PULL_FIN_VALID /= 0) generate
         O_PULL_FIN_VAL  <= o_valid(VEC_RANGE.PULL_FIN.VAL_POS);
-        O_PULL_FIN_LAST <= o_valid(VEC_RANGE.PULL_FIN.LAST_POS);
-        O_PULL_FIN_SIZE <= o_valid(VEC_RANGE.PULL_FIN.SIZE_HI downto VEC_RANGE.PULL_FIN.SIZE_LO);
+        O_PULL_FIN_LAST <= o_data (VEC_RANGE.PULL_FIN.LAST_POS);
+        O_PULL_FIN_SIZE <= o_data (VEC_RANGE.PULL_FIN.SIZE_HI downto VEC_RANGE.PULL_FIN.SIZE_LO);
     end generate;
     O_PULL_FIN_NONE : if (PULL_FIN_VALID  = 0) generate
         O_PULL_FIN_VAL  <= '0';
@@ -771,8 +771,8 @@ begin
     -------------------------------------------------------------------------------
     O_PULL_RSV_VALID: if (PULL_RSV_VALID /= 0) generate
         O_PULL_RSV_VAL  <= o_valid(VEC_RANGE.PULL_RSV.VAL_POS);
-        O_PULL_RSV_LAST <= o_valid(VEC_RANGE.PULL_RSV.LAST_POS);
-        O_PULL_RSV_SIZE <= o_valid(VEC_RANGE.PULL_RSV.SIZE_HI downto VEC_RANGE.PULL_RSV.SIZE_LO);
+        O_PULL_RSV_LAST <= o_data (VEC_RANGE.PULL_RSV.LAST_POS);
+        O_PULL_RSV_SIZE <= o_data (VEC_RANGE.PULL_RSV.SIZE_HI downto VEC_RANGE.PULL_RSV.SIZE_LO);
     end generate;
     O_PULL_RSV_NONE : if (PULL_RSV_VALID  = 0) generate
         O_PULL_RSV_VAL  <= '0';
