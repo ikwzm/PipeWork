@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 1.5.0
---!     @date    2013/4/16
+--!     @date    2013/5/16
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -316,7 +316,8 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
             return BUF_DATA_WIDTH;
         end if;
     end function;
-    constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
+ -- constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
+    constant ALIGNMENT_BITS     : integer := 8;
     constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS);
     -------------------------------------------------------------------------------
     -- 内部信号
