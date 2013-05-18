@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.0                                                           --
---!     @date    2013/05/13                                                      --
+--!     @date    2013/05/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1474,13 +1474,13 @@ component FLOAT_INTAKE_VALVE
     -------------------------------------------------------------------------------
         RESET           : --! @brief RESET REQUEST :
                           --! 強制的に内部状態をリセットする事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PAUSE           : --! @brief PAUSE REQUEST :
                           --! 強制的にフローを一時的に停止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         STOP            : --! @brief STOP  REQUEST :
                           --! 強制的にフローを中止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
                           --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
@@ -1492,33 +1492,42 @@ component FLOAT_INTAKE_VALVE
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以下の時に出力を開始する.
-                          --! フローカウンタの値がこの値を越えた時に出力を一時停止.
+                          --! * フローカウンタの値がこの値以下の時に入力を開始する.
+                          --! * フローカウンタの値がこの値を越えた時に入力を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_SIZE       : --! @brief LOAD FLOW COUNTER SIZE :
+                          --! LOAD='1'にフローカウンタにロードする値.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VALID      : --! @brief PUSH VALID :
                           --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_LAST       : --! @brief PUSH LAST :
                           --! 最後の入力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_SIZE       : --! @brief PUSH SIZE :
                           --! 入力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
         PULL_VALID      : --! @brief PULL VALID :
                           --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PULL_LAST       : --! @brief PULL LAST :
                           --! 最後の出力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PULL_SIZE       : --! @brief PULL SIZE :
                           --! 出力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -1791,13 +1800,13 @@ component FLOAT_OUTLET_VALVE
     -------------------------------------------------------------------------------
         RESET           : --! @brief RESET REQUEST :
                           --! 強制的に内部状態をリセットする事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PAUSE           : --! @brief PAUSE REQUEST :
                           --! 強制的にフローを一時的に停止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         STOP            : --! @brief STOP  REQUEST :
                           --! 強制的にフローを中止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
                           --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
@@ -1806,33 +1815,42 @@ component FLOAT_OUTLET_VALVE
                           in  std_logic;
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以上の時に転送を開始する.
-                          --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          --! * フローカウンタの値がこの値以上の時に出力を開始する.
+                          --! * フローカウンタの値がこの値未満の時に出力を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_SIZE       : --! @brief LOAD FLOW COUNTER SIZE :
+                          --! LOAD='1'にフローカウンタにロードする値.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VALID      : --! @brief PUSH VALID :
                           --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_LAST       : --! @brief PUSH LAST :
                           --! 最後の入力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_SIZE       : --! @brief PUSH SIZE :
                           --! 入力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
         PULL_VALID      : --! @brief PULL VALID :
                           --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PULL_LAST       : --! @brief PULL LAST :
                           --! 最後の出力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PULL_SIZE       : --! @brief PULL SIZE :
                           --! 出力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------

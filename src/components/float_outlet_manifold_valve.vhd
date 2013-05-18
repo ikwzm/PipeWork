@@ -2,7 +2,7 @@
 --!     @file    float_outlet_manifold_valve.vhd
 --!     @brief   FLOAT OUTLET MANIFOLD VALVE
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/5/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -273,6 +273,8 @@ begin
     -------------------------------------------------------------------------------
     NON_PRECEDING: if (FIXED = 0 and PRECEDE = 0) generate
         signal    count         : std_logic_vector(COUNT_BITS-1 downto 0);
+        constant  load          : std_logic := '0';
+        constant  null_size     : std_logic_vector(SIZE_BITS -1 downto 0) := (others => '0');
     begin
         ---------------------------------------------------------------------------
         --
@@ -298,6 +300,11 @@ begin
                 INTAKE_OPEN     => INTAKE_OPEN     , -- In :
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 FLOW_READY_LEVEL=> FLOW_READY_LEVEL, -- In :
+            -----------------------------------------------------------------------
+            -- Flow Counter Load Signals.
+            -----------------------------------------------------------------------
+                LOAD            => load            , -- In :
+                LOAD_SIZE       => null_size       , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -335,6 +342,9 @@ begin
     --
     -------------------------------------------------------------------------------
     PRECEDING: if (FIXED = 0 and PRECEDE /= 0) generate
+        constant  load          : std_logic := '0';
+        constant  null_size     : std_logic_vector(SIZE_BITS -1 downto 0) := (others => '0');
+    begin 
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -359,6 +369,11 @@ begin
                 INTAKE_OPEN     => INTAKE_OPEN     , -- In :
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 FLOW_READY_LEVEL=> FLOW_READY_LEVEL, -- In :
+            -----------------------------------------------------------------------
+            -- Flow Counter Load Signals.
+            -----------------------------------------------------------------------
+                LOAD            => load            , -- In :
+                LOAD_SIZE       => null_size       , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -412,6 +427,11 @@ begin
                 INTAKE_OPEN     => INTAKE_OPEN     , -- In :
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 FLOW_READY_LEVEL=> POOL_READY_LEVEL, -- In :
+            -----------------------------------------------------------------------
+            -- Flow Counter Load Signals.
+            -----------------------------------------------------------------------
+                LOAD            => load            , -- In :
+                LOAD_SIZE       => null_size       , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------

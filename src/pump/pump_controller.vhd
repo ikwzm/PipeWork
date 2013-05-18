@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/5/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -344,6 +344,7 @@ architecture RTL of PUMP_CONTROLLER is
     ------------------------------------------------------------------------------
     constant BUFFER_SIZE        : std_logic_vector(SIZE_BITS-1 downto 0) := 
                                   std_logic_vector(to_unsigned(2**BUF_DEPTH, SIZE_BITS));
+    constant NULL_SIZE          : std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     ------------------------------------------------------------------------------
     -- バッファへのアクセス用信号群.
     ------------------------------------------------------------------------------
@@ -359,6 +360,7 @@ architecture RTL of PUMP_CONTROLLER is
     signal   i_stop             : std_logic;
     signal   i_valve_open       : std_logic;
     signal   i_xfer_running     : std_logic;
+    constant i_valve_load       : std_logic := '0';
     ------------------------------------------------------------------------------
     -- 出力側の各種信号群.
     ------------------------------------------------------------------------------
@@ -369,6 +371,7 @@ architecture RTL of PUMP_CONTROLLER is
     signal   o_stop             : std_logic;
     signal   o_valve_open       : std_logic;
     signal   o_xfer_running     : std_logic;
+    constant o_valve_load       : std_logic := '0';
     ------------------------------------------------------------------------------
     -- 入力側->出力側の各種信号群.
     ------------------------------------------------------------------------------
@@ -538,6 +541,8 @@ begin
             RESET           => i_reset         , -- In  :
             PAUSE           => i_pause         , -- In  :
             STOP            => i_stop          , -- In  :
+            LOAD            => i_valve_load    , -- In  :
+            LOAD_SIZE       => NULL_SIZE       , -- In  :
             PUSH_VALID      => I_ACK_VALID     , -- In  :
             PUSH_LAST       => I_ACK_LAST      , -- In  :
             PUSH_SIZE       => I_ACK_SIZE      , -- In  :
@@ -708,6 +713,8 @@ begin
             RESET           => o_reset         , -- In  :
             PAUSE           => o_pause         , -- In  :
             STOP            => o_stop          , -- In  :
+            LOAD            => o_valve_load    , -- In  :
+            LOAD_SIZE       => NULL_SIZE       , -- In  :
             PUSH_VALID      => i2o_push_valid  , -- In  :
             PUSH_LAST       => i2o_push_last   , -- In  :
             PUSH_SIZE       => i2o_push_size   , -- In  :

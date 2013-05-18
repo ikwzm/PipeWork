@@ -2,7 +2,7 @@
 --!     @file    float_outlet_valve.vhd
 --!     @brief   FLOAT OUTLET VALVE
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/5/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -66,13 +66,13 @@ entity  FLOAT_OUTLET_VALVE is
     -------------------------------------------------------------------------------
         RESET           : --! @brief RESET REQUEST :
                           --! 強制的に内部状態をリセットする事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PAUSE           : --! @brief PAUSE REQUEST :
                           --! 強制的にフローを一時的に停止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         STOP            : --! @brief STOP  REQUEST :
                           --! 強制的にフローを中止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
                           --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
                           in  std_logic;
@@ -81,33 +81,42 @@ entity  FLOAT_OUTLET_VALVE is
                           in  std_logic;
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以上の時に転送を開始する.
-                          --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          --! * フローカウンタの値がこの値以上の時に出力を開始する.
+                          --! * フローカウンタの値がこの値未満の時に出力を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_SIZE       : --! @brief LOAD FLOW COUNTER SIZE :
+                          --! LOAD='1'にフローカウンタにロードする値.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VALID      : --! @brief PUSH VALID :
                           --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_LAST       : --! @brief PUSH LAST :
                           --! 最後の入力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_SIZE       : --! @brief PUSH SIZE :
                           --! 入力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Pull Size Signals.
     -------------------------------------------------------------------------------
         PULL_VALID      : --! @brief PULL VALID :
                           --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PULL_LAST       : --! @brief PULL LAST :
                           --! 最後の出力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PULL_SIZE       : --! @brief PULL SIZE :
                           --! 出力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -170,25 +179,28 @@ architecture RTL of FLOAT_OUTLET_VALVE is
     signal   flow_negative      : boolean;
     signal   flow_positive      : boolean;
     signal   flow_eq_zero       : boolean;
+    signal   io_open_req        : boolean;
     signal   io_open            : boolean;
     signal   io_last            : boolean;
     signal   pause_flag         : boolean;
+    signal   last_flag          : boolean;
 begin
     -------------------------------------------------------------------------------
     -- io_open : 入力側のバルブと出力側のバルブが開いていることを示すフラグ.
     --           入力側のバルブと出力側のバルブが双方とも開いた時点でアサート.
     --           入力側のバルブと出力側のバルブが双方とも閉じた時点でネゲート.
     -------------------------------------------------------------------------------
+    io_open_req <= TRUE  when (io_open = FALSE and INTAKE_OPEN = '1' and OUTLET_OPEN = '1') else
+                   FALSE when (io_open = TRUE  and INTAKE_OPEN = '0' and OUTLET_OPEN = '0') else
+                   io_open;
     process (CLK, RST) begin
         if    (RST = '1') then
-                io_open       <= FALSE;
+                io_open <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if    (CLR   = '1' or RESET = '1') then
-                io_open       <= FALSE;
-            elsif (io_open = FALSE and INTAKE_OPEN = '1' and OUTLET_OPEN = '1') then
-                io_open <= TRUE;
-            elsif (io_open = TRUE  and INTAKE_OPEN = '0' and OUTLET_OPEN = '0') then
                 io_open <= FALSE;
+            else
+                io_open <= io_open_req;
             end if;
         end if;
     end process;
@@ -200,7 +212,7 @@ begin
         if    (RST = '1') then
                 io_last <= FALSE;
         elsif (CLK'event and CLK = '1') then
-            if    (CLR   = '1' or RESET = '1' or io_open = FALSE) then
+            if    (CLR   = '1' or RESET = '1' or io_open_req = FALSE) then
                 io_last <= FALSE;
             elsif (PUSH_VALID = '1' and PUSH_LAST = '1') then
                 io_last <= TRUE;
@@ -208,7 +220,10 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- flow_counter : 現在バッファに入っている(または入る予定)の量をカウント
+    -- flow_counter  : 現在バッファに入っている(または入る予定)の量をカウント.
+    -- flow_positive : フローカウンタの値が正(>0)になったことを示すフラグ.
+    -- flow_negative : フローカウンタの値が負(<0)になったことを示すフラグ.
+    -- flow_eq_zero  : フローカウンタの値が0になったことを示すフラグ.
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable next_counter : unsigned(COUNT_BITS downto 0);
@@ -225,8 +240,12 @@ begin
                 flow_negative <= FALSE;
                 flow_eq_zero  <= TRUE;
             else
-                if (io_open) then
-                    next_counter := "0" & flow_counter;
+                if (io_open_req) then
+                    if (LOAD  = '1') then
+                        next_counter := "0" & unsigned(LOAD_SIZE);
+                    else
+                        next_counter := "0" & flow_counter;
+                    end if;
                     if (PUSH_VALID = '1') then
                         next_counter := next_counter + resize(unsigned(PUSH_SIZE),next_counter'length);
                     end if;
@@ -282,7 +301,8 @@ begin
     --              ただし、flow_counter の値が FLOW_OPEN_LEVEL 以下である場合のみ、
     --              アサートされる.
     -------------------------------------------------------------------------------
-    FLOW_LAST  <= '1' when (io_last = TRUE  and to_01(flow_counter) <= to_01(unsigned(FLOW_READY_LEVEL))) else '0';
+    last_flag  <= (io_last = TRUE  and to_01(flow_counter) <= to_01(unsigned(FLOW_READY_LEVEL)));
+    FLOW_LAST  <= '1' when (last_flag  = TRUE ) else '0';
     -------------------------------------------------------------------------------
     -- FLOW_SIZE  : 出力可能なバイト数(すなわちflow_counterの値)を出力.
     -------------------------------------------------------------------------------
