@@ -2,7 +2,7 @@
 --!     @file    float_outlet_valve.vhd
 --!     @brief   FLOAT OUTLET VALVE
 --!     @version 1.5.0
---!     @date    2013/5/18
+--!     @date    2013/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -90,9 +90,9 @@ entity  FLOAT_OUTLET_VALVE is
         LOAD            : --! @breif LOAD FLOW COUNTER :
                           --! フローカウンタに値をロードする事を指示する信号.
                           in  std_logic := '0';
-        LOAD_SIZE       : --! @brief LOAD FLOW COUNTER SIZE :
+        LOAD_COUNT      : --! @brief LOAD FLOW COUNTER VALUE :
                           --! LOAD='1'にフローカウンタにロードする値.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Size Signals.
     -------------------------------------------------------------------------------
@@ -242,7 +242,7 @@ begin
             else
                 if (io_open_req) then
                     if (LOAD  = '1') then
-                        next_counter := "0" & unsigned(LOAD_SIZE);
+                        next_counter := "0" & unsigned(LOAD_COUNT);
                     else
                         next_counter := "0" & flow_counter;
                     end if;

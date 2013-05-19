@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
---!     @version 0.0.1
---!     @date    2013/3/30
+--!     @version 1.5.0
+--!     @date    2013/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -78,40 +78,46 @@ entity  PIPE_RESPONDER_INTERFACE is
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
-        O_VALVE_FIXED       : --! @brief Outlet Valve Fixed Mode :
-                              --! 出力用バルブのモードを指定する.
-                              --! * O_VALVE_FIXED=0 : フローカウンタによるフロー制
-                              --!   御を行う.
-                              --! * O_VALVE_FIXED=1 : 常にバルブが閉じた状態にする.
-                              --! * O_VALVE_FIXED=2 : 常にバルブが開いた状態にする.
-                              integer :=  0;
-        O_VALVE_PRECEDE     : --! @brief Outlet Valve Precede Mode :
-                              --! 出力用バルブを先行(Precede)モードでフローを制御
-                              --! するかどうかを指定する.
-                              --! * O_VALVE_PRECEDE=0 : 非先行モード. フローカウン
-                              --!   タの加算にT_PUSH_FIN_SIZE(入力が確定(FINAL)し
-                              --!   たバイト数)を使う.
-                              --! * O_VALVE_PRECEDE=1 : 先行モード. フローカウンタ
-                              --!   の加算に T_PUSH_RSV_SIZE(入力する予定(RESERVE)
-                              --!   のバイト数)を使う.
-                              integer :=  0;
-        I_VALVE_FIXED       : --! @brief Intake Valve Fixed Mode :
-                              --! 入力用バルブのモードを指定する.
-                              --! * I_VALVE_FIXED=0 : フローカウンタによるフロー制
-                              --!   御を行う.
-                              --! * I_VALVE_FIXED=1 : 常にバルブが閉じた状態にする.
-                              --! * I_VALVE_FIXED=2 : 常にバルブが開いた状態にする.
-                              integer :=  0;
-        I_VALVE_PRECEDE     : --! @brief Intake Valve Precede Mode :
-                              --! 入力用バルブを先行(Precede)モードでフローを制御
-                              --! するかどうかを指定する.
-                              --! * I_VALVE_PRECEDE=0 : 非先行モード. 
-                              --!   フローカウンタの減算にT_PULL_FIN_SIZE(出力が確
-                              --!   定(FINAL)したバイト数)を使う.
-                              --! * I_VALVE_PRECEDE=1 : 先行モード. 
-                              --!   フローカウンタの減算に T_PULL_RSV_SIZE(出力する
-                              --!   予定(RESERVE)のバイト数)を使う.
-                              integer :=  0
+        O_FIXED_CLOSE       : --! @brief OUTLET VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_POOL_OPEN   : --! @brief OUTLET FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_CLOSE       : --! @brief INTAKE VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_POOL_OPEN   : --! @brief INTAKE FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        USE_M_PUSH_RSV      : --! @brief USE PUSH RESERVE SIGNALS :
+                              --! フローカウンタの加算に M_PUSH_RSV_SIZE を使うか 
+                              --! M_PUSH_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_T_PULL_BUF      : --! @brief USE PULL BUFFER  SIGNALS :
+                              --! プールカウンタの減算に T_PULL_BUF_SIZE を使うか 
+                              --! T_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
+        USE_M_PULL_RSV      : --! @brief USE PULL RESERVE SIGNALS :
+                              --! フローカウンタの減算に M_PULL_RSV_SIZE を使うか 
+                              --! M_PULL_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_T_PUSH_BUF      : --! @brief USE PUSH BUFFER  SIGNALS :
+                              --! プールカウンタの加算に T_PUSH_BUF_SIZE を使うか 
+                              --! T_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1
     );
     port (
     ------------------------------------------------------------------------------
@@ -228,6 +234,36 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
+                              in  std_logic;
+        T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
+                              in  std_logic;
+        T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
+                              in  std_logic;
+        T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
+                              out std_logic;
+        T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
+                              in  std_logic;
+        T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
+                              in  std_logic;
+        T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
+                              in  std_logic;
+        T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
+                              out std_logic;
+        T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
         O_VALVE_OPEN        : --! @brief Outlet Vavle Open :
@@ -250,19 +286,10 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
                               out std_logic;
-        O_POOL_READY        : --! @brief Outlet Valve Pool Ready :
-                              --! 先行モード(O_VALVE_PRECEDE=1)の時、プールバッファに 
-                              --! O_POOL_READY_LEVEL 以上のデータがあることを示す.
-                              out std_logic;
-        O_FLOW_READY_LEVEL  : --! @brief Outlet Valve Flow Ready Level :
+        O_FLOW_LEVEL        : --! @brief Outlet Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        O_POOL_READY_LEVEL  : --! @brief Outlet Valve Pool Ready Lelvel :
-                              --! 先行モード(O_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZEに
-                              --! よるフローカウンタの加算結果が、この値以上の時に
-                              --! O_POOL_READY 信号をアサートする.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Responder.
@@ -291,17 +318,12 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! 先行モード(I_VALVE_PRECEDE=1)の時、プールバッファに 
                               --! I_POOL_READY_LEVEL以下のデータしか無いことを示す.
                               out std_logic;
-        I_FLOW_READY_LEVEL  : --! @brief Intake Valve Flow Ready Level :
+        I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_POOL_READY_LEVEL  : --! @brief Intake Valve Pool Ready Level :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、M_PULL_FIN_SIZE に
-                              --! よるフローカウンタの減算結果が、この値以下の時に
-                              --! I_POOL_READY 信号をアサートする.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_POOL_SIZE         : --! @brief Intake Pool Size :
+        I_BUF_SIZE          : --! @brief Intake Pool Size :
                               --! 入力用プールの総容量を指定する.
                               --! I_FLOW_SIZE を求めるのに使用する.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
@@ -599,8 +621,11 @@ begin
     -------------------------------------------------------------------------------
     O_VALVE: FLOAT_OUTLET_MANIFOLD_VALVE             -- 
         generic map (                                -- 
-            PRECEDE         => O_VALVE_PRECEDE     , -- 
-            FIXED           => O_VALVE_FIXED       , -- 
+            FIXED_CLOSE     => O_FIXED_CLOSE       , --
+            FIXED_FLOW_OPEN => O_FIXED_FLOW_OPEN   , --
+            FIXED_POOL_OPEN => O_FIXED_POOL_OPEN   , --
+            USE_PUSH_RSV    => USE_M_PUSH_RSV      , --
+            USE_POOL_PULL   => USE_T_PULL_BUF      , --
             COUNT_BITS      => COUNT_BITS          , -- 
             SIZE_BITS       => SIZE_BITS             -- 
         )                                            -- 
@@ -619,8 +644,8 @@ begin
             STOP            => stop                , -- In  :
             INTAKE_OPEN     => m_valve_open        , -- In  :
             OUTLET_OPEN     => O_VALVE_OPEN        , -- In  :
-            FLOW_READY_LEVEL=> O_FLOW_READY_LEVEL  , -- In  :
-            POOL_READY_LEVEL=> O_POOL_READY_LEVEL  , -- In  :
+            FLOW_READY_LEVEL=> O_FLOW_LEVEL        , -- In  :
+            POOL_READY_LEVEL=> T_PULL_BUF_LEVEL    , -- In  :
         ---------------------------------------------------------------------------
         -- Push Final Size Signals.
         ---------------------------------------------------------------------------
@@ -636,9 +661,9 @@ begin
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PULL_VALID      => T_PULL_FIN_VALID    , -- In  :
-            PULL_LAST       => T_PULL_FIN_LAST     , -- In  :
-            PULL_SIZE       => T_PULL_FIN_SIZE     , -- In  :
+            FLOW_PULL_VALID => T_PULL_FIN_VALID    , -- In  :
+            FLOW_PULL_LAST  => T_PULL_FIN_LAST     , -- In  :
+            FLOW_PULL_SIZE  => T_PULL_FIN_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Flow Control Signals.
         ---------------------------------------------------------------------------
@@ -653,16 +678,26 @@ begin
             FLOW_COUNT      => open                , -- Out :
             FLOW_NEG        => open                , -- Out :
             PAUSED          => open                , -- Out :
-            POOL_COUNT      => open                , -- Out :
-            POOL_READY      => O_POOL_READY          -- Out :
+        ---------------------------------------------------------------------------
+        -- Pull Size Signals.
+        ---------------------------------------------------------------------------
+            POOL_PULL_RESET => T_PULL_BUF_RESET    , -- In  :
+            POOL_PULL_VALID => T_PULL_BUF_VALID    , -- In  :
+            POOL_PULL_LAST  => T_PULL_BUF_LAST     , -- In  :
+            POOL_PULL_SIZE  => T_PULL_BUF_SIZE     , -- In  :
+            POOL_READY      => T_PULL_BUF_READY    , -- Out :
+            POOL_COUNT      => open                  -- Out :
         );                                           -- 
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     I_VALVE: FLOAT_INTAKE_MANIFOLD_VALVE             --
         generic map (                                -- 
-            PRECEDE         => I_VALVE_PRECEDE     , -- 
-            FIXED           => I_VALVE_FIXED       , -- 
+            FIXED_CLOSE     => I_FIXED_CLOSE       , --
+            FIXED_FLOW_OPEN => I_FIXED_FLOW_OPEN   , --
+            FIXED_POOL_OPEN => I_FIXED_POOL_OPEN   , --
+            USE_PULL_RSV    => USE_M_PULL_RSV      , --
+            USE_POOL_PUSH   => USE_T_PUSH_BUF      , --
             COUNT_BITS      => COUNT_BITS          , -- 
             SIZE_BITS       => SIZE_BITS             -- 
         )                                            -- 
@@ -681,9 +716,9 @@ begin
             STOP            => stop                , -- In  :
             INTAKE_OPEN     => I_VALVE_OPEN        , -- In  :
             OUTLET_OPEN     => m_valve_open        , -- In  :
-            POOL_SIZE       => I_POOL_SIZE         , -- In  :
-            FLOW_READY_LEVEL=> I_FLOW_READY_LEVEL  , -- In  :
-            POOL_READY_LEVEL=> I_POOL_READY_LEVEL  , -- In  :
+            POOL_SIZE       => I_BUF_SIZE          , -- In  :
+            FLOW_READY_LEVEL=> I_FLOW_LEVEL        , -- In  :
+            POOL_READY_LEVEL=> T_PUSH_BUF_LEVEL    , -- In  :
         ---------------------------------------------------------------------------
         -- Push Final Size Signals.
         ---------------------------------------------------------------------------
@@ -699,9 +734,9 @@ begin
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PUSH_VALID      => T_PUSH_FIN_VALID    , -- In  :
-            PUSH_LAST       => T_PUSH_FIN_LAST     , -- In  :
-            PUSH_SIZE       => T_PUSH_FIN_SIZE     , -- In  :
+            FLOW_PUSH_VALID => T_PUSH_FIN_VALID    , -- In  :
+            FLOW_PUSH_LAST  => T_PUSH_FIN_LAST     , -- In  :
+            FLOW_PUSH_SIZE  => T_PUSH_FIN_SIZE     , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Flow Control Signals.
         ---------------------------------------------------------------------------
@@ -716,7 +751,14 @@ begin
             FLOW_COUNT      => open                , -- Out :
             FLOW_NEG        => open                , -- Out :
             PAUSED          => open                , -- Out :
-            POOL_COUNT      => open                , -- Out :
-            POOL_READY      => I_POOL_READY          -- Out :
+        ---------------------------------------------------------------------------
+        -- Pull Size Signals.
+        ---------------------------------------------------------------------------
+            POOL_PUSH_RESET => T_PUSH_BUF_RESET    , -- In  :
+            POOL_PUSH_VALID => T_PUSH_BUF_VALID    , -- In  :
+            POOL_PUSH_LAST  => T_PUSH_BUF_LAST     , -- In  :
+            POOL_PUSH_SIZE  => T_PUSH_BUF_SIZE     , -- In  :
+            POOL_READY      => T_PUSH_BUF_READY    , -- Out :
+            POOL_COUNT      => open                  -- Out :
         );                                           -- 
 end RTL;

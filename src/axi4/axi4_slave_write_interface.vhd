@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
 --!     @version 1.5.0
---!     @date    2013/4/16
+--!     @date    2013/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -238,35 +238,59 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
         VALVE_OPEN      : --! @brief Valve Open.
                           out   std_logic;
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
+        PUSH_RSV_VAL    : --! @brief Push Reserve Valid.
+                          --! PUSH_RSV_LAST/PUSH_RSV_ERROR/PUSH_RSV_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        RESV_LAST       : --! @brief Reserve Last.
+        PUSH_RSV_LAST   : --! @brief Push Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PUSH_RSV_ERROR  : --! @brief Push Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PUSH_RSV_SIZE   : --! @brief Push Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Push Final Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief Pull Valid.
-                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す.
+        PUSH_FIN_VAL    : --! @brief Push Final Valid.
+                          --! PUSH_FIN_LAST/PUSH_FIN_ERROR/PUSH_FIN_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        PUSH_LAST       : --! @brief Pull Last.
+        PUSH_FIN_LAST   : --! @brief Push Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PUSH_ERROR      : --! @brief Reserve Error.
+        PUSH_FIN_ERROR  : --! @brief Push Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PUSH_SIZE       : --! @brief Reserve Size.
+        PUSH_FIN_SIZE   : --! @brief Push Final Size.
                           --! 転送"した"バイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_BUF_RESET  : --! @brief Push Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic;
+        PUSH_BUF_VAL    : --! @brief Push Buffer Valid.
+                          --! PUSH_BUF_LAST/PUSH_BUF_ERROR/PUSH_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic;
+        PUSH_BUF_LAST   : --! @brief Push Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_ERROR  : --! @brief Push Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_SIZE   : --! @brief Push Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in    std_logic;
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -283,10 +307,7 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           out   std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : --! @brief Buffer Write Pointer.
                           --! ライト時にデータを書き込むバッファの位置を出力する.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Write Ready.
-                          --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end AXI4_SLAVE_WRITE_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -481,7 +502,7 @@ begin
             POOL_DVAL       => BUF_BEN         , -- Out :
             POOL_DATA       => BUF_DATA        , -- Out :
             POOL_PTR        => BUF_PTR         , -- Out :
-            POOL_RDY        => BUF_RDY         , -- In  :
+            POOL_RDY        => PUSH_BUF_RDY    , -- In  :
         -------------------------------------------------------------------------------
         -- Status Signals.
         -------------------------------------------------------------------------------
@@ -490,15 +511,23 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    PUSH_VAL   <= o_push_valid;
-    PUSH_LAST  <= o_push_last;
-    PUSH_ERROR <= o_push_error;
-    PUSH_SIZE  <= o_push_size;
+    PUSH_FIN_VAL   <= o_push_valid;
+    PUSH_FIN_LAST  <= o_push_last;
+    PUSH_FIN_ERROR <= o_push_error;
+    PUSH_FIN_SIZE  <= o_push_size;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    RESV_VAL   <= o_push_valid;
-    RESV_LAST  <= o_push_last;
-    RESV_ERROR <= o_push_error;
-    RESV_SIZE  <= o_push_size;
+    PUSH_RSV_VAL   <= o_push_valid;
+    PUSH_RSV_LAST  <= o_push_last;
+    PUSH_RSV_ERROR <= o_push_error;
+    PUSH_RSV_SIZE  <= o_push_size;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    PUSH_BUF_RESET <= '0';
+    PUSH_BUF_VAL   <= o_push_valid;
+    PUSH_BUF_LAST  <= o_push_last;
+    PUSH_BUF_ERROR <= o_push_error;
+    PUSH_BUF_SIZE  <= o_push_size;
 end RTL;

@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.0                                                           --
---!     @date    2013/05/16                                                      --
+--!     @date    2013/05/19                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -468,43 +468,67 @@ component AXI4_MASTER_READ_INTERFACE
                           --! * 例えば FIFO の空き容量を入力すると、この容量を越え
                           --!   た転送は行わない.
                           --! * FLOW_VALID=0の場合、この信号は無視される.
-                          in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
+                          in    std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        RESV_LAST       : --! @brief Reserve Last.
+        PUSH_RSV_VAL    : --! @brief Push Reserve Valid.
+                          --! PUSH_RSV_LAST/PUSH_RSV_ERROR/PUSH_RSV_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_RSV_LAST   : --! @brief Push Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PUSH_RSV_ERROR  : --! @brief Push Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PUSH_RSV_SIZE   : --! @brief Push Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Push Final Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief Pull Valid.
-                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        PUSH_LAST       : --! @brief Pull Last.
+        PUSH_FIN_VAL    : --! @brief Push Final Valid.
+                          --! PUSH_FIN_LAST/PUSH_FIN_ERROR/PUSH_FIN_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_FIN_LAST   : --! @brief Push Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PUSH_ERROR      : --! @brief Reserve Error.
+        PUSH_FIN_ERROR  : --! @brief Push Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PUSH_SIZE       : --! @brief Reserve Size.
+        PUSH_FIN_SIZE   : --! @brief Push Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_BUF_RESET  : --! @brief Push Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_BUF_VAL    : --! @brief Push Buffer Valid.
+                          --! PUSH_BUF_LAST/PUSH_BUF_ERROR/PUSH_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_BUF_LAST   : --! @brief Push Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_ERROR  : --! @brief Push Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_SIZE   : --! @brief Push Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in    std_logic_vector(VAL_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
         BUF_WEN         : --! @brief Buffer Write Enable.
                           --! バッファにデータをライトすることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
         BUF_BEN         : --! @brief Buffer Byte Enable.
                           --! バッファにデータをライトする際のバイトイネーブル信号.
                           --! * BUF_WEN='1'の場合にのみ有効.
@@ -515,10 +539,7 @@ component AXI4_MASTER_READ_INTERFACE
                           out   std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : --! @brief Buffer Write Pointer.
                           --! ライト時にデータを書き込むバッファの位置を出力する.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Write Ready.
-                          --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -809,7 +830,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! 転送するバイト数を示す.
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Transfer Status Signal.
     -------------------------------------------------------------------------------
@@ -858,37 +879,61 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! * 例えば FIFO に残っているデータの容量を入力しておく
                           --!   と、そのバイト数を越えた転送は行わない.
                           --! * FLOW_VALID=0の場合、この信号は無視される.
-                          in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
+                          in    std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        RESV_LAST       : --! @brief Reserve Last.
+        PULL_RSV_VAL    : --! @brief Pull Reserve Valid.
+                          --! PULL_RSV_LAST/PULL_RSV_ERROR/PULL_RSV_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_RSV_LAST   : --! @brief Pull Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PULL_RSV_ERROR  : --! @brief Pull Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PULL_RSV_SIZE   : --! @brief Pull Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief Pull Valid.
-                          --! PULL_LAST/PULL_ERROR/PULL_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        PULL_LAST       : --! @brief Pull Last.
+        PULL_FIN_VAL    : --! @brief Pull Final Valid.
+                          --! PULL_FIN_LAST/PULL_FIN_ERROR/PULL_FIN_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_FIN_LAST   : --! @brief Pull Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PULL_ERROR      : --! @brief Reserve Error.
+        PULL_FIN_ERROR  : --! @brief Pull Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PULL_SIZE       : --! @brief Reserve Size.
+        PULL_FIN_SIZE   : --! @brief Pull Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_BUF_RESET  : --! @brief Pull Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_BUF_VAL    : --! @brief Pull Buffer Valid.
+                          --! PULL_BUF_LAST/PULL_BUF_ERROR/PULL_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_BUF_LAST   : --! @brief Pull Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_ERROR  : --! @brief Pull Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_SIZE   : --! @brief Pull Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
+                          --! バッファからデータを読み出し可能な事をを示す.
+                          in    std_logic_vector(VAL_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -902,15 +947,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! 次にリードするデータのバッファの位置を出力する.
                           --! * この信号の１クロック後に、バッファからリードした
                           --!   データを BUF_DATA に入力すること.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Read Ready.
-                          --! バッファにデータが用意出来ていることを示す.
-                          --! * この信号がネゲートされていると、ライトデータチャネ
-                          --!   ルからデータが出力されずに、再びアサートされるまで
-                          --!   停止する.
-                          --! * ただし、この信号はライトデータチャネルを制御するも
-                          --!   ので、ライトアドレスチャネルを制御するものではない.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -1100,35 +1137,59 @@ component AXI4_SLAVE_READ_INTERFACE
         VALVE_OPEN      : --! @brief Valve Open.
                           out   std_logic;
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
+        PULL_RSV_VAL    : --! @brief Pull Reserve Valid.
+                          --! PULL_RSV_LAST/PULL_RSV_ERROR/PULL_RSV_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        RESV_LAST       : --! @brief Reserve Last.
+        PULL_RSV_LAST   : --! @brief Pull Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PULL_RSV_ERROR  : --! @brief Pull Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PULL_RSV_SIZE   : --! @brief Pull Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief Pull Valid.
-                          --! PULL_LAST/PULL_ERROR/PULL_SIZEが有効であることを示す.
+        PULL_FIN_VAL    : --! @brief Pull Final Valid.
+                          --! PULL_FIN_LAST/PULL_FIN_ERROR/PULL_FIN_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        PULL_LAST       : --! @brief Pull Last.
+        PULL_FIN_LAST   : --! @brief Pull Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PULL_ERROR      : --! @brief Reserve Error.
+        PULL_FIN_ERROR  : --! @brief Pull Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PULL_SIZE       : --! @brief Reserve Size.
+        PULL_FIN_SIZE   : --! @brief Pull Final Size.
                           --! 転送"した"バイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_BUF_RESET  : --! @brief Pull Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic;
+        PULL_BUF_VAL    : --! @brief Pull Buffer Valid.
+                          --! PULL_BUF_LAST/PULL_BUF_ERROR/PULL_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic;
+        PULL_BUF_LAST   : --! @brief Pull Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_ERROR  : --! @brief Pull Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_SIZE   : --! @brief Pull Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
+                          --! バッファからデータを読み出し可能な事をを示す.
+                          in    std_logic;
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -1145,10 +1206,7 @@ component AXI4_SLAVE_READ_INTERFACE
                           in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : --! @brief Buffer Write Pointer.
                           --! ライト時にデータを書き込むバッファの位置を出力する.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Write Ready.
-                          --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -1351,35 +1409,59 @@ component AXI4_SLAVE_WRITE_INTERFACE
         VALVE_OPEN      : --! @brief Valve Open.
                           out   std_logic;
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
+        PUSH_RSV_VAL    : --! @brief Push Reserve Valid.
+                          --! PUSH_RSV_LAST/PUSH_RSV_ERROR/PUSH_RSV_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        RESV_LAST       : --! @brief Reserve Last.
+        PUSH_RSV_LAST   : --! @brief Push Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PUSH_RSV_ERROR  : --! @brief Push Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PUSH_RSV_SIZE   : --! @brief Push Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Push Final Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief Pull Valid.
-                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す.
+        PUSH_FIN_VAL    : --! @brief Push Final Valid.
+                          --! PUSH_FIN_LAST/PUSH_FIN_ERROR/PUSH_FIN_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        PUSH_LAST       : --! @brief Pull Last.
+        PUSH_FIN_LAST   : --! @brief Push Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PUSH_ERROR      : --! @brief Reserve Error.
+        PUSH_FIN_ERROR  : --! @brief Push Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PUSH_SIZE       : --! @brief Reserve Size.
+        PUSH_FIN_SIZE   : --! @brief Push Final Size.
                           --! 転送"した"バイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_BUF_RESET  : --! @brief Push Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic;
+        PUSH_BUF_VAL    : --! @brief Push Buffer Valid.
+                          --! PUSH_BUF_LAST/PUSH_BUF_ERROR/PUSH_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic;
+        PUSH_BUF_LAST   : --! @brief Push Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_ERROR  : --! @brief Push Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_SIZE   : --! @brief Push Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in    std_logic;
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -1396,10 +1478,7 @@ component AXI4_SLAVE_WRITE_INTERFACE
                           out   std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : --! @brief Buffer Write Pointer.
                           --! ライト時にデータを書き込むバッファの位置を出力する.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Write Ready.
-                          --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------

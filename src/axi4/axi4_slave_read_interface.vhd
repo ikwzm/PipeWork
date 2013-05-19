@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/16
+--!     @date    2013/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -225,35 +225,59 @@ entity  AXI4_SLAVE_READ_INTERFACE is
         VALVE_OPEN      : --! @brief Valve Open.
                           out   std_logic;
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
+        PULL_RSV_VAL    : --! @brief Pull Reserve Valid.
+                          --! PULL_RSV_LAST/PULL_RSV_ERROR/PULL_RSV_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        RESV_LAST       : --! @brief Reserve Last.
+        PULL_RSV_LAST   : --! @brief Pull Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PULL_RSV_ERROR  : --! @brief Pull Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PULL_RSV_SIZE   : --! @brief Pull Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief Pull Valid.
-                          --! PULL_LAST/PULL_ERROR/PULL_SIZEが有効であることを示す.
+        PULL_FIN_VAL    : --! @brief Pull Final Valid.
+                          --! PULL_FIN_LAST/PULL_FIN_ERROR/PULL_FIN_SIZEが有効で
+                          --! あることを示す.
                           out   std_logic;
-        PULL_LAST       : --! @brief Pull Last.
+        PULL_FIN_LAST   : --! @brief Pull Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PULL_ERROR      : --! @brief Reserve Error.
+        PULL_FIN_ERROR  : --! @brief Pull Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PULL_SIZE       : --! @brief Reserve Size.
+        PULL_FIN_SIZE   : --! @brief Pull Final Size.
                           --! 転送"した"バイト数を出力する.
                           out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_BUF_RESET  : --! @brief Pull Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic;
+        PULL_BUF_VAL    : --! @brief Pull Buffer Valid.
+                          --! PULL_BUF_LAST/PULL_BUF_ERROR/PULL_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic;
+        PULL_BUF_LAST   : --! @brief Pull Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_ERROR  : --! @brief Pull Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_SIZE   : --! @brief Pull Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
+                          --! バッファからデータを読み出し可能な事をを示す.
+                          in    std_logic;
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -270,10 +294,7 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : --! @brief Buffer Write Pointer.
                           --! ライト時にデータを書き込むバッファの位置を出力する.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Write Ready.
-                          --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end AXI4_SLAVE_READ_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -404,7 +425,7 @@ begin
     -------------------------------------------------------------------------------
     xfer_start <= '1' when (curr_state = REQ_STATE) else '0';
     xfer_error <= '1' when (curr_state = ERR_STATE) else '0';
-    xfer_valid <= '1' when (BUF_RDY = '1') or
+    xfer_valid <= '1' when (PULL_BUF_RDY = '1') or
                            (curr_state = ERR_STATE) else '0';
     VALVE_OPEN <= '1' when (curr_state = REQ_STATE) or
                            (curr_state = ACK_STATE) or
@@ -576,17 +597,17 @@ begin
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PULL_VAL(0)     => exit_valid      , -- Out :
-            PULL_LAST       => exit_last       , -- Out :
-            PULL_ERROR      => exit_error      , -- Out :
-            PULL_SIZE       => exit_size       , -- Out :
+            PULL_VAL(0)     => PULL_BUF_VAL    , -- Out :
+            PULL_LAST       => PULL_BUF_LAST   , -- Out :
+            PULL_ERROR      => PULL_BUF_ERROR  , -- Out :
+            PULL_SIZE       => PULL_BUF_SIZE   , -- Out :
         ---------------------------------------------------------------------------
         -- Outlet Size Signals.
         ---------------------------------------------------------------------------
-            EXIT_VAL        => open            , -- Out :
-            EXIT_LAST       => open            , -- Out :
-            EXIT_ERROR      => open            , -- Out :
-            EXIT_SIZE       => open            , -- Out :
+            EXIT_VAL(0)     => exit_valid      , -- Out :
+            EXIT_LAST       => exit_last       , -- Out :
+            EXIT_ERROR      => exit_error      , -- Out :
+            EXIT_SIZE       => exit_size       , -- Out :
         ---------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
         ---------------------------------------------------------------------------
@@ -610,15 +631,19 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    PULL_VAL   <= exit_valid;
-    PULL_LAST  <= exit_last;
-    PULL_ERROR <= exit_error;
-    PULL_SIZE  <= exit_size;
+    PULL_FIN_VAL   <= exit_valid;
+    PULL_FIN_LAST  <= exit_last;
+    PULL_FIN_ERROR <= exit_error;
+    PULL_FIN_SIZE  <= exit_size;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    RESV_VAL   <= exit_valid;
-    RESV_LAST  <= exit_last;
-    RESV_ERROR <= exit_error;
-    RESV_SIZE  <= exit_size;
+    PULL_RSV_VAL   <= exit_valid;
+    PULL_RSV_LAST  <= exit_last;
+    PULL_RSV_ERROR <= exit_error;
+    PULL_RSV_SIZE  <= exit_size;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    PULL_BUF_RESET <= '0';
 end RTL;

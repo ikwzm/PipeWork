@@ -2,7 +2,7 @@
 --!     @file    pipe_components.vhd                                             --
 --!     @brief   PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 0.0.1                                                           --
---!     @date    2013/05/16                                                      --
+--!     @date    2013/05/19                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -320,40 +320,46 @@ component PIPE_REQUESTER_INTERFACE
                               --! リクエスタ側で想定している一回の転送時の最大
                               --! バイト数ではない事に注意.
                               integer :=  4;
-        O_VALVE_FIXED       : --! @brief Outlet Valve Fixed Mode :
-                              --! 出力用バルブのモードを指定する.
-                              --! * O_VALVE_FIXED=0 : フローカウンタによるフロー制
-                              --!   御を行う.
-                              --! * O_VALVE_FIXED=1 : 常にバルブが閉じた状態にする.
-                              --! * O_VALVE_FIXED=2 : 常にバルブが開いた状態にする.
-                              integer :=  0;
-        O_VALVE_PRECEDE     : --! @brief Outlet Valve Precede Mode :
-                              --! 出力用バルブを先行(Precede)モードでフローを制御
-                              --! するかどうかを指定する.
-                              --! * O_VALVE_PRECEDE=0 : 非先行モード. フローカウン
-                              --!   タの加算にT_PUSH_FIN_SIZE(入力が確定(FINAL)し
-                              --!   たバイト数)を使う.
-                              --! * O_VALVE_PRECEDE=1 : 先行モード. フローカウンタ
-                              --!   の加算に T_PUSH_RSV_SIZE(入力する予定(RESERVE)
-                              --!   のバイト数)を使う.
-                              integer :=  0;
-        I_VALVE_FIXED       : --! @brief Intake Valve Fixed Mode :
-                              --! 入力用バルブのモードを指定する.
-                              --! * I_VALVE_FIXED=0 : フローカウンタによるフロー制
-                              --!   御を行う.
-                              --! * I_VALVE_FIXED=1 : 常にバルブが閉じた状態にする.
-                              --! * I_VALVE_FIXED=2 : 常にバルブが開いた状態にする.
-                              integer :=  0;
-        I_VALVE_PRECEDE     : --! @brief Intake Valve Precede Mode :
-                              --! 入力用バルブを先行(Precede)モードでフローを制御
-                              --! するかどうかを指定する.
-                              --! * I_VALVE_PRECEDE=0 : 非先行モード. 
-                              --!   フローカウンタの減算にT_PULL_FIN_SIZE(出力が確
-                              --!   定(FINAL)したバイト数)を使う.
-                              --! * I_VALVE_PRECEDE=1 : 先行モード. 
-                              --!   フローカウンタの減算に T_PULL_RSV_SIZE(出力する
-                              --!   予定(RESERVE)のバイト数)を使う.
-                              integer :=  0
+        O_FIXED_CLOSE       : --! @brief OUTLET VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_POOL_OPEN   : --! @brief OUTLET FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_CLOSE       : --! @brief INTAKE VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_POOL_OPEN   : --! @brief INTAKE FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        USE_T_PUSH_RSV      : --! @brief USE PUSH RESERVE SIGNALS :
+                              --! フローカウンタの加算に T_PUSH_RSV_SIZE を使うか 
+                              --! T_PUSH_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_M_PULL_BUF      : --! @brief USE PULL BUFFER  SIGNALS :
+                              --! プールカウンタの減算に M_PULL_BUF_SIZE を使うか 
+                              --! M_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
+        USE_T_PULL_RSV      : --! @brief USE PULL RESERVE SIGNALS :
+                              --! フローカウンタの減算に T_PULL_RSV_SIZE を使うか 
+                              --! T_PULL_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_M_PUSH_BUF      : --! @brief USE PUSH BUFFER  SIGNALS :
+                              --! プールカウンタの加算に M_PUSH_BUF_SIZE を使うか 
+                              --! M_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1
     );
     port (
     ------------------------------------------------------------------------------
@@ -454,6 +460,36 @@ component PIPE_REQUESTER_INTERFACE
                               --! 示されるバイト数分を加算/減算すると良い.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        M_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from requester :
+                              in  std_logic;
+        M_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from requester :
+                              in  std_logic;
+        M_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from requester :
+                              in  std_logic;
+        M_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from requester :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   requester :
+                              out std_logic;
+        M_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        M_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from requester :
+                              in  std_logic;
+        M_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from requester :
+                              in  std_logic;
+        M_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from requester :
+                              in  std_logic;
+        M_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from requester :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   requester :
+                              out std_logic;
+        M_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Requester.
     -------------------------------------------------------------------------------
         O_FLOW_PAUSE        : --! @brief Outlet Valve Flow Pause :
@@ -474,19 +510,10 @@ component PIPE_REQUESTER_INTERFACE
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
                               out std_logic;
-        O_POOL_READY        : --! @brief Outlet Valve Pool Ready :
-                              --! 先行モード(O_VALVE_PRECEDE=1)の時、プールバッファに 
-                              --! O_POOL_READY_LEVEL 以上のデータがあることを示す.
-                              out std_logic;
-        O_FLOW_READY_LEVEL  : --! @brief Outlet Valve Flow Ready Level :
+        O_FLOW_LEVEL        : --! @brief Outlet Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        O_POOL_READY_LEVEL  : --! @brief Outlet Valve Pool Ready Lelvel :
-                              --! 先行モード(O_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZEに
-                              --! よるフローカウンタの加算結果が、この値以上の時に
-                              --! O_POOL_READY 信号をアサートする.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Requester.
@@ -509,23 +536,14 @@ component PIPE_REQUESTER_INTERFACE
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
                               out std_logic;
-        I_POOL_READY        : --! @brief Intake Valve Pool Ready :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、プールバッファに 
-                              --! I_POOL_READY_LEVEL以下のデータしか無いことを示す.
-                              out std_logic;
-        I_FLOW_READY_LEVEL  : --! @brief Intake Valve Flow Ready Level :
+        I_BUF_SIZE          : --! @brief Intake Buffer Size :
+                              --! 入力用プールの総容量を指定する.
+                              --! I_FLOW_SIZE を求めるのに使用する.
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_POOL_READY_LEVEL  : --! @brief Intake Valve Pool Ready Level :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZE に
-                              --! よるフローカウンタの減算結果が、この値以下の時に
-                              --! I_POOL_READY 信号をアサートする.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_POOL_SIZE         : --! @brief Intake Pool Size :
-                              --! 入力用プールの総容量を指定する.
-                              --! I_FLOW_SIZE を求めるのに使用する.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request from Responder.
@@ -714,40 +732,46 @@ component PIPE_RESPONDER_INTERFACE
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
-        O_VALVE_FIXED       : --! @brief Outlet Valve Fixed Mode :
-                              --! 出力用バルブのモードを指定する.
-                              --! * O_VALVE_FIXED=0 : フローカウンタによるフロー制
-                              --!   御を行う.
-                              --! * O_VALVE_FIXED=1 : 常にバルブが閉じた状態にする.
-                              --! * O_VALVE_FIXED=2 : 常にバルブが開いた状態にする.
-                              integer :=  0;
-        O_VALVE_PRECEDE     : --! @brief Outlet Valve Precede Mode :
-                              --! 出力用バルブを先行(Precede)モードでフローを制御
-                              --! するかどうかを指定する.
-                              --! * O_VALVE_PRECEDE=0 : 非先行モード. フローカウン
-                              --!   タの加算にT_PUSH_FIN_SIZE(入力が確定(FINAL)し
-                              --!   たバイト数)を使う.
-                              --! * O_VALVE_PRECEDE=1 : 先行モード. フローカウンタ
-                              --!   の加算に T_PUSH_RSV_SIZE(入力する予定(RESERVE)
-                              --!   のバイト数)を使う.
-                              integer :=  0;
-        I_VALVE_FIXED       : --! @brief Intake Valve Fixed Mode :
-                              --! 入力用バルブのモードを指定する.
-                              --! * I_VALVE_FIXED=0 : フローカウンタによるフロー制
-                              --!   御を行う.
-                              --! * I_VALVE_FIXED=1 : 常にバルブが閉じた状態にする.
-                              --! * I_VALVE_FIXED=2 : 常にバルブが開いた状態にする.
-                              integer :=  0;
-        I_VALVE_PRECEDE     : --! @brief Intake Valve Precede Mode :
-                              --! 入力用バルブを先行(Precede)モードでフローを制御
-                              --! するかどうかを指定する.
-                              --! * I_VALVE_PRECEDE=0 : 非先行モード. 
-                              --!   フローカウンタの減算にT_PULL_FIN_SIZE(出力が確
-                              --!   定(FINAL)したバイト数)を使う.
-                              --! * I_VALVE_PRECEDE=1 : 先行モード. 
-                              --!   フローカウンタの減算に T_PULL_RSV_SIZE(出力する
-                              --!   予定(RESERVE)のバイト数)を使う.
-                              integer :=  0
+        O_FIXED_CLOSE       : --! @brief OUTLET VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_POOL_OPEN   : --! @brief OUTLET FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_CLOSE       : --! @brief INTAKE VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_POOL_OPEN   : --! @brief INTAKE FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        USE_M_PUSH_RSV      : --! @brief USE PUSH RESERVE SIGNALS :
+                              --! フローカウンタの加算に M_PUSH_RSV_SIZE を使うか 
+                              --! M_PUSH_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_T_PULL_BUF      : --! @brief USE PULL BUFFER  SIGNALS :
+                              --! プールカウンタの減算に T_PULL_BUF_SIZE を使うか 
+                              --! T_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
+        USE_M_PULL_RSV      : --! @brief USE PULL RESERVE SIGNALS :
+                              --! フローカウンタの減算に M_PULL_RSV_SIZE を使うか 
+                              --! M_PULL_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_T_PUSH_BUF      : --! @brief USE PUSH BUFFER  SIGNALS :
+                              --! プールカウンタの加算に T_PUSH_BUF_SIZE を使うか 
+                              --! T_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1
     );
     port (
     ------------------------------------------------------------------------------
@@ -864,6 +888,36 @@ component PIPE_RESPONDER_INTERFACE
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
+                              in  std_logic;
+        T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
+                              in  std_logic;
+        T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
+                              in  std_logic;
+        T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
+                              out std_logic;
+        T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+        T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
+                              in  std_logic;
+        T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
+                              in  std_logic;
+        T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
+                              in  std_logic;
+        T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
+                              out std_logic;
+        T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
         O_VALVE_OPEN        : --! @brief Outlet Vavle Open :
@@ -886,19 +940,10 @@ component PIPE_RESPONDER_INTERFACE
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
                               out std_logic;
-        O_POOL_READY        : --! @brief Outlet Valve Pool Ready :
-                              --! 先行モード(O_VALVE_PRECEDE=1)の時、プールバッファに 
-                              --! O_POOL_READY_LEVEL 以上のデータがあることを示す.
-                              out std_logic;
-        O_FLOW_READY_LEVEL  : --! @brief Outlet Valve Flow Ready Level :
+        O_FLOW_LEVEL        : --! @brief Outlet Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        O_POOL_READY_LEVEL  : --! @brief Outlet Valve Pool Ready Lelvel :
-                              --! 先行モード(O_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZEに
-                              --! よるフローカウンタの加算結果が、この値以上の時に
-                              --! O_POOL_READY 信号をアサートする.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Responder.
@@ -927,17 +972,12 @@ component PIPE_RESPONDER_INTERFACE
                               --! 先行モード(I_VALVE_PRECEDE=1)の時、プールバッファに 
                               --! I_POOL_READY_LEVEL以下のデータしか無いことを示す.
                               out std_logic;
-        I_FLOW_READY_LEVEL  : --! @brief Intake Valve Flow Ready Level :
+        I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_POOL_READY_LEVEL  : --! @brief Intake Valve Pool Ready Level :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、M_PULL_FIN_SIZE に
-                              --! よるフローカウンタの減算結果が、この値以下の時に
-                              --! I_POOL_READY 信号をアサートする.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_POOL_SIZE         : --! @brief Intake Pool Size :
+        I_BUF_SIZE          : --! @brief Intake Pool Size :
                               --! 入力用プールの総容量を指定する.
                               --! I_FLOW_SIZE を求めるのに使用する.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
@@ -1115,25 +1155,89 @@ component PIPE_CORE_UNIT
                               integer := 12;
         T_COUNT_BITS        : --! @brief Responder Flow Counter Bits :
                               integer := 12;
-        M_O_VALVE_FIXED     : --! @brief Requester Outlet Valve Fixed Mode :
-                              integer :=  0;
-        M_O_VALVE_PRECEDE   : --! @brief Requester Outlet Valve Precede Mode :
-                              integer :=  0;
-        M_I_VALVE_FIXED     : --! @brief Requester Intake Valve Fixed Mode :
-                              integer :=  0;
-        M_I_VALVE_PRECEDE   : --! @brief Requester Intake Valve Precede Mode :
-                              integer :=  0;
-        T_O_VALVE_FIXED     : --! @brief Responder Outlet Valve Fixed Mode :
-                              integer :=  0;
-        T_O_VALVE_PRECEDE   : --! @brief Responder Outlet Valve Precede Mode :
-                              integer :=  0;
-        T_I_VALVE_FIXED     : --! @brief Responder Intake Valve Fixed Mode :
-                              integer :=  0;
-        T_I_VALVE_PRECEDE   : --! @brief Responder Intake Valve Precede Mode :
-                              integer :=  0;
-        T2M_PUSH_FIN_DELAY  : --! @brief Responder to Requester Pull Final Size Delay Cycle :
-                              integer :=  0;
+        M_O_FIXED_CLOSE     : --! @brief OUTLET VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        M_O_FIXED_FLOW_OPEN : --! @brief OUTLET VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        M_O_FIXED_POOL_OPEN : --! @brief OUTLET FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        M_I_FIXED_CLOSE     : --! @brief INTAKE VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        M_I_FIXED_FLOW_OPEN : --! @brief INTAKE VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        M_I_FIXED_POOL_OPEN : --! @brief INTAKE FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        T_O_FIXED_CLOSE     : --! @brief OUTLET VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        T_O_FIXED_FLOW_OPEN : --! @brief OUTLET VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        T_O_FIXED_POOL_OPEN : --! @brief OUTLET FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        T_I_FIXED_CLOSE     : --! @brief INTAKE VALVE FIXED CLOSE :
+                              --! フローカウンタによるフロー制御を行わず、常に栓が
+                              --! 閉じた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        T_I_FIXED_FLOW_OPEN : --! @brief INTAKE VALVE FLOW FIXED OPEN :
+                              --! フローカウンタによるフロー制御を行わず、常にフロ
+                              --! ー栓が開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        T_I_FIXED_POOL_OPEN : --! @brief INTAKE FIXED VALVE POOL OPEN :
+                              --! プールカウンタによるフロー制御を行わず、常にプー
+                              --! ル栓ルブが開いた状態にするか否かを指定する.
+                              integer range 0 to 1 := 0;
+        M2T_PUSH_RSV_VALID  : --! @brief USE PUSH RESERVE SIGNALS :
+                              --! フローカウンタの加算に M_PUSH_RSV_SIZE を使うか 
+                              --! M_PUSH_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        M2T_PULL_RSV_VALID  : --! @brief USE PULL RESERVE SIGNALS :
+                              --! フローカウンタの減算に M_PULL_RSV_SIZE を使うか 
+                              --! M_PULL_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        M2T_PUSH_BUF_VALID  : --! @brief USE PUSH BUFFER  SIGNALS :
+                              --! プールカウンタの加算に M_PUSH_BUF_SIZE を使うか 
+                              --! M_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
+        M2T_PULL_BUF_VALID  : --! @brief USE PULL BUFFER  SIGNALS :
+                              --! プールカウンタの減算に M_PULL_BUF_SIZE を使うか 
+                              --! M_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
         M2T_PUSH_FIN_DELAY  : --! @brief Requester to Responder Pull Final Size Delay Cycle :
+                              integer :=  0;
+        T2M_PUSH_RSV_VALID  : --! @brief USE PUSH RESERVE SIGNALS :
+                              --! フローカウンタの加算に T_PUSH_RSV_SIZE を使うか 
+                              --! T_PUSH_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        T2M_PULL_RSV_VALID  : --! @brief USE PULL RESERVE SIGNALS :
+                              --! フローカウンタの減算に T_PULL_RSV_SIZE を使うか 
+                              --! T_PULL_FIX_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        T2M_PUSH_BUF_VALID  : --! @brief USE PUSH BUFFER  SIGNALS :
+                              --! プールカウンタの加算に T_PUSH_BUF_SIZE を使うか 
+                              --! T_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
+        T2M_PULL_BUF_VALID  : --! @brief USE PULL BUFFER  SIGNALS :
+                              --! プールカウンタの減算に T_PULL_BUF_SIZE を使うか 
+                              --! T_ACK_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 1;
+        T2M_PUSH_FIN_DELAY  : --! @brief Responder to Requester Pull Final Size Delay Cycle :
                               integer :=  0;
         T_XFER_MAX_SIZE     : --! @brief Responder Transfer Max Size :
                               integer := 12
@@ -1154,125 +1258,75 @@ component PIPE_CORE_UNIT
     -------------------------------------------------------------------------------
     -- レスポンダ側からの要求信号入力.
     -------------------------------------------------------------------------------
-        T_REQ_ADDR          : --! @brief Responder Request Address :
-                              --! 転送開始アドレスを入力する.  
-                              in  std_logic_vector(ADDR_BITS-1 downto 0);
-        T_REQ_SIZE          : --! @brief Responder Request Transfer Size :
-                              --! 転送したいバイト数を出力する. 
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_REQ_BUF_PTR       : --! @brief Responder Request Buffer Pointer :
-                              --! 転送時のバッファポインタを出力する.
-                              in  std_logic_vector(BUF_DEPTH-1 downto 0);
-        T_REQ_MODE          : --! @brief Responder Request Mode Signals :
-                              --! 転送開始時に指定された各種情報を出力する.
-                              in  std_logic_vector(MODE_BITS-1 downto 0);
-        T_REQ_DIR           : --! @brief Request Direction signals from responder :
-                              --! 転送方向(PUSH/PULL)を指定する.
-                              --! * T_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
-                              --! * T_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
-                              in  std_logic;
-        T_REQ_FIRST         : --! @brief Request First transaction from responder :
-                              --! 最初のトランザクションであることを示す.
-                              --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
-                              --!   トランザクションを開始する.
-                              in  std_logic;
-        T_REQ_LAST          : --! @brief Request Last transaction from responder :
-                              --! 最後のトランザクションであることを示す.
-                              --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
-                              --!   すべてのトランザクションが終了していると、
-                              --!   ACK_LAST 信号をアサートする.
-                              --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
-                              --!   すべてのトランザクションが終了していると、
-                              --!   ACK_NEXT 信号をアサートする.
-                              in  std_logic;
-        T_REQ_VALID         : --! @brief Responder Request Valid Signal :
-                              --! 上記の各種リクエスト信号が有効であることを示す.
-                              --! * この信号のアサートでもってトランザクションを開始する.
-                              --! * 一度この信号をアサートすると Acknowledge を返すまで、
-                              --!   この信号はアサートされなくてはならない.
-                              in  std_logic;
-        T_REQ_READY         : --! @brief Responder Request Ready Signal :
-                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
-                              out std_logic;
+        T_REQ_ADDR          : in  std_logic_vector(ADDR_BITS-1 downto 0);
+        T_REQ_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_REQ_BUF_PTR       : in  std_logic_vector(BUF_DEPTH-1 downto 0);
+        T_REQ_MODE          : in  std_logic_vector(MODE_BITS-1 downto 0);
+        T_REQ_DIR           : in  std_logic;
+        T_REQ_FIRST         : in  std_logic;
+        T_REQ_LAST          : in  std_logic;
+        T_REQ_VALID         : in  std_logic;
+        T_REQ_READY         : out std_logic;
     -------------------------------------------------------------------------------
     -- レスポンダ側への応答信号出力.
     -------------------------------------------------------------------------------
-        T_ACK_VALID         : --! @brief Responder Acknowledge Valid Signal :
-                              --! 上記の Responder Request の応答信号.
-                              --! 下記の 各種 Acknowledge 信号が有効である事を示す.
-                              --! * この信号のアサートでもって、Responder Request が受け
-                              --!   付けられたことを示す. ただし、あくまでも Request が
-                              --!   受け付けられただけであって、必ずしもトランザクショ
-                              --!   ンが完了したわけではないことに注意.
-                              --! * この信号は Request につき１クロックだけアサートされ
-                              --!   る.
-                              --! * この信号がアサートされたら、アプリケーション側は速
-                              --!   やかに REQ_VAL 信号をネゲートして Request を取り下
-                              --!   げるか、REQ_VALをアサートしたままで次の Request 情
-                              --!   報を用意しておかなければならない.
-                              out std_logic;
-        T_ACK_NEXT          : --! @brief Acknowledge with need Next transaction to responder :
-                              --! すべてのトランザクションが終了かつ REQ_LAST=0 の
-                              --! 場合、この信号がアサートされる.
-                              out std_logic;
-        T_ACK_LAST          : --! @brief Acknowledge with Last transaction to responder :
-                              --! すべてのトランザクションが終了かつ REQ_LAST=1 の
-                              --! 場合、この信号がアサートされる.
-                              out std_logic;
-        T_ACK_ERROR         : --! @brief Acknowledge with Error to responder :
-                              --! トランザクション中になんらかのエラーが発生した場
-                              --! 合、この信号がアサートされる.
-                              out std_logic;
-        T_ACK_STOP          : --! @brief Acknowledge with Stop operation to responder :
-                              --! トランザクションが中止された場合、この信号がアサ
-                              --! ートされる.
-                              out std_logic;
-        T_ACK_SIZE          : --! @brief Acknowledge transfer Size to responder :
-                              --! 転送するバイト数を示す.
-                              --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で
-                              --! 示されるバイト数分を加算/減算すると良い.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+        T_ACK_VALID         : out std_logic;
+        T_ACK_NEXT          : out std_logic;
+        T_ACK_LAST          : out std_logic;
+        T_ACK_ERROR         : out std_logic;
+        T_ACK_STOP          : out std_logic;
+        T_ACK_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- レスポンダ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
+        T_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
         T_I_VALVE_OPEN      : in  std_logic;
-        T_I_FLOW_RDY        : out std_logic;
+        T_I_FLOW_READY      : out std_logic;
         T_I_FLOW_PAUSE      : out std_logic;
         T_I_FLOW_STOP       : out std_logic;
         T_I_FLOW_LAST       : out std_logic;
         T_I_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_POOL_RDY        : out std_logic;
-        T_I_FLOW_RDY_LVL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_POOL_RDY_LVL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_POOL_SIZE       : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PUSH_FIN_VAL      : in  std_logic;
+        T_PUSH_FIN_VALID    : in  std_logic;
         T_PUSH_FIN_LAST     : in  std_logic;
-        T_PUSH_FIN_ERR      : in  std_logic;
+        T_PUSH_FIN_ERROR    : in  std_logic;
         T_PUSH_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PUSH_RSV_VAL      : in  std_logic;
+        T_PUSH_RSV_VALID    : in  std_logic;
         T_PUSH_RSV_LAST     : in  std_logic;
-        T_PUSH_RSV_ERR      : in  std_logic;
+        T_PUSH_RSV_ERROR    : in  std_logic;
         T_PUSH_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_RESET    : in  std_logic;
+        T_PUSH_BUF_VALID    : in  std_logic;
+        T_PUSH_BUF_LAST     : in  std_logic;
+        T_PUSH_BUF_ERROR    : in  std_logic;
+        T_PUSH_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- レスポンダ側へのデータ出力のフロー制御信号入出力
     -------------------------------------------------------------------------------
+        T_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
         T_O_VALVE_OPEN      : in  std_logic;
-        T_O_FLOW_RDY        : out std_logic;
+        T_O_FLOW_READY      : out std_logic;
         T_O_FLOW_PAUSE      : out std_logic;
         T_O_FLOW_STOP       : out std_logic;
         T_O_FLOW_LAST       : out std_logic;
         T_O_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
-        T_O_POOL_RDY        : out std_logic;
-        T_O_FLOW_RDY_LVL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_O_POOL_RDY_LVL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PULL_FIN_VAL      : in  std_logic;
+        T_PULL_FIN_VALID    : in  std_logic;
         T_PULL_FIN_LAST     : in  std_logic;
-        T_PULL_FIN_ERR      : in  std_logic;
+        T_PULL_FIN_ERROR    : in  std_logic;
         T_PULL_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PULL_RSV_VAL      : in  std_logic;
+        T_PULL_RSV_VALID    : in  std_logic;
         T_PULL_RSV_LAST     : in  std_logic;
-        T_PULL_RSV_ERR      : in  std_logic;
+        T_PULL_RSV_ERROR    : in  std_logic;
         T_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_RESET    : in  std_logic;
+        T_PULL_BUF_VALID    : in  std_logic;
+        T_PULL_BUF_LAST     : in  std_logic;
+        T_PULL_BUF_ERROR    : in  std_logic;
+        T_PULL_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスト側クロック.
     -------------------------------------------------------------------------------
@@ -1282,178 +1336,74 @@ component PIPE_CORE_UNIT
     -------------------------------------------------------------------------------
     -- リクエスタ側への要求信号出力.
     -------------------------------------------------------------------------------
-        M_REQ_ADDR          : --! @brief Requester Request Address :
-                              --! 転送開始アドレスを出力する.  
-                              out std_logic_vector(ADDR_BITS-1 downto 0);
-        M_REQ_SIZE          : --! @brief Requester Request Transfer Size :
-                              --! 転送したいバイト数を出力する. 
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
-        M_REQ_BUF_PTR       : --! @brief Requester Request Buffer Pointer :
-                              --! 転送時のバッファポインタを出力する.
-                              out std_logic_vector(BUF_DEPTH-1 downto 0);
-        M_REQ_MODE          : --! @brief Requester Request Mode Signals :
-                              --! 転送開始時に指定された各種情報を出力する.
-                              out std_logic_vector(MODE_BITS-1 downto 0);
-        M_REQ_DIR           : --! @brief Request Direction to requester :
-                              --! 転送方向(PUSH/PULL)を指定する.
-                              --! * M_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
-                              --! * M_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
-                              out std_logic;
-        M_REQ_FIRST         : --! @brief Requester Request First Transaction :
-                              --! 最初のトランザクションであることを示す.
-                              --! * REQ_FIRST=1の場合、内部状態を初期化してからトランザ
-                              --!   クションを開始する.
-                              out std_logic;
-        M_REQ_LAST          : --! @brief Requester Request Last Transaction :
-                              --! 最後のトランザクションであることを示す.
-                              --! * REQ_LAST=1の場合、Acknowledge を返す際に、すべての
-                              --!   トランザクションが終了していると、ACK_LAST 信号をア
-                              --!   サートする.
-                              --! * REQ_LAST=0の場合、Acknowledge を返す際に、すべての
-                              --!   トランザクションが終了していると、ACK_NEXT 信号をア
-                              --!   サートする.
-                              out std_logic;
-        M_REQ_VALID         : --! @brief Requester Request Valid Signal :
-                              --! 上記の各種リクエスト信号が有効であることを示す.
-                              --! * この信号のアサートでもってトランザクションを開始する.
-                              --! * 一度この信号をアサートすると Acknowledge を返すまで、
-                              --!   この信号はアサートされなくてはならない.
-                              out std_logic;
-        M_REQ_READY         : --! @brief Requester Request Ready Signal :
-                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
-                              in  std_logic;
+        M_REQ_ADDR          : out std_logic_vector(ADDR_BITS-1 downto 0);
+        M_REQ_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH-1 downto 0);
+        M_REQ_MODE          : out std_logic_vector(MODE_BITS-1 downto 0);
+        M_REQ_DIR           : out std_logic;
+        M_REQ_FIRST         : out std_logic;
+        M_REQ_LAST          : out std_logic;
+        M_REQ_VALID         : out std_logic;
+        M_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側からの応答信号入力.
     -------------------------------------------------------------------------------
-        M_ACK_VALID         : --! @brief Requester Acknowledge Valid Signal :
-                              --! 上記の Requester Request の応答信号.
-                              --! 下記の 各種 Acknowledge 信号が有効である事を示す.
-                              --! * この信号のアサートでもって、Requester Request が受け
-                              --!   付けられたことを示す. ただし、あくまでも Request が
-                              --!   受け付けられただけであって、必ずしもトランザクショ
-                              --!   ンが完了したわけではないことに注意.
-                              --! * この信号は Request につき１クロックだけアサートされ
-                              --!   る.
-                              --! * この信号がアサートされたら、アプリケーション側は速
-                              --!   やかに REQ_VAL 信号をネゲートして Request を取り下
-                              --!   げるか、REQ_VALをアサートしたままで次の Request 情
-                              --!   報を用意しておかなければならない.
-                              in  std_logic;
-        M_ACK_NEXT          : --! @brief Requester Acknowledge with need Next transaction :
-                              --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
-                              --! この信号がアサートされる.
-                              in  std_logic;
-        M_ACK_LAST          : --! @brief Requester Acknowledge with Last transaction :
-                              --! すべてのトランザクションが終了かつ REQ_LAST=1 の場合、
-                              --! この信号がアサートされる.
-                              in  std_logic;
-        M_ACK_ERROR         : --! @brief Requester Acknowledge with Error :
-                              --! トランザクション中になんらかのエラーが発生した場合、
-                              --! この信号がアサートされる.
-                              in  std_logic;
-        M_ACK_STOP          : --! @brief Requester Acknowledge with Stop operation :
-                              --! トランザクションが中止された場合、この信号がアサート
-                              --! される.
-                              in  std_logic;
-        M_ACK_NONE          : --! @brief Requester Acknowledge with None Request Transfer Size :
-                              --! REQ_SIZE=0 の Request だった場合、この信号がアサート
-                              --! される.
-                              in  std_logic;
-        M_ACK_SIZE          : --! @brief Acknowledge transfer size :
-                              --! 転送するバイト数を示す.
-                              --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
-                              --! れるバイト数分を加算/減算すると良い.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_ACK_VALID         : in  std_logic;
+        M_ACK_NEXT          : in  std_logic;
+        M_ACK_LAST          : in  std_logic;
+        M_ACK_ERROR         : in  std_logic;
+        M_ACK_STOP          : in  std_logic;
+        M_ACK_NONE          : in  std_logic;
+        M_ACK_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- リクエスタ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
-        M_I_FLOW_PAUSE      : --! @brief Requester Intake Valve Flow Pause :
-                              --! 入力を一時的に止めたり、再開することを指示する信号.
-                              --! プールバッファに I_FLOW_RDY_LVL を越えるデータが溜っ
-                              --! ていて、これ以上データが入らないことを示す.
-                              out std_logic;
-        M_I_FLOW_STOP       : --! @brief Requester Intake Valve Flow Stop :
-                              --! 入力の中止を指示する信号.
-                              out std_logic;
-        M_I_FLOW_LAST       : --! @brief Requester Intake Valve Flow Last :
-                              --! 入力側から最後の入力を示すフラグがあったことを示す.
-                              out std_logic;
-        M_I_FLOW_SIZE       : --! @brief Requester Intake Valve Flow Enable Size :
-                              --! 入力可能なバイト数
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
-        M_I_FLOW_RDY        : --! @brief Requester Intake Valve Flow Ready :
-                              --! プールバッファに I_FLOW_RDY_LVL 以下のデータしか無く、
-                              --! データの入力が可能な事を示す.
-                              out std_logic;
-        M_I_POOL_RDY        : --! @brief Requester Intake Valve Pool Ready :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、プールバッファに 
-                              --! I_POOL_RDY_LVL以下のデータしか無いことを示す.
-                              out std_logic;
-        M_I_FLOW_RDY_LVL    : --! @brief Requester Intake Valve Flow Ready Level :
-                              --! 一時停止する/しないを指示するための閾値.
-                              --! フローカウンタの値がこの値以下の時に入力を開始する.
-                              --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_I_POOL_RDY_LVL    : --! @brief Requester Intake Valve Pool Ready Level :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZE に
-                              --! よるフローカウンタの減算結果が、この値以下の時に
-                              --! I_POOL_RDY 信号をアサートする.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_I_POOL_SIZE       : --! @brief Requester Intake Pool Size :
-                              --! 入力用プールの総容量を指定する.
-                              --! M_I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PUSH_FIN_VAL      : in  std_logic;
+        M_I_FLOW_PAUSE      : out std_logic;
+        M_I_FLOW_STOP       : out std_logic;
+        M_I_FLOW_LAST       : out std_logic;
+        M_I_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_FLOW_READY      : out std_logic;
+        M_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_FIN_VALID    : in  std_logic;
         M_PUSH_FIN_LAST     : in  std_logic;
-        M_PUSH_FIN_ERR      : in  std_logic;
+        M_PUSH_FIN_ERROR    : in  std_logic;
         M_PUSH_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PUSH_RSV_VAL      : in  std_logic;
+        M_PUSH_RSV_VALID    : in  std_logic;
         M_PUSH_RSV_LAST     : in  std_logic;
-        M_PUSH_RSV_ERR      : in  std_logic;
+        M_PUSH_RSV_ERROR    : in  std_logic;
         M_PUSH_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_BUF_RESET    : in  std_logic;
+        M_PUSH_BUF_VALID    : in  std_logic;
+        M_PUSH_BUF_LAST     : in  std_logic;
+        M_PUSH_BUF_ERROR    : in  std_logic;
+        M_PUSH_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側へのデータ出力のフロー制御信号入出力
     -------------------------------------------------------------------------------
-        M_O_FLOW_PAUSE      : --! @brief Requester Outlet Valve Flow Pause :
-                              --! 出力を一時的に止めたり、再開することを指示する信号.
-                              --! プールバッファに M_O_FLOW_RDY_LVL 未満のデータしか
-                              --! 無いことを示す.
-                              out std_logic;
-        M_O_FLOW_STOP       : --! @brief Requester Outlet Valve Flow Stop :
-                              --! 出力の中止を指示する信号.
-                              out std_logic;
-        M_O_FLOW_LAST       : --! @brief Requester Outlet Valve Flow Last :
-                              --! 入力側から最後の入力を示すフラグがあったことを示す.
-                              out std_logic;
-        M_O_FLOW_SIZE       : --! @brief Requester Outlet Valve Flow Enable Size. :
-                              --! 出力可能なバイト数を出力.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
-        M_O_FLOW_RDY        : --! @brief Outlet Valve Flow Ready :
-                              --! プールバッファに M_O_FLOW_RDY_LVL 以上のデータがあ
-                              --! ることを示す.
-                              out std_logic;
-        M_O_POOL_RDY        : --! @brief Requester Outlet Valve Flow Ready :
-                              --! プールバッファに M_O_FLOW_RDY_LVL 以上のデータがあ
-                              --! ることを示す.
-                              out std_logic;
-        M_O_FLOW_RDY_LVL    : --! @brief Requester Outlet Valve Flow Ready Level :
-                              --! 一時停止する/しないを指示するための閾値.
-                              --! フローカウンタの値がこの値以上の時に転送を開始する.
-                              --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_O_POOL_RDY_LVL    : --! @brief Requester Outlet Valve Pool Ready Lelvel :
-                              --! 先行モード(M_O_VALVE_PRECEDE=1)の時、T_PULL_FIN_SIZE
-                              --! によるフローカウンタの加算結果が、この値以上の時に
-                              --! M_O_POOL_RDY 信号をアサートする.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PULL_FIN_VAL      : in  std_logic;
+        M_O_FLOW_PAUSE      : out std_logic;
+        M_O_FLOW_STOP       : out std_logic;
+        M_O_FLOW_LAST       : out std_logic;
+        M_O_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_FLOW_READY      : out std_logic;
+        M_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_FIN_VALID    : in  std_logic;
         M_PULL_FIN_LAST     : in  std_logic;
-        M_PULL_FIN_ERR      : in  std_logic;
+        M_PULL_FIN_ERROR    : in  std_logic;
         M_PULL_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PULL_RSV_VAL      : in  std_logic;
+        M_PULL_RSV_VALID    : in  std_logic;
         M_PULL_RSV_LAST     : in  std_logic;
-        M_PULL_RSV_ERR      : in  std_logic;
-        M_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0)
+        M_PULL_RSV_ERROR    : in  std_logic;
+        M_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_BUF_RESET    : in  std_logic;
+        M_PULL_BUF_VALID    : in  std_logic;
+        M_PULL_BUF_LAST     : in  std_logic;
+        M_PULL_BUF_ERROR    : in  std_logic;
+        M_PULL_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_BUF_READY    : out std_logic
     );
 end component;
 end PIPE_COMPONENTS;

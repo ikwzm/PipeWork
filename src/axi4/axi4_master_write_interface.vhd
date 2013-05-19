@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.0
---!     @date    2013/4/29
+--!     @date    2013/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -326,7 +326,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! 転送するバイト数を示す.
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Transfer Status Signal.
     -------------------------------------------------------------------------------
@@ -375,37 +375,61 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! * 例えば FIFO に残っているデータの容量を入力しておく
                           --!   と、そのバイト数を越えた転送は行わない.
                           --! * FLOW_VALID=0の場合、この信号は無視される.
-                          in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
+                          in    std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        RESV_LAST       : --! @brief Reserve Last.
+        PULL_RSV_VAL    : --! @brief Pull Reserve Valid.
+                          --! PULL_RSV_LAST/PULL_RSV_ERROR/PULL_RSV_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_RSV_LAST   : --! @brief Pull Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PULL_RSV_ERROR  : --! @brief Pull Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PULL_RSV_SIZE   : --! @brief Pull Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief Pull Valid.
-                          --! PULL_LAST/PULL_ERROR/PULL_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        PULL_LAST       : --! @brief Pull Last.
+        PULL_FIN_VAL    : --! @brief Pull Final Valid.
+                          --! PULL_FIN_LAST/PULL_FIN_ERROR/PULL_FIN_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_FIN_LAST   : --! @brief Pull Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PULL_ERROR      : --! @brief Reserve Error.
+        PULL_FIN_ERROR  : --! @brief Pull Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PULL_SIZE       : --! @brief Reserve Size.
+        PULL_FIN_SIZE   : --! @brief Pull Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_BUF_RESET  : --! @brief Pull Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_BUF_VAL    : --! @brief Pull Buffer Valid.
+                          --! PULL_BUF_LAST/PULL_BUF_ERROR/PULL_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PULL_BUF_LAST   : --! @brief Pull Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_ERROR  : --! @brief Pull Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PULL_BUF_SIZE   : --! @brief Pull Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
+                          --! バッファからデータを読み出し可能な事をを示す.
+                          in    std_logic_vector(VAL_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -419,15 +443,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! 次にリードするデータのバッファの位置を出力する.
                           --! * この信号の１クロック後に、バッファからリードした
                           --!   データを BUF_DATA に入力すること.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Read Ready.
-                          --! バッファにデータが用意出来ていることを示す.
-                          --! * この信号がネゲートされていると、ライトデータチャネ
-                          --!   ルからデータが出力されずに、再びアサートされるまで
-                          --!   停止する.
-                          --! * ただし、この信号はライトデータチャネルを制御するも
-                          --!   ので、ライトアドレスチャネルを制御するものではない.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end AXI4_MASTER_WRITE_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -516,6 +532,8 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   buf_push_size      : std_logic_vector(BUF_DATA_SIZE      downto 0);
     signal   buf_push_last      : std_logic;
     signal   buf_push_ready     : std_logic;
+    signal   buf_pull_ready     : std_logic;
+    constant BUF_SEL_ALL0       : std_logic_vector(VAL_BITS    -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -811,7 +829,11 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    buf_push_valid <= '1' when (buf_enable = '1' and BUF_RDY = '1') else '0';
+    buf_pull_ready <= '1' when ((PULL_BUF_RDY and buf_select) /= BUF_SEL_ALL0) else '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    buf_push_valid <= '1' when (buf_enable     = '1' and buf_pull_ready = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -1013,18 +1035,26 @@ begin
     xfer_ack_last  <= risky_ack_last  or safety_ack_last;
     xfer_ack_size  <= risky_ack_size  or safety_ack_size;
     -------------------------------------------------------------------------------
-    -- Reserve Size and Last
+    -- Pull Reserve Size and Last
     -------------------------------------------------------------------------------
-    RESV_VAL       <= xfer_req_select when (xfer_start    = '1') else (others => '0');
-    RESV_LAST      <= '1'             when (xfer_req_last = '1') else '0';
-    RESV_ERROR     <= '0';
-    RESV_SIZE      <= std_logic_vector(RESIZE(unsigned(xfer_req_size) , RESV_SIZE'length));
+    PULL_RSV_VAL   <= xfer_req_select when (xfer_start    = '1') else (others => '0');
+    PULL_RSV_LAST  <= xfer_req_last;
+    PULL_RSV_ERROR <= '0';
+    PULL_RSV_SIZE  <= std_logic_vector(RESIZE(unsigned(xfer_req_size) , PULL_RSV_SIZE'length));
     -------------------------------------------------------------------------------
-    -- Pull Size and Last
+    -- Pull Final Size and Last
     -------------------------------------------------------------------------------
-    PULL_VAL       <= ack_queue_select when (ack_queue_valid(0) = '1' and BVALID = '1') else (others => '0');
-    PULL_LAST      <= '1'              when (ack_queue_last = '1') else '0';
-    PULL_ERROR     <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
-    PULL_SIZE      <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
-                      std_logic_vector(RESIZE(unsigned(ack_queue_size), PULL_SIZE'length));
+    PULL_FIN_VAL   <= ack_queue_select when (ack_queue_valid(0) = '1' and BVALID = '1') else (others => '0');
+    PULL_FIN_LAST  <= ack_queue_last;
+    PULL_FIN_ERROR <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
+    PULL_FIN_SIZE  <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
+                      std_logic_vector(RESIZE(unsigned(ack_queue_size), PULL_FIN_SIZE'length));
+    -------------------------------------------------------------------------------
+    -- Pull Buffer Size and Last
+    -------------------------------------------------------------------------------
+    PULL_BUF_RESET <= xfer_req_select  when (xfer_start     = '1') else (others => '0');
+    PULL_BUF_VAL   <= buf_select       when (xfer_beat_chop = '1') else (others => '0');
+    PULL_BUF_LAST  <= buf_push_last;
+    PULL_BUF_ERROR <= '0';
+    PULL_BUF_SIZE  <= std_logic_vector(RESIZE(unsigned(buf_push_size) , PULL_BUF_SIZE'length));
 end RTL;
