@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.0                                                           --
---!     @date    2013/05/19                                                      --
+--!     @date    2013/05/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -242,6 +242,18 @@ component PUMP_CONTROL_REGISTER
                           --! される.
                           in  std_logic;
     -------------------------------------------------------------------------------
+    -- Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        XFER_BUSY       : --! @brief Transfer Busy.
+                          --! データ転送中であることを示すフラグ.
+                          in  std_logic;
+        XFER_DONE       : --! @brief Transfer Done.
+                          --! データ転送中かつ、次のクロックで XFER_BUSY がネゲート
+                          --! される事を示すフラグ.
+                          --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
+                          --!   アサートされるわけでは無い.
+                          in std_logic;
+    -------------------------------------------------------------------------------
     -- Status.
     -------------------------------------------------------------------------------
         VALVE_OPEN      : --! @brief Valve Open Flag.
@@ -250,14 +262,14 @@ component PUMP_CONTROL_REGISTER
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
                           out std_logic;
-        XFER_RUNNING    : --! @brief Transaction Running Flag.
+        TRAN_BUSY       : --! @brief Transaction Busy Flag.
                           --! トランザクション中であることを示すフラグ.
                           out std_logic;
-        XFER_DONE       : --! @brief Transaction Done Flag.
+        TRAN_DONE       : --! @brief Transaction Done Flag.
                           --! トランザクションが終了したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
-        XFER_ERROR      : --! @brief Transaction Done Flag.
+        TRAN_ERROR      : --! @brief Transaction Error Flag.
                           --! トランザクション中にエラーが発生したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic
@@ -646,6 +658,11 @@ component PUMP_CONTROLLER
         I_ACK_STOP          : in  std_logic;
         I_ACK_NONE          : in  std_logic;
     -------------------------------------------------------------------------------
+    -- Intake Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        I_XFER_BUSY         : in  std_logic;
+        I_XFER_DONE         : in  std_logic;
+    -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
         I_FLOW_READY        : out std_logic;
@@ -694,6 +711,11 @@ component PUMP_CONTROLLER
         O_ACK_LAST          : in  std_logic;
         O_ACK_STOP          : in  std_logic;
         O_ACK_NONE          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        O_XFER_BUSY         : in  std_logic;
+        O_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -826,6 +848,8 @@ component PUMP_OPERATION_PROCESSOR
         M_ACK_STOP      : in  std_logic;
         M_ACK_NONE      : in  std_logic;
         M_ACK_SIZE      : in  std_logic_vector(M_BUF_SIZE           downto 0);
+        M_XFER_BUSY     : in  std_logic;
+        M_XFER_DONE     : in  std_logic;
         M_BUF_WE        : in  std_logic;
         M_BUF_BEN       : in  std_logic_vector(2**(M_BUF_WIDTH-3)-1 downto 0);
         M_BUF_DATA      : in  std_logic_vector(2**(M_BUF_WIDTH  )-1 downto 0);

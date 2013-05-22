@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -310,6 +310,12 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic;
+        XFER_DONE       : --! @brief Transfer Done.
+                          --! このモジュールが未だデータの転送中かつ、次のクロック
+                          --! で XFER_BUSY がネゲートされる事を示す.
+                          --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
+                          --!   アサートされるわけでは無い.
+                          out   std_logic;
     -------------------------------------------------------------------------------
     -- Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -500,6 +506,7 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   recv_enable        : std_logic;
+    signal   recv_busy          : std_logic;
     signal   recv_data_valid    : std_logic;
     signal   recv_data_ready    : std_logic;
     signal   recv_data_ben      : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
@@ -513,6 +520,8 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     signal   outlet_last        : std_logic;
     signal   outlet_size        : std_logic_vector(SIZE_BITS-1 downto 0);
     signal   outlet_ready       : std_logic;
+    signal   outlet_done        : std_logic;
+    signal   port_busy          : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -789,17 +798,30 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- XFER_BUSY      : 動作中である事を示すフラグ.
+    -- recv_busy      : データリード中 または Transfer Request Queue にまだ
+    --                  リクエストが残っていることを示す.
     -------------------------------------------------------------------------------
-    XFER_BUSY    <= '1' when (curr_state = WAIT_RFIRST or
+    recv_busy    <= '1' when (curr_state = WAIT_RFIRST or
                               curr_state = WAIT_RLAST  or
                               xfer_queue_empty = '0' ) else '0';
     -------------------------------------------------------------------------------
-    -- xfer_running   : 動作中である事を示すフラグ.
+    -- XFER_BUSY      : データ転送中である事を示すフラグ.
     -------------------------------------------------------------------------------
-    xfer_running <= '1' when (curr_state = WAIT_RFIRST or
-                              curr_state = WAIT_RLAST  or
-                              xfer_queue_empty = '0' ) else '0';
+    XFER_BUSY    <= '1' when (recv_busy = '1' or port_busy  = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
+    --                  このモジュールでは、XFER_BUSY がネゲートする前に 必ずしも 
+    --                  XFER_DONE がアサートされるわけでは無い.
+    --                  全てのデータリードが終了した後で、最後のデータを出力する時
+    --                  にのみ XFER_DONE はアサートされる.
+    -------------------------------------------------------------------------------
+    XFER_DONE    <= '1' when (recv_busy    = '0' and
+                              port_busy    = '1' and
+                              outlet_done  = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- xfer_running   : データ転送中である事を示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_running <= '1' when (recv_busy = '1' or port_busy  = '1') else '0';
     -------------------------------------------------------------------------------
     -- xfer_ack_size  : Transfer Request Queue から取り出したサイズ情報を保持.
     -- xfer_ack_select: Transfer Request Queue から取り出した選択情報を保持.
@@ -940,7 +962,7 @@ begin
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
-            BUSY            => open                  -- Out:
+            BUSY            => port_busy             -- Out:
         );
     -------------------------------------------------------------------------------
     -- PUSH_RSV_SIZE : 何バイト書き込む予定かを示す信号.
@@ -993,6 +1015,7 @@ begin
         PUSH_BUF_ERROR <= outlet_error;
         PUSH_BUF_SIZE  <= outlet_size;
         outlet_ready   <= '1' when ((xfer_ack_select and PUSH_BUF_RDY) /= SEL_ALL0) else '0';
+        outlet_done    <= '1' when (outlet_valid /= SEL_ALL0 and outlet_last = '1') else '0';
     end block;
 end RTL;
 

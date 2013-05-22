@@ -2,7 +2,7 @@
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -202,6 +202,18 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! 転送したバイト数を示す.
                               out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Status from Responder Signals.
+    -------------------------------------------------------------------------------
+        T_XFER_BUSY         : --! @brief Transfer Busy.
+                              --! データ転送中であることを示すフラグ.
+                              in  std_logic;
+        T_XFER_DONE         : --! @brief Transfer Done.
+                              --! データ転送中かつ、次のクロックで M_XFER_BUSY が
+                              --! ネゲートされる事を示すフラグ.
+                              --! * ただし、M_XFER_BUSY のネゲート前に 必ずしもこの
+                              --!   信号がアサートされるわけでは無い.
+                              in  std_logic;
+    -------------------------------------------------------------------------------
     -- Intake Valve Signals from Responder.
     -------------------------------------------------------------------------------
         T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
@@ -266,8 +278,6 @@ entity  PIPE_RESPONDER_INTERFACE is
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
-        O_VALVE_OPEN        : --! @brief Outlet Vavle Open :
-                              in  std_logic;
         O_FLOW_PAUSE        : --! @brief Outlet Valve Flow Pause :
                               --! 出力を一時的に止めたり、再開することを指示する信号.
                               --! プールバッファに O_FLOW_READY_LEVEL 未満のデータしか無い
@@ -294,8 +304,6 @@ entity  PIPE_RESPONDER_INTERFACE is
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Responder.
     -------------------------------------------------------------------------------
-        I_VALVE_OPEN        : --! @brief Intake Vavle Open :
-                              in  std_logic;
         I_FLOW_PAUSE        : --! @brief Intake Valve Flow Pause :
                               --! 入力を一時的に止めたり、再開することを指示する信号.
                               --! プールバッファに I_FLOW_READY_LEVEL を越えるデータが溜っ
@@ -364,6 +372,12 @@ entity  PIPE_RESPONDER_INTERFACE is
         M_REQ_READY         : --! @brief Request Ready signal from requester :
                               --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                               in  std_logic;
+        M_REQ_DONE          : --! @brief Request Done signal to requeseter :
+                              --! トランザクションの終了を指示する.
+                              out std_logic;
+        M_REQ_STOP          : --! @brief Request Done signal to requeseter :
+                              --! トランザクションの中止を指示する.
+                              out std_logic;
     -------------------------------------------------------------------------------
     -- Response from Requester Signals.
     -------------------------------------------------------------------------------
@@ -482,6 +496,13 @@ architecture RTL of PIPE_RESPONDER_INTERFACE is
     signal    size_up_select    : boolean;
     signal    m_valve_open      : std_logic;
     signal    m_res_open        : std_logic;
+    signal    t_valve_open      : std_logic;
+    signal    t_req_open        : std_logic;
+    signal    o_valve_i_open    : std_logic;
+    signal    o_valve_o_open    : std_logic;
+    signal    i_valve_i_open    : std_logic;
+    signal    i_valve_o_open    : std_logic;
+    signal    done_state        : std_logic_vector(1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -495,6 +516,7 @@ begin
     begin
         if (RST = '1') then
                 curr_state <= IDLE_STATE;
+                done_state <= "00";
                 xfer_dir   <= '0';
                 xfer_last  <= '1';
                 ack_error  <= '0';
@@ -502,6 +524,7 @@ begin
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
                 curr_state <= IDLE_STATE;
+                done_state <= "00";
                 xfer_dir   <= '0';
                 xfer_last  <= '1';
                 ack_error  <= '0';
@@ -542,6 +565,26 @@ begin
                         ack_last  <= '0';
                     end if;
                 end if;
+                case done_state is
+                    when "00" =>
+                        if (next_state = ACK_STATE) then
+                            if (T_XFER_BUSY = '0' or T_XFER_DONE = '1') then
+                                done_state <= "01";
+                            else
+                                done_state <= "10";
+                            end if;
+                        else
+                                done_state <= "00";
+                        end if;
+                    when "10" =>
+                        if (T_XFER_BUSY = '0' or T_XFER_DONE = '1') then
+                                done_state <= "01";
+                        else
+                                done_state <= "10";
+                        end if;
+                    when others => 
+                                done_state <= "00";
+                end case;
             end if;
         end if;
     end process;
@@ -599,6 +642,8 @@ begin
     M_REQ_LAST    <= T_REQ_LAST;
     M_REQ_DIR     <= '1' when (PUSH_VALID /= 0 and PULL_VALID  = 0) else
                      '0' when (PUSH_VALID  = 0 and PULL_VALID /= 0) else T_REQ_DIR;
+    M_REQ_DONE    <= done_state(0);
+    M_REQ_STOP    <= '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -610,12 +655,40 @@ begin
                 m_res_open <= '0';
             elsif (M_RES_START = '1' and M_RES_DONE = '0') then
                 m_res_open <= '1';
-            elsif (m_res_open  = '1' and M_RES_DONE = '1') then
+            elsif (m_res_open  = '1' and M_RES_DONE = '1' and xfer_last = '1') then
                 m_res_open <= '0';
             end if;
         end if;
     end process;
-    m_valve_open <= '1' when (M_RES_START = '1' or m_res_open = '1') else '0';
+    m_valve_open <= '1' when (M_RES_START = '1' and M_RES_DONE = '0') or
+                             (m_res_open = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                t_req_open <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                t_req_open <= '0';
+            elsif (curr_state = IDLE_STATE and start = '1') then
+                t_req_open <= '1';
+            elsif (t_req_open = '1') and
+                  (xfer_last  = '1') and
+                  (T_XFER_BUSY = '0' or T_XFER_DONE = '1') then
+                t_req_open <= '0';
+            end if;
+        end if;
+    end process;
+    t_valve_open <= '1' when (curr_state = IDLE_STATE and start = '1') or
+                             (t_req_open = '1') else '0';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    o_valve_o_open <= '1' when (pull_mode and t_valve_open = '1') else '0';
+    o_valve_i_open <= '1' when (pull_mode and m_valve_open = '1') else '0';
+    i_valve_o_open <= '1' when (push_mode and m_valve_open = '1') else '0';
+    i_valve_i_open <= '1' when (push_mode and t_valve_open = '1') else '0';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -642,8 +715,8 @@ begin
             RESET           => reset               , -- In  :
             PAUSE           => pause               , -- In  :
             STOP            => stop                , -- In  :
-            INTAKE_OPEN     => m_valve_open        , -- In  :
-            OUTLET_OPEN     => O_VALVE_OPEN        , -- In  :
+            INTAKE_OPEN     => o_valve_i_open      , -- In  :
+            OUTLET_OPEN     => o_valve_o_open      , -- In  :
             FLOW_READY_LEVEL=> O_FLOW_LEVEL        , -- In  :
             POOL_READY_LEVEL=> T_PULL_BUF_LEVEL    , -- In  :
         ---------------------------------------------------------------------------
@@ -714,8 +787,8 @@ begin
             RESET           => reset               , -- In  :
             PAUSE           => pause               , -- In  :
             STOP            => stop                , -- In  :
-            INTAKE_OPEN     => I_VALVE_OPEN        , -- In  :
-            OUTLET_OPEN     => m_valve_open        , -- In  :
+            INTAKE_OPEN     => i_valve_i_open      , -- In  :
+            OUTLET_OPEN     => i_valve_o_open      , -- In  :
             POOL_SIZE       => I_BUF_SIZE          , -- In  :
             FLOW_READY_LEVEL=> I_FLOW_LEVEL        , -- In  :
             POOL_READY_LEVEL=> T_PUSH_BUF_LEVEL    , -- In  :

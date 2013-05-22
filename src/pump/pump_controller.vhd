@@ -307,6 +307,11 @@ entity  PUMP_CONTROLLER is
         I_ACK_STOP          : in  std_logic;
         I_ACK_NONE          : in  std_logic;
     -------------------------------------------------------------------------------
+    -- Intake Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        I_XFER_BUSY         : in  std_logic;
+        I_XFER_DONE         : in  std_logic;
+    -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
         I_FLOW_READY        : out std_logic;
@@ -355,6 +360,11 @@ entity  PUMP_CONTROLLER is
         O_ACK_LAST          : in  std_logic;
         O_ACK_STOP          : in  std_logic;
         O_ACK_NONE          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        O_XFER_BUSY         : in  std_logic;
+        O_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -423,7 +433,7 @@ architecture RTL of PUMP_CONTROLLER is
     signal   i_pause            : std_logic;
     signal   i_stop             : std_logic;
     signal   i_valve_open       : std_logic;
-    signal   i_xfer_running     : std_logic;
+    signal   i_tran_running     : std_logic;
     constant i_valve_load       : std_logic := '0';
     -------------------------------------------------------------------------------
     -- 出力側の各種信号群.
@@ -434,7 +444,7 @@ architecture RTL of PUMP_CONTROLLER is
     signal   o_pause            : std_logic;
     signal   o_stop             : std_logic;
     signal   o_valve_open       : std_logic;
-    signal   o_xfer_running     : std_logic;
+    signal   o_tran_running     : std_logic;
     constant o_valve_load       : std_logic := '0';
     -------------------------------------------------------------------------------
     -- 入力側->出力側の各種信号群.
@@ -473,7 +483,7 @@ begin
             REGS_WEN        => I_ADDR_L            , -- In  :
             REGS_WDATA      => I_ADDR_D            , -- In  :
             REGS_RDATA      => I_ADDR_Q            , -- Out :
-            UP_ENA          => i_xfer_running      , -- In  :
+            UP_ENA          => i_tran_running      , -- In  :
             UP_VAL          => I_ACK_VALID         , -- In  :
             UP_BEN          => i_addr_up_ben       , -- In  :
             UP_SIZE         => I_ACK_SIZE          , -- In  :
@@ -496,7 +506,7 @@ begin
             REGS_WEN        => I_SIZE_L            , -- In  :
             REGS_WDATA      => I_SIZE_D            , -- In  :
             REGS_RDATA      => I_SIZE_Q            , -- Out :
-            DN_ENA          => i_xfer_running      , -- In  :
+            DN_ENA          => i_tran_running      , -- In  :
             DN_VAL          => I_ACK_VALID         , -- In  :
             DN_SIZE         => I_ACK_SIZE          , -- In  :
             COUNTER         => I_REQ_SIZE          , -- Out :
@@ -519,7 +529,7 @@ begin
             REGS_WEN        => i_buf_ptr_init      , -- In  :
             REGS_WDATA      => BUF_INIT_PTR        , -- In  :
             REGS_RDATA      => open                , -- Out :
-            UP_ENA          => i_xfer_running      , -- In  :
+            UP_ENA          => i_tran_running      , -- In  :
             UP_VAL          => I_ACK_VALID         , -- In  :
             UP_BEN          => BUF_UP_BEN          , -- In  :
             UP_SIZE         => I_ACK_SIZE          , -- In  :
@@ -582,16 +592,18 @@ begin
             ACK_LAST        => I_ACK_LAST          , -- In  :
             ACK_STOP        => I_ACK_STOP          , -- In  :
             ACK_NONE        => I_ACK_NONE          , -- In  :
+            XFER_BUSY       => I_XFER_BUSY         , -- In  :
+            XFER_DONE       => I_XFER_DONE         , -- In  :
             VALVE_OPEN      => i_valve_open        , -- Out :
-            XFER_DONE       => I_DONE              , -- Out :
-            XFER_ERROR      => I_ERROR             , -- Out :
-            XFER_RUNNING    => i_xfer_running        -- Out :
+            TRAN_DONE       => I_DONE              , -- Out :
+            TRAN_ERROR      => I_ERROR             , -- Out :
+            TRAN_BUSY       => i_tran_running        -- Out :
         );                                           -- 
     I_RESET_Q <= i_reset;
     I_PAUSE_Q <= i_pause;
     I_STOP_Q  <= i_stop;
     I_OPEN    <= i_valve_open;
-    I_RUNNING <= i_xfer_running;
+    I_RUNNING <= i_tran_running;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -659,7 +671,7 @@ begin
             REGS_WEN        => O_ADDR_L            , -- In  :
             REGS_WDATA      => O_ADDR_D            , -- In  :
             REGS_RDATA      => O_ADDR_Q            , -- Out :
-            UP_ENA          => o_xfer_running      , -- In  :
+            UP_ENA          => o_tran_running      , -- In  :
             UP_VAL          => O_ACK_VALID         , -- In  :
             UP_BEN          => o_addr_up_ben       , -- In  :
             UP_SIZE         => O_ACK_SIZE          , -- In  :
@@ -682,7 +694,7 @@ begin
             REGS_WEN        => O_SIZE_L            , -- In  :
             REGS_WDATA      => O_SIZE_D            , -- In  :
             REGS_RDATA      => O_SIZE_Q            , -- Out :
-            DN_ENA          => o_xfer_running      , -- In  :
+            DN_ENA          => o_tran_running      , -- In  :
             DN_VAL          => O_ACK_VALID         , -- In  :
             DN_SIZE         => O_ACK_SIZE          , -- In  :
             COUNTER         => O_REQ_SIZE          , -- Out :
@@ -705,7 +717,7 @@ begin
             REGS_WEN        => o_buf_ptr_init      , -- In  :
             REGS_WDATA      => BUF_INIT_PTR        , -- In  :
             REGS_RDATA      => open                , -- Out :
-            UP_ENA          => o_xfer_running      , -- In  :
+            UP_ENA          => o_tran_running      , -- In  :
             UP_VAL          => O_ACK_VALID         , -- In  :
             UP_BEN          => BUF_UP_BEN          , -- In  :
             UP_SIZE         => O_ACK_SIZE          , -- In  :
@@ -768,16 +780,18 @@ begin
             ACK_LAST        => O_ACK_LAST          , -- In  :
             ACK_STOP        => O_ACK_STOP          , -- In  :
             ACK_NONE        => O_ACK_NONE          , -- In  :
+            XFER_BUSY       => O_XFER_BUSY         , -- In  :
+            XFER_DONE       => O_XFER_DONE         , -- In  :
             VALVE_OPEN      => o_valve_open        , -- Out :
-            XFER_DONE       => O_DONE              , -- Out :
-            XFER_ERROR      => O_ERROR             , -- Out :
-            XFER_RUNNING    => o_xfer_running        -- Out :
+            TRAN_DONE       => O_DONE              , -- Out :
+            TRAN_ERROR      => O_ERROR             , -- Out :
+            TRAN_BUSY       => o_tran_running        -- Out :
         );                                           -- 
     O_RESET_Q <= o_reset;
     O_PAUSE_Q <= o_pause;
     O_STOP_Q  <= o_stop;
     O_OPEN    <= o_valve_open;
-    O_RUNNING <= o_xfer_running;
+    O_RUNNING <= o_tran_running;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

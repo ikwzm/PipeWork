@@ -2,7 +2,7 @@
 --!     @file    pipe_components.vhd                                             --
 --!     @brief   PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 0.0.1                                                           --
---!     @date    2013/05/19                                                      --
+--!     @date    2013/05/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -289,6 +289,18 @@ end component;
 -----------------------------------------------------------------------------------
 component PIPE_REQUESTER_INTERFACE
     generic (
+        PUSH_VALID          : --! @brief PUSH VALID :
+                              --! レスポンダ側からリクエスタ側へのデータ転送を行うか
+                              --! どうかを指定する.
+                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=0でデータ転送を行わない.
+                              integer :=  1;
+        PULL_VALID          : --! @brief PUSH VALID :
+                              --! リクエスタ側からレスポンダ側へのデータ転送を行うか
+                              --! どうかを指定する.
+                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=0でデータ転送を行わない.
+                              integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                           integer := 32;
@@ -460,6 +472,18 @@ component PIPE_REQUESTER_INTERFACE
                               --! 示されるバイト数分を加算/減算すると良い.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Status from Requester Signals.
+    -------------------------------------------------------------------------------
+        M_XFER_BUSY         : --! @brief Transfer Busy.
+                              --! データ転送中であることを示すフラグ.
+                              in  std_logic;
+        M_XFER_DONE         : --! @brief Transfer Done.
+                              --! データ転送中かつ、次のクロックで M_XFER_BUSY が
+                              --! ネゲートされる事を示すフラグ.
+                              --! * ただし、M_XFER_BUSY のネゲート前に 必ずしもこの
+                              --!   信号がアサートされるわけでは無い.
+                              in  std_logic;
+    -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
         M_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from requester :
@@ -548,7 +572,7 @@ component PIPE_REQUESTER_INTERFACE
     -------------------------------------------------------------------------------
     -- Request from Responder.
     -------------------------------------------------------------------------------
-        T_REQ_START         : --! @brief Request Valid signal from responder :
+        T_REQ_START         : --! @brief Request Start signal from responder :
                               --! 転送開始を指示する.
                               in  std_logic;
         T_REQ_ADDR          : --! @brief Request Address from responder :
@@ -581,6 +605,12 @@ component PIPE_REQUESTER_INTERFACE
                               --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
+                              in  std_logic;
+        T_REQ_DONE          : --! @brief Request Done signal from responder :
+                              --! トランザクションの終了を指示する.
+                              in  std_logic;
+        T_REQ_STOP          : --! @brief Request Done signal from responder :
+                              --! トランザクションの中止を指示する.
                               in  std_logic;
     -------------------------------------------------------------------------------
     -- Response to Responder.
@@ -856,6 +886,18 @@ component PIPE_RESPONDER_INTERFACE
                               --! 転送したバイト数を示す.
                               out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Status from Responder Signals.
+    -------------------------------------------------------------------------------
+        T_XFER_BUSY         : --! @brief Transfer Busy.
+                              --! データ転送中であることを示すフラグ.
+                              in  std_logic;
+        T_XFER_DONE         : --! @brief Transfer Done.
+                              --! データ転送中かつ、次のクロックで M_XFER_BUSY が
+                              --! ネゲートされる事を示すフラグ.
+                              --! * ただし、M_XFER_BUSY のネゲート前に 必ずしもこの
+                              --!   信号がアサートされるわけでは無い.
+                              in  std_logic;
+    -------------------------------------------------------------------------------
     -- Intake Valve Signals from Responder.
     -------------------------------------------------------------------------------
         T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
@@ -920,8 +962,6 @@ component PIPE_RESPONDER_INTERFACE
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
-        O_VALVE_OPEN        : --! @brief Outlet Vavle Open :
-                              in  std_logic;
         O_FLOW_PAUSE        : --! @brief Outlet Valve Flow Pause :
                               --! 出力を一時的に止めたり、再開することを指示する信号.
                               --! プールバッファに O_FLOW_READY_LEVEL 未満のデータしか無い
@@ -948,8 +988,6 @@ component PIPE_RESPONDER_INTERFACE
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Responder.
     -------------------------------------------------------------------------------
-        I_VALVE_OPEN        : --! @brief Intake Vavle Open :
-                              in  std_logic;
         I_FLOW_PAUSE        : --! @brief Intake Valve Flow Pause :
                               --! 入力を一時的に止めたり、再開することを指示する信号.
                               --! プールバッファに I_FLOW_READY_LEVEL を越えるデータが溜っ
@@ -1018,6 +1056,12 @@ component PIPE_RESPONDER_INTERFACE
         M_REQ_READY         : --! @brief Request Ready signal from requester :
                               --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                               in  std_logic;
+        M_REQ_DONE          : --! @brief Request Done signal to requeseter :
+                              --! トランザクションの終了を指示する.
+                              out std_logic;
+        M_REQ_STOP          : --! @brief Request Done signal to requeseter :
+                              --! トランザクションの中止を指示する.
+                              out std_logic;
     -------------------------------------------------------------------------------
     -- Response from Requester Signals.
     -------------------------------------------------------------------------------
@@ -1277,11 +1321,15 @@ component PIPE_CORE_UNIT
         T_ACK_STOP          : out std_logic;
         T_ACK_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- リクエスタ側からのステータス信号入力.
+    -------------------------------------------------------------------------------
+        T_XFER_BUSY         : in  std_logic;
+        T_XFER_DONE         : in  std_logic;
+    -------------------------------------------------------------------------------
     -- レスポンダ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
         T_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
         T_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_VALVE_OPEN      : in  std_logic;
         T_I_FLOW_READY      : out std_logic;
         T_I_FLOW_PAUSE      : out std_logic;
         T_I_FLOW_STOP       : out std_logic;
@@ -1306,7 +1354,6 @@ component PIPE_CORE_UNIT
     -- レスポンダ側へのデータ出力のフロー制御信号入出力
     -------------------------------------------------------------------------------
         T_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_O_VALVE_OPEN      : in  std_logic;
         T_O_FLOW_READY      : out std_logic;
         T_O_FLOW_PAUSE      : out std_logic;
         T_O_FLOW_STOP       : out std_logic;
@@ -1355,6 +1402,11 @@ component PIPE_CORE_UNIT
         M_ACK_STOP          : in  std_logic;
         M_ACK_NONE          : in  std_logic;
         M_ACK_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- リクエスタ側からのステータス信号入力.
+    -------------------------------------------------------------------------------
+        M_XFER_BUSY         : in  std_logic;
+        M_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------

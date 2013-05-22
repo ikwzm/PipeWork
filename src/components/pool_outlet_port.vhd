@@ -181,11 +181,11 @@ entity  POOL_OUTLET_PORT is
                           --! バッファからデータをリードする際のユニット単位での
                           --! 有効信号.
                           in  std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
-        POOL_SIZE       : --! @brief POOL BUFFERDATA SIZE :
+        POOL_SIZE       : --! @brief POOL BUFFER DATA SIZE :
                           --! 入力バイト数
                           --! * バッファからのデータの入力ユニット数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
-        POOL_ERROR      : --! @brief POOl BUFFER ERROR :
+        POOL_ERROR      : --! @brief POOL BUFFER ERROR :
                           --! データ転送中にエラーが発生したことを示すフラグ.
                           in  std_logic;
         POOL_LAST       : --! @brief POOL BUFFER DATA LAST :
@@ -200,11 +200,19 @@ entity  POOL_OUTLET_PORT is
     -------------------------------------------------------------------------------
     -- Status Signals.
     -------------------------------------------------------------------------------
+        POOL_BUSY       : --! @brief POOL BUFFER BUSY :
+                          --! バッファからデータリード中であることを示す信号.
+                          --! * START信号がアサートされたときにアサートされる.
+                          --! * 最後のデータが入力されたネゲートされる.
+                          out std_logic;
+        POOL_DONE       : --! @brief POOL BUFFER DONE :
+                          --! 次のクロックで POOL_BUSY がネゲートされることを示す.
+                          out std_logic;
         BUSY            : --! @brief QUEUE BUSY :
                           --! キューが動作中であることを示す信号.
-                          --! * 最初にデータが入力されたときにアサートされる.
+                          --! * START信号がアサートされたときにアサートされる.
                           --! * 最後のデータが出力し終えたらネゲートされる.
-                          out  std_logic
+                          out std_logic
     );
 end POOL_OUTLET_PORT;
 -----------------------------------------------------------------------------------
@@ -346,6 +354,8 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
+        POOL_BUSY  <= '1' when (intake_running = TRUE) else '0';
+        POOL_DONE  <= '1' when (intake_done    = TRUE) else '0';
         POOL_PTR   <= START_POOL_PTR when (START       = '1') else
                       next_read_ptr  when (intake_chop = '1') else
                       curr_read_ptr;

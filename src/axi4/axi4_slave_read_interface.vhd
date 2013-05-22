@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -219,10 +219,11 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic;
-    -------------------------------------------------------------------------------
-    -- Flow Control Signals.
-    -------------------------------------------------------------------------------
-        VALVE_OPEN      : --! @brief Valve Open.
+        XFER_DONE       : --! @brief Transfer Done.
+                          --! このモジュールが未だデータの転送中かつ、次のクロック
+                          --! で XFER_BUSY がネゲートされる事を示す.
+                          --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
+                          --!   アサートされるわけでは無い.
                           out   std_logic;
     -------------------------------------------------------------------------------
     -- Pull Reserve Size Signals.
@@ -355,7 +356,7 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     signal   xfer_valid         : std_logic;
     signal   xfer_ready         : std_logic;
     signal   xfer_none          : std_logic;
-    signal   rbuf_busy          : std_logic;
+    signal   port_busy          : std_logic;
     signal   outlet_error       : std_logic;
     signal   exit_valid         : std_logic;
     signal   exit_error         : std_logic;
@@ -403,7 +404,7 @@ begin
                     when ERR_STATE =>
                             next_state := TURN_AR;
                     when TURN_AR =>
-                        if (rbuf_busy = '0') then
+                        if (port_busy = '0') then
                             next_state := IDLE_STATE;
                         else
                             next_state := TURN_AR;
@@ -427,9 +428,6 @@ begin
     xfer_error <= '1' when (curr_state = ERR_STATE) else '0';
     xfer_valid <= '1' when (PULL_BUF_RDY = '1') or
                            (curr_state = ERR_STATE) else '0';
-    VALVE_OPEN <= '1' when (curr_state = REQ_STATE) or
-                           (curr_state = ACK_STATE) or
-                           (curr_state = TURN_AR  ) else '0';
     -------------------------------------------------------------------------------
     -- ARVALID='1' and ARREADY='1'の時に、各種情報をレジスタに保存しておく.
     -------------------------------------------------------------------------------
@@ -621,7 +619,9 @@ begin
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
-            BUSY            => rbuf_busy         -- Out :
+            POOL_BUSY       => XFER_BUSY       , -- Out :
+            POOL_DONE       => XFER_DONE       , -- Out :
+            BUSY            => port_busy         -- Out :
         );
     -------------------------------------------------------------------------------
     --

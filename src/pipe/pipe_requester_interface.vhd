@@ -2,7 +2,7 @@
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -41,6 +41,18 @@ use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
 entity  PIPE_REQUESTER_INTERFACE is
     generic (
+        PUSH_VALID          : --! @brief PUSH VALID :
+                              --! レスポンダ側からリクエスタ側へのデータ転送を行うか
+                              --! どうかを指定する.
+                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=0でデータ転送を行わない.
+                              integer :=  1;
+        PULL_VALID          : --! @brief PUSH VALID :
+                              --! リクエスタ側からレスポンダ側へのデータ転送を行うか
+                              --! どうかを指定する.
+                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=0でデータ転送を行わない.
+                              integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                           integer := 32;
@@ -212,6 +224,18 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! 示されるバイト数分を加算/減算すると良い.
                               in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Status from Requester Signals.
+    -------------------------------------------------------------------------------
+        M_XFER_BUSY         : --! @brief Transfer Busy.
+                              --! データ転送中であることを示すフラグ.
+                              in  std_logic;
+        M_XFER_DONE         : --! @brief Transfer Done.
+                              --! データ転送中かつ、次のクロックで M_XFER_BUSY が
+                              --! ネゲートされる事を示すフラグ.
+                              --! * ただし、M_XFER_BUSY のネゲート前に 必ずしもこの
+                              --!   信号がアサートされるわけでは無い.
+                              in  std_logic;
+    -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
         M_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from requester :
@@ -300,7 +324,7 @@ entity  PIPE_REQUESTER_INTERFACE is
     -------------------------------------------------------------------------------
     -- Request from Responder.
     -------------------------------------------------------------------------------
-        T_REQ_START         : --! @brief Request Valid signal from responder :
+        T_REQ_START         : --! @brief Request Start signal from responder :
                               --! 転送開始を指示する.
                               in  std_logic;
         T_REQ_ADDR          : --! @brief Request Address from responder :
@@ -333,6 +357,12 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
+                              in  std_logic;
+        T_REQ_DONE          : --! @brief Request Done signal from responder :
+                              --! トランザクションの終了を指示する.
+                              in  std_logic;
+        T_REQ_STOP          : --! @brief Request Done signal from responder :
+                              --! トランザクションの中止を指示する.
                               in  std_logic;
     -------------------------------------------------------------------------------
     -- Response to Responder.
@@ -474,49 +504,58 @@ architecture RTL of PIPE_REQUESTER_INTERFACE is
     ------------------------------------------------------------------------------
     -- サイズレジスタ関連の信号.
     ------------------------------------------------------------------------------
-    signal   size_load          : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    size_load         : std_logic_vector(SIZE_BITS-1 downto 0);
     ------------------------------------------------------------------------------
     -- バッファポインタ関連の信号.
     ------------------------------------------------------------------------------
-    signal   buf_ptr_load       : std_logic_vector(BUF_DEPTH-1 downto 0);
-    constant buf_ptr_up         : std_logic_vector(BUF_DEPTH-1 downto 0) := (others => '1');
+    signal    buf_ptr_load      : std_logic_vector(BUF_DEPTH-1 downto 0);
+    constant  buf_ptr_up        : std_logic_vector(BUF_DEPTH-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- モードレジスタ関連の信号.
     -------------------------------------------------------------------------------
-    signal   mode_load          : std_logic_vector(MODE_BITS-1 downto 0);
+    signal    mode_load         : std_logic_vector(MODE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- ステータスレジスタ関連の信号.
     -------------------------------------------------------------------------------
-    constant STAT_BITS          : integer := 1;
-    signal   stat_load          : std_logic_vector(STAT_BITS-1 downto 0);
-    constant stat_all0          : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
-    signal   stat_i             : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
-    signal   stat_o             : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
+    constant  STAT_BITS         : integer := 1;
+    signal    stat_load         : std_logic_vector(STAT_BITS-1 downto 0);
+    constant  stat_all0         : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
+    signal    stat_i            : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
+    signal    stat_o            : std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
     ------------------------------------------------------------------------------
     -- リセットコントロールレジスタ関連の信号.
     ------------------------------------------------------------------------------
-    constant reset_load         : std_logic := '0';
-    constant reset_data         : std_logic := '0';
-    signal   reset              : std_logic;
+    constant  reset_load        : std_logic := '0';
+    constant  reset_data        : std_logic := '0';
+    signal    reset             : std_logic;
     ------------------------------------------------------------------------------
     -- ストップコントロールレジスタ関連の信号.
     ------------------------------------------------------------------------------
-    signal   stop_load          : std_logic;
-    constant stop_data          : std_logic := '1';
-    signal   stop               : std_logic;
-    signal   push_stop          : boolean;
-    signal   pull_stop          : boolean;
+    signal    stop_load         : std_logic;
+    constant  stop_data         : std_logic := '1';
+    signal    stop              : std_logic;
+    signal    push_stop         : boolean;
+    signal    pull_stop         : boolean;
     ------------------------------------------------------------------------------
     -- 一時停止コントロールレジスタ関連の信号.
     ------------------------------------------------------------------------------
-    constant pause_load         : std_logic := '0';
-    constant pause_data         : std_logic := '0';
-    signal   pause              : std_logic;
+    constant  pause_load        : std_logic := '0';
+    constant  pause_data        : std_logic := '0';
+    signal    pause             : std_logic;
     -------------------------------------------------------------------------------
     -- その他コントロールレジスタ関連の信号.
     -------------------------------------------------------------------------------
-    signal   xfer_running       : std_logic;
-    signal   valve_open         : std_logic;
+    signal    m_running         : std_logic;
+    signal    m_valve_open      : std_logic;
+    signal    t_valve_open      : std_logic;
+    signal    o_valve_i_open    : std_logic;
+    signal    o_valve_o_open    : std_logic;
+    signal    i_valve_i_open    : std_logic;
+    signal    i_valve_o_open    : std_logic;
+    signal    tran_dir          : std_logic;
+    signal    tran_last         : std_logic;
+    signal    push_mode         : boolean;
+    signal    pull_mode         : boolean;
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -534,7 +573,7 @@ begin
             REGS_WEN        => addr_load           , -- In  :
             REGS_WDATA      => T_REQ_ADDR          , -- In  :
             REGS_RDATA      => open                , -- Out :
-            UP_ENA          => xfer_running        , -- In  :
+            UP_ENA          => m_running           , -- In  :
             UP_VAL          => M_ACK_VALID         , -- In  :
             UP_BEN          => ADDR_UP_BEN         , -- In  :
             UP_SIZE         => M_ACK_SIZE          , -- In  :
@@ -557,7 +596,7 @@ begin
             REGS_WEN        => size_load           , -- In  :
             REGS_WDATA      => T_REQ_SIZE          , -- In  :
             REGS_RDATA      => open                , -- Out :
-            DN_ENA          => xfer_running        , -- In  :
+            DN_ENA          => m_running           , -- In  :
             DN_VAL          => M_ACK_VALID         , -- In  :
             DN_SIZE         => M_ACK_SIZE          , -- In  :
             COUNTER         => M_REQ_SIZE          , -- Out :
@@ -581,7 +620,7 @@ begin
             REGS_WEN        => buf_ptr_load        , -- In  :
             REGS_WDATA      => T_REQ_BUF_PTR       , -- In  :
             REGS_RDATA      => open                , -- Out :
-            UP_ENA          => xfer_running        , -- In  :
+            UP_ENA          => m_running           , -- In  :
             UP_VAL          => M_ACK_VALID         , -- In  :
             UP_BEN          => buf_ptr_up          , -- In  :
             UP_SIZE         => M_ACK_SIZE          , -- In  :
@@ -617,7 +656,7 @@ begin
             FIRST_Q         => open                , -- Out :
             LAST_L          => T_REQ_START         , -- In  :
             LAST_D          => T_REQ_LAST          , -- In  :
-            LAST_Q          => open                , -- Out :
+            LAST_Q          => tran_last           , -- Out :
             DONE_EN_L       => T_REQ_START         , -- In  :
             DONE_EN_D       => stat_all0(0)        , -- In  :
             DONE_EN_Q       => open                , -- Out :
@@ -644,18 +683,22 @@ begin
             ACK_LAST        => M_ACK_LAST          , -- In  :
             ACK_STOP        => M_ACK_STOP          , -- In  :
             ACK_NONE        => M_ACK_NONE          , -- In  :
-            VALVE_OPEN      => valve_open          , -- Out :
-            XFER_DONE       => T_RES_DONE          , -- Out :
-            XFER_ERROR      => T_RES_ERROR         , -- Out :
-            XFER_RUNNING    => xfer_running          -- Out :
+            XFER_BUSY       => M_XFER_BUSY         , -- In  :
+            XFER_DONE       => M_XFER_DONE         , -- In  :
+            VALVE_OPEN      => m_valve_open        , -- Out :
+            TRAN_DONE       => T_RES_DONE          , -- Out :
+            TRAN_ERROR      => T_RES_ERROR         , -- Out :
+            TRAN_BUSY       => m_running             -- Out :
         );
-    push_stop <= (O_FIXED_CLOSE /= 0 or O_FIXED_FLOW_OPEN /= 0) and
+    push_stop <= (push_mode) and 
+                 (O_FIXED_CLOSE /= 0 or O_FIXED_FLOW_OPEN /= 0) and
                  ((                        T_PUSH_FIN_ERR = '1' and T_PUSH_FIN_VALID = '1') or
                   (USE_T_PUSH_RSV /= 0 and T_PUSH_RSV_ERR = '1' and T_PUSH_RSV_VALID = '1'));
-    pull_stop <= (I_FIXED_CLOSE /= 0 or I_FIXED_FLOW_OPEN /= 0) and
+    pull_stop <= (pull_mode) and 
+                 (I_FIXED_CLOSE /= 0 or I_FIXED_FLOW_OPEN /= 0) and
                  ((                        T_PULL_FIN_ERR = '1' and T_PULL_FIN_VALID = '1') or
                   (USE_T_PULL_RSV /= 0 and T_PULL_RSV_ERR = '1' and T_PULL_RSV_VALID = '1'));
-    stop_load <= '1' when (push_stop or pull_stop) else '0';
+    stop_load <= '1' when (push_stop or pull_stop or T_REQ_STOP = '1') else '0';
     mode_load <= (others => '1') when (T_REQ_START = '1') else (others => '0');
     stat_load <= (others => '1') when (T_REQ_START = '1') else (others => '0');
     stat_i    <= (others => '0');
@@ -664,19 +707,48 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                M_REQ_DIR <= '0';
+                t_valve_open <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
-                M_REQ_DIR <= '0';
+                t_valve_open <= '0';
+            elsif (T_REQ_DONE  = '1' and tran_last = '1') or
+                  (T_REQ_STOP  = '1') then
+                t_valve_open <= '0';
             elsif (T_REQ_START = '1') then
-                M_REQ_DIR <= T_REQ_DIR;
+                t_valve_open <= '1';
             end if;
         end if;
     end process;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                tran_dir  <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                tran_dir  <= '0';
+            elsif (T_REQ_START = '1') then
+                tran_dir  <= T_REQ_DIR;
+            end if;
+        end if;
+    end process;
+    push_mode   <= (PUSH_VALID /= 0 and PULL_VALID  = 0) or
+                   (PUSH_VALID /= 0 and PULL_VALID /= 0 and tran_dir  = '1');
+    pull_mode   <= (PULL_VALID /= 0 and PUSH_VALID  = 0) or
+                   (PULL_VALID /= 0 and PUSH_VALID /= 0 and tran_dir  = '0');
+    M_REQ_DIR   <= '1' when (push_mode) else '0';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     T_RES_START   <= T_REQ_START;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    o_valve_o_open <= '1' when (push_mode and m_valve_open = '1') else '0';
+    o_valve_i_open <= '1' when (push_mode and t_valve_open = '1') else '0';
+    i_valve_o_open <= '1' when (pull_mode and t_valve_open = '1') else '0';
+    i_valve_i_open <= '1' when (pull_mode and m_valve_open = '1') else '0';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -703,8 +775,8 @@ begin
             RESET           => reset               , -- In  :
             PAUSE           => pause               , -- In  :
             STOP            => stop                , -- In  :
-            INTAKE_OPEN     => valve_open          , -- In  :
-            OUTLET_OPEN     => valve_open          , -- In  :
+            INTAKE_OPEN     => o_valve_i_open      , -- In  :
+            OUTLET_OPEN     => o_valve_o_open      , -- In  :
             FLOW_READY_LEVEL=> O_FLOW_LEVEL        , -- In  :
             POOL_READY_LEVEL=> M_PULL_BUF_LEVEL    , -- In  :
         ---------------------------------------------------------------------------
@@ -777,8 +849,8 @@ begin
             RESET           => reset               , -- In  :
             PAUSE           => pause               , -- In  :
             STOP            => stop                , -- In  :
-            INTAKE_OPEN     => valve_open          , -- In  :
-            OUTLET_OPEN     => valve_open          , -- In  :
+            INTAKE_OPEN     => i_valve_i_open      , -- In  :
+            OUTLET_OPEN     => i_valve_o_open      , -- In  :
             POOL_SIZE       => I_BUF_SIZE          , -- In  :
             FLOW_READY_LEVEL=> I_FLOW_LEVEL        , -- In  :
             POOL_READY_LEVEL=> M_PUSH_BUF_LEVEL    , -- In  :

@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -232,10 +232,11 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic;
-    -------------------------------------------------------------------------------
-    -- Flow Control Signals.
-    -------------------------------------------------------------------------------
-        VALVE_OPEN      : --! @brief Valve Open.
+        XFER_DONE       : --! @brief Transfer Done.
+                          --! このモジュールが未だデータの転送中かつ、次のクロック
+                          --! で XFER_BUSY がネゲートされる事を示す.
+                          --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
+                          --!   アサートされるわけでは無い.
                           out   std_logic;
     -------------------------------------------------------------------------------
     -- Push Reserve Size Signals.
@@ -437,8 +438,8 @@ begin
     --
     -------------------------------------------------------------------------------
     xfer_start  <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
-    VALVE_OPEN  <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
     XFER_BUSY   <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
+    XFER_DONE   <= '1' when (o_push_valid = '1' and o_push_last = '1') else '0';
     AWREADY     <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1') else '0';
     BRESP       <= AXI4_RESP_SLVERR when (xfer_error = '1') else AXI4_RESP_OKAY;
     -------------------------------------------------------------------------------

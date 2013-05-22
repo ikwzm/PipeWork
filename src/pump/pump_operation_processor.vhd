@@ -2,7 +2,7 @@
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -137,6 +137,8 @@ entity  PUMP_OPERATION_PROCESSOR is
         M_ACK_STOP      : in  std_logic;
         M_ACK_NONE      : in  std_logic;
         M_ACK_SIZE      : in  std_logic_vector(M_BUF_SIZE           downto 0);
+        M_XFER_BUSY     : in  std_logic;
+        M_XFER_DONE     : in  std_logic;
         M_BUF_WE        : in  std_logic;
         M_BUF_BEN       : in  std_logic_vector(2**(M_BUF_WIDTH-3)-1 downto 0);
         M_BUF_DATA      : in  std_logic_vector(2**(M_BUF_WIDTH  )-1 downto 0);
@@ -243,7 +245,7 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     signal   m_stop             : std_logic;
     signal   m_done             : std_logic;
     signal   m_error            : std_logic;
-    signal   m_xfer_run         : std_logic;
+    signal   m_running          : std_logic;
     constant m_first            : std_logic := '1';
     constant m_last             : std_logic := '1';
     constant m_start_data       : std_logic := '1';
@@ -300,7 +302,7 @@ begin
             REGS_WEN        => m_addr_load     , -- In  :
             REGS_WDATA      => m_addr_data     , -- In  :
             REGS_RDATA      => T_ADDR_Q        , -- Out :
-            UP_ENA          => m_xfer_run      , -- In  :
+            UP_ENA          => m_running       , -- In  :
             UP_VAL          => M_ACK_VALID     , -- In  :
             UP_BEN          => m_addr_up_ben   , -- In  :
             UP_SIZE         => M_ACK_SIZE      , -- In  :
@@ -324,7 +326,7 @@ begin
             REGS_WEN        => m_size_load     , -- In  :
             REGS_WDATA      => m_size_data     , -- In  :
             REGS_RDATA      => open            , -- Out :
-            DN_ENA          => m_xfer_run      , -- In  :
+            DN_ENA          => m_running       , -- In  :
             DN_VAL          => M_ACK_VALID     , -- In  :
             DN_SIZE         => M_ACK_SIZE      , -- In  :
             COUNTER         => M_REQ_SIZE      , -- Out :
@@ -348,7 +350,7 @@ begin
             REGS_WEN        => m_buf_ptr_load  , -- In  :
             REGS_WDATA      => m_buf_ptr_data  , -- In  :
             REGS_RDATA      => open            , -- Out :
-            UP_ENA          => m_xfer_run      , -- In  :
+            UP_ENA          => m_running       , -- In  :
             UP_VAL          => M_ACK_VALID     , -- In  :
             UP_BEN          => m_buf_ptr_up_ben, -- In  :
             UP_SIZE         => M_ACK_SIZE      , -- In  :
@@ -411,10 +413,12 @@ begin
             ACK_LAST        => M_ACK_LAST      , -- In  :
             ACK_STOP        => M_ACK_STOP      , -- In  :
             ACK_NONE        => M_ACK_NONE      , -- In  :
+            XFER_BUSY       => M_XFER_BUSY     , -- In  :
+            XFER_DONE       => M_XFER_DONE     , -- In  :
             VALVE_OPEN      => open            , -- Out :
-            XFER_DONE       => m_done          , -- Out :
-            XFER_ERROR      => m_error         , -- Out :
-            XFER_RUNNING    => m_xfer_run        -- Out :
+            TRAN_DONE       => m_done          , -- Out :
+            TRAN_ERROR      => m_error         , -- Out :
+            TRAN_BUSY       => m_running         -- Out :
         );
     -------------------------------------------------------------------------------
     -- モードレジスタ入出力
@@ -469,13 +473,13 @@ begin
                 -------------------------------------------------------------------
                 case curr_state is
                     when IDLE_STATE =>
-                        if    (start_bit = '1' and m_xfer_run = '0') then
+                        if    (start_bit = '1' and m_running = '0') then
                             next_state := M_START_STATE;
                         else
                             next_state := IDLE_STATE;
                         end if;
                     when M_START_STATE =>
-                        if    (m_xfer_run = '1') then
+                        if    (m_running = '1') then
                             next_state := M_RUN_STATE;
                         else
                             next_state := M_START_STATE;
@@ -483,7 +487,7 @@ begin
                     when M_RUN_STATE =>
                         if    (stop_request) then
                             next_state := STOP_STATE;
-                        elsif (m_xfer_run = '0') then
+                        elsif (m_running = '0') then
                             next_state := DECODE_STATE;
                         else
                             next_state := M_RUN_STATE;

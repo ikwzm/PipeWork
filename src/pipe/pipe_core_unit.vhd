@@ -211,11 +211,15 @@ entity  PIPE_CORE_UNIT is
         T_ACK_STOP          : out std_logic;
         T_ACK_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- リクエスタ側からのステータス信号入力.
+    -------------------------------------------------------------------------------
+        T_XFER_BUSY         : in  std_logic;
+        T_XFER_DONE         : in  std_logic;
+    -------------------------------------------------------------------------------
     -- レスポンダ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
         T_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
         T_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_VALVE_OPEN      : in  std_logic;
         T_I_FLOW_READY      : out std_logic;
         T_I_FLOW_PAUSE      : out std_logic;
         T_I_FLOW_STOP       : out std_logic;
@@ -240,7 +244,6 @@ entity  PIPE_CORE_UNIT is
     -- レスポンダ側へのデータ出力のフロー制御信号入出力
     -------------------------------------------------------------------------------
         T_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_O_VALVE_OPEN      : in  std_logic;
         T_O_FLOW_READY      : out std_logic;
         T_O_FLOW_PAUSE      : out std_logic;
         T_O_FLOW_STOP       : out std_logic;
@@ -289,6 +292,11 @@ entity  PIPE_CORE_UNIT is
         M_ACK_STOP          : in  std_logic;
         M_ACK_NONE          : in  std_logic;
         M_ACK_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- リクエスタ側からのステータス信号入力.
+    -------------------------------------------------------------------------------
+        M_XFER_BUSY         : in  std_logic;
+        M_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
@@ -364,6 +372,8 @@ architecture RTL of PIPE_CORE_UNIT is
     signal    s_req_mode        : std_logic_vector(MODE_BITS-1 downto 0);
     signal    s_req_buf_ptr     : std_logic_vector(BUF_DEPTH-1 downto 0);
     constant  s_req_ready       : std_logic := '1';
+    signal    s_req_done        : std_logic;
+    signal    s_req_stop        : std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -403,6 +413,8 @@ architecture RTL of PIPE_CORE_UNIT is
     signal    q_req_size        : std_logic_vector(SIZE_BITS-1 downto 0);
     signal    q_req_mode        : std_logic_vector(MODE_BITS-1 downto 0);
     signal    q_req_buf_ptr     : std_logic_vector(BUF_DEPTH-1 downto 0);
+    signal    q_req_done        : std_logic;
+    signal    q_req_stop        : std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -486,6 +498,11 @@ begin
             T_ACK_STOP              => T_ACK_STOP                  , -- Out :
             T_ACK_SIZE              => T_ACK_SIZE                  , -- Out :
         ---------------------------------------------------------------------------
+        -- Status from Responder Signals.
+        ---------------------------------------------------------------------------
+            T_XFER_BUSY             => T_XFER_BUSY                 , -- In  :
+            T_XFER_DONE             => T_XFER_DONE                 , -- In  :
+        ---------------------------------------------------------------------------
         -- Intake Valve Signals from Responder.
         ---------------------------------------------------------------------------
             T_PUSH_FIN_VALID        => T_PUSH_FIN_VALID            , -- In  :
@@ -512,7 +529,6 @@ begin
         ---------------------------------------------------------------------------
         -- Requester Outlet Flow Signals.
         ---------------------------------------------------------------------------
-            O_VALVE_OPEN            => T_O_VALVE_OPEN              , -- In  :
             O_FLOW_PAUSE            => T_O_FLOW_PAUSE              , -- Out :
             O_FLOW_STOP             => T_O_FLOW_STOP               , -- Out :
             O_FLOW_LAST             => T_O_FLOW_LAST               , -- Out :
@@ -522,7 +538,6 @@ begin
         ---------------------------------------------------------------------------
         -- Requester Intake Flow Signals.
         ---------------------------------------------------------------------------
-            I_VALVE_OPEN            => T_I_VALVE_OPEN              , -- In  :
             I_FLOW_PAUSE            => T_I_FLOW_PAUSE              , -- Out :
             I_FLOW_STOP             => T_I_FLOW_STOP               , -- Out :
             I_FLOW_LAST             => T_I_FLOW_LAST               , -- Out :
@@ -543,6 +558,8 @@ begin
             M_REQ_LAST              => s_req_last                  , -- Out :
             M_REQ_VALID             => s_req_valid                 , -- Out :
             M_REQ_READY             => s_req_ready                 , -- In  :
+            M_REQ_DONE              => s_req_done                  , -- Out :
+            M_REQ_STOP              => s_req_stop                  , -- Out :
         ---------------------------------------------------------------------------
         -- Response from Requester Signals.
         ---------------------------------------------------------------------------
@@ -731,8 +748,8 @@ begin
             i_open_info(OPEN_INFO_RANGE.LAST_POS ) <= s_req_last;
             i_open_info(OPEN_INFO_RANGE.MODE_HI downto OPEN_INFO_RANGE.MODE_LO) <= s_req_mode;
             i_open_info(OPEN_INFO_RANGE.PTR_HI  downto OPEN_INFO_RANGE.PTR_LO ) <= s_req_buf_ptr;
-            i_close_valid <= '0';
-            i_close_info  <= (others => '0');
+            i_close_valid   <= '1' when (s_req_done = '1' or s_req_stop = '1') else '0';
+            i_close_info(0) <= s_req_stop;
         end block;
         ---------------------------------------------------------------------------
         -- 
@@ -827,6 +844,8 @@ begin
             q_req_last    <= o_open_info(OPEN_INFO_RANGE.LAST_POS);
             q_req_buf_ptr <= o_open_info(OPEN_INFO_RANGE.PTR_HI  downto OPEN_INFO_RANGE.PTR_LO );
             q_req_mode    <= o_open_info(OPEN_INFO_RANGE.MODE_HI downto OPEN_INFO_RANGE.MODE_LO);
+            q_req_done    <= '1' when (o_close_valid = '1' and o_close_info(0) = '0') else '0';
+            q_req_stop    <= '1' when (o_close_valid = '1' and o_close_info(0) = '1') else '0';
         end block;
     end block;
     -------------------------------------------------------------------------------
@@ -953,6 +972,8 @@ begin
     -------------------------------------------------------------------------------
     M: PIPE_REQUESTER_INTERFACE 
         generic map (
+            PUSH_VALID              => PUSH_VALID                  ,
+            PULL_VALID              => PULL_VALID                  ,
             ADDR_BITS               => ADDR_BITS                   ,
             ADDR_VALID              => ADDR_VALID                  ,
             SIZE_BITS               => SIZE_BITS                   ,
@@ -1002,6 +1023,11 @@ begin
             M_ACK_NONE              => M_ACK_NONE                  , -- In  :
             M_ACK_SIZE              => M_ACK_SIZE                  , -- In  :
         ---------------------------------------------------------------------------
+        -- Requester Status Signals.
+        ---------------------------------------------------------------------------
+            M_XFER_BUSY             => M_XFER_BUSY                 , -- In  :
+            M_XFER_DONE             => M_XFER_DONE                 , -- In  :
+        ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
             M_PULL_BUF_LEVEL        => M_PULL_BUF_LEVEL            , -- In  :
@@ -1049,6 +1075,8 @@ begin
             T_REQ_LAST              => q_req_last                  , -- In  :
             T_REQ_MODE              => q_req_mode                  , -- In  :
             T_REQ_DIR               => q_req_dir                   , -- In  :
+            T_REQ_DONE              => q_req_done                  , -- In  :
+            T_REQ_STOP              => q_req_stop                  , -- In  :
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
