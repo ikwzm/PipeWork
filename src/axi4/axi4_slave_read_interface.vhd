@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/22
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -64,6 +64,9 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           integer := 32;
         BUF_PTR_BITS    : --! @brief BUFFER POINTER BITS :
                           --! バッファポインタなどを表す信号のビット数を指定する.
+                          integer := 8;
+        ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
+                          --! アライメントサイズのビット数を指定する.
                           integer := 8
     );
     port(
@@ -329,17 +332,8 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     -------------------------------------------------------------------------------
     constant XFER_MAX_SIZE      : integer := AXI4_ALEN_WIDTH + AXI4_DATA_SIZE;
     -------------------------------------------------------------------------------
-    -- アライメントのビット数
+    -- アライメントのバイト数を２のべき乗値で示す.
     -------------------------------------------------------------------------------
-    function CALC_ALIGNMENT_BITS return integer is begin
-        if (AXI4_DATA_WIDTH <= BUF_DATA_WIDTH) then
-            return AXI4_DATA_WIDTH;
-        else
-            return BUF_DATA_WIDTH;
-        end if;
-    end function;
- -- constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
-    constant ALIGNMENT_BITS     : integer := 8;
     constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS);
     -------------------------------------------------------------------------------
     -- 内部信号

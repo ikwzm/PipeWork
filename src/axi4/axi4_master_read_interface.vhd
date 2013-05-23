@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/22
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -81,6 +81,9 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           integer := 32;
         BUF_PTR_BITS    : --! @brief BUFFER POINTER BITS :
                           --! バッファポインタなどを表す信号のビット数を指定する.
+                          integer := 8;
+        ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
+                          --! アライメントサイズのビット数を指定する.
                           integer := 8;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
@@ -453,12 +456,14 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     end function;
     constant AXI4_DATA_SIZE     : integer := CALC_DATA_SIZE(AXI4_DATA_WIDTH);
     constant BUF_DATA_SIZE      : integer := CALC_DATA_SIZE( BUF_DATA_WIDTH);
+    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS );
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
     signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
     signal   xfer_req_select    : std_logic_vector(VAL_BITS       -1 downto 0);
+    signal   xfer_req_ptr       : std_logic_vector(BUF_PTR_BITS   -1 downto 0);
     signal   xfer_req_valid     : std_logic;
     signal   xfer_req_ready     : std_logic;
     signal   xfer_req_next      : std_logic;
@@ -623,6 +628,18 @@ begin
     ARREGION <= REQ_REGION;
     ARID     <= REQ_ID;
     -------------------------------------------------------------------------------
+    -- xfer_req_ptr  : バッファのライト開始ポインタ
+    -------------------------------------------------------------------------------
+    process (xfer_req_addr, REQ_BUF_PTR) begin
+        for i in xfer_req_ptr'range loop
+            if (i < ALIGNMENT_SIZE) then
+                xfer_req_ptr(i) <= xfer_req_addr(i);
+            else
+                xfer_req_ptr(i) <= REQ_BUF_PTR(i);
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
     -- Transfer Request Queue.
     -------------------------------------------------------------------------------
     REQ: block
@@ -649,7 +666,7 @@ begin
         ---------------------------------------------------------------------------
         i_vec(VEC_SIZE_HI downto VEC_SIZE_LO) <= xfer_req_size;
         i_vec(VEC_ADDR_HI downto VEC_ADDR_LO) <= xfer_req_addr(AXI4_DATA_SIZE downto 0);
-        i_vec(VEC_PTR_HI  downto VEC_PTR_LO ) <= REQ_BUF_PTR;
+        i_vec(VEC_PTR_HI  downto VEC_PTR_LO ) <= xfer_req_ptr;
         i_vec(VEC_SEL_HI  downto VEC_SEL_LO ) <= xfer_req_select;
         i_vec(VEC_NEXT_POS)                   <= xfer_req_next;
         i_vec(VEC_LAST_POS)                   <= xfer_req_last;
@@ -912,7 +929,7 @@ begin
     INTAKE_PORT: POOL_INTAKE_PORT                    -- 
         generic map (                                --
             UNIT_BITS       => 8                   , -- 
-            WORD_BITS       => 8                   , --
+            WORD_BITS       => ALIGNMENT_BITS      , --
             PORT_DATA_BITS  => AXI4_DATA_WIDTH     , --
             POOL_DATA_BITS  => BUF_DATA_WIDTH      , -- 
             SEL_BITS        => VAL_BITS            , -- 

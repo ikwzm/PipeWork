@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -81,6 +81,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           integer := 32;
         BUF_PTR_BITS    : --! @brief BUFFER POINTER BITS :
                           --! バッファポインタなどを表す信号のビット数を指定する.
+                          integer := 8;
+        ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
+                          --! アライメントサイズのビット数を指定する.
                           integer := 8;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
@@ -479,6 +482,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     end function;
     constant AXI4_DATA_SIZE     : integer := CALC_DATA_SIZE(AXI4_DATA_WIDTH);
     constant BUF_DATA_SIZE      : integer := CALC_DATA_SIZE( BUF_DATA_WIDTH);
+    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS );
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -548,6 +552,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
+    signal   buf_start_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     signal   next_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     signal   curr_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -744,6 +749,18 @@ begin
     -------------------------------------------------------------------------------
     xfer_start      <= '1' when (xfer_req_ready = '1' and xfer_req_valid = '1') else '0';
     -------------------------------------------------------------------------------
+    -- buf_start_ptr  : バッファのリード開始ポインタ
+    -------------------------------------------------------------------------------
+    process (REQ_ADDR, REQ_BUF_PTR) begin
+        for i in buf_start_ptr'range loop
+            if (i < ALIGNMENT_SIZE) then
+                buf_start_ptr(i) <= REQ_ADDR(i);
+            else
+                buf_start_ptr(i) <= REQ_BUF_PTR(i);
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
     -- buf_push_ben   : 送信バッファに書き込むためのバイトイネーブル信号.
     -- buf_push_size  : 送信バッファに書き込むバイト数を１ビート毎に出力する.
     -- buf_push_last  : 送信バッファに書き込む最後のビートであることを示す.
@@ -754,7 +771,7 @@ begin
             MIN_PIECE       => BUF_DATA_SIZE         ,
             MAX_PIECE       => BUF_DATA_SIZE         ,
             MAX_SIZE        => XFER_MAX_SIZE         ,
-            ADDR_BITS       => REQ_BUF_PTR'length    ,
+            ADDR_BITS       => buf_start_ptr'length  ,
             SIZE_BITS       => xfer_req_size'length  ,
             COUNT_BITS      => 1                     ,
             PSIZE_BITS      => buf_push_size'length  ,
@@ -770,7 +787,7 @@ begin
         ---------------------------------------------------------------------------
         -- 各種初期値
         ---------------------------------------------------------------------------
-            ADDR            => REQ_BUF_PTR           , -- In  :
+            ADDR            => buf_start_ptr         , -- In  :
             SIZE            => xfer_req_size         , -- In  :
             SEL             => xfer_beat_sel         , -- In  :
             LOAD            => xfer_start            , -- In  :
@@ -809,13 +826,13 @@ begin
             if (CLR = '1') then 
                 curr_read_ptr <= (others => '0');
             elsif (xfer_start = '1') then
-                curr_read_ptr <= REQ_BUF_PTR;
+                curr_read_ptr <= buf_start_ptr;
             elsif (xfer_beat_chop = '1') then
                 curr_read_ptr <= next_read_ptr;
             end if;
         end if;
     end process;
-    BUF_PTR <= REQ_BUF_PTR     when (xfer_start     = '1') else
+    BUF_PTR <= buf_start_ptr   when (xfer_start     = '1') else
                next_read_ptr   when (xfer_beat_chop = '1') else
                curr_read_ptr;
     BUF_REN <= xfer_req_select when (xfer_start     = '1') else buf_select;
@@ -855,8 +872,8 @@ begin
     -- 送信バッファ : 
     -------------------------------------------------------------------------------
     SBUF: block
-        constant WORD_BITS      : integer := 8;
-        constant STRB_BITS      : integer := 1;
+        constant WORD_BITS      : integer := ALIGNMENT_BITS;
+        constant STRB_BITS      : integer := ALIGNMENT_BITS/8;
         constant I_WIDTH        : integer :=  BUF_DATA_WIDTH/WORD_BITS;
         constant O_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
         constant i_enable       : std_logic := '1';

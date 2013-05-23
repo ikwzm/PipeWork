@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
 --!     @version 1.5.0
---!     @date    2013/5/22
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -64,6 +64,9 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           integer := 32;
         BUF_PTR_BITS    : --! @brief BUFFER POINTER BITS :
                           --! バッファポインタなどを表す信号のビット数を指定する.
+                          integer := 8;
+        ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
+                          --! アライメントサイズのビット数を指定する.
                           integer := 8
     );
     port(
@@ -322,9 +325,25 @@ use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.COMPONENTS.POOL_INTAKE_PORT;
 architecture RTL of AXI4_SLAVE_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
+    -- データバスのバイト数の２のべき乗値を計算する関数.
+    -------------------------------------------------------------------------------
+    function CALC_DATA_SIZE(WIDTH:integer) return integer is
+        variable value : integer;
+    begin
+        value := 0;
+        while (2**(value+3) < WIDTH) loop
+            value := value + 1;
+        end loop;
+        return value;
+    end function;
+    -------------------------------------------------------------------------------
+    -- アライメントのバイト数を２のべき乗値で示す.
+    -------------------------------------------------------------------------------
+    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS);
+    -------------------------------------------------------------------------------
     -- バッファの先頭ポインタ
     -------------------------------------------------------------------------------
-    constant BUF_START_PTR      : std_logic_vector(BUF_PTR_BITS-1 downto 0) := (others => '0');
+    signal   start_ptr          : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 各種定数
     -------------------------------------------------------------------------------
@@ -445,11 +464,23 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    process (AWADDR) begin
+        for i in start_ptr'range loop
+            if (i < ALIGNMENT_SIZE) then
+                start_ptr(i) <= AWADDR(i);
+            else
+                start_ptr(i) <= '0';
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     REQ_VAL     <= '1' when (curr_state = IDLE_STATE and AWVALID = '1') else '0';
     REQ_ADDR    <= AWADDR;
     REQ_BURST   <= AWBURST;
     REQ_ID      <= AWID;
-    REQ_BUF_PTR <= BUF_START_PTR;
+    REQ_BUF_PTR <= start_ptr;
     REQ_FIRST   <= '1';
     REQ_LAST    <= '1';
     -------------------------------------------------------------------------------
@@ -458,7 +489,7 @@ begin
     INTAKE_PORT: POOL_INTAKE_PORT                -- 
         generic map (                            -- 
             UNIT_BITS       => 8               , -- 
-            WORD_BITS       => 8               , -- 
+            WORD_BITS       => ALIGNMENT_BITS  , -- 
             PORT_DATA_BITS  => AXI4_DATA_WIDTH , -- 
             POOL_DATA_BITS  =>  BUF_DATA_WIDTH , -- 
             SEL_BITS        => 1               , -- 
@@ -477,7 +508,7 @@ begin
         -- Control Signals.
         ---------------------------------------------------------------------------
             START           => xfer_start      , -- In  :
-            START_PTR       => BUF_START_PTR   , -- In  :
+            START_PTR       => start_ptr       , -- In  :
             XFER_LAST       => sig1            , -- In  :
             XFER_SEL(0)     => sig1            , -- In  :
         -------------------------------------------------------------------------------
