@@ -2,7 +2,7 @@
 --!     @file    float_outlet_manifold_valve.vhd
 --!     @brief   FLOAT OUTLET MANIFOLD VALVE
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -509,7 +509,7 @@ begin
             -----------------------------------------------------------------------
             -- Pull Size Signals.
             -----------------------------------------------------------------------
-                PULL_VALID      => POOL_PULL_LAST  , -- In :
+                PULL_VALID      => POOL_PULL_VALID , -- In :
                 PULL_LAST       => POOL_PULL_LAST  , -- In :
                 PULL_SIZE       => POOL_PULL_SIZE  , -- In :
             -----------------------------------------------------------------------
