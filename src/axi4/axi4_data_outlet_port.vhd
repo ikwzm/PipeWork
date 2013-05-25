@@ -230,12 +230,6 @@ entity  AXI4_DATA_OUTLET_PORT is
         POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
                           --! ライト時にデータを書き込むバッファの位置を出力する.
                           out std_logic_vector(POOL_PTR_BITS-1 downto 0);
-        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
-                          --! バッファからデータをリードする際のユニット単位での有効
-                          --! 信号.
-                          --! * POOL_REN='1'の場合にのみ有効.
-                          --! * POOL_REN='0'の場合のこの信号の値は不定.
-                          out std_logic_vector(POOL_DATA_BITS/8-1 downto 0);
         POOL_ERROR      : --! @brief EXIT ERROR : 
                           --! エラーが発生したことを示すフラグ.
                           in  std_logic;
@@ -395,7 +389,6 @@ begin
     i_valid   <= POOL_VAL;
     i_chop    <= '1' when (i_valid = '1' and i_ready = '1') else '0';
     POOL_RDY  <= i_ready;
-    POOL_DVAL <= i_ben;
     XFER_VAL  <= i_chop;
     XFER_DVAL <= i_ben;
     XFER_LAST <= i_last;

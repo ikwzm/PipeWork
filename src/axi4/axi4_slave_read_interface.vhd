@@ -288,11 +288,6 @@ entity  AXI4_SLAVE_READ_INTERFACE is
         BUF_REN         : --! @brief Buffer Write Enable.
                           --! バッファにデータをライトすることを示す.
                           out   std_logic;
-        BUF_BEN         : --! @brief Buffer Byte Enable.
-                          --! バッファにデータをライトする際のバイトイネーブル信号.
-                          --! * BUF_WEN='1'の場合にのみ有効.
-                          --! * BUF_WEN='0'の場合のこの信号の値は不定.
-                          out   std_logic_vector(BUF_DATA_WIDTH/8 -1 downto 0);
         BUF_DATA        : --! @brief Buffer Data.
                           --! バッファへライトするデータを出力する.
                           in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
@@ -605,7 +600,6 @@ begin
         ---------------------------------------------------------------------------
             POOL_REN(0)     => BUF_REN         , -- Out :
             POOL_PTR        => BUF_PTR         , -- Out :
-            POOL_DVAL       => open            , -- Out :
             POOL_DATA       => BUF_DATA        , -- In  :
             POOL_ERROR      => xfer_error      , -- In  :
             POOL_VAL        => xfer_valid      , -- In  :

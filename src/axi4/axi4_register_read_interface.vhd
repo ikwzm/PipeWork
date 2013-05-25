@@ -2,7 +2,7 @@
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
 --!     @version 1.5.0
---!     @date    2013/4/1
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -449,7 +449,6 @@ begin
         ---------------------------------------------------------------------------
             POOL_REN        => open            , -- Out :
             POOL_PTR        => open            , -- Out :
-            POOL_DVAL       => open            , -- Out :
             POOL_ERROR      => REGS_ERR        , -- In  :
             POOL_DATA       => REGS_DATA       , -- In  :
             POOL_VAL        => xfer_beat_valid , -- In  :
