@@ -489,7 +489,7 @@ architecture RTL of PIPE_REQUESTER_INTERFACE is
     -- アドレスレジスタ関連の信号.
     ------------------------------------------------------------------------------
     signal   addr_load          : std_logic_vector(ADDR_BITS-1 downto 0);
-    function ADDR_UP_BEN return std_logic_vector is
+    function CALC_ADDR_UP_BEN return std_logic_vector is
         variable up_ben    : std_logic_vector(ADDR_BITS-1 downto 0);
     begin
         for i in up_ben'range loop
@@ -501,6 +501,7 @@ architecture RTL of PIPE_REQUESTER_INTERFACE is
         end loop;
         return up_ben;
     end function;
+    constant  ADDR_UP_BEN       : std_logic_vector(ADDR_BITS-1 downto 0) := CALC_ADDR_UP_BEN;
     ------------------------------------------------------------------------------
     -- サイズレジスタ関連の信号.
     ------------------------------------------------------------------------------
