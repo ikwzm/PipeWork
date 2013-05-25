@@ -402,9 +402,14 @@ begin
                 o_xfer_last   <= '0';
                 o_xfer_select <= (others => '0');
             elsif (PORT_VAL = '1' and i_ready = '1') then
-                o_error       <= PORT_ERROR;
-                o_xfer_last   <= i_xfer_last;
-                o_xfer_select <= i_xfer_select;
+                if (START = '1') then
+                    o_xfer_last   <= XFER_LAST;
+                    o_xfer_select <= XFER_SEL;
+                else
+                    o_xfer_last   <= i_xfer_last;
+                    o_xfer_select <= i_xfer_select;
+                end if;
+                o_error <= PORT_ERROR;
             end if;
         end if;
     end process;
