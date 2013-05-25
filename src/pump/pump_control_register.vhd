@@ -2,7 +2,7 @@
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
 --!     @version 1.5.0
---!     @date    2013/5/20
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -257,6 +257,11 @@ entity  PUMP_CONTROL_REGISTER is
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
                           out std_logic;
+        TRAN_START      : --! @brief Transaction Start Flag.
+                          --! トランザクションを開始したことを示すフラグ.
+                          --! トランザクション開始"の直前"に１クロックだけアサート
+                          --! される.
+                          out std_logic;
         TRAN_BUSY       : --! @brief Transaction Busy Flag.
                           --! トランザクション中であることを示すフラグ.
                           out std_logic;
@@ -293,6 +298,10 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   mode_regs          : std_logic_vector(MODE_BITS-1 downto 0);
     signal   stat_regs          : std_logic_vector(STAT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+    signal   transaction_start  : boolean;
+    -------------------------------------------------------------------------------
     -- State Machine.
     -------------------------------------------------------------------------------
     type     STATE_TYPE     is  ( IDLE_STATE    ,
@@ -305,11 +314,17 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   first_state        : std_logic_vector(2 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- 
+    -- transaction_start : トランザクション開始信号.
+    -------------------------------------------------------------------------------
+    transaction_start <= (curr_state = IDLE_STATE) and
+                         (start_bit = '1' or (START_L = '1' and START_D = '1'));
+    -------------------------------------------------------------------------------
+    -- コントロールステータスレジスタとステートマシン
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable next_state : STATE_TYPE;
         variable xfer_run   : boolean;
+        variable xfer_first : boolean;
     begin
         if    (RST = '1') then
                 curr_state  <= IDLE_STATE;
@@ -344,12 +359,15 @@ begin
                 stat_regs   <= (others => '0');
             else
                 -------------------------------------------------------------------
-                -- ステートマシン
+                --
                 -------------------------------------------------------------------
                 xfer_run := (XFER_BUSY = '1' and XFER_DONE = '0');
+                -------------------------------------------------------------------
+                -- ステートマシン
+                -------------------------------------------------------------------
                 case curr_state is
                     when IDLE_STATE =>
-                        if (start_bit = '1') then
+                        if (transaction_start) then
                             next_state := REQ_STATE;
                         else
                             next_state := IDLE_STATE;
@@ -403,34 +421,6 @@ begin
                     curr_state <= next_state;
                 end if;
                 -------------------------------------------------------------------
-                -- first_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
-                -------------------------------------------------------------------
-                if    (reset_bit = '1') then
-                        first_state <= "000";
-                elsif (first_state = "000") then
-                    if (curr_state = IDLE_STATE and start_bit = '1' and first_bit = '1') then
-                        first_state <= "111";
-                    else
-                        first_state <= "000";
-                    end if;
-                elsif (first_state = "100") then
-                    if (xfer_run = TRUE) then
-                        first_state <= "100";
-                    else
-                        first_state <= "000";
-                    end if;
-                elsif (ACK_VALID = '1') then
-                    if (ACK_LAST = '1' or ACK_ERROR = '1' or ACK_STOP = '1') then
-                        if (xfer_run = TRUE) then
-                            first_state <= "100";
-                        else
-                            first_state <= "000";
-                        end if;
-                    else
-                            first_state <= "110";
-                    end if;
-                end if;
-                -------------------------------------------------------------------
                 -- RESET BIT   :
                 -------------------------------------------------------------------
                 if    (RESET_L = '1') then
@@ -472,6 +462,7 @@ begin
                 elsif (FIRST_L = '1') then
                     first_bit <= FIRST_D;
                 end if;
+                xfer_first := (FIRST_L = '1' and FIRST_D = '1') or (first_bit = '1');
                 -------------------------------------------------------------------
                 -- LAST BIT    :
                 -------------------------------------------------------------------
@@ -542,6 +533,34 @@ begin
                         end if;
                     end loop;
                 end if;
+                -------------------------------------------------------------------
+                -- first_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
+                -------------------------------------------------------------------
+                if    (reset_bit = '1') then
+                        first_state <= "000";
+                elsif (first_state = "000") then
+                    if (transaction_start and xfer_first) then
+                        first_state <= "111";
+                    else
+                        first_state <= "000";
+                    end if;
+                elsif (first_state = "100") then
+                    if (xfer_run = TRUE) then
+                        first_state <= "100";
+                    else
+                        first_state <= "000";
+                    end if;
+                elsif (ACK_VALID = '1') then
+                    if (ACK_LAST = '1' or ACK_ERROR = '1' or ACK_STOP = '1') then
+                        if (xfer_run = TRUE) then
+                            first_state <= "100";
+                        else
+                            first_state <= "000";
+                        end if;
+                    else
+                            first_state <= "110";
+                    end if;
+                end if;
             end if;
         end if;
     end process;
@@ -563,13 +582,14 @@ begin
     -- Status
     -------------------------------------------------------------------------------
     VALVE_OPEN   <= first_state(2);
+    TRAN_START   <= '1' when (transaction_start = TRUE) else '0';
     TRAN_BUSY    <= start_bit;
-    TRAN_DONE    <= '1' when (curr_state = DONE_STATE) else '0';
+    TRAN_DONE    <= '1' when (curr_state = DONE_STATE ) else '0';
     TRAN_ERROR   <= error_flag;
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-    REQ_VALID    <= '1' when (curr_state = REQ_STATE ) else '0';
+    REQ_VALID    <= '1' when (curr_state = REQ_STATE  ) else '0';
     REQ_FIRST    <= first_state(0);
     REQ_LAST     <= last_bit;
 end RTL;

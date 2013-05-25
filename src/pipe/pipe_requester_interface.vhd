@@ -2,7 +2,7 @@
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
 --!     @version 1.5.0
---!     @date    2013/5/22
+--!     @date    2013/5/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -686,6 +686,7 @@ begin
             XFER_BUSY       => M_XFER_BUSY         , -- In  :
             XFER_DONE       => M_XFER_DONE         , -- In  :
             VALVE_OPEN      => m_valve_open        , -- Out :
+            TRAN_START      => T_RES_START         , -- Out :
             TRAN_DONE       => T_RES_DONE          , -- Out :
             TRAN_ERROR      => T_RES_ERROR         , -- Out :
             TRAN_BUSY       => m_running             -- Out :
@@ -738,10 +739,6 @@ begin
     pull_mode   <= (PULL_VALID /= 0 and PUSH_VALID  = 0) or
                    (PULL_VALID /= 0 and PUSH_VALID /= 0 and tran_dir  = '0');
     M_REQ_DIR   <= '1' when (push_mode) else '0';
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    T_RES_START   <= T_REQ_START;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
