@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.0                                                           --
---!     @date    2013/05/22                                                      --
+--!     @date    2013/05/24                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -261,6 +261,11 @@ component PUMP_CONTROL_REGISTER
                           --! ートされ、最後の(REQ_LAST='1'付き)トランザクション終
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
+                          out std_logic;
+        TRAN_START      : --! @brief Transaction Start Flag.
+                          --! トランザクションを開始したことを示すフラグ.
+                          --! トランザクション開始"の直前"に１クロックだけアサート
+                          --! される.
                           out std_logic;
         TRAN_BUSY       : --! @brief Transaction Busy Flag.
                           --! トランザクション中であることを示すフラグ.

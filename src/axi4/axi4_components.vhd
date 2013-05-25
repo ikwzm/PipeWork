@@ -1218,11 +1218,6 @@ component AXI4_SLAVE_READ_INTERFACE
         BUF_REN         : --! @brief Buffer Write Enable.
                           --! バッファにデータをライトすることを示す.
                           out   std_logic;
-        BUF_BEN         : --! @brief Buffer Byte Enable.
-                          --! バッファにデータをライトする際のバイトイネーブル信号.
-                          --! * BUF_WEN='1'の場合にのみ有効.
-                          --! * BUF_WEN='0'の場合のこの信号の値は不定.
-                          out   std_logic_vector(BUF_DATA_WIDTH/8 -1 downto 0);
         BUF_DATA        : --! @brief Buffer Data.
                           --! バッファへライトするデータを出力する.
                           in    std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
@@ -2295,12 +2290,6 @@ component AXI4_DATA_OUTLET_PORT
         POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
                           --! ライト時にデータを書き込むバッファの位置を出力する.
                           out std_logic_vector(POOL_PTR_BITS-1 downto 0);
-        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
-                          --! バッファからデータをリードする際のユニット単位での有効
-                          --! 信号.
-                          --! * POOL_REN='1'の場合にのみ有効.
-                          --! * POOL_REN='0'の場合のこの信号の値は不定.
-                          out std_logic_vector(POOL_DATA_BITS/8-1 downto 0);
         POOL_ERROR      : --! @brief EXIT ERROR : 
                           --! エラーが発生したことを示すフラグ.
                           in  std_logic;
