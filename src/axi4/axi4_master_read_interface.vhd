@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/24
+--!     @date    2013/5/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -119,7 +119,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          out   AXI4_ALEN_TYPE;
+                          out   std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -132,7 +132,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
         ARLOCK          : --! @brief Lock type.
                           --! This signal provides additional information about
                           --! the atomic characteristics of the transfer.
-                          out   AXI4_ALOCK_TYPE;
+                          out   std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         ARCACHE         : --! @brief Memory type.
                           --! This signal indicates how transactions are required
                           --! to progress through a system.
@@ -209,7 +209,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           in    AXI4_ABURST_TYPE;
         REQ_LOCK        : --! @brief Request Lock type.
                           --! ARLOCK の値を指定する.
-                          in    AXI4_ALOCK_TYPE;
+                          in    std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         REQ_CACHE       : --! @brief Request Memory type.
                           --! ARCACHE の値を指定する.
                           in    AXI4_ACACHE_TYPE;
@@ -542,6 +542,7 @@ begin
             DATA_SIZE       => AXI4_DATA_SIZE    , --
             ADDR_BITS       => AXI4_ADDR_WIDTH   , --
             SIZE_BITS       => SIZE_BITS         , --
+            ALEN_BITS       => AXI4_ALEN_WIDTH   , --
             REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
             REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
             FLOW_VALID      => FLOW_VALID        , --

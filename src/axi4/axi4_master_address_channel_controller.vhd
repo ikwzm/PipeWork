@@ -2,7 +2,7 @@
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
 --!     @version 1.5.0
---!     @date    2013/4/2
+--!     @date    2013/5/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -58,6 +58,9 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種SIZE信号のビット数を指定する.
                           integer := 32;
+        ALEN_BITS       : --! @brief BURST LENGTH BITS :
+                          --! バースト長を示す信号のビット幅を指定する.
+                          integer := AXI4_ALEN_WIDTH;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS :
                           --! REQ_SIZE信号のビット数を指定する.
                           --! * REQ_SIZE信号が無効(REQ_SIZE_ENABLE=0)の場合でもエラ
@@ -93,8 +96,8 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -- AXI4 Address Channel Signals.
     ------------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
+        ALEN            : out   std_logic_vector(ALEN_BITS    -1 downto 0);
         ASIZE           : out   AXI4_ASIZE_TYPE;
-        ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
     -------------------------------------------------------------------------------
@@ -203,7 +206,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   burst_length       : AXI4_ALEN_TYPE;
+    signal   burst_length       : std_logic_vector(ALEN_BITS-1   downto 0);
     signal   addr_valid         : std_logic;
     signal   speculative        : boolean;
     -------------------------------------------------------------------------------

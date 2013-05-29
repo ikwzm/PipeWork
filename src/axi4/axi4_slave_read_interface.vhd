@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 1.5.0
---!     @date    2013/5/24
+--!     @date    2013/5/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -93,7 +93,7 @@ entity  AXI4_SLAVE_READ_INTERFACE is
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -340,7 +340,7 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     signal   identifier         : std_logic_vector(AXI4_ID_WIDTH  -1 downto 0);
     signal   start_ptr          : std_logic_vector(BUF_PTR_BITS   -1 downto 0);
     signal   burst_type         : AXI4_ABURST_TYPE;
-    signal   burst_length       : AXI4_ALEN_TYPE;
+    signal   burst_length       : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0);
     signal   word_size          : AXI4_ASIZE_TYPE;
     signal   xfer_valid         : std_logic;
     signal   xfer_ready         : std_logic;

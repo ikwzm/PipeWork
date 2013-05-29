@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.0                                                           --
---!     @date    2013/05/24                                                      --
+--!     @date    2013/05/29                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -63,6 +63,9 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種SIZE信号のビット数を指定する.
                           integer := 32;
+        ALEN_BITS       : --! @brief BURST LENGTH BITS :
+                          --! バースト長を示す信号のビット幅を指定する.
+                          integer := AXI4_ALEN_WIDTH;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS :
                           --! REQ_SIZE信号のビット数を指定する.
                           --! * REQ_SIZE信号が無効(REQ_SIZE_ENABLE=0)の場合でもエラ
@@ -98,8 +101,8 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
     -- AXI4 Address Channel Signals.
     ------------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
+        ALEN            : out   std_logic_vector(ALEN_BITS    -1 downto 0);
         ASIZE           : out   AXI4_ASIZE_TYPE;
-        ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
     -------------------------------------------------------------------------------
@@ -241,7 +244,7 @@ component AXI4_MASTER_READ_INTERFACE
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          out   AXI4_ALEN_TYPE;
+                          out   std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -254,7 +257,7 @@ component AXI4_MASTER_READ_INTERFACE
         ARLOCK          : --! @brief Lock type.
                           --! This signal provides additional information about
                           --! the atomic characteristics of the transfer.
-                          out   AXI4_ALOCK_TYPE;
+                          out   std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         ARCACHE         : --! @brief Memory type.
                           --! This signal indicates how transactions are required
                           --! to progress through a system.
@@ -331,7 +334,7 @@ component AXI4_MASTER_READ_INTERFACE
                           in    AXI4_ABURST_TYPE;
         REQ_LOCK        : --! @brief Request Lock type.
                           --! ARLOCK の値を指定する.
-                          in    AXI4_ALOCK_TYPE;
+                          in    std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         REQ_CACHE       : --! @brief Request Memory type.
                           --! ARCACHE の値を指定する.
                           in    AXI4_ACACHE_TYPE;
@@ -632,7 +635,7 @@ component AXI4_MASTER_WRITE_INTERFACE
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          out   AXI4_ALEN_TYPE;
+                          out   std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -645,7 +648,7 @@ component AXI4_MASTER_WRITE_INTERFACE
         AWLOCK          : --! @brief Lock type.
                           --! This signal provides additional information about
                           --! the atomic characteristics of the transfer.
-                          out   AXI4_ALOCK_TYPE;
+                          out   std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         AWCACHE         : --! @brief Memory type.
                           --! This signal indicates how transactions are required
                           --! to progress through a system.
@@ -744,7 +747,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           in    AXI4_ABURST_TYPE;
         REQ_LOCK        : --! @brief Request Lock type.
                           --! AWLOCK の値を指定する.
-                          in    AXI4_ALOCK_TYPE;
+                          in    std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         REQ_CACHE       : --! @brief Request Memory type.
                           --! AWCACHE の値を指定する.
                           in    AXI4_ACACHE_TYPE;
@@ -1023,7 +1026,7 @@ component AXI4_SLAVE_READ_INTERFACE
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -1281,7 +1284,7 @@ component AXI4_SLAVE_WRITE_INTERFACE
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -1553,7 +1556,7 @@ component AXI4_REGISTER_WRITE_INTERFACE
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -1682,7 +1685,7 @@ component AXI4_REGISTER_READ_INTERFACE
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -1795,7 +1798,7 @@ component AXI4_REGISTER_INTERFACE
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -1850,7 +1853,7 @@ component AXI4_REGISTER_INTERFACE
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -1953,7 +1956,7 @@ component AXI4_DATA_PORT
                           --! O_USER/I_USER のビット数を指定する.
                           integer := 1;
         ALEN_BITS       : --! @brief BURST LENGTH BITS :
-                          --! BURST_LEN のビット数を指定する.
+                          --! ALEN のビット数を指定する.
                           integer := 12;
         USE_ASIZE       : --! @brief USE BURST SIZE :
                           --! ASIZE による Narrow transfers をサポートするか否かを

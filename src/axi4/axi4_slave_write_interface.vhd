@@ -93,7 +93,7 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.

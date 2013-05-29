@@ -58,7 +58,7 @@ entity  AXI4_DATA_PORT is
                           --! O_USER/I_USER のビット数を指定する.
                           integer := 1;
         ALEN_BITS       : --! @brief BURST LENGTH BITS :
-                          --! BURST_LEN のビット数を指定する.
+                          --! ALEN のビット数を指定する.
                           integer := 12;
         USE_ASIZE       : --! @brief USE BURST SIZE :
                           --! ASIZE による Narrow transfers をサポートするか否かを
