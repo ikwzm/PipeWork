@@ -2,7 +2,7 @@
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
 --!     @version 1.5.0
---!     @date    2013/5/22
+--!     @date    2013/6/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -287,9 +287,9 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     signal   xfer_last          : std_logic;
 begin
     -------------------------------------------------------------------------------
-    -- M_REQ_ADDR : 
+    -- M_REQ_ADDR : Operation Code Fetch Address Register.
     -------------------------------------------------------------------------------
-    M_REQ_ADDR_REGS: COUNT_UP_REGISTER
+    M_REQ_ADDR_REGS: COUNT_UP_REGISTER           -- 
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_ADDR_BITS     , -- 
@@ -311,9 +311,9 @@ begin
     m_addr_load <= (others => '1')                       when (link_start) else T_ADDR_L;
     m_addr_data <= op_code(OP_ADDR_HI downto OP_ADDR_LO) when (link_start) else T_ADDR_D;
     -------------------------------------------------------------------------------
-    -- M_REQ_SIZE :
+    -- M_REQ_SIZE : Operation Code Fetch Size Counter.
     -------------------------------------------------------------------------------
-    M_REQ_SIZE_REGS: COUNT_DOWN_REGISTER
+    M_REQ_SIZE_REGS: COUNT_DOWN_REGISTER         -- 
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_BUF_SIZE+1    , -- 
@@ -335,9 +335,9 @@ begin
        );
     m_size_load <= (others => '1') when (curr_state = M_START_STATE) else (others => '0');
     -------------------------------------------------------------------------------
-    -- M_REP_PTR  :
+    -- M_REQ_PTR  : Operation Code Fetch Queue Pointer.
     -------------------------------------------------------------------------------
-    M_REQ_PTR_REGS: COUNT_UP_REGISTER
+    M_REQ_PTR_REGS: COUNT_UP_REGISTER            -- 
         generic map (                            -- 
             VALID           => 1               , -- 
             BITS            => M_BUF_SIZE      , -- 
@@ -358,9 +358,9 @@ begin
         );
     m_buf_ptr_load <= (others => '1') when (curr_state = M_START_STATE) else (others => '0');
     -------------------------------------------------------------------------------
-    -- M_CTRL_REGS:
+    -- M_CTRL_REGS: Operation Code Fetch Control Registers.
     -------------------------------------------------------------------------------
-    M_CTRL_REGS: PUMP_CONTROL_REGISTER
+    M_CTRL_REGS: PUMP_CONTROL_REGISTER           -- 
         generic map (                            -- 
             MODE_BITS       => mode_regs'length, -- 
             STAT_BITS       => stat_regs'length  -- 
@@ -472,18 +472,27 @@ begin
                 -- ステートマシン
                 -------------------------------------------------------------------
                 case curr_state is
+                    ---------------------------------------------------------------
+                    -- アイドル状態
+                    ---------------------------------------------------------------
                     when IDLE_STATE =>
                         if    (start_bit = '1' and m_running = '0') then
                             next_state := M_START_STATE;
                         else
                             next_state := IDLE_STATE;
                         end if;
+                    ---------------------------------------------------------------
+                    -- オペレーションコードのフェッチを開始
+                    ---------------------------------------------------------------
                     when M_START_STATE =>
                         if    (m_running = '1') then
                             next_state := M_RUN_STATE;
                         else
                             next_state := M_START_STATE;
                         end if;
+                    ---------------------------------------------------------------
+                    -- オペレーションコードをフェッチ中
+                    ---------------------------------------------------------------
                     when M_RUN_STATE =>
                         if    (stop_request) then
                             next_state := STOP_STATE;
@@ -492,6 +501,9 @@ begin
                         else
                             next_state := M_RUN_STATE;
                         end if;
+                    ---------------------------------------------------------------
+                    -- オペレーションコードのデコード
+                    ---------------------------------------------------------------
                     when DECODE_STATE =>
                         if    (stop_request) then
                             next_state := STOP_STATE;
@@ -512,6 +524,9 @@ begin
                         else
                             next_state := X_DONE_STATE;
                         end if;
+                    ---------------------------------------------------------------
+                    -- 転送オペレーション実行中
+                    ---------------------------------------------------------------
                     when X_START_STATE =>
                         if    (stop_request) then
                             next_state := STOP_STATE;
@@ -522,17 +537,28 @@ begin
                         else
                             next_state := M_START_STATE;
                         end if;
+                    ---------------------------------------------------------------
+                    -- 転送オペレーション終了処理またはオペレーション停止処理中
+                    ---------------------------------------------------------------
                     when X_DONE_STATE | STOP_STATE => 
                         if    (X_RUN = '0') then
                             next_state := DONE_STATE;
+                        else
+                            next_state := curr_state;
                         end if;
+                    ---------------------------------------------------------------
+                    -- オペレーション終了処理
+                    ---------------------------------------------------------------
                     when DONE_STATE =>
                             next_state := IDLE_STATE;
+                    ---------------------------------------------------------------
+                    -- その他
+                    ---------------------------------------------------------------
                     when others =>
                             next_state := IDLE_STATE;
                 end case;
                 -------------------------------------------------------------------
-                --
+                -- 現在の状態
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     curr_state <= IDLE_STATE;
@@ -560,7 +586,7 @@ begin
                     stop_bit  <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- xfer_last :
+                -- xfer_last : 最後のトランザクションであることを示す.
                 -------------------------------------------------------------------
                 if   (op_decode and op_type = OP_XFER_TYPE) then
                     xfer_last <= op_code(OP_END_POS);
@@ -568,7 +594,7 @@ begin
                     xfer_last <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- op_shift  :
+                -- op_shift  : キューからデコード済みのコードを破棄する.
                 -------------------------------------------------------------------
                 if   (curr_state = DECODE_STATE and next_state /= DECODE_STATE) then
                     op_shift  <= '1';
@@ -614,16 +640,24 @@ begin
         end if;     
     end process;
     -------------------------------------------------------------------------------
-    -- 
+    -- m_start_load : オペレーションフェッチ開始時に各種レジスタを設定するための信号
+    -- m_done_load  : オペレーション終了時にステータスレジスタをクリアするための信号
     -------------------------------------------------------------------------------
     m_start_load <= '1' when (curr_state = M_START_STATE) else '0';
     m_done_load  <= '1' when (curr_state = M_START_STATE or
                               curr_state = DONE_STATE   ) else '0';
+    -------------------------------------------------------------------------------
+    -- stop_request : オペレーションの中止を指示する信号
+    -------------------------------------------------------------------------------
     stop_request <= (stop_bit = '1' or error_bits /= NO_ERROR);
+    -------------------------------------------------------------------------------
+    -- link_start   : リンクオペレーションの開始を指示する信号
+    -- xfer_start   : 転送オペレーションの開始を指示する信号
+    -------------------------------------------------------------------------------
     link_start   <= (op_decode and op_type = OP_LINK_TYPE and stop_request = FALSE);
     xfer_start   <= (op_decode and op_type = OP_XFER_TYPE and stop_request = FALSE and X_RUN = '0');
     -------------------------------------------------------------------------------
-    -- 
+    -- Control Status Register Output Signals.
     -------------------------------------------------------------------------------
     T_RESET_Q    <= reset_bit;
     T_START_Q    <= start_bit;
@@ -648,6 +682,9 @@ begin
             if    (CLR   = '1' or reset_bit = '1') then
                 op_code  <= (others => '0');
                 op_valid <= '0';
+            -----------------------------------------------------------------------
+            -- M_BUF_WE 信号によりオペレーションコードがキューに取り込まれる.
+            -----------------------------------------------------------------------
             elsif (M_BUF_WE = '1') then
                 for i in lo_ptr'range loop
                     if (i < M_BUF_SIZE) then
@@ -675,16 +712,26 @@ begin
                 if (valid(valid'high) = '1') then
                     op_valid <= '1';
                 end if;
+            -----------------------------------------------------------------------
+            -- op_shift 信号によりキューからデコード済みのコードを破棄する.
+            -----------------------------------------------------------------------
             elsif (op_shift = '1') then
                 op_valid <= '0';
             end if;
         end if;
     end process;
+    -------------------------------------------------------------------------------
+    -- op_decode : キューに有効なコードがあり、デコード中である事を示すフラグ
+    -- op_type   : キューの先頭にあるコードの、オペレーションのタイプを示す.
+    -------------------------------------------------------------------------------
     op_decode   <= (curr_state = DECODE_STATE and op_valid = '1');
     op_type     <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
-    M_BUF_RDY   <= '1';
     -------------------------------------------------------------------------------
     -- 
+    -------------------------------------------------------------------------------
+    M_BUF_RDY   <= '1';
+    -------------------------------------------------------------------------------
+    -- 転送オペレーション要求信号出力
     -------------------------------------------------------------------------------
     X_OPERAND_L <= (others => '1') when (xfer_start) else (others => '0');
     X_OPERAND_D <= op_code(OP_XFER_HI downto OP_XFER_LO);
