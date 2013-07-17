@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.0
---!     @date    2013/5/29
+--!     @version 1.5.1
+--!     @date    2013/7/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -882,13 +882,19 @@ begin
         -- 
         ---------------------------------------------------------------------------
         process (xfer_req_addr)
-            variable addr : unsigned(AXI4_DATA_SIZE downto 0);
+            variable addr : unsigned(AXI4_DATA_SIZE-ALIGNMENT_SIZE downto 0);
         begin
             for i in addr'range loop
-                if (i < AXI4_DATA_SIZE and xfer_req_addr(i) = '1') then
-                    addr(i) := '1';
+                if (i+ALIGNMENT_SIZE <  AXI4_DATA_SIZE    ) and
+                   (i+ALIGNMENT_SIZE <= xfer_req_addr'high) and
+                   (i+ALIGNMENT_SIZE >= xfer_req_addr'low ) then
+                    if (xfer_req_addr(i+ALIGNMENT_SIZE) = '1') then
+                        addr(i) := '1';
+                    else
+                        addr(i) := '0';
+                    end if;
                 else
-                    addr(i) := '0';
+                        addr(i) := '0';
                 end if;
             end loop;
             for i in offset'range loop

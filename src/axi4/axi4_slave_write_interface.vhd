@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
---!     @version 1.5.0
---!     @date    2013/5/24
+--!     @version 1.5.1
+--!     @date    2013/7/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -489,7 +489,7 @@ begin
     INTAKE_PORT: POOL_INTAKE_PORT                -- 
         generic map (                            -- 
             UNIT_BITS       => 8               , -- 
-            WORD_BITS       => ALIGNMENT_BITS  , -- 
+            WORD_BITS       => 8               , -- 
             PORT_DATA_BITS  => AXI4_DATA_WIDTH , -- 
             POOL_DATA_BITS  =>  BUF_DATA_WIDTH , -- 
             SEL_BITS        => 1               , -- 
