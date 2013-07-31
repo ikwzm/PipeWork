@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.1
---!     @date    2013/7/17
+--!     @version 1.5.0
+--!     @date    2013/7/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
