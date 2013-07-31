@@ -2,7 +2,7 @@
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
 --!     @version 1.5.0
---!     @date    2013/5/29
+--!     @date    2013/7/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -539,15 +539,18 @@ begin
         if (RST = '1') then
                 addr_valid <= '0';
                 AVALID     <= '0';
+                AADDR      <= (others => '0');
                 ALEN       <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 addr_valid <= '0';
                 AVALID     <= '0';
+                AADDR      <= (others => '0');
                 ALEN       <= (others => '0');
             elsif (req_xfer_valid = '1') then
                 addr_valid <= '1';
                 AVALID     <= '1';
+                AADDR      <= REQ_ADDR;
                 ALEN       <= burst_length;
             elsif (AREADY = '1') then
                 addr_valid <= '0';
@@ -555,6 +558,5 @@ begin
             end if;
         end if;
     end process;
-    AADDR <= REQ_ADDR;
     ASIZE <= std_logic_vector(to_unsigned(DATA_SIZE, ASIZE'length));
 end RTL;
