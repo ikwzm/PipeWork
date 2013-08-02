@@ -2,7 +2,7 @@
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
 --!     @version 1.5.0
---!     @date    2013/5/24
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

@@ -3,8 +3,8 @@
 --!     @brief   PIPE FLOW SYNCRONIZER
 --!              Pipe の Requester 側から Responder 側へ、またはResponder 側から
 --!              Requester側 へ、各種情報を伝達するモジュール.
---!     @version 0.0.1
---!     @date    2013/3/26
+--!     @version 1.5.0
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
