@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.5.0
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -68,19 +68,22 @@ entity  AXI4_MASTER_READ_INTERFACE is
         REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
                           --! * REQ_SIZE_VALID=0で無効.
-                          --! * REQ_SIZE_VALID>0で有効.
-                          integer :=  1;
+                          --! * REQ_SIZE_VALID=1で有効.
+                          integer range 0 to 1 :=  1;
         FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
                           --! * FLOW_VALID=0で無効.
-                          --! * FLOW_VALID>0で有効.
-                          integer := 1;
+                          --! * FLOW_VALID=1で有効.
+                          integer range 0 to 1 := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
                           integer := 32;
         BUF_PTR_BITS    : --! @brief BUFFER POINTER BITS :
                           --! バッファポインタなどを表す信号のビット数を指定する.
+                          integer := 8;
+        ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
+                          --! アライメントサイズのビット数を指定する.
                           integer := 8;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
@@ -116,7 +119,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          out   AXI4_ALEN_TYPE;
+                          out   std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -129,7 +132,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
         ARLOCK          : --! @brief Lock type.
                           --! This signal provides additional information about
                           --! the atomic characteristics of the transfer.
-                          out   AXI4_ALOCK_TYPE;
+                          out   std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         ARCACHE         : --! @brief Memory type.
                           --! This signal indicates how transactions are required
                           --! to progress through a system.
@@ -206,7 +209,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           in    AXI4_ABURST_TYPE;
         REQ_LOCK        : --! @brief Request Lock type.
                           --! ARLOCK の値を指定する.
-                          in    AXI4_ALOCK_TYPE;
+                          in    std_logic_vector(AXI4_ALOCK_WIDTH -1 downto 0);
         REQ_CACHE       : --! @brief Request Memory type.
                           --! ARCACHE の値を指定する.
                           in    AXI4_ACACHE_TYPE;
@@ -310,6 +313,12 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic;
+        XFER_DONE       : --! @brief Transfer Done.
+                          --! このモジュールが未だデータの転送中かつ、次のクロック
+                          --! で XFER_BUSY がネゲートされる事を示す.
+                          --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
+                          --!   アサートされるわけでは無い.
+                          out   std_logic;
     -------------------------------------------------------------------------------
     -- Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -346,43 +355,67 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! * 例えば FIFO の空き容量を入力すると、この容量を越え
                           --!   た転送は行わない.
                           --! * FLOW_VALID=0の場合、この信号は無視される.
-                          in    std_logic_vector(SIZE_BITS        -1 downto 0) := (others => '1');
+                          in    std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
-    -- Reserve Size Signals.
+    -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
-        RESV_VAL        : --! @brief Reserve Valid.
-                          --! RESV_LAST/RESV_ERROR/RESV_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        RESV_LAST       : --! @brief Reserve Last.
+        PUSH_RSV_VAL    : --! @brief Push Reserve Valid.
+                          --! PUSH_RSV_LAST/PUSH_RSV_ERROR/PUSH_RSV_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_RSV_LAST   : --! @brief Push Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
-        RESV_ERROR      : --! @brief Reserve Error.
+        PUSH_RSV_ERROR  : --! @brief Push Reserve Error.
                           --! 転送"する予定"がエラーだった事を示すフラグ.
                           out   std_logic;
-        RESV_SIZE       : --! @brief Reserve Size.
+        PUSH_RSV_SIZE   : --! @brief Push Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Push Final Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief Pull Valid.
-                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
-        PUSH_LAST       : --! @brief Pull Last.
+        PUSH_FIN_VAL    : --! @brief Push Final Valid.
+                          --! PUSH_FIN_LAST/PUSH_FIN_ERROR/PUSH_FIN_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_FIN_LAST   : --! @brief Push Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
-        PUSH_ERROR      : --! @brief Reserve Error.
+        PUSH_FIN_ERROR  : --! @brief Push Final Error.
                           --! 転送"した事"がエラーだった事を示すフラグ.
                           out   std_logic;
-        PUSH_SIZE       : --! @brief Reserve Size.
+        PUSH_FIN_SIZE   : --! @brief Push Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Buffer Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_BUF_RESET  : --! @brief Push Buffer Counter Reset.
+                          --! バッファのカウンタをリセットする信号.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_BUF_VAL    : --! @brief Push Buffer Valid.
+                          --! PUSH_BUF_LAST/PUSH_BUF_ERROR/PUSH_BUF_SIZEが有効で
+                          --! あることを示す.
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
+        PUSH_BUF_LAST   : --! @brief Push Buffer Last.
+                          --! 最後の転送"した事"を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_ERROR  : --! @brief Push Buffer Error.
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out   std_logic;
+        PUSH_BUF_SIZE   : --! @brief Push Buffer Size.
+                          --! 転送"した"バイト数を出力する.
+                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+        PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in    std_logic_vector(VAL_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
         BUF_WEN         : --! @brief Buffer Write Enable.
                           --! バッファにデータをライトすることを示す.
-                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+                          out   std_logic_vector(VAL_BITS -1 downto 0);
         BUF_BEN         : --! @brief Buffer Byte Enable.
                           --! バッファにデータをライトする際のバイトイネーブル信号.
                           --! * BUF_WEN='1'の場合にのみ有効.
@@ -393,10 +426,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           out   std_logic_vector(BUF_DATA_WIDTH   -1 downto 0);
         BUF_PTR         : --! @brief Buffer Write Pointer.
                           --! ライト時にデータを書き込むバッファの位置を出力する.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        BUF_RDY         : --! @brief Buffer Write Ready.
-                          --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic
+                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0)
     );
 end AXI4_MASTER_READ_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -407,8 +437,8 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.CHOPPER;
-use     PIPEWORK.COMPONENTS.REDUCER;
 use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
+use     PIPEWORK.COMPONENTS.POOL_INTAKE_PORT;
 use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.AXI4_COMPONENTS.AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;
 architecture RTL of AXI4_MASTER_READ_INTERFACE is
@@ -426,12 +456,14 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     end function;
     constant AXI4_DATA_SIZE     : integer := CALC_DATA_SIZE(AXI4_DATA_WIDTH);
     constant BUF_DATA_SIZE      : integer := CALC_DATA_SIZE( BUF_DATA_WIDTH);
+    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS );
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
     signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
     signal   xfer_req_select    : std_logic_vector(VAL_BITS       -1 downto 0);
+    signal   xfer_req_ptr       : std_logic_vector(BUF_PTR_BITS   -1 downto 0);
     signal   xfer_req_valid     : std_logic;
     signal   xfer_req_ready     : std_logic;
     signal   xfer_req_next      : std_logic;
@@ -451,6 +483,7 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
+    constant port_enable        : std_logic := '1';
     signal   xfer_start         : std_logic;
     signal   xfer_running       : std_logic;
     -------------------------------------------------------------------------------
@@ -474,29 +507,26 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     signal   xfer_beat_chop     : std_logic;
     signal   xfer_beat_last     : std_logic;
     signal   xfer_beat_size     : std_logic_vector(SIZE_BITS        -1 downto 0);
-    signal   xfer_beat_valid    : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   buf_busy           : std_logic;
     signal   recv_enable        : std_logic;
+    signal   recv_busy          : std_logic;
     signal   recv_data_valid    : std_logic;
     signal   recv_data_ready    : std_logic;
     signal   recv_data_ben      : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
-    signal   recv_data_done     : std_logic;
-    signal   recv_data_error    : boolean;
-    signal   response_error     : boolean;
+    signal   recv_data_error    : std_logic;
+    signal   response_error     : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   buf_data_valid     : std_logic;
-    signal   buf_data_ben       : std_logic_vector(BUF_DATA_WIDTH/8-1 downto 0);
-    signal   buf_data_done      : std_logic;
-    signal   buf_data_last      : std_logic;
-    signal   buf_data_error     : std_logic;
-    signal   buf_data_select    : std_logic_vector(VAL_BITS         -1 downto 0);
-    signal   buf_beat_size      : unsigned(SIZE_BITS-1    downto 0);
-    signal   buf_write_ptr      : unsigned(BUF_PTR_BITS-1 downto 0);
+    signal   outlet_valid       : std_logic_vector(VAL_BITS -1 downto 0);
+    signal   outlet_error       : std_logic;
+    signal   outlet_last        : std_logic;
+    signal   outlet_size        : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal   outlet_ready       : std_logic;
+    signal   outlet_done        : std_logic;
+    signal   port_busy          : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -512,6 +542,7 @@ begin
             DATA_SIZE       => AXI4_DATA_SIZE    , --
             ADDR_BITS       => AXI4_ADDR_WIDTH   , --
             SIZE_BITS       => SIZE_BITS         , --
+            ALEN_BITS       => AXI4_ALEN_WIDTH   , --
             REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
             REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
             FLOW_VALID      => FLOW_VALID        , --
@@ -598,6 +629,18 @@ begin
     ARREGION <= REQ_REGION;
     ARID     <= REQ_ID;
     -------------------------------------------------------------------------------
+    -- xfer_req_ptr  : バッファのライト開始ポインタ
+    -------------------------------------------------------------------------------
+    process (xfer_req_addr, REQ_BUF_PTR) begin
+        for i in xfer_req_ptr'range loop
+            if (i < ALIGNMENT_SIZE) then
+                xfer_req_ptr(i) <= xfer_req_addr(i);
+            else
+                xfer_req_ptr(i) <= REQ_BUF_PTR(i);
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
     -- Transfer Request Queue.
     -------------------------------------------------------------------------------
     REQ: block
@@ -619,14 +662,20 @@ begin
         signal   q_vec          : std_logic_vector(VEC_HI downto VEC_LO);
         constant Q_ALL_0        : std_logic_vector(QUEUE_SIZE downto 0) := (others => '0');
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         i_vec(VEC_SIZE_HI downto VEC_SIZE_LO) <= xfer_req_size;
         i_vec(VEC_ADDR_HI downto VEC_ADDR_LO) <= xfer_req_addr(AXI4_DATA_SIZE downto 0);
-        i_vec(VEC_PTR_HI  downto VEC_PTR_LO ) <= REQ_BUF_PTR;
+        i_vec(VEC_PTR_HI  downto VEC_PTR_LO ) <= xfer_req_ptr;
         i_vec(VEC_SEL_HI  downto VEC_SEL_LO ) <= xfer_req_select;
         i_vec(VEC_NEXT_POS)                   <= xfer_req_next;
         i_vec(VEC_LAST_POS)                   <= xfer_req_last;
         i_vec(VEC_FIRST_POS)                  <= xfer_req_first;
         i_vec(VEC_SAFETY_POS)                 <= xfer_req_safety;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         QUEUE: QUEUE_REGISTER
             generic map (
                 QUEUE_SIZE  => QUEUE_SIZE        ,
@@ -646,6 +695,9 @@ begin
                 Q_VAL       => xfer_queue_valid  , -- Out :
                 Q_RDY       => xfer_queue_ready    -- In  :
             );
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         xfer_queue_size   <= q_vec(VEC_SIZE_HI downto VEC_SIZE_LO);
         xfer_queue_addr   <= q_vec(VEC_ADDR_HI downto VEC_ADDR_LO);
         xfer_queue_ptr    <= q_vec(VEC_PTR_HI  downto VEC_PTR_LO );
@@ -657,8 +709,8 @@ begin
         xfer_queue_empty  <= '1' when (xfer_queue_valid = Q_ALL_0) else '0';
     end block;
     -------------------------------------------------------------------------------
-    -- xfer_beat_valid : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
-    --                   ここで作っておく.
+    -- recv_data_ben : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
+    --                 ここで作っておく.
     -------------------------------------------------------------------------------
     BEN: CHOPPER
         generic map (
@@ -706,7 +758,7 @@ begin
         ---------------------------------------------------------------------------
         -- バイトイネーブル信号
         ---------------------------------------------------------------------------
-            VALID           => xfer_beat_valid       , -- Out :
+            VALID           => recv_data_ben         , -- Out :
             NEXT_VALID      => open                    -- Out :
         );
     -------------------------------------------------------------------------------
@@ -764,17 +816,30 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- XFER_BUSY      : 動作中である事を示すフラグ.
+    -- recv_busy      : データリード中 または Transfer Request Queue にまだ
+    --                  リクエストが残っていることを示す.
     -------------------------------------------------------------------------------
-    XFER_BUSY    <= '1' when (curr_state = WAIT_RFIRST or
+    recv_busy    <= '1' when (curr_state = WAIT_RFIRST or
                               curr_state = WAIT_RLAST  or
                               xfer_queue_empty = '0' ) else '0';
     -------------------------------------------------------------------------------
-    -- xfer_running   : 動作中である事を示すフラグ.
+    -- XFER_BUSY      : データ転送中である事を示すフラグ.
     -------------------------------------------------------------------------------
-    xfer_running <= '1' when (curr_state = WAIT_RFIRST or
-                              curr_state = WAIT_RLAST  or
-                              xfer_queue_empty = '0' ) else '0';
+    XFER_BUSY    <= '1' when (recv_busy = '1' or port_busy  = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
+    --                  このモジュールでは、XFER_BUSY がネゲートする前に 必ずしも 
+    --                  XFER_DONE がアサートされるわけでは無い.
+    --                  全てのデータリードが終了した後で、最後のデータを出力する時
+    --                  にのみ XFER_DONE はアサートされる.
+    -------------------------------------------------------------------------------
+    XFER_DONE    <= '1' when (recv_busy    = '0' and
+                              port_busy    = '1' and
+                              outlet_done  = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- xfer_running   : データ転送中である事を示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_running <= '1' when (recv_busy = '1' or port_busy  = '1') else '0';
     -------------------------------------------------------------------------------
     -- xfer_ack_size  : Transfer Request Queue から取り出したサイズ情報を保持.
     -- xfer_ack_select: Transfer Request Queue から取り出した選択情報を保持.
@@ -826,18 +891,9 @@ begin
     -------------------------------------------------------------------------------
     recv_data_valid <= '1' when (recv_enable = '1' and RVALID = '1') else '0';
     -------------------------------------------------------------------------------
-    -- recv_data_done   : レシーブバッファに最後のデータであることを示す信号.
-    -------------------------------------------------------------------------------
-    recv_data_done  <= '1' when (recv_data_valid  = '1' and RLAST  = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- recv_data_ben    : レシーブバッファへのバイトイネーブル信号.
-    --                    エラー時は書き込みが行われないようにしておく.
-    -------------------------------------------------------------------------------
-    recv_data_ben   <= (others => '0') when (recv_data_error) else xfer_beat_valid;
-    -------------------------------------------------------------------------------
     -- recv_data_error  : エラーレスンポンス
     -------------------------------------------------------------------------------
-    recv_data_error <= (RRESP = AXI4_RESP_SLVERR or RRESP = AXI4_RESP_DECERR);
+    recv_data_error <= '1' when (RRESP = AXI4_RESP_SLVERR or RRESP = AXI4_RESP_DECERR) else '0';
     -------------------------------------------------------------------------------
     -- xfer_ack_valid   : 
     -------------------------------------------------------------------------------
@@ -848,18 +904,18 @@ begin
     -------------------------------------------------------------------------------
     -- xfer_ack_error   : 
     -------------------------------------------------------------------------------
-    xfer_ack_error  <= '1' when (recv_data_error or response_error) else '0';
+    xfer_ack_error  <= '1' when (recv_data_error = '1' or response_error = '1') else '0';
     -------------------------------------------------------------------------------
-    -- read_res_error   : 
+    -- response_error   : 
     -------------------------------------------------------------------------------
     process(CLK, RST) begin
         if (RST = '1') then
-                response_error <= FALSE;
+                response_error <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1' or xfer_start = '1') then 
-                response_error <= FALSE;
-            elsif (recv_data_error) then
-                response_error <= TRUE;
+                response_error <= '0';
+            elsif (recv_data_error = '1') then
+                response_error <= '1';
             end if;
         end if;
     end process;
@@ -868,233 +924,116 @@ begin
     -------------------------------------------------------------------------------
     RREADY <= '1' when (recv_enable = '1' and recv_data_ready = '1') else '0';
     -------------------------------------------------------------------------------
-    -- RESV_SIZE : 何バイト書き込む予定かを示す信号.
-    -- RESV_LAST : 最後のデータを書き込む予定であることを示す信号.
-    -- RESV_ERROR: エラーが発生したことを示す信号.
-    -- RESV_VAL  : RESV_LAST、RESV_ERROR、RESV_SIZE が有効であることを示す信号.
+    -- 入力ポート : 外部のリードバッファに書き込む前に、一旦このモジュールで受けて、
+    --              バス幅の変換やバイトレーンの調整を行う.
     -------------------------------------------------------------------------------
-    RESV: block
+    INTAKE_PORT: POOL_INTAKE_PORT                    -- 
+        generic map (                                --
+            UNIT_BITS       => 8                   , -- 
+            WORD_BITS       => ALIGNMENT_BITS      , --
+            PORT_DATA_BITS  => AXI4_DATA_WIDTH     , --
+            POOL_DATA_BITS  => BUF_DATA_WIDTH      , -- 
+            SEL_BITS        => VAL_BITS            , -- 
+            SIZE_BITS       => SIZE_BITS           , --
+            PTR_BITS        => BUF_PTR_BITS        , -- 
+            QUEUE_SIZE      => 0                     -- 
+        )                                            -- 
+        port map (                                   -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK                 , -- In :
+            RST             => RST                 , -- In :
+            CLR             => CLR                 , -- In :
+        ---------------------------------------------------------------------------
+        -- 各種制御信号
+        ---------------------------------------------------------------------------
+            START           => xfer_start          , -- In :
+            START_PTR       => xfer_queue_ptr      , -- In :
+            XFER_LAST       => xfer_queue_last     , -- In :
+            XFER_SEL        => xfer_queue_select   , -- In :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            PORT_ENABLE     => port_enable         , -- In :
+            PORT_DATA       => RDATA               , -- In :
+            PORT_LAST       => RLAST               , -- In :
+            PORT_DVAL       => recv_data_ben       , -- In :
+            PORT_ERROR      => recv_data_error     , -- In :
+            PORT_VAL        => recv_data_valid     , -- In :
+            PORT_RDY        => recv_data_ready     , -- Out:
+        ---------------------------------------------------------------------------
+        -- Push Size Signals.
+        ---------------------------------------------------------------------------
+            PUSH_VAL        => outlet_valid        , -- Out:
+            PUSH_LAST       => outlet_last         , -- Out:
+            PUSH_ERROR      => outlet_error        , -- Out:
+            PUSH_SIZE       => outlet_size         , -- Out:
+        ---------------------------------------------------------------------------
+        -- Pool Buffer Interface Signals.
+        ---------------------------------------------------------------------------
+            POOL_WEN        => BUF_WEN             , -- Out:
+            POOL_DVAL       => BUF_BEN             , -- Out:
+            POOL_DATA       => BUF_DATA            , -- Out:
+            POOL_PTR        => BUF_PTR             , -- Out:
+            POOL_RDY        => outlet_ready        , -- In :
+        ---------------------------------------------------------------------------
+        -- Status Signals.
+        ---------------------------------------------------------------------------
+            BUSY            => port_busy             -- Out:
+        );
+    -------------------------------------------------------------------------------
+    -- PUSH_RSV_SIZE : 何バイト書き込む予定かを示す信号.
+    -- PUSH_RSV_LAST : 最後のデータを書き込む予定であることを示す信号.
+    -- PUSH_RSV_ERROR: エラーが発生したことを示す信号.
+    -- PUSH_RSV_VAL  : PUSH_RSV_LAST、PUSH_RSV_ERROR、PUSH_RSV_SIZE が有効であることを示す信号.
+    -------------------------------------------------------------------------------
+    PUSH_RSV: block
         signal enable : boolean;
         signal error  : boolean;
         signal last   : boolean;
         signal valid  : boolean;
     begin
         enable <= (curr_state = WAIT_RFIRST);
-        error  <= (enable and recv_data_error = TRUE);
-        last   <= (enable and xfer_ack_last   = '1' );
+        error  <= (enable and recv_data_error = '1');
+        last   <= (enable and xfer_ack_last   = '1');
         valid  <= (enable and recv_data_valid = '1' and recv_data_ready = '1');
-        RESV_VAL   <= xfer_ack_select when (valid) else (others => '0');
-        RESV_LAST  <= '1'             when (last ) else '0';
-        RESV_ERROR <= '1'             when (error) else '0';
-        RESV_SIZE  <= (others => '0') when (enable = FALSE or error = TRUE) else
-                      std_logic_vector(RESIZE(unsigned(xfer_ack_size), RESV_SIZE'length));
+        PUSH_RSV_VAL   <= xfer_ack_select when (valid) else (others => '0');
+        PUSH_RSV_LAST  <= '1'             when (last ) else '0';
+        PUSH_RSV_ERROR <= '1'             when (error) else '0';
+        PUSH_RSV_SIZE  <= (others => '0') when (enable = FALSE or error = TRUE) else
+                          std_logic_vector(RESIZE(unsigned(xfer_ack_size), PUSH_RSV_SIZE'length));
     end block;
     -------------------------------------------------------------------------------
-    -- レシーブバッファ : 外部のリードバッファに書き込む前に、一旦このバッファで
-    --                    受けて、バス幅の変換やバイトレーンの調整を行う.
+    -- PUSH_FIN_SIZE : 何バイト書き込んだかを示す信号.
+    -- PUSH_FIN_LAST : 最後のデータを書き込んだことを示す信号.
+    -- PUSH_FIN_ERROR: エラーが発生したことを示す信号.
+    -- PUSH_FIN_VAL  : PUSH_RSV_LAST、PUSH_RSV_ERROR、PUSH_RSV_SIZE が有効であることを示す信号.
     -------------------------------------------------------------------------------
-    RBUF: block
-        constant WORD_BITS      : integer := 8;
-        constant ENBL_BITS      : integer := 1;
-        constant I_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
-        constant O_WIDTH        : integer :=  BUF_DATA_WIDTH/WORD_BITS;
-        constant QUEUE_SIZE     : integer := O_WIDTH+I_WIDTH+I_WIDTH-1;
-        constant done           : std_logic := '0';
-        constant flush          : std_logic := '0';
-        signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
+    PUSH_FIN: block
+    begin 
+        PUSH_FIN_VAL   <= outlet_valid;
+        PUSH_FIN_LAST  <= outlet_last;
+        PUSH_FIN_ERROR <= outlet_error;
+        PUSH_FIN_SIZE  <= outlet_size;
+    end block;
+    -------------------------------------------------------------------------------
+    -- PUSH_BUF_SIZE : 何バイト書き込んだかを示す信号.
+    -- PUSH_BUF_LAST : 最後のデータを書き込んだことを示す信号.
+    -- PUSH_BUF_ERROR: エラーが発生したことを示す信号.
+    -- PUSH_BUF_VAL  : PUSH_RSV_LAST、PUSH_RSV_ERROR、PUSH_RSV_SIZE が有効であることを示す信号.
+    -- PUSH_BUF_RESET: バッファカウンタをリセットする信号
+    -------------------------------------------------------------------------------
+    PUSH_BUF: block
+        constant SEL_ALL0 : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
     begin
-        ---------------------------------------------------------------------------
-        -- offset : REDUCER にセットするオフセット値.
-        ---------------------------------------------------------------------------
-        process (xfer_queue_ptr)
-            variable addr : unsigned(BUF_DATA_SIZE downto 0);
-        begin
-            for i in addr'range loop
-                if (i < BUF_DATA_SIZE and xfer_queue_ptr(i) = '1') then
-                    addr(i) := '1';
-                else
-                    addr(i) := '0';
-                end if;
-            end loop;
-            for i in offset'range loop
-                if (i < addr) then
-                    offset(i) <= '1';
-                else
-                    offset(i) <= '0';
-                end if;
-            end loop;
-        end process;
-        ---------------------------------------------------------------------------
-        -- 
-        ---------------------------------------------------------------------------
-        B: REDUCER
-            generic map (
-                WORD_BITS       => WORD_BITS      ,
-                ENBL_BITS       => ENBL_BITS      ,
-                I_WIDTH         => I_WIDTH        ,
-                O_WIDTH         => O_WIDTH        ,
-                QUEUE_SIZE      => QUEUE_SIZE     ,
-                VALID_MIN       => 0              ,
-                VALID_MAX       => 0              ,
-                I_JUSTIFIED     => 0              ,
-                FLUSH_ENABLE    => 0              
-            )
-            port map (
-            -----------------------------------------------------------------------
-            -- クロック&リセット信号
-            -----------------------------------------------------------------------
-                CLK             => CLK            , -- In  :
-                RST             => RST            , -- In  :
-                CLR             => CLR            , -- In  :
-            -----------------------------------------------------------------------
-            -- 各種制御信号
-            -----------------------------------------------------------------------
-                START           => xfer_start     , -- In  :
-                OFFSET          => offset         , -- In  :
-                DONE            => done           , -- In  :
-                FLUSH           => flush          , -- In  :
-                BUSY            => buf_busy       , -- Out :
-                VALID           => open           , -- Out :
-            -----------------------------------------------------------------------
-            -- 入力側 I/F
-            -----------------------------------------------------------------------
-                I_DATA          => RDATA          , -- In  :
-                I_ENBL          => recv_data_ben  , -- In  :
-                I_DONE          => recv_data_done , -- In  :
-                I_FLUSH         => flush          , -- In  :
-                I_VAL           => recv_data_valid, -- In  :
-                I_RDY           => recv_data_ready, -- Out :
-            -----------------------------------------------------------------------
-            -- 出力側 I/F
-            -----------------------------------------------------------------------
-                O_DATA          => BUF_DATA       , -- Out :
-                O_ENBL          => buf_data_ben   , -- Out :
-                O_DONE          => buf_data_done  , -- Out :
-                O_FLUSH         => open           , -- Out :
-                O_VAL           => buf_data_valid , -- Out :
-                O_RDY           => BUF_RDY          -- In  :
-        );
-        ---------------------------------------------------------------------------
-        -- buf_beat_size : バッファの出力側のバイト数.
-        --                 ここでは buf_data_ben の'1'の数を数えている.
-        ---------------------------------------------------------------------------
-        process (buf_data_ben)
-            function count_assert_bit(ARG:std_logic_vector) return integer is
-                variable n  : integer range 0 to ARG'length;
-                variable nL : integer range 0 to ARG'length/2;
-                variable nH : integer range 0 to ARG'length/2;
-                alias    a  : std_logic_vector(ARG'length-1 downto 0) is ARG;
-            begin
-                case a'length is
-                    when 0 =>                   n := 0;
-                    when 1 =>
-                        if    (a =    "1") then n := 1;
-                        else                    n := 0;
-                        end if;
-                    when 2 =>
-                        if    (a =   "11") then n := 2;
-                        elsif (a =   "01") then n := 1;
-                        elsif (a =   "10") then n := 1;
-                        else                    n := 0;
-                        end if;
-                    when 4 =>
-                        if    (a = "1111") then n := 4;
-                        elsif (a = "1101") then n := 3;
-                        elsif (a = "1110") then n := 3;
-                        elsif (a = "1100") then n := 2;
-                        elsif (a = "1011") then n := 3;
-                        elsif (a = "1001") then n := 2;
-                        elsif (a = "1010") then n := 2;
-                        elsif (a = "1000") then n := 1;
-                        elsif (a = "0111") then n := 3;
-                        elsif (a = "0101") then n := 2;
-                        elsif (a = "0110") then n := 2;
-                        elsif (a = "0100") then n := 1;
-                        elsif (a = "0011") then n := 2;
-                        elsif (a = "0001") then n := 1;
-                        elsif (a = "0010") then n := 1;
-                        else                    n := 0;
-                        end if;
-                    when others =>
-                        nL := count_assert_bit(a(a'length  -1 downto a'length/2));
-                        nH := count_assert_bit(a(a'length/2-1 downto 0         ));
-                        n  := nL + nH;
-                end case;
-                return n;
-            end function;
-            variable size : integer range 0 to buf_data_ben'length;
-        begin
-            size := count_assert_bit(buf_data_ben);
-            buf_beat_size <= to_unsigned(size, buf_beat_size'length);
-        end process;
-        ---------------------------------------------------------------------------
-        -- buf_data_last : xfer_ack_lastをレジスタに保存しておく.
-        --                 REDUCERを使う場合、REDUCER内部にデータが残っている時に
-        --                 次の xfer_start が来る可能性があるので、xfer_ack_last
-        --                 をそのまま使うわけにはいかない.
-        ---------------------------------------------------------------------------
-        process(CLK, RST) begin
-            if (RST = '1') then
-                    buf_data_last   <= '0';
-                    buf_data_error  <= '0';
-                    buf_data_select <= (others => '0');
-            elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then
-                    buf_data_last   <= '0';
-                    buf_data_error  <= '0';
-                    buf_data_select <= (others => '0');
-                elsif (recv_data_valid = '1' and recv_data_ready = '1') then
-                    buf_data_last   <= xfer_ack_last;
-                    buf_data_error  <= xfer_ack_error;
-                    buf_data_select <= xfer_ack_select;
-                end if;
-            end if;
-        end process;
+        PUSH_BUF_RESET <= xfer_queue_select when (xfer_start = '1') else (others => '0');
+        PUSH_BUF_VAL   <= outlet_valid;
+        PUSH_BUF_LAST  <= outlet_last;
+        PUSH_BUF_ERROR <= outlet_error;
+        PUSH_BUF_SIZE  <= outlet_size;
+        outlet_ready   <= '1' when ((xfer_ack_select and PUSH_BUF_RDY) /= SEL_ALL0) else '0';
+        outlet_done    <= '1' when (outlet_valid /= SEL_ALL0 and outlet_last = '1') else '0';
     end block;
-    -------------------------------------------------------------------------------
-    -- PUSH_SIZE : 何バイト書き込んだかを示す信号.
-    -- PUSH_LAST : 最後のデータ書き込みであることを示す信号.
-    -- PUSH_ERROR: エラーが発生したことを示す信号.
-    -- PUSH_VAL  : PUSH_LAST、PUSH_ERROR、PUSH_SIZE が有効であることを示す信号.
-    -------------------------------------------------------------------------------
-    PUSH: block
-        signal error  : boolean;
-        signal last   : boolean;
-        signal valid  : boolean;
-    begin
-        error  <= (buf_data_valid = '1' and buf_data_done = '1' and buf_data_error = '1');
-        last   <= (buf_data_valid = '1' and buf_data_done = '1' and buf_data_last  = '1');
-        valid  <= (buf_data_valid = '1' and BUF_RDY       = '1');
-        PUSH_VAL   <= buf_data_select when (valid) else (others => '0');
-        PUSH_LAST  <= '1'             when (last ) else '0';
-        PUSH_ERROR <= '1'             when (error) else '0';
-        PUSH_SIZE  <= (others => '0') when (error) else
-                      std_logic_vector(buf_beat_size);
-    end block;
-    -------------------------------------------------------------------------------
-    -- BUF_WEN   : 外部リードバッファへの書き込み信号.
-    -------------------------------------------------------------------------------
-    BUF_WEN    <= buf_data_select when (buf_data_valid = '1' and BUF_RDY = '1') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- BUF_BEN   : 外部リードバッファへの書き込み信号.
-    -------------------------------------------------------------------------------
-    BUF_BEN    <= buf_data_ben;
-    -------------------------------------------------------------------------------
-    -- BUF_PTR   : 外部リードバッファへの書き込みポインタ.
-    -------------------------------------------------------------------------------
-    process(CLK, RST) begin
-        if (RST = '1') then
-                buf_write_ptr <= (others => '0');
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then
-                buf_write_ptr <= (others => '0');
-            elsif (xfer_start = '1') then
-                buf_write_ptr <= unsigned(xfer_queue_ptr);
-            elsif (buf_data_valid = '1' and BUF_RDY = '1') then
-                buf_write_ptr <= buf_write_ptr + RESIZE(buf_beat_size, buf_write_ptr'length);
-            end if;
-        end if;
-    end process;
-    BUF_PTR <= std_logic_vector(buf_write_ptr);
 end RTL;
 

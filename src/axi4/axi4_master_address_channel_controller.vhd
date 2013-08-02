@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.5.0
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -58,6 +58,9 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種SIZE信号のビット数を指定する.
                           integer := 32;
+        ALEN_BITS       : --! @brief BURST LENGTH BITS :
+                          --! バースト長を示す信号のビット幅を指定する.
+                          integer := AXI4_ALEN_WIDTH;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS :
                           --! REQ_SIZE信号のビット数を指定する.
                           --! * REQ_SIZE信号が無効(REQ_SIZE_ENABLE=0)の場合でもエラ
@@ -67,14 +70,14 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         REQ_SIZE_VALID  : --! @brief REQUEST SIZE VALID :
                           --! REQ_SIZE信号を有効にするかどうかを指定する.
                           --! * REQ_SIZE_VALID=0で無効.
-                          --! * REQ_SIZE_VALID>0で有効.
-                          integer :=  1;
+                          --! * REQ_SIZE_VALID=1で有効.
+                          integer range 0 to 1 :=  1;
         FLOW_VALID      : --! @brief FLOW VALID :
                           --! FLOW_PAUSE、FLOW_STOP、FLOW_SIZE、FLOW_LAST信号を有効
                           --! にするかどうかを指定する.
                           --! * FLOW_VALID=0で無効.
-                          --! * FLOW_VALID>0で有効.
-                          integer := 1;
+                          --! * FLOW_VALID=1で有効.
+                          integer range 0 to 1 := 1;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
                           integer := 4;
@@ -93,8 +96,8 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -- AXI4 Address Channel Signals.
     ------------------------------------------------------------------------------
         AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
+        ALEN            : out   std_logic_vector(ALEN_BITS    -1 downto 0);
         ASIZE           : out   AXI4_ASIZE_TYPE;
-        ALEN            : out   AXI4_ALEN_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
     -------------------------------------------------------------------------------
@@ -203,7 +206,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   burst_length       : AXI4_ALEN_TYPE;
+    signal   burst_length       : std_logic_vector(ALEN_BITS-1   downto 0);
     signal   addr_valid         : std_logic;
     signal   speculative        : boolean;
     -------------------------------------------------------------------------------
@@ -536,15 +539,18 @@ begin
         if (RST = '1') then
                 addr_valid <= '0';
                 AVALID     <= '0';
+                AADDR      <= (others => '0');
                 ALEN       <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 addr_valid <= '0';
                 AVALID     <= '0';
+                AADDR      <= (others => '0');
                 ALEN       <= (others => '0');
             elsif (req_xfer_valid = '1') then
                 addr_valid <= '1';
                 AVALID     <= '1';
+                AADDR      <= REQ_ADDR;
                 ALEN       <= burst_length;
             elsif (AREADY = '1') then
                 addr_valid <= '0';
@@ -552,6 +558,5 @@ begin
             end if;
         end if;
     end process;
-    AADDR <= REQ_ADDR;
     ASIZE <= std_logic_vector(to_unsigned(DATA_SIZE, ASIZE'length));
 end RTL;

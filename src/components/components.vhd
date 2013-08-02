@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.4.0                                                           --
---!     @date    2013/03/18                                                      --
+--!     @version 1.5.0                                                           --
+--!     @date    2013/08/02                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ component CHOPPER
                       --!   定され、CHOP信号が一回アサートされた時点でカウンタは停止
                       --!   する. つまり、最初のピースのサイズしか生成されない.
                       --! * 当然 BURST=0 の方が回路規模は小さくなる.
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         MIN_PIECE   : --! @brief MINIMUM PIECE SIZE :
                       --! １ピースの大きさの最小値を2のべき乗値で指定する.
                       --! * 例えば、大きさの単位がバイトの場合次のようになる.
@@ -114,7 +114,7 @@ component CHOPPER
                       --!   論理合成ツールによっては、コンパイルに膨大な時間を
                       --!   要することがある.
                       --!   その場合はこの変数を０にすることで解決出来る場合がある.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -220,9 +220,9 @@ component REDUCER
         WORD_BITS   : --! @brief WORD BITS :
                       --! １ワードのデータのビット数を指定する.
                       integer := 8;
-        ENBL_BITS   : --! @brief ENABLE BITS :
-                      --! ワードデータのうち有効なデータであることを示す信号の
-                      --! ビット数を指定する.
+        STRB_BITS   : --! @brief ENABLE BITS :
+                      --! ワードデータのうち有効なデータであることを示す信号(STRB)
+                      --! のビット数を指定する.
                       integer := 1;
         I_WIDTH     : --! @brief INPUT WORD WIDTH :
                       --! 入力側のデータのワード数を指定する.
@@ -232,10 +232,10 @@ component REDUCER
                       integer := 4;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
-                      --! * 少なくともキューの大きさは、I_WIDTH+O_WIDTH-1以上で
-                      --!   なければならない.
-                      --! * ただしQUEUE_SIZE=0を指定した場合は、キューの深さは
-                      --!   自動的にI_WIDTH+O_WIDTH に設定される.
+                      --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
+                      --!   O_WIDTH+I_WIDTH+I_WIDTH-1 に設定される.
+                      --! * QUEUE_SIZE<O_WIDTH+I_WIDTH-1の場合は、キューの深さは
+                      --!   自動的にO_WIDTH+I_WIDTH-1に設定される.
                       integer := 0;
         VALID_MIN   : --! @brief BUFFER VALID MINIMUM NUMBER :
                       --! VALID信号の配列の最小値を指定する.
@@ -248,19 +248,19 @@ component REDUCER
                       --! 示すフラグ.
                       --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
                       --!   ため回路が簡単になる.
-                      integer := 0;
+                      integer range 0 to 1 := 0;
         FLUSH_ENABLE: --! @brief FLUSH ENABLE :
                       --! FLUSH/I_FLUSHによるフラッシュ処理を有効にするかどうかを
                       --! 指定する.
                       --! * FLUSHとDONEとの違いは、DONEは最後のデータの出力時に
                       --!   キューの状態をすべてクリアするのに対して、
-                      --!   FLUSHは最後のデータの出力時にENBLだけをクリアしてVALは
+                      --!   FLUSHは最後のデータの出力時にSTRBだけをクリアしてVALは
                       --!   クリアしない.
                       --!   そのため次の入力データは、最後のデータの次のワード位置
                       --!   から格納される.
                       --! * フラッシュ処理を行わない場合は、0を指定すると回路が若干
                       --!   簡単になる.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -282,7 +282,7 @@ component REDUCER
                       --! 開始信号.
                       --! * この信号はOFFSETを内部に設定してキューを初期化する.
                       --! * 最初にデータ入力と同時にアサートしても構わない.
-                      in  std_logic;
+                      in  std_logic := '0';
         OFFSET      : --! @brief OFFSET :
                       --! 最初のワードの出力位置を指定する.
                       --! * START信号がアサートされた時のみ有効.
@@ -297,21 +297,21 @@ component REDUCER
                       --!   3バイト目から出力される.    
                       --!   OFFSET="0111"に設定すると、最初に入力したバイトデータは
                       --!   4バイト目から出力される.    
-                      in  std_logic_vector(O_WIDTH-1 downto 0);
+                      in  std_logic_vector(O_WIDTH-1 downto 0) := (others => '0');
         DONE        : --! @brief DONE :
                       --! 終了信号.
                       --! * この信号をアサートすることで、キューに残っているデータ
                       --!   を掃き出す.
                       --!   その際、最後のワードと同時にO_DONE信号がアサートされる.
                       --! * FLUSH信号との違いは、FLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         FLUSH       : --! @brief FLUSH :
                       --! フラッシュ信号.
                       --! * この信号をアサートすることで、キューに残っているデータ
                       --!   を掃き出す.
                       --!   その際、最後のワードと同時にO_FLUSH信号がアサートされる.
                       --! * DONE信号との違いは、FLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         BUSY        : --! @brief BUSY :
                       --! ビジー信号.
                       --! * 最初にデータが入力されたときにアサートされる.
@@ -325,29 +325,34 @@ component REDUCER
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
+        I_ENABLE    : --! @brief INPUT ENABLE :
+                      --! 入力許可信号.
+                      --! * この信号がアサートされている場合、キューの入力を許可する.
+                      --! * この信号がネゲートされている場合、I_RDY アサートされない.
+                      in  std_logic := '1';
         I_DATA      : --! @brief INPUT WORD DATA :
                       --! ワードデータ入力.
                       in  std_logic_vector(I_WIDTH*WORD_BITS-1 downto 0);
-        I_ENBL      : --! @brief INPUT WORD ENABLE :
-                      --! ワードイネーブル信号入力.
-                      in  std_logic_vector(I_WIDTH*ENBL_BITS-1 downto 0);
+        I_STRB      : --! @brief INPUT WORD ENABLE :
+                      --! ワードストローブ信号入力.
+                      in  std_logic_vector(I_WIDTH*STRB_BITS-1 downto 0);
         I_DONE      : --! @brief INPUT WORD DONE :
                       --! 最終ワード信号入力.
                       --! * 最後の力ワードデータ入であることを示すフラグ.
                       --! * 基本的にはDONE信号と同じ働きをするが、I_DONE信号は
                       --!   最後のワードデータを入力する際に同時にアサートする.
                       --! * I_FLUSH信号との違いはFLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         I_FLUSH     : --! @brief INPUT WORD FLUSH :
                       --! 最終ワード信号入力.
                       --! * 最後のワードデータ入力であることを示すフラグ.
                       --! * 基本的にはFLUSH信号と同じ働きをするが、I_FLUSH信号は
                       --!   最後のワードデータを入力する際に同時にアサートする.
                       --! * I_DONE信号との違いはFLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         I_VAL       : --! @brief INPUT WORD VALID :
                       --! 入力ワード有効信号.
-                      --! * I_DATA/I_ENBL/I_DONE/I_FLUSHが有効であることを示す.
+                      --! * I_DATA/I_STRB/I_DONE/I_FLUSHが有効であることを示す.
                       --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
                       in  std_logic;
         I_RDY       : --! @brief INPUT WORD READY :
@@ -358,12 +363,17 @@ component REDUCER
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
+        O_ENABLE    : --! @brief OUTPUT ENABLE :
+                      --! 出力許可信号.
+                      --! * この信号がアサートされている場合、キューの出力を許可する.
+                      --! * この信号がネゲートされている場合、O_VAL アサートされない.
+                      in  std_logic := '1';
         O_DATA      : --! @brief OUTPUT WORD DATA :
                       --! ワードデータ出力.
                       out std_logic_vector(O_WIDTH*WORD_BITS-1 downto 0);
-        O_ENBL      : --! @brief OUTPUT WORD ENABLE :
-                      --! ワードイネーブル信号出力.
-                      out std_logic_vector(O_WIDTH*ENBL_BITS-1 downto 0);
+        O_STRB      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワードストローブ信号出力.
+                      out std_logic_vector(O_WIDTH*STRB_BITS-1 downto 0);
         O_DONE      : --! @brief OUTPUT WORD DONE :
                       --! 最終ワード信号出力.
                       --! * 最後のワードデータ出力であることを示すフラグ.
@@ -376,7 +386,7 @@ component REDUCER
                       out std_logic;
         O_VAL       : --! @brief OUTPUT WORD VALID :
                       --! 出力ワード有効信号.
-                      --! * O_DATA/O_ENBL/O_DONE/O_FLUSHが有効であることを示す.
+                      --! * O_DATA/O_STRB/O_DONE/O_FLUSHが有効であることを示す.
                       --! * O_VAL='1'and O_RDY='1'でワードデータがキューから取り除かれる.
                       out std_logic;
         O_RDY       : --! @brief OUTPUT WORD READY :
@@ -598,7 +608,7 @@ component QUEUE_REGISTER
                       --! レジスタが不必要にトグルすることを防いで消費電力を
                       --! 下げるようにする.
                       --! ただし、回路が若干増える.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -710,7 +720,7 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい。
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
@@ -718,29 +728,30 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい.
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         I_CLK_FALL  : --! @brief USE INPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のクロック(I_CLK)の立ち下がりを使うかどう
                       --! かを指定する.
+                      --! * この変数は後方互換性のために存在する. 現在は未使用.
                       --! * I_CLK_FALL = 0 の場合は使わない.
-                      --! * I_CLK_FALL > 0 の場合は使う.
-                      integer :=  0;
+                      --! * I_CLK_FALL = 1 の場合は使う.
+                      integer range 0 to 1 :=  0;
         O_CLK_FALL  : --! @brief USE OUTPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、出力側のクロック(OCLK)の立ち下がりを使うかどう
                       --! かを指定する.
                       --! * O_CLK_FALL = 0 の場合は使わない.
-                      --! * O_CLK_FALL > 0 の場合は使う.
-                      integer :=  0;
+                      --! * O_CLK_FALL = 1 の場合は使う.
+                      integer range 0 to 1 :=  0;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_VAL/O_DATA)をレジスタ出力するかどうか
                       --! を指定する.
                       --! * この変数は I_CLK_RATE > 0 の場合のみ有効. 
                       --!   I_CLK_RATE = 0 の場合は、常にレジスタ出力になる.
                       --! * O_CLK_REGS = 0 の場合はレジスタ出力しない.
-                      --! * O_CLK_REGS > 0 の場合はレジスタ出力する.
-                      integer :=  0
+                      --! * O_CLK_REGS = 1 の場合はレジスタ出力する.
+                      integer range 0 to 1 :=  0
     );
     port (
     -------------------------------------------------------------------------------
@@ -959,9 +970,9 @@ component COUNT_DOWN_REGISTER
     generic (
         VALID       : --! @brief COUNTER VALID :
                       --! このカウンターを有効にするかどうかを指定する.
-                      --! * VALID =0 : このカウンターは常に無効.
-                      --! * VALID/=0 : このカウンターは常に有効.
-                      integer := 1;
+                      --! * VALID=0 : このカウンターは常に無効.
+                      --! * VALID=1 : このカウンターは常に有効.
+                      integer range 0 to 1 := 1;
         BITS        : --! @brief  COUNTER BITS :
                       --! カウンターのビット数を指定する.
                       --! * BIT=0の場合、このカウンターは常に無効になる.
@@ -1041,9 +1052,9 @@ component COUNT_UP_REGISTER
     generic (
         VALID       : --! @brief COUNTER VALID :
                       --! このカウンターを有効にするかどうかを指定する.
-                      --! * VALID =0 : このカウンターは常に無効.
-                      --! * VALID/=0 : このカウンターは常に有効.
-                      integer := 1;
+                      --! * VALID=0 : このカウンターは常に無効.
+                      --! * VALID=1 : このカウンターは常に有効.
+                      integer range 0 to 1 := 1;
         BITS        : --! @brief  COUNTER BITS :
                       --! カウンターのビット数を指定する.
                       --! * BIT=0の場合、このカウンターは常に無効になる.
@@ -1114,10 +1125,509 @@ component COUNT_UP_REGISTER
     );
 end component;
 -----------------------------------------------------------------------------------
+--! @brief POOL_INTAKE_PORT                                                      --
+-----------------------------------------------------------------------------------
+component POOL_INTAKE_PORT
+    generic (
+        UNIT_BITS       : --! @brief UNIT BITS :
+                          --! イネーブル信号(PORT_DVAL,POOL_DVAL)、
+                          --! ポインタ(POOL_PTR)のサイズカウンタ(PUSH_SIZE)の
+                          --! 基本単位をビット数で指定する.
+                          --! 普通はUNIT_BITS=8(８ビット単位)にしておく.
+                          integer := 8;
+        WORD_BITS       : --! @brief WORD BITS :
+                          --! １ワードのデータのビット数を指定する.
+                          integer := 8;
+        PORT_DATA_BITS  : --! @brief INTAKE PORT DATA BITS :
+                          --! PORT_DATA のビット数を指定する.
+                          integer := 32;
+        POOL_DATA_BITS  : --! @brief POOL BUFFER DATA BITS :
+                          --! POOL_DATA のビット数を指定する.
+                          integer := 32;
+        SEL_BITS        : --! @brief SELECT BITS :
+                          --! XFER_SEL、PUSH_VAL、POOL_WEN のビット数を指定する.
+                          integer := 1;
+        SIZE_BITS       : --! @brief POOL_SIZE BITS :
+                          --! POOL_SIZE のビット数を指定する.
+                          integer := 16;
+        PTR_BITS        : --! @brief POOL BUFFER POINTER BITS:
+                          --! START_PTR、POOL_PTR のビット数を指定する.
+                          integer := 16;
+        QUEUE_SIZE      : --! @brief QUEUE SIZE :
+                          --! キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
+                          --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
+                          --!   に設定される.
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        START           : --! @brief START :
+                          --! 開始信号.
+                          --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
+                          --!   してこのモジュールを初期化しする.
+                          --! * 最初にデータ入力と同時にアサートしても構わない.
+                          in  std_logic;
+        START_PTR       : --! @brief START POOL BUFFER POINTER :
+                          --! 書き込み開始ポインタ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(PTR_BITS-1 downto 0);
+        XFER_LAST       : --! @brief TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic;
+        XFER_SEL        : --! @brief TRANSFER SELECT :
+                          --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(SEL_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Port Signals.
+    -------------------------------------------------------------------------------
+        PORT_ENABLE     : --! @brief INTAKE PORT ENABLE :
+                          --! 動作許可信号.
+                          --! * この信号がアサートされている場合、キューの入出力を
+                          --!   許可する.
+                          --! * この信号がネゲートされている場合、PORT_RDY はアサー
+                          --!   トされない.
+                          in  std_logic := '1';
+        PORT_DATA       : --! @brief INTAKE PORT DATA :
+                          --! ワードデータ入力.
+                          in  std_logic_vector(PORT_DATA_BITS-1 downto 0);
+        PORT_DVAL       : --! @brief INTAKE PORT DATA VALID :
+                          --! ポートからデータを入力する際のユニット単位での有効信号.
+                          in  std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+        PORT_ERROR      : --! @brief INTAKE PORT ERROR :
+                          --! データ入力中にエラーが発生したことを示すフラグ.
+                          in  std_logic;
+        PORT_LAST       : --! @brief INTAKE DATA LAST :
+                          --! 最終ワード信号入力.
+                          --! * 最後のワードデータ入力であることを示すフラグ.
+                          in  std_logic;
+        PORT_VAL        : --! @brief INTAKE PORT VALID :
+                          --! 入力ワード有効信号.
+                          --! * PORT_DATA/PORT_DVAL/PORT_LAST/PORT_ERRが有効であることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューに取り込まれる.
+                          in  std_logic;
+        PORT_RDY        : --! @brief INTAKE PORT READY :
+                          --! 入力レディ信号.
+                          --! * キューが次のワードデータを入力出来ることを示す.
+                          --! * PORT_VAL='1'and PORT_RDY='1'で上記信号がキューに取り込まれる.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Push Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_VAL        : --! @brief PUSH VALID: 
+                          --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        PUSH_LAST       : --! @brief PUSH LAST : 
+                          --! 最後の転送"した事"を示すフラグ.
+                          out std_logic;
+        PUSH_ERROR      : --! @brief PUSH ERROR : 
+                          --! 転送"した事"がエラーだった事を示すフラグ.
+                          out std_logic;
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 転送"した"バイト数を出力する.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pool Buffer Interface Signals.
+    -------------------------------------------------------------------------------
+        POOL_WEN        : --! @brief POOL BUFFER WRITE ENABLE :
+                          --! バッファにデータをライトすることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
+                          --! バッファにデータをライトする際のユニット単位での有効
+                          --! 信号.
+                          --! * POOL_WEN='1'の場合にのみ有効.
+                          --! * POOL_WEN='0'の場合のこの信号の値は不定.
+                          out std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
+        POOL_DATA       : --! @brief POOL BUFFER WRITE DATA :
+                          --! バッファへライトするデータを出力する.
+                          out std_logic_vector(POOL_DATA_BITS-1 downto 0);
+        POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
+                          --! ライト時にデータを書き込むバッファの位置を出力する.
+                          out std_logic_vector(PTR_BITS-1 downto 0);
+        POOL_RDY        : --! @brief POOL BUFFER WRITE READY :
+                          --! バッファにデータを書き込み可能な事をを示す.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY            : --! @brief QUEUE BUSY :
+                          --! キューが動作中であることを示す信号.
+                          --! * 最初にデータが入力されたときにアサートされる.
+                          --! * 最後のデータが出力し終えたらネゲートされる.
+                          out  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief POOL_OUTLET_PORT                                                      --
+-----------------------------------------------------------------------------------
+component POOL_OUTLET_PORT
+    generic (
+        UNIT_BITS       : --! @brief UNIT BITS :
+                          --! イネーブル信号(PORT_DVAL,POOL_DVAL)、
+                          --! ポインタ(POOL_PTR)のサイズカウンタ(PUSH_SIZE)の
+                          --! 基本単位をビット数で指定する.
+                          --! 普通はUNIT_BITS=8(８ビット単位)にしておく.
+                          integer := 8;
+        WORD_BITS       : --! @brief WORD BITS :
+                          --! １ワードのデータのビット数を指定する.
+                          integer := 8;
+        PORT_DATA_BITS  : --! @brief OUTLET PORT DATA BITS :
+                          --! PORT_DATA のビット数を指定する.
+                          integer := 32;
+        POOL_DATA_BITS  : --! @brief POOL BUFFER DATA BITS :
+                          --! POOL_DATA のビット数を指定する.
+                          integer := 32;
+        PORT_PTR_BITS   : --! @brief PORT POINTER BITS:
+                          --! START_PORT_PTR のビット数を指定する.
+                          integer := 16;
+        POOL_PTR_BITS   : --! @brief POOL BUFFER POINTER BITS:
+                          --! START_POOL_PTR、POOL_PTR のビット数を指定する.
+                          integer := 16;
+        SEL_BITS        : --! @brief SELECT BITS :
+                          --! XFER_SEL、PUSH_VAL、POOL_WEN のビット数を指定する.
+                          integer := 1;
+        SIZE_BITS       : --! @brief PORT_SIZE BITS :
+                          --! PORT_SIZE のビット数を指定する.
+                          integer := 16;
+        POOL_SIZE_VALID : --! @brief POOL_SIZE VALID :
+                          --! POOL_SIZE が有効が有効かどうかを指定する.
+                          --! * POOL_SIZE_VALID=0の場合、POOL_SIZE 信号は無効。
+                          --!   この場合、入力ユニット数は POOL_DVAL 信号から生成さ
+                          --!   れる.
+                          integer := 1;
+        QUEUE_SIZE      : --! @brief QUEUE SIZE :
+                          --! キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE<0 かつ PORT_DATA_BITS=WORD_BITS かつ
+                          --!   POOL_DATA_BITS=WORD_BITS の場合、キューは生成しない.
+                          --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
+                          --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
+                          --!   に設定される.
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        START           : --! @brief START :
+                          --! 開始信号.
+                          --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
+                          --!   してこのモジュールを初期化しする.
+                          --! * 最初にデータ入力と同時にアサートしても構わない.
+                          in  std_logic;
+        START_POOL_PTR  : --! @brief START POOL BUFFER POINTER :
+                          --! 書き込み開始ポインタ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(POOL_PTR_BITS-1 downto 0);
+        START_PORT_PTR  : --! @brief START PORT POINTER :
+                          --! 書き込み開始ポインタ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(PORT_PTR_BITS-1 downto 0);
+        XFER_LAST       : --! @brief TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic;
+        XFER_SEL        : --! @brief TRANSFER SELECT :
+                          --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
+                          --! START 信号により内部に取り込まれる.
+                          in  std_logic_vector(SEL_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Port Signals.
+    -------------------------------------------------------------------------------
+        PORT_DATA       : --! @brief OUTLET PORT DATA :
+                          --! ワードデータ出力.
+                          out std_logic_vector(PORT_DATA_BITS-1 downto 0);
+        PORT_DVAL       : --! @brief OUTLET PORT DATA VALID :
+                          --! ポートからデータを出力する際のユニット単位での有効信号.
+                          out std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+        PORT_LAST       : --! @brief OUTLET DATA LAST :
+                          --! 最終ワード信号出力.
+                          --! * 最後のワードデータ出力であることを示すフラグ.
+                          out std_logic;
+        PORT_ERROR      : --! @brief OUTLET ERROR :
+                          --! エラー出力
+                          --! * エラーが発生したことをし示すフラグ.
+                          out std_logic;
+        PORT_SIZE       : --! @brief OUTLET DATA SIZE :
+                          --! 出力バイト数
+                          --! * ポートからのデータの出力ユニット数.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+        PORT_VAL        : --! @brief OUTLET PORT VALID :
+                          --! 出力ワード有効信号.
+                          --! * PORT_DATA/PORT_DVAL/PORT_LAST/PORT_SIZEが有効である
+                          --!   ことを示す.
+                          out std_logic;
+        PORT_RDY        : --! @brief OUTLET PORT READY :
+                          --! 出力レディ信号.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VAL        : --! @brief PULL VALID: 
+                          --! PULL_LAST/PULL_ERR/PULL_SIZEが有効であることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        PULL_LAST       : --! @brief PULL LAST : 
+                          --! 最後の入力"した事"を示すフラグ.
+                          out std_logic;
+        PULL_ERROR      : --! @brief PULL ERROR : 
+                          --! エラーが発生したことをし示すフラグ.
+                          out std_logic;
+        PULL_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力"した"バイト数を出力する.
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pool Buffer Interface Signals.
+    -------------------------------------------------------------------------------
+        POOL_REN        : --! @brief POOL BUFFER READ ENABLE :
+                          --! バッファからデータをリードすることを示す.
+                          out std_logic_vector(SEL_BITS-1 downto 0);
+        POOL_PTR        : --! @brief POOL BUFFER WRITE POINTER :
+                          --! リード時にデータをリードするバッファの位置を出力する.
+                          out std_logic_vector(POOL_PTR_BITS-1 downto 0);
+        POOL_DATA       : --! @brief POOL BUFFER WRITE DATA :
+                          --! バッファからリードされたデータを入力する.
+                          in  std_logic_vector(POOL_DATA_BITS-1 downto 0);
+        POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
+                          --! バッファからデータをリードする際のユニット単位での
+                          --! 有効信号.
+                          in  std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
+        POOL_SIZE       : --! @brief POOL BUFFER DATA SIZE :
+                          --! 入力バイト数
+                          --! * バッファからのデータの入力ユニット数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+        POOL_ERROR      : --! @brief POOL BUFFER ERROR :
+                          --! データ転送中にエラーが発生したことを示すフラグ.
+                          in  std_logic;
+        POOL_LAST       : --! @brief POOL BUFFER DATA LAST :
+                          --! 最後の入力データであることを示す.
+                          in  std_logic;
+        POOL_VAL        : --! @brief POOL BUFFER DATA VALID :
+                          --! バッファからリードしたデータが有効である事を示す信号.
+                          in  std_logic;
+        POOL_RDY        : --! @brief POOL BUFFER WRITE READY :
+                          --! バッファからデータを読み込み可能な事をを示す.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        POOL_BUSY       : --! @brief POOL BUFFER BUSY :
+                          --! バッファからデータリード中であることを示す信号.
+                          --! * START信号がアサートされたときにアサートされる.
+                          --! * 最後のデータが入力されたネゲートされる.
+                          out std_logic;
+        POOL_DONE       : --! @brief POOL BUFFER DONE :
+                          --! 次のクロックで POOL_BUSY がネゲートされることを示す.
+                          out std_logic;
+        BUSY            : --! @brief QUEUE BUSY :
+                          --! キューが動作中であることを示す信号.
+                          --! * START信号がアサートされたときにアサートされる.
+                          --! * 最後のデータが出力し終えたらネゲートされる.
+                          out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
 --! @brief FLOAT_INTAKE_VALVE                                                    --
 -----------------------------------------------------------------------------------
 component FLOAT_INTAKE_VALVE
     generic (
+        COUNT_BITS      : --! @brief COUNTER BITS :
+                          --! 内部カウンタのビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! サイズ信号のビット数を指定する.
+                          integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- Clock & Reset Signals.
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic := '0';
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic := '0';
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic := '0';
+        INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        POOL_SIZE       : --! @brief POOL SIZE :
+                          --! プールの大きさをバイト数で指定する.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+        FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! * フローカウンタの値がこの値以下の時に入力を開始する.
+                          --! * フローカウンタの値がこの値を越えた時に入力を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_COUNT      : --! @brief LOAD FLOW COUNTER VALUE :
+                          --! LOAD='1'にフローカウンタにロードする値.
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Push Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_VALID      : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic := '0';
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic := '0';
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VALID      : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic := '0';
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic := '0';
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Intake Flow Control Signals.
+    -------------------------------------------------------------------------------
+        FLOW_READY      : --! @brief FLOW INTAKE READY :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_PAUSE='0' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '0'を出力する.
+                          out std_logic;
+        FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '1'を出力する.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW INTAKE STOP :
+                          --! 転送の中止を指示する信号.
+                          --! * FLOW_STOP='1' : 中止を指示.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW INTAKE LAST :
+                          --! INTAKE側では未使用. 常に'0'が出力.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
+                          --! 入力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Flow Counter Signals.
+    -------------------------------------------------------------------------------
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
+                          --! フローカウンタの値が0になったことを示すフラグ.
+                          out std_logic;
+        FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
+                          out std_logic;
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief FLOAT_INTAKE_MANIFOLD_VALVE                                           --
+-----------------------------------------------------------------------------------
+component FLOAT_INTAKE_MANIFOLD_VALVE
+    generic (
+        FIXED_CLOSE     : --! @brief FIXED VALVE CLOSE :
+                          --! フローカウンタによるフロー制御を行わず、常に栓が閉じ
+                          --! た状態にするか否かを指定する.
+                          --! * FIXED_CLOSE=1 : 常に栓が閉じた状態にする.
+                          --! * FIXED_CLOSE=0 : 栓の状態は他の変数に依存する.
+                          integer range 0 to 1 := 0;
+        FIXED_FLOW_OPEN : --! @brief FIXED VALVE FLOE OPEN :
+                          --! フローカウンタによるフロー制御を行わず、常にフロー栓
+                          --! が開いた状態にするか否かを指定する.
+                          --! * FIXED_FLOW_OPEN=1 : 常にフロー栓が開いた状態にする.
+                          --! * FIXED_FLOW_OPEN=0 : フロー栓の状態は他の変数に依存
+                          --!   する.
+                          integer range 0 to 1 := 0;
+        FIXED_POOL_OPEN : --! @brief FIXED VALVE POOL OPEN :
+                          --! プールカウンタによるフロー制御を行わず、常にプール栓
+                          --! ルブが開いた状態にするか否かを指定する.
+                          --! * FIXED_POOL_OPEN=1 : 常にプール栓が開いた状態にする.
+                          --! * FIXED_POOL_OPEN=0 : プール栓の状態は他の変数に依存
+                          --!   する.
+                          integer range 0 to 1 := 0;
+        USE_PULL_RSV    : --! @brief USE PULL RESERVE SIGNALS :
+                          --! フローカウンタの減算に PULL_RSV_SIZE を使うか 
+                          --! PULL_FIX_SIZE を使うかを指定する.
+                          --! * USE_PULL_RSV=1 : フローカウンタの減算にPULL_RSV_SIZE
+                          --!   (入力する予定(RESERVE)のバイト数)を使う.
+                          --! * USE_PULL_RSV=0 : フローカウンタの減算にPULL_FIN_SIZE
+                          --!   (入力が確定(FINAL)したバイト数)を使う.
+                          integer range 0 to 1 := 0;
+        USE_POOL_PUSH   : --! @brief USE POOL PUSH SIGNALS :
+                          --! プールカウンタの加算に FLOW_PUSH_SIZE を使うか 
+                          --! POOL_PUSH_SIZE を使うかを指定する.
+                          --! * USE_POOL_PUSH=1 : フローカウンタの加算に
+                          --!   POOL_PUSH_SIZEを使う.
+                          --! * USE_POOL_PUSH=0 : プールカウンタの加算に
+                          --!   FLOW_PUSH_SIZEを使う.
+                          integer range 0 to 1 := 1;
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
                           integer := 32;
@@ -1161,67 +1671,154 @@ component FLOAT_INTAKE_VALVE
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以下の時に出力を開始する.
-                          --! フローカウンタの値がこの値を越えた時に出力を一時停止.
+                          --! フローカウンタの値がこの値以下の時に入力を開始する.
+                          --! フローカウンタの値がこの値を越えた時に入力を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+        POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
+                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるプール
+                          --! カウンタの減算結果が、この値以下の時にPOOL_READY 信号
+                          --! をアサートする.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Push Size Signals.
+    -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief PUSH VALID :
-                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+        PULL_RSV_VALID  : --! @brief PULL RESERVE VALID :
+                          --! PULL_RSV_LAST/PULL_RSV_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic;
-        PUSH_LAST       : --! @brief PUSH LAST :
-                          --! 最後の入力であることを示す信号.
+        PULL_RSV_LAST   : --! @brief PULL RESERVE LAST :
+                          --! 最後のPULL_RSV入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
                           in  std_logic;
-        PUSH_SIZE       : --! @brief PUSH SIZE :
+        PULL_RSV_SIZE   : --! @brief PULL RESERVE SIZE :
+                          --! 出力する予定(RESERVE)のバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull Final Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_FIN_VALID  : --! @brief PULL FINAL VALID :
+                          --! PULL_FIN_LAST/PULL_FIN_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          in  std_logic;
+        PULL_FIN_LAST   : --! @brief PULL FINAL LAST :
+                          --! 最後のPULL_FIN入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          in  std_logic;
+        PULL_FIN_SIZE   : --! @brief PUSH RESERVE SIZE :
+                          --! 出力が確定(FINAL)したバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Flow Push Size Signals.
+    -------------------------------------------------------------------------------
+        FLOW_PUSH_VALID : --! @brief FLOW PUSH VALID :
+                          --! FLOW_PUSH_LAST/FLOW_PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        FLOW_PUSH_LAST  : --! @brief FLOW PUSH LAST :
+                          --! 最後のPUSH入力であることを示す信号.
+                          in  std_logic;
+        FLOW_PUSH_SIZE  : --! @brief FLOW PUSH SIZE :
                           --! 入力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    -- Pull Size Signals.
-    -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief PULL VALID :
-                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
-                          in  std_logic;
-        PULL_LAST       : --! @brief PULL LAST :
-                          --! 最後の出力であることを示す信号.
-                          in  std_logic;
-        PULL_SIZE       : --! @brief PULL SIZE :
-                          --! 出力したバイト数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW INTAKE READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
                           --! * FLOW_PAUSE=1 : 中止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW INTAKE LAST :
-                          --! INTAKE側では未使用.
+                          --! INTAKE側では未使用. 常に'0'を出力.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW INTAKE ENABLE SIZE :
                           --! 入力可能なバイト数
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Flow Counter Signals.
+    -- Intake Flow Counter.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
+                          --! フローカウンタの値が0になったことを示すフラグ.
+                          out std_logic;
+        FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
+                          out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Pool Size Signals.
+    -------------------------------------------------------------------------------
+        POOL_PUSH_RESET : --! @brief POOL PUSH RESET :
+                          --! POOL COUNTER の値をリセットすることを指示する信号.
+                          --! * この信号をアサートすることにより、FLOW COUNTER の値
+                          --!   を POOL COUNTER にセットする.
+                          --! * POOL COUNTER をリセットすることにより、再送、再出力
+                          --!   に対応することが出来る.
+                          in  std_logic;
+        POOL_PUSH_VALID : --! @brief POOL PUSH VALID :
+                          --! POOL_PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        POOL_PUSH_LAST  : --! @brief POOL PUSH LAST :
+                          --! 最後のPOOL_PUSH入力であることを示す信号.
+                          in  std_logic;
+        POOL_PUSH_SIZE  : --! @brief FLOW PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Pool Counter.
+    -------------------------------------------------------------------------------
+        POOL_COUNT      : --! @brief POOL COUNT :
+                          --! 現在のプールカウンタの値を出力.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合はFLOW_COUNTと
+                          --!   同じ値を出力する.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        POOL_READY      : --! @brief POOL READY :
+                          --! プールカウンタの値が POOL_READY_LEVEL 以下であること
+                          --! を示すフラグ.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は常に'1'を出
+                          --!   力する.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
     );
 end component;
@@ -1230,6 +1827,174 @@ end component;
 -----------------------------------------------------------------------------------
 component FLOAT_OUTLET_VALVE
     generic (
+        COUNT_BITS      : --! @brief COUNTER BITS :
+                          --! 内部カウンタのビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! サイズ信号のビット数を指定する.
+                          integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- Clock & Reset Signals.
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Control Signals.
+    -------------------------------------------------------------------------------
+        RESET           : --! @brief RESET REQUEST :
+                          --! 強制的に内部状態をリセットする事を指示する信号.
+                          in  std_logic := '0';
+        PAUSE           : --! @brief PAUSE REQUEST :
+                          --! 強制的にフローを一時的に停止する事を指示する信号.
+                          in  std_logic := '0';
+        STOP            : --! @brief STOP  REQUEST :
+                          --! 強制的にフローを中止する事を指示する信号.
+                          in  std_logic := '0';
+        INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
+                          --! 入力(INTAKE)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        OUTLET_OPEN     : --! @brief OUTLET VALVE OPEN FLAG :
+                          --! 出力(OUTLET)側のバルブが開いている事を示すフラグ.
+                          in  std_logic;
+        FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
+                          --! 一時停止する/しないを指示するための閾値.
+                          --! * フローカウンタの値がこの値以上の時に出力を開始する.
+                          --! * フローカウンタの値がこの値未満の時に出力を一時停止.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_COUNT      : --! @brief LOAD FLOW COUNTER VALUE :
+                          --! LOAD='1'にフローカウンタにロードする値.
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Push Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_VALID      : --! @brief PUSH VALID :
+                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
+                          in  std_logic := '0';
+        PUSH_LAST       : --! @brief PUSH LAST :
+                          --! 最後の入力であることを示す信号.
+                          in  std_logic := '0';
+        PUSH_SIZE       : --! @brief PUSH SIZE :
+                          --! 入力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Pull Size Signals.
+    -------------------------------------------------------------------------------
+        PULL_VALID      : --! @brief PULL VALID :
+                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+                          in  std_logic := '0';
+        PULL_LAST       : --! @brief PULL LAST :
+                          --! 最後の出力であることを示す信号.
+                          in  std_logic := '0';
+        PULL_SIZE       : --! @brief PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Outlet Flow Control Signals.
+    -------------------------------------------------------------------------------
+        FLOW_READY      : --! @brief FLOW OUTLET READY :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '0'を出力する.
+                          out std_logic;
+        FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
+                          --! 転送を一時的に止めたり、再開することを指示する信号.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '1'を出力する.
+                          out std_logic;
+        FLOW_STOP       : --! @brief FLOW OUTLET STOP :
+                          --! 転送の中止を指示する信号.
+                          --! * FLOW_STOP='1' : 中止を指示.
+                          out std_logic;
+        FLOW_LAST       : --! @brief FLOW OUTLET LAST :
+                          --! 入力側から最後の入力を示すフラグがあったことを示す.
+                          out std_logic;
+        FLOW_SIZE       : --! @brief FLOW OUTLET ENABLE SIZE :
+                          --! 出力可能なバイト数
+                          out std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Flow Counter Signals.
+    -------------------------------------------------------------------------------
+        FLOW_COUNT      : --! @brief FLOW COUNTER :
+                          --! 現在のフローカウンタの値を出力.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
+                          --! フローカウンタの値が0になったことを示すフラグ.
+                          out std_logic;
+        FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
+                          out std_logic;
+        FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
+                          out std_logic;
+        PAUSED          : --! @brief PAUSE FLAG :
+                          --! 現在一時停止中であることを示すフラグ.
+                          out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief FLOAT_OUTLET_MANIFOLD_VALVE                                           --
+-----------------------------------------------------------------------------------
+component FLOAT_OUTLET_MANIFOLD_VALVE
+    generic (
+        FIXED_CLOSE     : --! @brief FIXED VALVE CLOSE :
+                          --! フローカウンタによるフロー制御を行わず、常に栓が閉じ
+                          --! た状態にするか否かを指定する.
+                          --! * FIXED_CLOSE=1 : 常に栓が閉じた状態にする.
+                          --! * FIXED_CLOSE=0 : 栓の状態は他の変数に依存する.
+                          integer range 0 to 1 := 0;
+        FIXED_FLOW_OPEN : --! @brief FIXED VALVE FLOE OPEN :
+                          --! フローカウンタによるフロー制御を行わず、常にフロー栓
+                          --! が開いた状態にするか否かを指定する.
+                          --! * FIXED_FLOW_OPEN=1 : 常にフロー栓が開いた状態にする.
+                          --! * FIXED_FLOW_OPEN=0 : フロー栓の状態は他の変数に依存
+                          --!   する.
+                          integer range 0 to 1 := 0;
+        FIXED_POOL_OPEN : --! @brief FIXED VALVE POOL OPEN :
+                          --! プールカウンタによるフロー制御を行わず、常にプール栓
+                          --! ルブが開いた状態にするか否かを指定する.
+                          --! * FIXED_POOL_OPEN=1 : 常にプール栓が開いた状態にする.
+                          --! * FIXED_POOL_OPEN=0 : プール栓の状態は他の変数に依存
+                          --!   する.
+                          integer range 0 to 1 := 0;
+        USE_PUSH_RSV    : --! @brief USE PUSH RESERVE SIGNALS :
+                          --! フローカウンタの加算に PUSH_RSV_SIZE を使うか 
+                          --! PUSH_FIX_SIZE を使うかを指定する.
+                          --! * USE_PUSH_RSV=1 : フローカウンタの加算にPUSH_RSV_SIZE
+                          --!   (入力する予定(RESERVE)のバイト数)を使う.
+                          --! * USE_PUSH_RSV=0 : フローカウンタの加算にPUSH_FIN_SIZE
+                          --!   (入力が確定(FINAL)したバイト数)を使う.
+                          integer range 0 to 1 := 0;
+        USE_POOL_PULL   : --! @brief USE POOL PULL SIGNALS :
+                          --! プールカウンタの減算に FLOW_PULL_SIZE を使うか 
+                          --! POOL_PULL_SIZE を使うかを指定する.
+                          --! * USE_POOL_PULL=1 : フローカウンタの加算に
+                          --!   POOL_PULL_SIZEを使う.
+                          --! * USE_POOL_PULL=0 : プールカウンタの減算に
+                          --!   FLOW_PULL_SIZEを使う.
+                          integer range 0 to 1 := 1;
         COUNT_BITS      : --! @brief COUNTER BITS :
                           --! 内部カウンタのビット数を指定する.
                           integer := 32;
@@ -1273,28 +2038,54 @@ component FLOAT_OUTLET_VALVE
                           --! フローカウンタの値がこの値以上の時に転送を開始する.
                           --! フローカウンタの値がこの値未満の時に転送を一時停止.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    -- Push Size Signals.
-    -------------------------------------------------------------------------------
-        PUSH_VAL        : --! @brief PUSH VALID :
-                          --! PUSH_LAST/PUSH_SIZEが有効であることを示す信号.
-                          in  std_logic;
-        PUSH_LAST       : --! @brief PUSH LAST :
-                          --! 最後の入力であることを示す信号.
-                          in  std_logic;
-        PUSH_SIZE       : --! @brief PUSH SIZE :
-                          --! 入力したバイト数.
+        POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
+                          --! 先行モード(PRECEDE=1)の時、PULL_FIN_SIZEによるフロー
+                          --! カウンタの加算結果が、この値以上の時にPOOL_READY 信号
+                          --! をアサートする.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Push Final Size Signals.
     -------------------------------------------------------------------------------
-        PULL_VAL        : --! @brief PULL VALID :
-                          --! PULL_LAST/PULL_SIZEが有効であることを示す信号.
+        PUSH_FIN_VALID  : --! @brief PUSH FINAL VALID :
+                          --! PUSH_FIN_LAST/PUSH_FIN_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
                           in  std_logic;
-        PULL_LAST       : --! @brief PULL LAST :
+        PUSH_FIN_LAST   : --! @brief PUSH FINAL LAST :
+                          --! 最後のPUSH_FIN入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          in  std_logic;
+        PUSH_FIN_SIZE   : --! @brief PUSH FINAL SIZE :
+                          --! 入力が確定(FINAL)したバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Push Reserve Size Signals.
+    -------------------------------------------------------------------------------
+        PUSH_RSV_VALID  : --! @brief PUSH RESERVE VALID :
+                          --! PUSH_RSV_LAST/PUSH_RSV_SIZEが有効であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
+                          in  std_logic;
+        PUSH_RSV_LAST   : --! @brief PUSH RESERVE LAST :
+                          --! 最後のPUSH_RSV入力であることを示す信号.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
+                          in  std_logic;
+        PUSH_RSV_SIZE   : --! @brief PUSH RESERVE SIZE :
+                          --! 入力する予定(RESERVE)のバイト数.
+                          --! * バルブが固定(Fixed)モードの場合は未使用.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は未使用.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Flow Pull Size Signals.
+    -------------------------------------------------------------------------------
+        FLOW_PULL_VALID : --! @brief FLOW PULL VALID :
+                          --! FLOW_PULL_LAST/FLOW_PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        FLOW_PULL_LAST  : --! @brief FLOW PULL LAST :
                           --! 最後の出力であることを示す信号.
                           in  std_logic;
-        PULL_SIZE       : --! @brief PULL SIZE :
+        FLOW_PULL_SIZE  : --! @brief FLOW PULL SIZE :
                           --! 出力したバイト数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -1302,35 +2093,96 @@ component FLOAT_OUTLET_VALVE
     -------------------------------------------------------------------------------
         FLOW_READY      : --! @brief FLOW OUTLET READY :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_READY=1 : 再開.
-                          --! * FLOW_PAUSE=0 : 一時停止.
+                          --! * FLOW_READY='1' : 再開.
+                          --! * FLOW_READY='0' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
-                          --! * FLOW_PAUSE=0 : 再開.
-                          --! * FLOW_PAUSE=1 : 一時停止.
+                          --! * FLOW_PAUSE='0' : 再開.
+                          --! * FLOW_PAUSE='1' : 一時停止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!   '0'を出力する.
+                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!   '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
                           --! * FLOW_PAUSE=1 : 中止.
+                          --! * バルブが開固定(FIXED=2)の時は常に'0'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'1'を出力する.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW OUTLET LAST :
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
                           out std_logic;
         FLOW_SIZE       : --! @brief FLOW OUTLET ENABLE SIZE :
                           --! 出力可能なバイト数
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Flow Counter Signals.
+    -- Outlet Flow Counter.
     -------------------------------------------------------------------------------
         FLOW_COUNT      : --! @brief FLOW COUNTER :
                           --! 現在のフローカウンタの値を出力.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
                           out std_logic_vector(COUNT_BITS-1 downto 0);
+        FLOW_ZERO       : --! @brief FLOW COUNTER is ZERO :
+                          --! フローカウンタの値が0になったことを示すフラグ.
+                          out std_logic;
+        FLOW_POS        : --! @brief FLOW COUNTER is POSitive :
+                          --! フローカウンタの値が正(>0)になったことを示すフラグ.
+                          out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
-                          --! 現在のフローカウンタの値が負になった事示すフラグ.
+                          --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Pool Size Signals.
+    -------------------------------------------------------------------------------
+        POOL_PULL_RESET : --! @brief POOL PULL RESET :
+                          --! POOL COUNTER の値をリセットすることを指示する信号.
+                          --! * この信号をアサートすることにより、FLOW COUNTER の値
+                          --!   を POOL COUNTER にセットする.
+                          --! * POOL COUNTER をリセットすることにより、再送、再出力
+                          --!   に対応することが出来る.
+                          in  std_logic;
+        POOL_PULL_VALID : --! @brief POOL PULL VALID :
+                          --! POOL_PULL_SIZEが有効であることを示す信号.
+                          in  std_logic;
+        POOL_PULL_LAST  : --! @brief POOL PULL LAST :
+                          --! 最後のPOOL_PULL入力であることを示す信号.
+                          in  std_logic;
+        POOL_PULL_SIZE  : --! @brief FLOW PULL SIZE :
+                          --! 出力したバイト数.
+                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Pool Counter.
+    -------------------------------------------------------------------------------
+        POOL_COUNT      : --! @brief POOL COUNT :
+                          --! 現在のプールカウンタの値を出力.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合はFLOW_COUNTと
+                          --!   同じ値を出力する.
+                          --! * バルブが開固定(FIXED=2)の時は常にALL'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常にALL'0'を出力する.
+                          out std_logic_vector(COUNT_BITS-1 downto 0);
+        POOL_READY      : --! @brief POOL READY :
+                          --! プールカウンタの値が POOL_READY_LEVEL 以上であること
+                          --! を示すフラグ.
+                          --! * バルブが非先行モード(PRECEDE=0)の場合は常に'1'を出
+                          --!   力する.
+                          --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
+                          --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
     );
 end component;

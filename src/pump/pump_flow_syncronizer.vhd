@@ -2,8 +2,8 @@
 --!     @file    pump_flow_syncronizer.vhd
 --!     @brief   PUMP FLOW SYNCRONIZER
 --!              PUMPの入力側と出力側の間で各種情報を伝達するモジュール
---!     @version 1.4.0
---!     @date    2013/3/15
+--!     @version 1.5.0
+--!     @date    2013/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -86,15 +86,26 @@ entity  PUMP_FLOW_SYNCRONIZER is
         I_OPEN      : --! @brief INPUT OPEN FLAG :
                       --! 入力側のバルブが開いていることを示すフラグ.
                       in  std_logic;
-        I_VAL       : --! @brief INPUT SIZE/LAST VALID :
-                      --! I_LAST、I_SIZEが有効であることを示す信号.
-                      --! この信号のアサートによりI_LAST、I_SIZEの内容が出力側に伝達
-                      --! されて、O_LAST、O_SIZEから出力される.
+        I_FIN_VAL   : --! @brief INPUT FINAL SIZE/LAST VALID :
+                      --! I_FIN_LAST、I_FIN_SIZEが有効であることを示す信号.
+                      --! この信号のアサートによりI_FIN_LAST、I_FIN_SIZEの内容が
+                      --! 出力側に伝達されて、O_FIN_LAST、O_FIN_SIZEから出力される.
                       in  std_logic;
-        I_LAST      : --! @brief INPUT LAST FLAG :
+        I_FIN_LAST  : --! @brief INPUT FINAL LAST FLAG :
                       --! 最後の転送であることを示すフラグを入力.
                       in  std_logic;
-        I_SIZE      : --! @brief INPUT SIZE :
+        I_FIN_SIZE  : --! @brief INPUT FINAL SIZE :
+                      --! 転送バイト数を入力.
+                      in  std_logic_vector(SIZE_BITS-1 downto 0);
+        I_RSV_VAL   : --! @brief INPUT RESERVE SIZE/LAST VALID :
+                      --! I_RSV_LAST、I_RSV_SIZEが有効であることを示す信号.
+                      --! この信号のアサートによりI_RSV_LAST、I_RSV_SIZEの内容が
+                      --! 出力側に伝達されて、O_RSV_LAST、O_RSV_SIZEから出力される.
+                      in  std_logic;
+        I_RSV_LAST  : --! @brief INPUT RESERVE LAST FLAG :
+                      --! 最後の転送であることを示すフラグを入力.
+                      in  std_logic;
+        I_RSV_SIZE  : --! @brief INPUT RESERVE SIZE :
                       --! 転送バイト数を入力.
                       in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -118,13 +129,22 @@ entity  PUMP_FLOW_SYNCRONIZER is
         O_OPEN      : --! @brief OUTPUT OPEN FLAG :
                       --! 入力側のバルブが開いていることを示すフラグ.
                       out std_logic;
-        O_VAL       : --! @brief OUTPUT SIZE/LAST VALID :
-                      --! O_LAST、O_SIZEが有効であることを示す信号.
+        O_FIN_VAL   : --! @brief OUTPUT FINAL SIZE/LAST VALID :
+                      --! O_FIN_LAST、O_FIN_SIZEが有効であることを示す信号.
                       out std_logic;
-        O_LAST      : --! @brief OUTPUT LAST FLAG :
+        O_FIN_LAST  : --! @brief OUTPUT FINAL LAST FLAG :
                       --! 最後の転送であることを示すフラグを出力.
                       out std_logic;
-        O_SIZE      : --! @brief INPUT SIZE :
+        O_FIN_SIZE  : --! @brief INPUT FINAL SIZE :
+                      --! 転送バイト数を出力.
+                      out std_logic_vector(SIZE_BITS-1 downto 0);
+        O_RSV_VAL   : --! @brief OUTPUT RESERVE SIZE/LAST VALID :
+                      --! O_FIN_LAST、O_FIN_SIZEが有効であることを示す信号.
+                      out std_logic;
+        O_RSV_LAST  : --! @brief OUTPUT RESERVE LAST FLAG :
+                      --! 最後の転送であることを示すフラグを出力.
+                      out std_logic;
+        O_RSV_SIZE  : --! @brief OUTPUT RESERVE SIZE :
                       --! 転送バイト数を出力.
                       out std_logic_vector(SIZE_BITS-1 downto 0)
     );
@@ -140,32 +160,38 @@ use     PIPEWORK.COMPONENTS.SYNCRONIZER_INPUT_PENDING_REGISTER;
 use     PIPEWORK.COMPONENTS.DELAY_REGISTER;
 use     PIPEWORK.COMPONENTS.DELAY_ADJUSTER;
 architecture RTL of PUMP_FLOW_SYNCRONIZER is
-    constant VALID_LO   : integer   := 0;
-    constant VALID_POS  : integer   := 0;
-    constant OPEN_POS   : integer   := 1;
-    constant CLOSE_POS  : integer   := 2;
-    constant VALID_HI   : integer   := 2;
-    constant DATA_LO    : integer   := 0;
-    constant SIZE_LO    : integer   := 0;
-    constant SIZE_HI    : integer   := SIZE_LO + SIZE_BITS - 1;
-    constant LAST_POS   : integer   := SIZE_HI + 1;
-    constant DATA_HI    : integer   := LAST_POS;
-    constant sig0       : std_logic := '0';
-    constant i_pause    : std_logic := '0';
-    signal   i_data     : std_logic_vector( DATA_HI downto  DATA_LO);
-    signal   i_valid    : std_logic_vector(VALID_HI downto VALID_LO);
-    signal   i_ready    : std_logic;
-    signal   i_open_q   : std_logic;
-    signal   i_open_val : std_logic;
-    signal   i_close_val: std_logic;
-    signal   o_data     : std_logic_vector( DATA_HI downto  DATA_LO);
-    signal   o_valid    : std_logic_vector(VALID_HI downto VALID_LO);
-    signal   o_open_q   : std_logic;
-    signal   o_open_val : std_logic;
-    signal   o_close_val: std_logic;
-    constant DELAY_SEL  : std_logic_vector(DELAY_CYCLE downto DELAY_CYCLE) := (others => '1');
-    signal   d_valid    : std_logic_vector(DELAY_CYCLE downto 0);
-    signal   d_data     : std_logic_vector( DATA_HI downto  DATA_LO);
+    constant VALID_LO       : integer   := 0;
+    constant OPEN_POS       : integer   := 0;
+    constant CLOSE_POS      : integer   := 1;
+    constant FIN_VAL_POS    : integer   := 2;
+    constant RSV_VAL_POS    : integer   := 3;
+    constant VALID_HI       : integer   := 3;
+    constant DATA_LO        : integer   := 0;
+    constant FIN_SIZE_LO    : integer   := 0;
+    constant FIN_SIZE_HI    : integer   := FIN_SIZE_LO + SIZE_BITS - 1;
+    constant FIN_LAST_POS   : integer   := FIN_SIZE_HI + 1;
+    constant RSV_SIZE_LO    : integer   := FIN_LAST_POS+ 1;
+    constant RSV_SIZE_HI    : integer   := RSV_SIZE_LO + SIZE_BITS - 1;
+    constant RSV_LAST_POS   : integer   := RSV_SIZE_HI + 1;
+    constant DATA_HI        : integer   := RSV_LAST_POS;
+    constant FIN_DATA_LO    : integer   := FIN_SIZE_LO;
+    constant FIN_DATA_HI    : integer   := FIN_LAST_POS;
+    constant sig0           : std_logic := '0';
+    constant i_pause        : std_logic := '0';
+    signal   i_data         : std_logic_vector( DATA_HI downto  DATA_LO);
+    signal   i_valid        : std_logic_vector(VALID_HI downto VALID_LO);
+    signal   i_ready        : std_logic;
+    signal   i_open_q       : std_logic;
+    signal   i_open_val     : std_logic;
+    signal   i_close_val    : std_logic;
+    signal   o_data         : std_logic_vector( DATA_HI downto  DATA_LO);
+    signal   o_valid        : std_logic_vector(VALID_HI downto VALID_LO);
+    signal   o_open_q       : std_logic;
+    signal   o_open_val     : std_logic;
+    signal   o_close_val    : std_logic;
+    constant DELAY_SEL      : std_logic_vector(DELAY_CYCLE downto DELAY_CYCLE) := (others => '1');
+    signal   d_valid        : std_logic_vector(DELAY_CYCLE downto 0);
+    signal   fin_data       : std_logic_vector(FIN_DATA_HI downto FIN_DATA_LO);
 begin
     ------------------------------------------------------------------------------
     -- i_open_val  : I_OPENの立ち上がりを示す.
@@ -227,10 +253,10 @@ begin
             O_RDY       => i_ready             -- In  :
         );                                     -- 
     ------------------------------------------------------------------------------
-    -- i_valid(VALID_POS) : I_VAL 信号を SYNCRONIZER の I_VAL に入力する.
-    -- i_data(SIZE'range) : I_SIZE信号を SYNCRONIZER の I_DATA に入力する.
+    -- i_valid(VALID_POS) : I_FIN_VAL 信号を SYNCRONIZER の I_VAL に入力する.
+    -- i_data(SIZE'range) : I_FIN_SIZE信号を SYNCRONIZER の I_DATA に入力する.
     ------------------------------------------------------------------------------
-    I_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER
+    I_FIN_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER
         generic map (                          --
             DATA_BITS   => SIZE_BITS         , -- 
             OPERATION   => 2                   -- 
@@ -239,19 +265,19 @@ begin
             CLK         => I_CLK             , -- In  :
             RST         => RST               , -- In  :
             CLR         => I_CLR             , -- In  :
-            I_DATA      => I_SIZE            , -- In  :
-            I_VAL       => I_VAL             , -- In  :
+            I_DATA      => I_FIN_SIZE        , -- In  :
+            I_VAL       => I_FIN_VAL         , -- In  :
             I_PAUSE     => i_pause           , -- In  :
             P_DATA      => open              , -- Out :
             P_VAL       => open              , -- Out :
-            O_DATA      => i_data (SIZE_HI downto SIZE_LO),
-            O_VAL       => i_valid(VALID_POS), -- Out :
+            O_DATA      => i_data (FIN_SIZE_HI downto FIN_SIZE_LO),
+            O_VAL       => i_valid(FIN_VAL_POS),
             O_RDY       => i_ready             -- In  :
         );                                     -- 
     ------------------------------------------------------------------------------
-    -- i_data(LAST_POS) : I_LAST信号を SYNCRONIZER の I_DATA に入力する.
+    -- i_data(FIN_LAST_POS) : I_FIN_LAST信号を SYNCRONIZER の I_DATA に入力する.
     ------------------------------------------------------------------------------
-    I_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER
+    I_FIN_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER
         generic map (                          --
             DATA_BITS   => 1                 , -- 
             OPERATION   => 1                   -- 
@@ -260,12 +286,55 @@ begin
             CLK         => I_CLK             , -- In  :
             RST         => RST               , -- In  :
             CLR         => I_CLR             , -- In  :
-            I_DATA(0)   => I_LAST            , -- In  :
-            I_VAL       => I_VAL             , -- In  :
+            I_DATA(0)   => I_FIN_LAST        , -- In  :
+            I_VAL       => I_FIN_VAL         , -- In  :
             I_PAUSE     => i_pause           , -- In  :
             P_DATA      => open              , -- Out :
             P_VAL       => open              , -- Out :
-            O_DATA(0)   => i_data (LAST_POS) , -- Out :
+            O_DATA(0)   => i_data (FIN_LAST_POS),
+            O_VAL       => open              , -- Out :
+            O_RDY       => i_ready             -- In  :
+        );                                     -- 
+    ------------------------------------------------------------------------------
+    -- i_valid(VALID_POS) : I_RSV_VAL 信号を SYNCRONIZER の I_VAL に入力する.
+    -- i_data(SIZE'range) : I_RSV_SIZE信号を SYNCRONIZER の I_DATA に入力する.
+    ------------------------------------------------------------------------------
+    I_RSV_SIZE_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER
+        generic map (                          --
+            DATA_BITS   => SIZE_BITS         , -- 
+            OPERATION   => 2                   -- 
+        )                                      --
+        port map (                             --
+            CLK         => I_CLK             , -- In  :
+            RST         => RST               , -- In  :
+            CLR         => I_CLR             , -- In  :
+            I_DATA      => I_RSV_SIZE        , -- In  :
+            I_VAL       => I_RSV_VAL         , -- In  :
+            I_PAUSE     => i_pause           , -- In  :
+            P_DATA      => open              , -- Out :
+            P_VAL       => open              , -- Out :
+            O_DATA      => i_data (RSV_SIZE_HI downto RSV_SIZE_LO),
+            O_VAL       => i_valid(RSV_VAL_POS),
+            O_RDY       => i_ready             -- In  :
+        );                                     -- 
+    ------------------------------------------------------------------------------
+    -- i_data(RSV_LAST_POS) : I_RSV_LAST信号を SYNCRONIZER の I_DATA に入力する.
+    ------------------------------------------------------------------------------
+    I_RSV_LAST_REGS: SYNCRONIZER_INPUT_PENDING_REGISTER
+        generic map (                          --
+            DATA_BITS   => 1                 , -- 
+            OPERATION   => 1                   -- 
+        )                                      -- 
+        port map (                             -- 
+            CLK         => I_CLK             , -- In  :
+            RST         => RST               , -- In  :
+            CLR         => I_CLR             , -- In  :
+            I_DATA(0)   => I_RSV_LAST        , -- In  :
+            I_VAL       => I_RSV_VAL         , -- In  :
+            I_PAUSE     => i_pause           , -- In  :
+            P_DATA      => open              , -- Out :
+            P_VAL       => open              , -- Out :
+            O_DATA(0)   => i_data (RSV_LAST_POS),
             O_VAL       => open              , -- Out :
             O_RDY       => i_ready             -- In  :
         );                                     -- 
@@ -299,12 +368,12 @@ begin
             O_VAL       => o_valid             -- Out :
         );                                     -- 
     ------------------------------------------------------------------------------
-    -- O_SIZE : SYNCで同期をとった SIZE を指定したクロックだけ遅延させて出力
-    -- O_LAST : SYNCで同期をとった LAST を指定したクロックだけ遅延させて出力
+    -- O_FIN_SIZE : SYNCで同期をとった SIZE を指定したクロックだけ遅延させて出力
+    -- O_FIN_LAST : SYNCで同期をとった LAST を指定したクロックだけ遅延させて出力
     ------------------------------------------------------------------------------
-    O_SIZE_REGS: DELAY_REGISTER
+    O_FIN_SIZE_REGS: DELAY_REGISTER
         generic map (                          -- 
-            DATA_BITS   => o_data'length     , -- 
+            DATA_BITS   => fin_data'length   , -- 
             DELAY_MAX   => DELAY_CYCLE       , -- 
             DELAY_MIN   => DELAY_CYCLE         -- 
         )                                      --
@@ -314,16 +383,16 @@ begin
             CLR         => O_CLR             , -- In  :
             SEL         => DELAY_SEL         , -- In  :
             D_VAL       => d_valid           , -- Out :
-            I_DATA      => o_data            , -- In  :
-            I_VAL       => o_valid(VALID_POS), -- In  :
-            O_DATA      => d_data            , -- Out :
-            O_VAL       => O_VAL               -- Out :
+            I_DATA      => o_data (FIN_DATA_HI downto FIN_DATA_LO),
+            I_VAL       => o_valid(FIN_VAL_POS),
+            O_DATA      => fin_data          , -- Out :
+            O_VAL       => O_FIN_VAL           -- Out :
         );
-    O_SIZE <= d_data(SIZE_HI downto SIZE_LO);
-    O_LAST <= d_data(LAST_POS);
+    O_FIN_LAST <= fin_data(FIN_LAST_POS);
+    O_FIN_SIZE <= fin_data(FIN_SIZE_HI downto FIN_SIZE_LO);
     ------------------------------------------------------------------------------
-    -- o_close_val : SYNCで同期をとった i_clock_val を、O_SIZE/O_LASTに合わせて
-    --               遅延させる.
+    -- o_close_val : SYNCで同期をとった i_clock_val を、O_FIN_SIZE/O_FIN_LASTに
+    --               合わせて遅延させる.
     ------------------------------------------------------------------------------
     O_CLOSE_REGS: DELAY_ADJUSTER
         generic map (                          -- 
@@ -342,6 +411,14 @@ begin
             O_DATA      => open              , -- Out :
             O_VAL       => o_close_val         -- Out :
         );
+    ------------------------------------------------------------------------------
+    -- O_RSV_VAL  : SYNCで同期をとった I_RSV_VAL  信号.
+    -- O_RSV_LAST : SYNCで同期をとった I_RSV_LAST 信号.
+    -- O_RSV_SIZE : SYNCで同期をとった I_RSV_SIZE 信号.
+    ------------------------------------------------------------------------------
+    O_RSV_VAL  <= o_valid(RSV_VAL_POS);
+    O_RSV_LAST <= o_data (RSV_LAST_POS);
+    O_RSV_SIZE <= o_data (RSV_SIZE_HI downto RSV_SIZE_LO);
     ------------------------------------------------------------------------------
     -- o_open_val : SYNCで同期をとった i_open_val 信号.
     --              o_close_val とは異なり O_SIZE/O_LASTに合わせて遅延させない.

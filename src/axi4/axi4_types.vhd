@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_types.vhd
 --!     @brief   AXI4 Channel Signal Type Package.
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.5.0
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012,2013 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -44,26 +44,11 @@ package AXI4_TYPES is
     --! @brief アドレスチャネルのバースト長信号のビット数.
     -------------------------------------------------------------------------------
     constant  AXI4_ALEN_WIDTH      : integer := 8;
+    constant  AXI3_ALEN_WIDTH      : integer := 4;
     -------------------------------------------------------------------------------
     --! @brief アドレスチャネルのバースト長信号のタイプ.
     -------------------------------------------------------------------------------
     subtype   AXI4_ALEN_TYPE       is std_logic_vector(AXI4_ALEN_WIDTH   -1 downto 0);
-    constant  AXI4_ALEN_1          : AXI4_ALEN_TYPE := "00000000";
-    constant  AXI4_ALEN_2          : AXI4_ALEN_TYPE := "00000001";
-    constant  AXI4_ALEN_3          : AXI4_ALEN_TYPE := "00000010";
-    constant  AXI4_ALEN_4          : AXI4_ALEN_TYPE := "00000011";
-    constant  AXI4_ALEN_5          : AXI4_ALEN_TYPE := "00000100";
-    constant  AXI4_ALEN_6          : AXI4_ALEN_TYPE := "00000101";
-    constant  AXI4_ALEN_7          : AXI4_ALEN_TYPE := "00000110";
-    constant  AXI4_ALEN_8          : AXI4_ALEN_TYPE := "00000111";
-    constant  AXI4_ALEN_9          : AXI4_ALEN_TYPE := "00001000";
-    constant  AXI4_ALEN_10         : AXI4_ALEN_TYPE := "00001001";
-    constant  AXI4_ALEN_11         : AXI4_ALEN_TYPE := "00001010";
-    constant  AXI4_ALEN_12         : AXI4_ALEN_TYPE := "00001011";
-    constant  AXI4_ALEN_13         : AXI4_ALEN_TYPE := "00001100";
-    constant  AXI4_ALEN_14         : AXI4_ALEN_TYPE := "00001101";
-    constant  AXI4_ALEN_15         : AXI4_ALEN_TYPE := "00001110";
-    constant  AXI4_ALEN_16         : AXI4_ALEN_TYPE := "00001111";
     -------------------------------------------------------------------------------
     --! @brief アドレスチャネルの転送サイズ信号のビット数.
     -------------------------------------------------------------------------------
@@ -95,7 +80,8 @@ package AXI4_TYPES is
     -------------------------------------------------------------------------------
     --! @brief アドレスチャネルの排他アクセス信号のビット数.
     -------------------------------------------------------------------------------
-    constant  AXI4_ALOCK_WIDTH     : integer := 2;
+    constant  AXI4_ALOCK_WIDTH     : integer := 1;
+    constant  AXI3_ALOCK_WIDTH     : integer := 2;
     -------------------------------------------------------------------------------
     --! @brief アドレスチャネルの排他アクセス信号のタイプ.
     -------------------------------------------------------------------------------
@@ -165,6 +151,14 @@ package AXI4_TYPES is
     -------------------------------------------------------------------------------
     constant  AXI4_USER_MAX_WIDTH  : integer := 32;
     -------------------------------------------------------------------------------
+    --! @brief AXI4 ARLEN/AWLEN の最大ビット幅
+    -------------------------------------------------------------------------------
+    constant  AXI4_ALEN_MAX_WIDTH  : integer :=  8;
+    -------------------------------------------------------------------------------
+    --! @brief AXI4 ARLOCK/AWLOCK の最大ビット幅
+    -------------------------------------------------------------------------------
+    constant  AXI4_ALOCK_MAX_WIDTH : integer :=  2;
+    -------------------------------------------------------------------------------
     --! @brief AXI4 チャネルの可変長信号のビット幅を指定するレコードタイプ.
     -------------------------------------------------------------------------------
     type      AXI4_SIGNAL_WIDTH_TYPE is record
@@ -173,6 +167,8 @@ package AXI4_TYPES is
               AWUSER               : integer range 1 to AXI4_USER_MAX_WIDTH;
               ARADDR               : integer range 1 to AXI4_USER_MAX_WIDTH;
               ARUSER               : integer range 1 to AXI4_USER_MAX_WIDTH;
+              ALEN                 : integer range 4 to AXI4_ALEN_MAX_WIDTH;
+              ALOCK                : integer range 1 to AXI4_ALOCK_MAX_WIDTH;
               WDATA                : integer range 8 to AXI4_DATA_MAX_WIDTH;
               WUSER                : integer range 1 to AXI4_USER_MAX_WIDTH;
               RDATA                : integer range 8 to AXI4_DATA_MAX_WIDTH;

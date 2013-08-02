@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.4.0                                                           --
---!     @date    2013/03/18                                                      --
+--!     @version 1.5.0                                                           --
+--!     @date    2013/08/02                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -242,6 +242,18 @@ component PUMP_CONTROL_REGISTER
                           --! される.
                           in  std_logic;
     -------------------------------------------------------------------------------
+    -- Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        XFER_BUSY       : --! @brief Transfer Busy.
+                          --! データ転送中であることを示すフラグ.
+                          in  std_logic;
+        XFER_DONE       : --! @brief Transfer Done.
+                          --! データ転送中かつ、次のクロックで XFER_BUSY がネゲート
+                          --! される事を示すフラグ.
+                          --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
+                          --!   アサートされるわけでは無い.
+                          in std_logic;
+    -------------------------------------------------------------------------------
     -- Status.
     -------------------------------------------------------------------------------
         VALVE_OPEN      : --! @brief Valve Open Flag.
@@ -250,14 +262,19 @@ component PUMP_CONTROL_REGISTER
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
                           out std_logic;
-        XFER_RUNNING    : --! @brief Transaction Running Flag.
+        TRAN_START      : --! @brief Transaction Start Flag.
+                          --! トランザクションを開始したことを示すフラグ.
+                          --! トランザクション開始"の直前"に１クロックだけアサート
+                          --! される.
+                          out std_logic;
+        TRAN_BUSY       : --! @brief Transaction Busy Flag.
                           --! トランザクション中であることを示すフラグ.
                           out std_logic;
-        XFER_DONE       : --! @brief Transaction Done Flag.
+        TRAN_DONE       : --! @brief Transaction Done Flag.
                           --! トランザクションが終了したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
-        XFER_ERROR      : --! @brief Transaction Done Flag.
+        TRAN_ERROR      : --! @brief Transaction Error Flag.
                           --! トランザクション中にエラーが発生したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic
@@ -312,15 +329,26 @@ component PUMP_FLOW_SYNCRONIZER
         I_OPEN      : --! @brief INPUT OPEN FLAG :
                       --! 入力側のバルブが開いていることを示すフラグ.
                       in  std_logic;
-        I_VAL       : --! @brief INPUT SIZE/LAST VALID :
-                      --! I_LAST、I_SIZEが有効であることを示す信号.
-                      --! この信号のアサートによりI_LAST、I_SIZEの内容が出力側に伝達
-                      --! されて、O_LAST、O_SIZEから出力される.
+        I_FIN_VAL   : --! @brief INPUT FINAL SIZE/LAST VALID :
+                      --! I_FIN_LAST、I_FIN_SIZEが有効であることを示す信号.
+                      --! この信号のアサートによりI_FIN_LAST、I_FIN_SIZEの内容が
+                      --! 出力側に伝達されて、O_FIN_LAST、O_FIN_SIZEから出力される.
                       in  std_logic;
-        I_LAST      : --! @brief INPUT LAST FLAG :
+        I_FIN_LAST  : --! @brief INPUT FINAL LAST FLAG :
                       --! 最後の転送であることを示すフラグを入力.
                       in  std_logic;
-        I_SIZE      : --! @brief INPUT SIZE :
+        I_FIN_SIZE  : --! @brief INPUT FINAL SIZE :
+                      --! 転送バイト数を入力.
+                      in  std_logic_vector(SIZE_BITS-1 downto 0);
+        I_RSV_VAL   : --! @brief INPUT RESERVE SIZE/LAST VALID :
+                      --! I_RSV_LAST、I_RSV_SIZEが有効であることを示す信号.
+                      --! この信号のアサートによりI_RSV_LAST、I_RSV_SIZEの内容が
+                      --! 出力側に伝達されて、O_RSV_LAST、O_RSV_SIZEから出力される.
+                      in  std_logic;
+        I_RSV_LAST  : --! @brief INPUT RESERVE LAST FLAG :
+                      --! 最後の転送であることを示すフラグを入力.
+                      in  std_logic;
+        I_RSV_SIZE  : --! @brief INPUT RESERVE SIZE :
                       --! 転送バイト数を入力.
                       in  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -344,13 +372,22 @@ component PUMP_FLOW_SYNCRONIZER
         O_OPEN      : --! @brief OUTPUT OPEN FLAG :
                       --! 入力側のバルブが開いていることを示すフラグ.
                       out std_logic;
-        O_VAL       : --! @brief OUTPUT SIZE/LAST VALID :
-                      --! O_LAST、O_SIZEが有効であることを示す信号.
+        O_FIN_VAL   : --! @brief OUTPUT FINAL SIZE/LAST VALID :
+                      --! O_FIN_LAST、O_FIN_SIZEが有効であることを示す信号.
                       out std_logic;
-        O_LAST      : --! @brief OUTPUT LAST FLAG :
+        O_FIN_LAST  : --! @brief OUTPUT FINAL LAST FLAG :
                       --! 最後の転送であることを示すフラグを出力.
                       out std_logic;
-        O_SIZE      : --! @brief INPUT SIZE :
+        O_FIN_SIZE  : --! @brief INPUT FINAL SIZE :
+                      --! 転送バイト数を出力.
+                      out std_logic_vector(SIZE_BITS-1 downto 0);
+        O_RSV_VAL   : --! @brief OUTPUT RESERVE SIZE/LAST VALID :
+                      --! O_FIN_LAST、O_FIN_SIZEが有効であることを示す信号.
+                      out std_logic;
+        O_RSV_LAST  : --! @brief OUTPUT RESERVE LAST FLAG :
+                      --! 最後の転送であることを示すフラグを出力.
+                      out std_logic;
+        O_RSV_SIZE  : --! @brief OUTPUT RESERVE SIZE :
                       --! 転送バイト数を出力.
                       out std_logic_vector(SIZE_BITS-1 downto 0)
     );
@@ -360,284 +397,359 @@ end component;
 -----------------------------------------------------------------------------------
 component PUMP_CONTROLLER
     generic (
-        I_CLK_RATE      : --! @brief INPUT CLOCK RATE :
-                          --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
-                          --! クロック(O_CLK)との関係を指定する.
-                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
-                          integer :=  1;
-        I_REQ_ADDR_VALID: --! @brief INTAKE REQUEST ADDRESS VALID :
-                          --! I_REQ_ADDR信号を有効にするか否かを指示する.
-                          --! * I_ADDR_VAL=0で無効.
-                          --! * I_ADDR_VAL>0で有効.
-                          integer :=  1;
-        I_REQ_ADDR_BITS : --! @brief INTAKE REQUEST ADDRESS BITS :
-                          --! I_REQ_ADDR信号のビット数を指定する.
-                          --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        I_REG_ADDR_BITS : --! @brief INTAKE ADDRESS REGISTER BITS :
-                          --! I_REG_ADDR信号のビット数を指定する.
-                          --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        I_REQ_SIZE_VALID: --! @brief INTAKE REQUEST SIZE VALID :
-                          --! I_REQ_SIZE信号を有効にするか否かを指示する.
-                          --! * I_SIZE_VAL=0で無効.
-                          --! * I_SIZE_VAL>0で有効.
-                          integer :=  1;
-        I_REQ_SIZE_BITS : --! @brief INTAKE REQUEST SIZE BITS :
-                          --! I_REQ_SIZE信号のビット数を指定する.
-                          --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        I_REG_SIZE_BITS : --! @brief INTAKE SIZE REGISTER BITS :
-                          --! I_REG_SIZE信号のビット数を指定する.
-                          --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        I_REG_MODE_BITS : --! @brief INTAKE MODE REGISTER BITS :
-                          --! I_MODE_L/I_MODE_D/I_MODE_Qのビット数を指定する.
-                          integer := 32;
-        I_REG_STAT_BITS : --! @brief INTAKE STATUS REGISTER BITS :
-                          --! I_STAT_L/I_STAT_D/I_STAT_Qのビット数を指定する.
-                          integer := 32;
-        O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
-                          --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
-                          --! クロック(O_CLK)との関係を指定する.
-                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
-                          integer :=  1;
-        O_REQ_ADDR_VALID: --! @brief OUTLET REQUEST ADDRESS VALID :
-                          --! O_REQ_ADDR信号を有効にするか否かを指示する.
-                          --! * O_ADDR_VAL=0で無効.
-                          --! * O_ADDR_VAL>0で有効.
-                          integer :=  1;
-        O_REQ_ADDR_BITS : --! @brief OUTLET REQUEST ADDRESS BITS :
-                          --! O_REQ_ADDR信号のビット数を指定する.
-                          --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        O_REG_ADDR_BITS : --! @brief OUTLET ADDRESS REGISTER BITS :
-                          --! O_REG_ADDR信号のビット数を指定する.
-                          --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        O_REQ_SIZE_VALID: --! @brief OUTLET REQUEST SIZE VALID :
-                          --! O_REQ_SIZE信号を有効にするか否かを指示する.
-                          --! * O_SIZE_VAL=0で無効.
-                          --! * O_SIZE_VAL>0で有効.
-                          integer :=  1;
-        O_REQ_SIZE_BITS : --! @brief OUTLET REQUEST SIZE BITS :
-                          --! O_REQ_SIZE信号のビット数を指定する.
-                          --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        O_REG_SIZE_BITS : --! @brief OUTLET SIZE REGISTER BITS :
-                          --! O_REG_SIZE信号のビット数を指定する.
-                          --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を指定
-                          --!   しなければならない.
-                          integer := 32;
-        O_REG_MODE_BITS : --! @brief OUTLET MODE REGISTER BITS :
-                          --! O_MODE_L/O_MODE_D/O_MODE_Qのビット数を指定する.
-                          integer := 32;
-        O_REG_STAT_BITS : --! @brief OUTLET STATUS REGISTER BITS :
-                          --! O_STAT_L/O_STAT_D/O_STAT_Qのビット数を指定する.
-                          integer := 32;
-        BUF_DEPTH       : --! @brief BUFFER DEPTH :
-                          --! バッファの容量(バイト数)を２のべき乗値で指定する.
-                          integer := 12;
-        I2O_DELAY_CYCLE : --! @brief DELAY CYCLE :
-                          --! 入力側から出力側への転送する際の遅延サイクルを指定する.
-                          integer :=  0
+        I_CLK_RATE          : --! @brief INPUT CLOCK RATE :
+                              --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側
+                              --! のクロック(O_CLK)との関係を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer :=  1;
+        I_REQ_ADDR_VALID    : --! @brief INTAKE REQUEST ADDRESS VALID :
+                              --! I_REQ_ADDR信号を有効にするか否かを指示する.
+                              --! * I_REQ_ADDR_VALID=0で無効.
+                              --! * I_REQ_ADDR_VALID=1で有効.
+                              integer range 0 to 1 :=  1;
+        I_REQ_ADDR_BITS     : --! @brief INTAKE REQUEST ADDRESS BITS :
+                              --! I_REQ_ADDR信号のビット数を指定する.
+                              --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REG_ADDR_BITS     : --! @brief INTAKE ADDRESS REGISTER BITS :
+                              --! I_REG_ADDR信号のビット数を指定する.
+                              --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REQ_SIZE_VALID    : --! @brief INTAKE REQUEST SIZE VALID :
+                              --! I_REQ_SIZE信号を有効にするか否かを指示する.
+                              --! * I_REQ_SIZE_VALID=0で無効.
+                              --! * I_REQ_SIZE_VALID=1で有効.
+                              integer range 0 to 1 :=  1;
+        I_REQ_SIZE_BITS     : --! @brief INTAKE REQUEST SIZE BITS :
+                              --! I_REQ_SIZE信号のビット数を指定する.
+                              --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REG_SIZE_BITS     : --! @brief INTAKE SIZE REGISTER BITS :
+                              --! I_REG_SIZE信号のビット数を指定する.
+                              --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REG_MODE_BITS     : --! @brief INTAKE MODE REGISTER BITS :
+                              --! I_MODE_L/I_MODE_D/I_MODE_Qのビット数を指定する.
+                              integer := 32;
+        I_REG_STAT_BITS     : --! @brief INTAKE STATUS REGISTER BITS :
+                              --! I_STAT_L/I_STAT_D/I_STAT_Qのビット数を指定する.
+                              integer := 32;
+        I_USE_PUSH_RSV_SIZE : --! @brief INTAKE USE PUSH RESERVE SIZE :
+                              --! I_PUSH_RSV_SIZE信号を使用するか否かを指示する.
+                              --! * I_USE_PUSH_RSV_SIZE=0で使用しない.
+                              --! * I_USE_PUSH_RSV_SIZE=1で使用する.
+                              integer range 0 to 1 := 0;
+        I_USE_PUSH_BUF_SIZE : --! @brief INTAKE USE PUSH BUFFER SIZE :
+                              --! I_PUSH_BUF_SIZE信号を使用するか否かを指示する.
+                              --! * I_USE_PUSH_BUF_SIZE=0で使用しない.
+                              --! * I_USE_PUSH_BUF_SIZE=1で使用する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FIXED FLOW OPEN :
+                              --! I_FLOW_READYを常に'1'にするか否かを指定する.
+                              --! * I_FIXED_FLOW_OPEN=1で常に'1'にする.
+                              --! * I_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_POOL_OPEN   : --! @brief INTAKE VALVE FIXED POOL OPEN :
+                              --! I_PUSH_BUF_READYを常に'1'にするか否かを指定する.
+                              --! * I_FIXED_POOL_OPEN=1で常に'1'にする.
+                              --! * I_FIXED_POOL_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        O_CLK_RATE          : --! @brief OUTPUT CLOCK RATE :
+                              --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側
+                              --! のクロック(O_CLK)との関係を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer :=  1;
+        O_REQ_ADDR_VALID    : --! @brief OUTLET REQUEST ADDRESS VALID :
+                              --! O_REQ_ADDR信号を有効にするか否かを指示する.
+                              --! * O_REQ_ADDR_VAL=0で無効.
+                              --! * O_REQ_ADDR_VAL=1で有効.
+                              integer range 0 to 1 :=  1;
+        O_REQ_ADDR_BITS     : --! @brief OUTLET REQUEST ADDRESS BITS :
+                              --! O_REQ_ADDR信号のビット数を指定する.
+                              --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REG_ADDR_BITS     : --! @brief OUTLET ADDRESS REGISTER BITS :
+                              --! O_REG_ADDR信号のビット数を指定する.
+                              --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REQ_SIZE_VALID    : --! @brief OUTLET REQUEST SIZE VALID :
+                              --! O_REQ_SIZE信号を有効にするか否かを指示する.
+                              --! * O_REQ_SIZE_VAL=0で無効.
+                              --! * O_REQ_SIZE_VAL=1で有効.
+                              integer range 0 to 1 :=  1;
+        O_REQ_SIZE_BITS     : --! @brief OUTLET REQUEST SIZE BITS :
+                              --! O_REQ_SIZE信号のビット数を指定する.
+                              --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REG_SIZE_BITS     : --! @brief OUTLET SIZE REGISTER BITS :
+                              --! O_REG_SIZE信号のビット数を指定する.
+                              --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REG_MODE_BITS     : --! @brief OUTLET MODE REGISTER BITS :
+                              --! O_MODE_L/O_MODE_D/O_MODE_Qのビット数を指定する.
+                              integer := 32;
+        O_REG_STAT_BITS     : --! @brief OUTLET STATUS REGISTER BITS :
+                              --! O_STAT_L/O_STAT_D/O_STAT_Qのビット数を指定する.
+                              integer := 32;
+        O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FIXED FLOW OPEN :
+                              --! O_FLOW_READYを常に'1'にするか否かを指定する.
+                              --! * O_FIXED_FLOW_OPEN=1で常に'1'にする.
+                              --! * O_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_POOL_OPEN   : --! @brief OUTLET VALVE FIXED POOL OPEN :
+                              --! O_PULL_BUF_READYを常に'1'にするか否かを指定する.
+                              --! * O_FIXED_POOL_OPEN=1で常に'1'にする.
+                              --! * O_FIXED_POOL_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        O_USE_PULL_RSV_SIZE : --! @brief OUTLET USE PULL RESERVE SIZE :
+                              --! I_PULL_RSV_SIZE信号を使用するか否かを指示する.
+                              --! * I_USE_PULL_RSV_SIZE=0で使用しない.
+                              --! * I_USE_PULL_RSV_SIZE=1で使用する.
+                              integer range 0 to 1 := 0;
+        O_USE_PULL_BUF_SIZE : --! @brief OUTLET USE PULL BUFFER SIZE :
+                              --! I_PULL_BUF_SIZE信号を使用するか否かを指示する.
+                              --! * I_USE_PULL_BUF_SIZE=0で使用しない.
+                              --! * I_USE_PULL_BUF_SIZE=1で使用する.
+                              integer range 0 to 1 := 0;
+        BUF_DEPTH           : --! @brief BUFFER DEPTH :
+                              --! バッファの容量(バイト数)を２のべき乗値で指定する.
+                              integer := 12;
+        I2O_DELAY_CYCLE     : --! @brief DELAY CYCLE :
+                              --! 入力側から出力側への転送する際の遅延サイクルを
+                              --! 指定する.
+                              integer :=  0
     );
     port (
     -------------------------------------------------------------------------------
     --Reset Signals.
     -------------------------------------------------------------------------------
-        RST             : in  std_logic;
+        RST                 : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Clock and Clock Enable.
     -------------------------------------------------------------------------------
-        I_CLK           : in  std_logic;
-        I_CLR           : in  std_logic;
-        I_CKE           : in  std_logic;
+        I_CLK               : in  std_logic;
+        I_CLR               : in  std_logic;
+        I_CKE               : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Control Register Interface.
     -------------------------------------------------------------------------------
-        I_ADDR_L        : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_ADDR_D        : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_ADDR_Q        : out std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_SIZE_L        : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_SIZE_D        : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_SIZE_Q        : out std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_MODE_L        : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_MODE_D        : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_MODE_Q        : out std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_STAT_L        : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_D        : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_Q        : out std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_I        : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_RESET_L       : in  std_logic;
-        I_RESET_D       : in  std_logic;
-        I_RESET_Q       : out std_logic;
-        I_START_L       : in  std_logic;
-        I_START_D       : in  std_logic;
-        I_START_Q       : out std_logic;
-        I_STOP_L        : in  std_logic;
-        I_STOP_D        : in  std_logic;
-        I_STOP_Q        : out std_logic;
-        I_PAUSE_L       : in  std_logic;
-        I_PAUSE_D       : in  std_logic;
-        I_PAUSE_Q       : out std_logic;
-        I_FIRST_L       : in  std_logic;
-        I_FIRST_D       : in  std_logic;
-        I_FIRST_Q       : out std_logic;
-        I_LAST_L        : in  std_logic;
-        I_LAST_D        : in  std_logic;
-        I_LAST_Q        : out std_logic;
-        I_DONE_EN_L     : in  std_logic;
-        I_DONE_EN_D     : in  std_logic;
-        I_DONE_EN_Q     : out std_logic;
-        I_DONE_ST_L     : in  std_logic;
-        I_DONE_ST_D     : in  std_logic;
-        I_DONE_ST_Q     : out std_logic;
-        I_ERR_ST_L      : in  std_logic;
-        I_ERR_ST_D      : in  std_logic;
-        I_ERR_ST_Q      : out std_logic;
+        I_ADDR_L            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_ADDR_D            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_ADDR_Q            : out std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_SIZE_L            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_SIZE_D            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_SIZE_Q            : out std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_MODE_L            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_MODE_D            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_MODE_Q            : out std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_STAT_L            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_D            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_Q            : out std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_I            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_RESET_L           : in  std_logic;
+        I_RESET_D           : in  std_logic;
+        I_RESET_Q           : out std_logic;
+        I_START_L           : in  std_logic;
+        I_START_D           : in  std_logic;
+        I_START_Q           : out std_logic;
+        I_STOP_L            : in  std_logic;
+        I_STOP_D            : in  std_logic;
+        I_STOP_Q            : out std_logic;
+        I_PAUSE_L           : in  std_logic;
+        I_PAUSE_D           : in  std_logic;
+        I_PAUSE_Q           : out std_logic;
+        I_FIRST_L           : in  std_logic;
+        I_FIRST_D           : in  std_logic;
+        I_FIRST_Q           : out std_logic;
+        I_LAST_L            : in  std_logic;
+        I_LAST_D            : in  std_logic;
+        I_LAST_Q            : out std_logic;
+        I_DONE_EN_L         : in  std_logic;
+        I_DONE_EN_D         : in  std_logic;
+        I_DONE_EN_Q         : out std_logic;
+        I_DONE_ST_L         : in  std_logic;
+        I_DONE_ST_D         : in  std_logic;
+        I_DONE_ST_Q         : out std_logic;
+        I_ERR_ST_L          : in  std_logic;
+        I_ERR_ST_D          : in  std_logic;
+        I_ERR_ST_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Configuration Signals.
     -------------------------------------------------------------------------------
-        I_ADDR_FIX      : in  std_logic;
-        I_THRESHOLD_SIZE: in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_ADDR_FIX          : in  std_logic;
+        I_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Clock and Clock Enable.
     -------------------------------------------------------------------------------
-        O_CLK           : in  std_logic;
-        O_CLR           : in  std_logic;
-        O_CKE           : in  std_logic;
+        O_CLK               : in  std_logic;
+        O_CLR               : in  std_logic;
+        O_CKE               : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Control Register Interface.
     -------------------------------------------------------------------------------
-        O_ADDR_L        : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_ADDR_D        : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_ADDR_Q        : out std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_SIZE_L        : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_SIZE_D        : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_SIZE_Q        : out std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_MODE_L        : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_MODE_D        : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_MODE_Q        : out std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_STAT_L        : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_D        : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_Q        : out std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_I        : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_RESET_L       : in  std_logic;
-        O_RESET_D       : in  std_logic;
-        O_RESET_Q       : out std_logic;
-        O_START_L       : in  std_logic;
-        O_START_D       : in  std_logic;
-        O_START_Q       : out std_logic;
-        O_STOP_L        : in  std_logic;
-        O_STOP_D        : in  std_logic;
-        O_STOP_Q        : out std_logic;
-        O_PAUSE_L       : in  std_logic;
-        O_PAUSE_D       : in  std_logic;
-        O_PAUSE_Q       : out std_logic;
-        O_FIRST_L       : in  std_logic;
-        O_FIRST_D       : in  std_logic;
-        O_FIRST_Q       : out std_logic;
-        O_LAST_L        : in  std_logic;
-        O_LAST_D        : in  std_logic;
-        O_LAST_Q        : out std_logic;
-        O_DONE_EN_L     : in  std_logic;
-        O_DONE_EN_D     : in  std_logic;
-        O_DONE_EN_Q     : out std_logic;
-        O_DONE_ST_L     : in  std_logic;
-        O_DONE_ST_D     : in  std_logic;
-        O_DONE_ST_Q     : out std_logic;
-        O_ERR_ST_L      : in  std_logic;
-        O_ERR_ST_D      : in  std_logic;
-        O_ERR_ST_Q      : out std_logic;
+        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_Q            : out std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_Q            : out std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_Q            : out std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_Q            : out std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_RESET_L           : in  std_logic;
+        O_RESET_D           : in  std_logic;
+        O_RESET_Q           : out std_logic;
+        O_START_L           : in  std_logic;
+        O_START_D           : in  std_logic;
+        O_START_Q           : out std_logic;
+        O_STOP_L            : in  std_logic;
+        O_STOP_D            : in  std_logic;
+        O_STOP_Q            : out std_logic;
+        O_PAUSE_L           : in  std_logic;
+        O_PAUSE_D           : in  std_logic;
+        O_PAUSE_Q           : out std_logic;
+        O_FIRST_L           : in  std_logic;
+        O_FIRST_D           : in  std_logic;
+        O_FIRST_Q           : out std_logic;
+        O_LAST_L            : in  std_logic;
+        O_LAST_D            : in  std_logic;
+        O_LAST_Q            : out std_logic;
+        O_DONE_EN_L         : in  std_logic;
+        O_DONE_EN_D         : in  std_logic;
+        O_DONE_EN_Q         : out std_logic;
+        O_DONE_ST_L         : in  std_logic;
+        O_DONE_ST_D         : in  std_logic;
+        O_DONE_ST_Q         : out std_logic;
+        O_ERR_ST_L          : in  std_logic;
+        O_ERR_ST_D          : in  std_logic;
+        O_ERR_ST_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Configuration Signals.
     -------------------------------------------------------------------------------
-        O_ADDR_FIX      : in  std_logic;
-        O_THRESHOLD_SIZE: in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_ADDR_FIX          : in  std_logic;
+        O_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-        I_REQ_VALID     : out std_logic;
-        I_REQ_ADDR      : out std_logic_vector(I_REQ_ADDR_BITS-1 downto 0);
-        I_REQ_SIZE      : out std_logic_vector(I_REQ_SIZE_BITS-1 downto 0);
-        I_REQ_BUF_PTR   : out std_logic_vector(BUF_DEPTH      -1 downto 0);
-        I_REQ_FIRST     : out std_logic;
-        I_REQ_LAST      : out std_logic;
-        I_REQ_READY     : in  std_logic;
+        I_REQ_VALID         : out std_logic;
+        I_REQ_ADDR          : out std_logic_vector(I_REQ_ADDR_BITS-1 downto 0);
+        I_REQ_SIZE          : out std_logic_vector(I_REQ_SIZE_BITS-1 downto 0);
+        I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
+        I_REQ_FIRST         : out std_logic;
+        I_REQ_LAST          : out std_logic;
+        I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Acknowledge Signals.
     -------------------------------------------------------------------------------
-        I_ACK_VALID     : in  std_logic;
-        I_ACK_SIZE      : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_ACK_ERROR     : in  std_logic;
-        I_ACK_NEXT      : in  std_logic;
-        I_ACK_LAST      : in  std_logic;
-        I_ACK_STOP      : in  std_logic;
-        I_ACK_NONE      : in  std_logic;
+        I_ACK_VALID         : in  std_logic;
+        I_ACK_SIZE          : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_ACK_ERROR         : in  std_logic;
+        I_ACK_NEXT          : in  std_logic;
+        I_ACK_LAST          : in  std_logic;
+        I_ACK_STOP          : in  std_logic;
+        I_ACK_NONE          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        I_XFER_BUSY         : in  std_logic;
+        I_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
-        I_FLOW_PAUSE    : out std_logic;
-        I_FLOW_STOP     : out std_logic;
-        I_FLOW_LAST     : out std_logic;
-        I_FLOW_SIZE     : out std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_VALID    : in  std_logic;
-        I_PUSH_LAST     : in  std_logic;
-        I_PUSH_ERROR    : in  std_logic;
-        I_PUSH_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_FLOW_READY        : out std_logic;
+        I_FLOW_PAUSE        : out std_logic;
+        I_FLOW_STOP         : out std_logic;
+        I_FLOW_LAST         : out std_logic;
+        I_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_FIN_VALID    : in  std_logic;
+        I_PUSH_FIN_LAST     : in  std_logic;
+        I_PUSH_FIN_ERROR    : in  std_logic;
+        I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_RSV_VALID    : in  std_logic;
+        I_PUSH_RSV_LAST     : in  std_logic;
+        I_PUSH_RSV_ERROR    : in  std_logic;
+        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_BUF_RESET    : in  std_logic;
+        I_PUSH_BUF_VALID    : in  std_logic;
+        I_PUSH_BUF_LAST     : in  std_logic;
+        I_PUSH_BUF_ERROR    : in  std_logic;
+        I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Status.
     -------------------------------------------------------------------------------
-        I_OPEN          : out std_logic;
-        I_RUNNING       : out std_logic;
-        I_DONE          : out std_logic;
-        I_ERROR         : out std_logic;
+        I_OPEN              : out std_logic;
+        I_RUNNING           : out std_logic;
+        I_DONE              : out std_logic;
+        I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-        O_REQ_VALID     : out std_logic;
-        O_REQ_ADDR      : out std_logic_vector(O_REQ_ADDR_BITS-1 downto 0);
-        O_REQ_SIZE      : out std_logic_vector(O_REQ_SIZE_BITS-1 downto 0);
-        O_REQ_BUF_PTR   : out std_logic_vector(BUF_DEPTH      -1 downto 0);
-        O_REQ_FIRST     : out std_logic;
-        O_REQ_LAST      : out std_logic;
-        O_REQ_READY     : in  std_logic;
+        O_REQ_VALID         : out std_logic;
+        O_REQ_ADDR          : out std_logic_vector(O_REQ_ADDR_BITS-1 downto 0);
+        O_REQ_SIZE          : out std_logic_vector(O_REQ_SIZE_BITS-1 downto 0);
+        O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
+        O_REQ_FIRST         : out std_logic;
+        O_REQ_LAST          : out std_logic;
+        O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Response Signals.
     -------------------------------------------------------------------------------
-        O_ACK_VALID     : in  std_logic;
-        O_ACK_SIZE      : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_ACK_ERROR     : in  std_logic;
-        O_ACK_NEXT      : in  std_logic;
-        O_ACK_LAST      : in  std_logic;
-        O_ACK_STOP      : in  std_logic;
-        O_ACK_NONE      : in  std_logic;
+        O_ACK_VALID         : in  std_logic;
+        O_ACK_SIZE          : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_ACK_ERROR         : in  std_logic;
+        O_ACK_NEXT          : in  std_logic;
+        O_ACK_LAST          : in  std_logic;
+        O_ACK_STOP          : in  std_logic;
+        O_ACK_NONE          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        O_XFER_BUSY         : in  std_logic;
+        O_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
-        O_FLOW_PAUSE    : out std_logic;
-        O_FLOW_STOP     : out std_logic;
-        O_FLOW_LAST     : out std_logic;
-        O_FLOW_SIZE     : out std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_VALID    : in  std_logic;
-        O_PULL_LAST     : in  std_logic;
-        O_PULL_ERROR    : in  std_logic;
-        O_PULL_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_FLOW_READY        : out std_logic;
+        O_FLOW_PAUSE        : out std_logic;
+        O_FLOW_STOP         : out std_logic;
+        O_FLOW_LAST         : out std_logic;
+        O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_FIN_VALID    : in  std_logic;
+        O_PULL_FIN_LAST     : in  std_logic;
+        O_PULL_FIN_ERROR    : in  std_logic;
+        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_RSV_VALID    : in  std_logic;
+        O_PULL_RSV_LAST     : in  std_logic;
+        O_PULL_RSV_ERROR    : in  std_logic;
+        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_BUF_RESET    : in  std_logic;
+        O_PULL_BUF_VALID    : in  std_logic;
+        O_PULL_BUF_LAST     : in  std_logic;
+        O_PULL_BUF_ERROR    : in  std_logic;
+        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Status.
     -------------------------------------------------------------------------------
-        O_OPEN          : out std_logic;
-        O_RUNNING       : out std_logic;
-        O_DONE          : out std_logic;
-        O_ERROR         : out std_logic
+        O_OPEN              : out std_logic;
+        O_RUNNING           : out std_logic;
+        O_DONE              : out std_logic;
+        O_ERROR             : out std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -741,6 +853,8 @@ component PUMP_OPERATION_PROCESSOR
         M_ACK_STOP      : in  std_logic;
         M_ACK_NONE      : in  std_logic;
         M_ACK_SIZE      : in  std_logic_vector(M_BUF_SIZE           downto 0);
+        M_XFER_BUSY     : in  std_logic;
+        M_XFER_DONE     : in  std_logic;
         M_BUF_WE        : in  std_logic;
         M_BUF_BEN       : in  std_logic_vector(2**(M_BUF_WIDTH-3)-1 downto 0);
         M_BUF_DATA      : in  std_logic_vector(2**(M_BUF_WIDTH  )-1 downto 0);

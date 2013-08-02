@@ -2,12 +2,12 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.0.1
---!     @date    2012/12/11
+--!     @version 1.5.0
+--!     @date    2013/4/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012,2013 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@ use     ieee.std_logic_1164.all;
 --!        * ちょっと汎用的に作りすぎたせいか、多少回路が冗長です.
 --!          特にI_WIDTHが大きいとかなり大きな回路になってしまいます.
 --!          例えば32bit入力64bit出力の場合、
---!          WORD_BITS=8 、ENBL_BITS=1、I_WIDTH=4、O_WIDTH=8 とするよりも、
---!          WORD_BITS=32、ENBL_BITS=4、I_WIDTH=1、O_WIDTH=2 としたほうが
+--!          WORD_BITS=8 、STRB_BITS=1、I_WIDTH=4、O_WIDTH=8 とするよりも、
+--!          WORD_BITS=32、STRB_BITS=4、I_WIDTH=1、O_WIDTH=2 としたほうが
 --!          回路はコンパクトになります.
 --!        * O_WIDTH>I_WIDTHの場合、最初のワードデータを出力する際のオフセットを
 --!          設定できます. 詳細はOFFSETの項を参照.
@@ -58,9 +58,9 @@ entity  REDUCER is
         WORD_BITS   : --! @brief WORD BITS :
                       --! １ワードのデータのビット数を指定する.
                       integer := 8;
-        ENBL_BITS   : --! @brief ENABLE BITS :
-                      --! ワードデータのうち有効なデータであることを示す信号の
-                      --! ビット数を指定する.
+        STRB_BITS   : --! @brief ENABLE BITS :
+                      --! ワードデータのうち有効なデータであることを示す信号(STRB)
+                      --! のビット数を指定する.
                       integer := 1;
         I_WIDTH     : --! @brief INPUT WORD WIDTH :
                       --! 入力側のデータのワード数を指定する.
@@ -70,10 +70,10 @@ entity  REDUCER is
                       integer := 4;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
-                      --! * 少なくともキューの大きさは、I_WIDTH+O_WIDTH-1以上で
-                      --!   なければならない.
-                      --! * ただしQUEUE_SIZE=0を指定した場合は、キューの深さは
-                      --!   自動的にI_WIDTH+O_WIDTH に設定される.
+                      --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
+                      --!   O_WIDTH+I_WIDTH+I_WIDTH-1 に設定される.
+                      --! * QUEUE_SIZE<O_WIDTH+I_WIDTH-1の場合は、キューの深さは
+                      --!   自動的にO_WIDTH+I_WIDTH-1に設定される.
                       integer := 0;
         VALID_MIN   : --! @brief BUFFER VALID MINIMUM NUMBER :
                       --! VALID信号の配列の最小値を指定する.
@@ -86,19 +86,19 @@ entity  REDUCER is
                       --! 示すフラグ.
                       --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
                       --!   ため回路が簡単になる.
-                      integer := 0;
+                      integer range 0 to 1 := 0;
         FLUSH_ENABLE: --! @brief FLUSH ENABLE :
                       --! FLUSH/I_FLUSHによるフラッシュ処理を有効にするかどうかを
                       --! 指定する.
                       --! * FLUSHとDONEとの違いは、DONEは最後のデータの出力時に
                       --!   キューの状態をすべてクリアするのに対して、
-                      --!   FLUSHは最後のデータの出力時にENBLだけをクリアしてVALは
+                      --!   FLUSHは最後のデータの出力時にSTRBだけをクリアしてVALは
                       --!   クリアしない.
                       --!   そのため次の入力データは、最後のデータの次のワード位置
                       --!   から格納される.
                       --! * フラッシュ処理を行わない場合は、0を指定すると回路が若干
                       --!   簡単になる.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ entity  REDUCER is
                       --! 開始信号.
                       --! * この信号はOFFSETを内部に設定してキューを初期化する.
                       --! * 最初にデータ入力と同時にアサートしても構わない.
-                      in  std_logic;
+                      in  std_logic := '0';
         OFFSET      : --! @brief OFFSET :
                       --! 最初のワードの出力位置を指定する.
                       --! * START信号がアサートされた時のみ有効.
@@ -135,21 +135,21 @@ entity  REDUCER is
                       --!   3バイト目から出力される.    
                       --!   OFFSET="0111"に設定すると、最初に入力したバイトデータは
                       --!   4バイト目から出力される.    
-                      in  std_logic_vector(O_WIDTH-1 downto 0);
+                      in  std_logic_vector(O_WIDTH-1 downto 0) := (others => '0');
         DONE        : --! @brief DONE :
                       --! 終了信号.
                       --! * この信号をアサートすることで、キューに残っているデータ
                       --!   を掃き出す.
                       --!   その際、最後のワードと同時にO_DONE信号がアサートされる.
                       --! * FLUSH信号との違いは、FLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         FLUSH       : --! @brief FLUSH :
                       --! フラッシュ信号.
                       --! * この信号をアサートすることで、キューに残っているデータ
                       --!   を掃き出す.
                       --!   その際、最後のワードと同時にO_FLUSH信号がアサートされる.
                       --! * DONE信号との違いは、FLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         BUSY        : --! @brief BUSY :
                       --! ビジー信号.
                       --! * 最初にデータが入力されたときにアサートされる.
@@ -163,29 +163,34 @@ entity  REDUCER is
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
+        I_ENABLE    : --! @brief INPUT ENABLE :
+                      --! 入力許可信号.
+                      --! * この信号がアサートされている場合、キューの入力を許可する.
+                      --! * この信号がネゲートされている場合、I_RDY アサートされない.
+                      in  std_logic := '1';
         I_DATA      : --! @brief INPUT WORD DATA :
                       --! ワードデータ入力.
                       in  std_logic_vector(I_WIDTH*WORD_BITS-1 downto 0);
-        I_ENBL      : --! @brief INPUT WORD ENABLE :
-                      --! ワードイネーブル信号入力.
-                      in  std_logic_vector(I_WIDTH*ENBL_BITS-1 downto 0);
+        I_STRB      : --! @brief INPUT WORD ENABLE :
+                      --! ワードストローブ信号入力.
+                      in  std_logic_vector(I_WIDTH*STRB_BITS-1 downto 0);
         I_DONE      : --! @brief INPUT WORD DONE :
                       --! 最終ワード信号入力.
                       --! * 最後の力ワードデータ入であることを示すフラグ.
                       --! * 基本的にはDONE信号と同じ働きをするが、I_DONE信号は
                       --!   最後のワードデータを入力する際に同時にアサートする.
                       --! * I_FLUSH信号との違いはFLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         I_FLUSH     : --! @brief INPUT WORD FLUSH :
                       --! 最終ワード信号入力.
                       --! * 最後のワードデータ入力であることを示すフラグ.
                       --! * 基本的にはFLUSH信号と同じ働きをするが、I_FLUSH信号は
                       --!   最後のワードデータを入力する際に同時にアサートする.
                       --! * I_DONE信号との違いはFLUSH_ENABLEの項を参照.
-                      in  std_logic;
+                      in  std_logic := '0';
         I_VAL       : --! @brief INPUT WORD VALID :
                       --! 入力ワード有効信号.
-                      --! * I_DATA/I_ENBL/I_DONE/I_FLUSHが有効であることを示す.
+                      --! * I_DATA/I_STRB/I_DONE/I_FLUSHが有効であることを示す.
                       --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
                       in  std_logic;
         I_RDY       : --! @brief INPUT WORD READY :
@@ -196,12 +201,17 @@ entity  REDUCER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
+        O_ENABLE    : --! @brief OUTPUT ENABLE :
+                      --! 出力許可信号.
+                      --! * この信号がアサートされている場合、キューの出力を許可する.
+                      --! * この信号がネゲートされている場合、O_VAL アサートされない.
+                      in  std_logic := '1';
         O_DATA      : --! @brief OUTPUT WORD DATA :
                       --! ワードデータ出力.
                       out std_logic_vector(O_WIDTH*WORD_BITS-1 downto 0);
-        O_ENBL      : --! @brief OUTPUT WORD ENABLE :
-                      --! ワードイネーブル信号出力.
-                      out std_logic_vector(O_WIDTH*ENBL_BITS-1 downto 0);
+        O_STRB      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワードストローブ信号出力.
+                      out std_logic_vector(O_WIDTH*STRB_BITS-1 downto 0);
         O_DONE      : --! @brief OUTPUT WORD DONE :
                       --! 最終ワード信号出力.
                       --! * 最後のワードデータ出力であることを示すフラグ.
@@ -214,7 +224,7 @@ entity  REDUCER is
                       out std_logic;
         O_VAL       : --! @brief OUTPUT WORD VALID :
                       --! 出力ワード有効信号.
-                      --! * O_DATA/O_ENBL/O_DONE/O_FLUSHが有効であることを示す.
+                      --! * O_DATA/O_STRB/O_DONE/O_FLUSHが有効であることを示す.
                       --! * O_VAL='1'and O_RDY='1'でワードデータがキューから取り除かれる.
                       out std_logic;
         O_RDY       : --! @brief OUTPUT WORD READY :
@@ -231,18 +241,18 @@ library ieee;
 use     ieee.std_logic_1164.all;
 architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
-    --! @brief ワード単位でデータ/データイネーブル信号/ワード有効フラグをまとめておく
+    --! @brief ワード単位でデータ/データストローブ信号/ワード有効フラグをまとめておく
     -------------------------------------------------------------------------------
     type      WORD_TYPE    is record
               DATA          : std_logic_vector(WORD_BITS-1 downto 0);
-              ENBL          : std_logic_vector(ENBL_BITS-1 downto 0);
+              STRB          : std_logic_vector(STRB_BITS-1 downto 0);
               VAL           : boolean;
     end record;
     -------------------------------------------------------------------------------
     --! @brief WORD TYPE の初期化時の値.
     -------------------------------------------------------------------------------
     constant  WORD_NULL     : WORD_TYPE := (DATA => (others => '0'),
-                                            ENBL => (others => '0'),
+                                            STRB => (others => '0'),
                                             VAL  => FALSE);
     -------------------------------------------------------------------------------
     --! @brief WORD TYPE の配列の定義.
@@ -290,10 +300,10 @@ architecture RTL of REDUCER is
             else
                 assert (QUEUE_SIZE >= I_WIDTH+O_WIDTH-1)
                     report "require QUEUE_SIZE >= I_WIDTH+O_WIDTH-1" severity WARNING;
-                return I_WIDTH+O_WIDTH;
+                return O_WIDTH+I_WIDTH-1;
             end if;
         else
-                return I_WIDTH+O_WIDTH;
+                return O_WIDTH+I_WIDTH+I_WIDTH-1;
         end if;
     end function;
     -------------------------------------------------------------------------------
@@ -303,7 +313,7 @@ architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
     --! @brief 1ワード分のイネーブル信号がオール0であることを示す定数.
     -------------------------------------------------------------------------------
-    constant  ENBL_NULL     : std_logic_vector(ENBL_BITS-1 downto 0) := (others => '0');
+    constant  STRB_NULL     : std_logic_vector(STRB_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     --! @brief FLUSH 出力フラグ.
     -------------------------------------------------------------------------------
@@ -386,7 +396,7 @@ begin
                                 next_queue(i).VAL := FALSE;
                             end if;
                             next_queue(i).DATA := (others => '0');
-                            next_queue(i).ENBL := (others => '0');
+                            next_queue(i).STRB := (others => '0');
                         end loop;
                     else
                         for i in next_queue'range loop
@@ -409,7 +419,7 @@ begin
                             next_queue(i).VAL := FALSE;
                         end if;
                         next_queue(i).DATA := (others => '0');
-                        next_queue(i).ENBL := (others => '0');
+                        next_queue(i).STRB := (others => '0');
                     end loop;
                 end if;
                 -------------------------------------------------------------------
@@ -418,8 +428,8 @@ begin
                 if (I_VAL = '1' and i_ready = '1') then
                     for i in in_word'range loop
                         in_word(i).DATA :=  I_DATA((i+1)*WORD_BITS-1 downto i*WORD_BITS);
-                        in_word(i).ENBL :=  I_ENBL((i+1)*ENBL_BITS-1 downto i*ENBL_BITS);
-                        in_word(i).VAL  := (I_ENBL((i+1)*ENBL_BITS-1 downto i*ENBL_BITS) /= ENBL_NULL);
+                        in_word(i).STRB :=  I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS);
+                        in_word(i).VAL  := (I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL);
                     end loop;
                     if (I_JUSTIFIED    > 0) or
                        (in_word'length = 1) then
@@ -517,9 +527,10 @@ begin
                 -------------------------------------------------------------------
                 -- 出力有効信号の生成
                 -------------------------------------------------------------------
-                if (next_done_output  = '1') or
-                   (next_flush_output = '1') or
-                   (next_queue(O_WIDTH-1).VAL = TRUE) then
+                if (O_ENABLE = '1') and
+                   ((next_done_output  = '1') or
+                    (next_flush_output = '1') or
+                    (next_queue(O_WIDTH-1).VAL = TRUE)) then
                     o_valid <= '1';
                 else
                     o_valid <= '0';
@@ -527,7 +538,8 @@ begin
                 -------------------------------------------------------------------
                 -- 入力可能信号の生成
                 -------------------------------------------------------------------
-                if (next_done_output  = '0' and next_done_pending  = '0') and
+                if (I_ENABLE = '1') and 
+                   (next_done_output  = '0' and next_done_pending  = '0') and
                    (next_flush_output = '0' and next_flush_pending = '0') and
                    (next_queue(next_queue'length-I_WIDTH).VAL = FALSE) then
                     i_ready <= '1';
@@ -567,7 +579,7 @@ begin
     process (curr_queue) begin
         for i in 0 to O_WIDTH-1 loop
             O_DATA((i+1)*WORD_BITS-1 downto i*WORD_BITS) <= curr_queue(i).DATA;
-            O_ENBL((i+1)*ENBL_BITS-1 downto i*ENBL_BITS) <= curr_queue(i).ENBL;
+            O_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS) <= curr_queue(i).STRB;
         end loop;
         for i in VALID'range loop
             if (curr_queue'low <= i and i <= curr_queue'high) then

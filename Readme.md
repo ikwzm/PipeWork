@@ -49,6 +49,13 @@
 PUMP_CONTROLLERの動作を、メモリ上に展開したオペレーションリストに基づいて行うプロセッサもどきです.   
 
 
+*PipeWork* PIPE Component
+-------------------------
+
+####PIPE_CORE_UNIT####
+
+バスプロトコル変換用のコアユニットです.
+
 *PipeWork* AIX4 Component
 -------------------------
 
@@ -63,6 +70,14 @@ AXI4 Master Read コントローラーです.
 ####AXI4_MASTER_WRITE_INTERFACE####
 
 AXI4 Master Write コントローラーです.    
+
+####AXI4_SLAVE_READ_INTERFACE####
+
+AXI4 Slave Read コントローラーです.    
+
+####AXI4_SLAVE_WRITE_INTERFACE####
+
+AXI4 Slave Write コントローラーです.    
 
 ####AXI4_REGISTER_INTERFACE####
 

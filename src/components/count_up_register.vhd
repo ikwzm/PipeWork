@@ -2,8 +2,8 @@
 --!     @file    count_up_register.vhd
 --!     @brief   COUNT UP REGISTER
 --!              転送したバイト数をカウントするレジスタ.
---!     @version 1.4.0
---!     @date    2013/3/15
+--!     @version 1.5.0
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -50,9 +50,9 @@ entity  COUNT_UP_REGISTER is
     generic (
         VALID       : --! @brief COUNTER VALID :
                       --! このカウンターを有効にするかどうかを指定する.
-                      --! * VALID =0 : このカウンターは常に無効.
-                      --! * VALID/=0 : このカウンターは常に有効.
-                      integer := 1;
+                      --! * VALID=0 : このカウンターは常に無効.
+                      --! * VALID=1 : このカウンターは常に有効.
+                      integer range 0 to 1 := 1;
         BITS        : --! @brief  COUNTER BITS :
                       --! カウンターのビット数を指定する.
                       --! * BIT=0の場合、このカウンターは常に無効になる.

@@ -2,12 +2,12 @@
 --!     @file    queue_register.vhd
 --!     @brief   QUEUE REGISTER MODULE :
 --!              フリップフロップベースの比較的浅いキュー.
---!     @version 0.2.0
---!     @date    2012/8/29
+--!     @version 1.5.0
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012,2013 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,7 @@ entity  QUEUE_REGISTER is
                       --! レジスタが不必要にトグルすることを防いで消費電力を
                       --! 下げるようにする.
                       --! ただし、回路が若干増える.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------

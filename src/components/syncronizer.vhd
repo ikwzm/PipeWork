@@ -2,12 +2,12 @@
 --!     @file    syncronizer.vhd
 --!     @brief   SYNCRONIZER MODULE :
 --!              異なるクロックで動作するパスを継ぐアダプタのクロック同期化モジュール.
---!     @version 0.1.2
---!     @date    2012/9/3
+--!     @version 1.5.0
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012,2013 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -94,7 +94,7 @@ entity  SYNCRONIZER is
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい。
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
@@ -102,29 +102,30 @@ entity  SYNCRONIZER is
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい.
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         I_CLK_FALL  : --! @brief USE INPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のクロック(I_CLK)の立ち下がりを使うかどう
                       --! かを指定する.
+                      --! * この変数は後方互換性のために存在する. 現在は未使用.
                       --! * I_CLK_FALL = 0 の場合は使わない.
-                      --! * I_CLK_FALL > 0 の場合は使う.
-                      integer :=  0;
+                      --! * I_CLK_FALL = 1 の場合は使う.
+                      integer range 0 to 1 :=  0;
         O_CLK_FALL  : --! @brief USE OUTPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、出力側のクロック(OCLK)の立ち下がりを使うかどう
                       --! かを指定する.
                       --! * O_CLK_FALL = 0 の場合は使わない.
-                      --! * O_CLK_FALL > 0 の場合は使う.
-                      integer :=  0;
+                      --! * O_CLK_FALL = 1 の場合は使う.
+                      integer range 0 to 1 :=  0;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_VAL/O_DATA)をレジスタ出力するかどうか
                       --! を指定する.
                       --! * この変数は I_CLK_RATE > 0 の場合のみ有効. 
                       --!   I_CLK_RATE = 0 の場合は、常にレジスタ出力になる.
                       --! * O_CLK_REGS = 0 の場合はレジスタ出力しない.
-                      --! * O_CLK_REGS > 0 の場合はレジスタ出力する.
-                      integer :=  0
+                      --! * O_CLK_REGS = 1 の場合はレジスタ出力する.
+                      integer range 0 to 1 :=  0
     );
     port (
     -------------------------------------------------------------------------------

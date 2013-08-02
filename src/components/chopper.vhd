@@ -4,12 +4,12 @@
 --!              先頭アドレス(ADDR信号)と容量(SIZE信号)で表されたブロックを、
 --!              指定された単位(SEL信号およびMIN_PIECE変数、MAX_PIECE変数)のピース
 --!              に分割するモジュール.
---!     @version 1.0.0
---!     @date    2012/8/11
+--!     @version 1.5.0
+--!     @date    2013/4/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012,2013 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@ entity  CHOPPER is
                       --!   定され、CHOP信号が一回アサートされた時点でカウンタは停止
                       --!   する. つまり、最初のピースのサイズしか生成されない.
                       --! * 当然 BURST=0 の方が回路規模は小さくなる.
-                      integer := 1;
+                      integer range 0 to 1 := 1;
         MIN_PIECE   : --! @brief MINIMUM PIECE SIZE :
                       --! １ピースの大きさの最小値を2のべき乗値で指定する.
                       --! * 例えば、大きさの単位がバイトの場合次のようになる.
@@ -125,7 +125,7 @@ entity  CHOPPER is
                       --!   論理合成ツールによっては、コンパイルに膨大な時間を
                       --!   要することがある.
                       --!   その場合はこの変数を０にすることで解決出来る場合がある.
-                      integer := 1
+                      integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -338,8 +338,8 @@ begin
     -- init_piece_count : piece_count の初期値.
     --                    block_addr_last を sel_piece 分だけ右にシフトすることに
     --                    よって計算される.
-    -- init_piece_last  : init_piece_count = 0 であることを示すフラグ.
-    -- init_piece_none  : init_piece_count < 0 であることを示すフラグ.
+    -- init_piece_last  : init_piece_count = 1 であることを示すフラグ.
+    -- init_piece_none  : init_piece_count = 0 であることを示すフラグ.
     -------------------------------------------------------------------------------
     process (block_addr_last, SEL)
         type     COUNT_VECTOR is array (INTEGER range <>) 
@@ -417,8 +417,8 @@ begin
     end process;
     -------------------------------------------------------------------------------
     -- curr_piece_count : ピースカウンタ
-    -- curr_piece_none  : ピースカウンタ終了信号(curr_piece_count < 0)
-    -- curr_piece_last  : ピースカウンタ最終信号(curr_piece_count = 0)
+    -- curr_piece_none  : ピースカウンタ終了信号(curr_piece_count = 0)
+    -- curr_piece_last  : ピースカウンタ最終信号(curr_piece_count = 1)
     -------------------------------------------------------------------------------
     PCOUNT_REGS: process (CLK, RST) begin
         if (RST = '1') then

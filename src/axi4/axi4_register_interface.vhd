@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_interface.vhd
 --!     @brief   AXI4 Register Interface
---!     @version 1.3.0
---!     @date    2013/2/11
+--!     @version 1.5.0
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -89,7 +89,7 @@ entity  AXI4_REGISTER_INTERFACE is
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -144,7 +144,7 @@ entity  AXI4_REGISTER_INTERFACE is
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    AXI4_ALEN_TYPE;
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
@@ -204,7 +204,7 @@ entity  AXI4_REGISTER_INTERFACE is
     ------------------------------------------------------------------------------
     -- Register Interface.
     ------------------------------------------------------------------------------
-        REGS_REQ        : --! @breif レジスタアクセス要求信号.
+        REGS_REQ        : --! @brief レジスタアクセス要求信号.
                           --! レジスタアクセス要求時にアサートされる.
                           --! REGS_ACK 信号がアサートされるまで、この信号はアサー
                           --! トされたまま.
