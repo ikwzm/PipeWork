@@ -2,7 +2,7 @@
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
 --!     @version 1.5.0
---!     @date    2013/5/19
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

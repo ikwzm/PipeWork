@@ -2,7 +2,7 @@
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
 --!     @version 1.5.0
---!     @date    2013/5/13
+--!     @date    2013/8/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
