@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.0                                                           --
---!     @date    2013/08/02                                                      --
+--!     @version 1.5.1                                                           --
+--!     @date    2013/08/24                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ component AXI4_MASTER_READ_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびリードデータチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
@@ -571,7 +571,7 @@ component AXI4_MASTER_WRITE_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
@@ -988,7 +988,7 @@ component AXI4_SLAVE_READ_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
@@ -1246,7 +1246,7 @@ component AXI4_SLAVE_WRITE_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         SIZE_BITS       : --! @brief SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
@@ -1522,7 +1522,7 @@ component AXI4_REGISTER_WRITE_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
                           --! レジスタアクセスインターフェースのアドレスのビット幅
                           --! を指定する.
@@ -1651,7 +1651,7 @@ component AXI4_REGISTER_READ_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
                           --! レジスタアクセスインターフェースのアドレスのビット幅
                           --! を指定する.
@@ -1764,7 +1764,7 @@ component AXI4_REGISTER_INTERFACE
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH   := AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
                           --! レジスタアクセスインターフェースのアドレスのビット幅
                           --! を指定する.

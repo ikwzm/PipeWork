@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_types.vhd
 --!     @brief   AXI4 Channel Signal Type Package.
---!     @version 1.5.0
---!     @date    2013/8/2
+--!     @version 1.5.1
+--!     @date    2013/8/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -131,10 +131,6 @@ package AXI4_TYPES is
     constant  AXI4_RESP_SLVERR     : AXI4_RESP_TYPE := "10";
     constant  AXI4_RESP_DECERR     : AXI4_RESP_TYPE := "11";
     -------------------------------------------------------------------------------
-    --! @brief AXI4 ID の最大ビット幅
-    -------------------------------------------------------------------------------
-    constant  AXI4_ID_MAX_WIDTH    : integer := 8;
-    -------------------------------------------------------------------------------
     --! @brief AXI4 ADDR の最大ビット幅
     -------------------------------------------------------------------------------
     constant  AXI4_ADDR_MAX_WIDTH  : integer := 64;
@@ -162,7 +158,7 @@ package AXI4_TYPES is
     --! @brief AXI4 チャネルの可変長信号のビット幅を指定するレコードタイプ.
     -------------------------------------------------------------------------------
     type      AXI4_SIGNAL_WIDTH_TYPE is record
-              ID                   : integer range 1 to AXI4_ID_MAX_WIDTH;
+              ID                   : integer;
               AWADDR               : integer range 1 to AXI4_USER_MAX_WIDTH;
               AWUSER               : integer range 1 to AXI4_USER_MAX_WIDTH;
               ARADDR               : integer range 1 to AXI4_USER_MAX_WIDTH;
@@ -183,7 +179,7 @@ package AXI4_TYPES is
     --! @brief AXI4-Stream の可変長信号のビット幅を指定するレコードタイプ.
     -------------------------------------------------------------------------------
     type      AXI4_STREAM_SIGNAL_WIDTH_TYPE is record
-              ID                   : integer range 1 to AXI4_ID_MAX_WIDTH;
+              ID                   : integer;
               USER                 : integer range 1 to AXI4_USER_MAX_WIDTH;
               DEST                 : integer range 1 to AXI4_DEST_MAX_WIDTH;
               DATA                 : integer range 8 to AXI4_DATA_MAX_WIDTH;

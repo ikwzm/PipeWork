@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.0
---!     @date    2013/8/2
+--!     @version 1.5.1
+--!     @date    2013/8/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -55,7 +55,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
-                          integer range 1 to AXI4_ID_MAX_WIDTH;
+                          integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
