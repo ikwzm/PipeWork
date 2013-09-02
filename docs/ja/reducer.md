@@ -30,5 +30,20 @@ OFFSET="0111"に設定すると、最初に入力したバイトデータは4バ
 ###TODO###
 残念ながらテストベンチは未完成です。すべてのパターンのテストをしているわけではありません。
 
+###注意###
+2013年9月2日現在、Xilinx Vivado2013.2 にて、以下のジェネリック変数で論理合成すると、
+論理合成が終了しないという問題があることがわかっています。
+    generic map (              
+        WORD_BITS   => 8,      
+        STRB_BITS   => 1,      
+        I_WIDTH     => 8,      
+        O_WIDTH     => 4,      
+        QUEUE_SIZE  => 0,      
+        VALID_MIN   => 0,      
+        VALID_MAX   => 0,      
+        I_JUSTIFIED => 0,      
+        FLUSH_ENABLE=> 0       
+    )       
+
 ###ライセンス###
 二条項BSDライセンス (2-clause BSD license) で公開しています。
