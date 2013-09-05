@@ -1,5 +1,5 @@
 GHDL=ghdl
-GHDLFLAGS=--mb-comments
+GHDLFLAGS=--mb-comments -P../../../Dummy_Plug/sim/ghdl/dummy_plug
 WORK=PIPEWORK
 
 SRC_PATH  = ../../src
