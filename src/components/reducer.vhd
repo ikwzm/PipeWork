@@ -2,8 +2,8 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.5.0
---!     @date    2013/4/29
+--!     @version 1.6.0
+--!     @date    2013/9/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -259,37 +259,136 @@ architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
     type      WORD_VECTOR  is array (INTEGER range <>) of WORD_TYPE;
     -------------------------------------------------------------------------------
+    --! @brief 
+    -------------------------------------------------------------------------------
+    function  or_reduce(Arg : std_logic_vector) return std_logic is
+        variable result : std_logic;
+    begin
+        result := '0';
+        for i in Arg'range loop
+            result := result or Arg(i);
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief 
+    -------------------------------------------------------------------------------
+    function  priority_encoder(
+                 Data        : std_logic_vector
+    )            return        std_logic_vector
+    is
+        variable result      : std_logic_vector(Data'range);
+    begin
+        for i in Data'range loop
+            if (i = Data'low) then
+                result(i) := Data(i);
+            else
+                result(i) := Data(i) and (not or_reduce(Data(Data'low to i-1)));
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief ワードの配列からSELで指定されたワードを選択する関数.
+    -------------------------------------------------------------------------------
+    function  select_word(
+                 WORDS   : in    WORD_VECTOR;
+                 SEL     : in    std_logic_vector
+    )            return          WORD_TYPE
+    is
+        alias    i_words :       WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        alias    i_sel   :       std_logic_vector(0 to   SEL'length-1) is SEL;
+        variable result  :       WORD_TYPE;
+        variable s_vec   :       std_logic_vector(0 to WORDS'length-1);
+    begin
+        for n in WORD_BITS-1 downto 0 loop
+            for i in i_words'range loop
+                s_vec(i) := i_words(i).DATA(n) and i_sel(i);
+            end loop;
+            result.DATA(n) := or_reduce(s_vec);
+        end loop;
+        for n in STRB_BITS-1 downto 0 loop
+            for i in i_words'range loop
+                s_vec(i) := i_words(i).STRB(n) and i_sel(i);
+            end loop;
+            result.STRB(n) := or_reduce(s_vec);
+        end loop;
+        for i in i_words'range loop
+            if (i_words(i).VAL and i_sel(i) = '1') then
+                s_vec(i) := '1';
+            else
+                s_vec(i) := '0';
+            end if;
+        end loop;
+        result.VAL := (or_reduce(s_vec) = '1');
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
     --! @brief キューの最後にワードを追加するプロシージャ.
     -------------------------------------------------------------------------------
-    procedure APPEND(
+    procedure append_words(
         variable QUEUE : inout WORD_VECTOR;
                  WORDS : in    WORD_VECTOR
     ) is
-        alias    vec   :       WORD_VECTOR(0 to WORDS'length-1) is WORDS;
+        alias    i_vec :       WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_val :       std_logic_vector(0 to WORDS'length-1);
+        variable i_sel :       std_logic_vector(0 to WORDS'length-1);
         type     bv    is      array (INTEGER range <>) of boolean;
-        variable val   :       bv(QUEUE'low to QUEUE'high);
-        variable hit   :       boolean;
+        variable q_val :       bv(QUEUE'low to QUEUE'high);
     begin
-        for i in val'range loop         -- 先に val を作っておいた方が論理合成の結果
-            val(i) := QUEUE(i).VAL;     -- が良かった
-        end loop;                       --
-        for i in val'range loop
-            if (val(i) = FALSE) then
-                QUEUE(i) := WORD_NULL;
-                for pos in vec'range loop
-                    if (i-pos-1 < val'low) then
-                        hit := TRUE;
+        for q in QUEUE'range loop
+            q_val(q) := QUEUE(q).VAL;
+        end loop;
+        for q in QUEUE'range loop 
+            if (q_val(q) = FALSE) then
+                for i in i_val'range loop
+                    if (q-i-1 >= QUEUE'low) then
+                        if (q_val(q-i-1)) then
+                            i_val(i) := '1';
+                        else
+                            i_val(i) := '0';
+                        end if;
                     else
-                        hit := val(i-pos-1);
-                    end if;
-                    if (hit) then
-                        QUEUE(i) := vec(pos);
-                        exit;
+                            i_val(i) := '1';
                     end if;
                 end loop;
-           end if;
+                i_sel := priority_encoder(i_val);
+                QUEUE(q) := select_word(WORDS=>i_vec, SEL=>i_sel);
+            end if;
         end loop;
-    end APPEND;
+    end append_words;
+    -------------------------------------------------------------------------------
+    --! @brief ワード配列の有効なデータをLOW側に詰めたワード配列を返す関数.
+    -------------------------------------------------------------------------------
+    function  justify_words(
+                 WORDS   : WORD_VECTOR
+    )            return    WORD_VECTOR
+    is
+        alias    i_vec   : WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_val   : std_logic_vector(0 to WORDS'length-1);
+        variable s_vec   : WORD_VECTOR     (0 to WORDS'length-1);
+        variable s_sel   : std_logic_vector(0 to WORDS'length-1);
+        variable result  : WORD_VECTOR     (0 to WORDS'length-1);
+    begin
+        for i in i_vec'range loop
+            if (i_vec(i).VAL) then
+                i_val(i) := '1';
+            else
+                i_val(i) := '0';
+            end if;
+        end loop;
+        s_sel := priority_encoder(i_val);
+        for i in result'range loop
+            for n in 0 to WORDS'length-i-1 loop
+                s_vec(n) := i_vec(i+n);
+            end loop;
+            result(i) := select_word(
+                WORDS => i_vec(i to WORDS'length-1  ),
+                SEL   => s_sel(0 to WORDS'length-i-1)
+            );
+        end loop;
+        return result;
+    end function;
     -------------------------------------------------------------------------------
     --! @brief キューのサイズを計算する関数.
     -------------------------------------------------------------------------------
@@ -347,7 +446,7 @@ begin
     -- メインプロセス
     -------------------------------------------------------------------------------
     process (CLK, RST) 
-        variable    in_word           : WORD_VECTOR(0 to I_WIDTH-1);
+        variable    in_words          : WORD_VECTOR(0 to I_WIDTH-1);
         variable    next_queue        : WORD_VECTOR(curr_queue'range);
         variable    next_flush_output : std_logic;
         variable    next_flush_pending: std_logic;
@@ -382,33 +481,6 @@ begin
                 -------------------------------------------------------------------
                 next_queue := curr_queue;
                 -------------------------------------------------------------------
-                -- データ出力時の次のクロックでのキューの状態に更新
-                -------------------------------------------------------------------
-                if (o_valid = '1' and O_RDY = '1') then
-                    if (FLUSH_ENABLE >  0 ) and
-                       (flush_output = '1') and
-                       (O_WIDTH      >  1 ) and
-                       (curr_queue(O_WIDTH-1).VAL = FALSE) then
-                        for i in next_queue'range loop
-                            if (i < O_WIDTH-1) then
-                                next_queue(i).VAL := curr_queue(i).VAL;
-                            else
-                                next_queue(i).VAL := FALSE;
-                            end if;
-                            next_queue(i).DATA := (others => '0');
-                            next_queue(i).STRB := (others => '0');
-                        end loop;
-                    else
-                        for i in next_queue'range loop
-                            if (i+O_WIDTH > next_queue'high) then
-                                next_queue(i) := WORD_NULL;
-                            else
-                                next_queue(i) := curr_queue(i+O_WIDTH);
-                            end if;
-                        end loop;
-                    end if;
-                end if;
-                -------------------------------------------------------------------
                 -- キュー初期化時の次のクロックでのキューの状態に更新
                 -------------------------------------------------------------------
                 if (START = '1') then
@@ -426,19 +498,40 @@ begin
                 -- データ入力時の次のクロックでのキューの状態に更新
                 -------------------------------------------------------------------
                 if (I_VAL = '1' and i_ready = '1') then
-                    for i in in_word'range loop
-                        in_word(i).DATA :=  I_DATA((i+1)*WORD_BITS-1 downto i*WORD_BITS);
-                        in_word(i).STRB :=  I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS);
-                        in_word(i).VAL  := (I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL);
+                    for i in in_words'range loop
+                        in_words(i).DATA :=  I_DATA((i+1)*WORD_BITS-1 downto i*WORD_BITS);
+                        in_words(i).STRB :=  I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS);
+                        in_words(i).VAL  := (I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL);
                     end loop;
-                    if (I_JUSTIFIED    > 0) or
-                       (in_word'length = 1) then
-                        APPEND(next_queue, in_word);
+                    if (I_JUSTIFIED     = 0) and
+                       (in_words'length > 1) then
+                        in_words := justify_words(in_words);
+                    end if;
+                    append_words(next_queue, in_words);
+                end if;
+                -------------------------------------------------------------------
+                -- データ出力時の次のクロックでのキューの状態に更新
+                -------------------------------------------------------------------
+                if (o_valid = '1' and O_RDY = '1') then
+                    if (FLUSH_ENABLE >  0 ) and
+                       (flush_output = '1') and
+                       (O_WIDTH      >  1 ) and
+                       (next_queue(O_WIDTH-1).VAL = FALSE) then
+                        for i in next_queue'low to next_queue'high loop
+                            if (i < O_WIDTH-1) then
+                                next_queue(i).VAL := next_queue(i).VAL;
+                            else
+                                next_queue(i).VAL := FALSE;
+                            end if;
+                            next_queue(i).DATA := (others => '0');
+                            next_queue(i).STRB := (others => '0');
+                        end loop;
                     else
-                        for i in in_word'range loop
-                            if (in_word(i).VAL) then
-                                APPEND(next_queue, in_word(i to in_word'high));
-                                exit;
+                        for i in next_queue'low to next_queue'high loop
+                            if (i+O_WIDTH > next_queue'high) then
+                                next_queue(i) := WORD_NULL;
+                            else
+                                next_queue(i) := next_queue(i+O_WIDTH);
                             end if;
                         end loop;
                     end if;
