@@ -2,8 +2,8 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.6.0
---!     @date    2013/9/5
+--!     @version 1.5.2
+--!     @date    2013/9/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -271,7 +271,7 @@ architecture RTL of REDUCER is
         return result;
     end function;
     -------------------------------------------------------------------------------
-    --! @brief 
+    --! @brief プライオリティエンコーダ
     -------------------------------------------------------------------------------
     function  priority_encoder(
                  Data        : std_logic_vector
