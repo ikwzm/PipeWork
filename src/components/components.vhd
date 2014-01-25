@@ -680,7 +680,7 @@ component QUEUE_RECEIVER
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
                       --! 構造上、キューの大きさは２以上でなければならない.
-                      integer range 2 to 256 := 1;
+                      integer range 2 to 256 := 2;
         DATA_BITS   : --! @brief DATA BITS :
                       --! データ(I_DATA/O_DATA/Q_DATA)のビット幅を指定する.
                       integer :=  32
