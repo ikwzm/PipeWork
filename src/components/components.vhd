@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.2                                                           --
---!     @date    2013/09/08                                                      --
+--!     @version 1.5.3                                                           --
+--!     @date    2014/01/25                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2013 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2014 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -665,6 +665,66 @@ component QUEUE_REGISTER
                       --!   QUEUE_SIZE>0の場合は、Q_VAL(0)はQ_VAL(1)と同じ.
                       out std_logic_vector(QUEUE_SIZE  downto 0);
         Q_RDY       : --! @brief OUTPUT READY :
+                      --! 出力可能信号.
+                      in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief QUEUE_RECEIVER                                                        --
+-----------------------------------------------------------------------------------
+component QUEUE_RECEIVER
+    -------------------------------------------------------------------------------
+    -- ジェネリック変数
+    -------------------------------------------------------------------------------
+    generic (
+        QUEUE_SIZE  : --! @brief QUEUE SIZE :
+                      --! キューの大きさをワード数で指定する.
+                      --! 構造上、キューの大きさは２以上でなければならない.
+                      integer range 2 to 256 := 2;
+        DATA_BITS   : --! @brief DATA BITS :
+                      --! データ(I_DATA/O_DATA/Q_DATA)のビット幅を指定する.
+                      integer :=  32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側
+    -------------------------------------------------------------------------------
+        I_ENABLE    : --! @brief INPUT ENABLE :
+                      --! 入力許可信号.
+                      in  std_logic;
+        I_DATA      : --! @brief INPUT DATA  :
+                      --! 入力データ信号.
+                      in  std_logic_vector(DATA_BITS-1 downto 0);
+        I_VAL       : --! @brief INPUT DATA VALID :
+                      --! 入力データ有効信号.
+                      in  std_logic;
+        I_RDY       : --! @brief INPUT READY :
+                      --! 入力可能信号.
+                      --! キューが空いていて、入力データを受け付けることが可能で
+                      --! あることを示す信号.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側
+    -------------------------------------------------------------------------------
+        O_DATA      : --! @brief OUTPUT DATA :
+                      --! 出力データ.
+                      out std_logic_vector(DATA_BITS-1 downto 0);
+        O_VAL       : --! @brief OUTPUT DATA VALID :
+                      --! キューレジスタに有効なデータが入っている事を示すフラグ.
+                      out std_logic;
+        O_RDY       : --! @brief OUTPUT READY :
                       --! 出力可能信号.
                       in  std_logic
     );
