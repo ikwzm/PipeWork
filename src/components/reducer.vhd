@@ -524,7 +524,7 @@ architecture RTL of REDUCER is
         for i in result'range loop
             if    (i <  SHIFT'low ) then
                 result(i).VAL := i_vec(i).VAL;
-            elsif (i <= O_SHIFT'high) then
+            elsif (i <= SHIFT'high) then
                 result(i).VAL := i_vec(i).VAL and (SHIFT(i) = '1');
             else
                 result(i).VAL := FALSE;
