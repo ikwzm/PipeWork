@@ -2,12 +2,12 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.5.2
---!     @date    2013/9/8
+--!     @version 1.5.4
+--!     @date    2014/2/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -64,10 +64,10 @@ entity  REDUCER is
                       integer := 1;
         I_WIDTH     : --! @brief INPUT WORD WIDTH :
                       --! 入力側のデータのワード数を指定する.
-                      integer := 4;
+                      integer := 1;
         O_WIDTH     : --! @brief OUTPUT WORD WIDTH :
                       --! 出力側のデータのワード数を指定する.
-                      integer := 4;
+                      integer := 1;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
                       --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
@@ -81,6 +81,12 @@ entity  REDUCER is
         VALID_MAX   : --! @brief BUFFER VALID MAXIMUM NUMBER :
                       --! VALID信号の配列の最大値を指定する.
                       integer := 0;
+        O_SHIFT_MIN : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
+                      --! O_SHIFT信号の配列の最小値を指定する.
+                      integer := 1;
+        O_SHIFT_MAX : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
+                      --! O_SHIFT信号の配列の最大値を指定する.
+                      integer := 1;
         I_JUSTIFIED : --! @brief INPUT WORD JUSTIFIED :
                       --! 入力側の有効なデータが常にLOW側に詰められていることを
                       --! 示すフラグ.
@@ -231,7 +237,34 @@ entity  REDUCER is
                       --! 出力レディ信号.
                       --! * キューから次のワードを取り除く準備が出来ていることを示す.
                       --! * O_VAL='1'and O_RDY='1'でワードデータがキューから取り除かれる.
-                      in  std_logic
+                      in  std_logic;
+        O_SHIFT     : --! @brief OUTPUT SHIFT SIZE :
+                      --! 出力シフトサイズ信号.
+                      --! * キューからワードを出力する際に、何ワード取り除くかを指定する.
+                      --! * O_VAL='1' and O_RDY='1'の場合にのみこの信号は有効.
+                      --! * 取り除くワードの位置に'1'をセットする.
+                      --! * 例) O_SHIFT_MAX=3、O_SHIFT_MIN=0の場合、    
+                      --!   O_SHIFT(3 downto 0)="1111" で4ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0111" で3ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0011" で2ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0001" で1ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0000" で取り除かない.    
+                      --!   上記以外の値を指定した場合は動作を保証しない.
+                      --! * 例) O_SHIFT_MAX=3、O_SHIFT_MIN=2の場合、    
+                      --!   O_SHIFT(3 downto 2)="11" で4ワード取り除く.    
+                      --!   O_SHIFT(3 downto 2)="01" で3ワード取り除く.    
+                      --!   O_SHIFT(3 downto 2)="00" で2ワード取り除く.    
+                      --!   上記以外の値を指定した場合は動作を保証しない.
+                      --! * 例) O_SHIFT_MAX=1、O_SHIFT_MIN=1の場合、    
+                      --!   O_SHIFT(1 downto 1)="1" で2ワード取り除く.    
+                      --!   O_SHIFT(1 downto 1)="0" で1ワード取り除く.
+                      --! * 例) O_SHIFT_MAX=0、O_SHIFT_MIN=0の場合、    
+                      --!   O_SHIFT(0 downto 0)="1" で1ワード取り除く.    
+                      --!   O_SHIFT(0 downto 0)="0" で取り除かない.
+                      --! * 出力ワード数(O_WIDTH)分だけ取り除きたい場合は、
+                      --!   O_SHIFT_MAX=O_WIDTH、O_SHIFT_MIN=O_WIDTH、
+                      --!   O_SHIFT=(others => '0') としておくと良い.
+                      in  std_logic_vector(O_SHIFT_MAX downto O_SHIFT_MIN) := (others => '0')
     );
 end REDUCER;
 -----------------------------------------------------------------------------------
@@ -241,7 +274,7 @@ library ieee;
 use     ieee.std_logic_1164.all;
 architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
-    --! @brief ワード単位でデータ/データストローブ信号/ワード有効フラグをまとめておく
+    --! @brief ワード単位でデータ/データストローブ信号/ワード有効フラグをまとめておく.
     -------------------------------------------------------------------------------
     type      WORD_TYPE    is record
               DATA          : std_logic_vector(WORD_BITS-1 downto 0);
@@ -259,7 +292,16 @@ architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
     type      WORD_VECTOR  is array (INTEGER range <>) of WORD_TYPE;
     -------------------------------------------------------------------------------
-    --! @brief 
+    --! @brief 整数の最小値を求める関数.
+    -------------------------------------------------------------------------------
+    function  minimum(L,R : integer) return integer is
+    begin
+        if (L < R) then return L;
+        else            return R;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief 指定されたベクタのリダクション論理和を求める.
     -------------------------------------------------------------------------------
     function  or_reduce(Arg : std_logic_vector) return std_logic is
         variable result : std_logic;
@@ -271,13 +313,13 @@ architecture RTL of REDUCER is
         return result;
     end function;
     -------------------------------------------------------------------------------
-    --! @brief プライオリティエンコーダ
+    --! @brief プライオリティエンコーダ.
     -------------------------------------------------------------------------------
     function  priority_encoder(
-                 Data        : std_logic_vector
-    )            return        std_logic_vector
+                 Data    : std_logic_vector
+    )            return    std_logic_vector
     is
-        variable result      : std_logic_vector(Data'range);
+        variable result  : std_logic_vector(Data'range);
     begin
         for i in Data'range loop
             if (i = Data'low) then
@@ -292,49 +334,63 @@ architecture RTL of REDUCER is
     --! @brief ワードの配列からSELで指定されたワードを選択する関数.
     -------------------------------------------------------------------------------
     function  select_word(
-                 WORDS   : in    WORD_VECTOR;
-                 SEL     : in    std_logic_vector
-    )            return          WORD_TYPE
+                 WORDS   :  WORD_VECTOR;
+                 SEL     :  std_logic_vector
+    )            return     WORD_TYPE
     is
-        alias    i_words :       WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
-        alias    i_sel   :       std_logic_vector(0 to   SEL'length-1) is SEL;
-        variable result  :       WORD_TYPE;
-        variable s_vec   :       std_logic_vector(0 to WORDS'length-1);
+        alias    i_words :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        alias    i_sel   :  std_logic_vector(0 to   SEL'length-1) is SEL;
+        variable result  :  WORD_TYPE;
+        variable s_vec   :  std_logic_vector(0 to WORDS'length-1);
     begin
         for n in WORD_BITS-1 downto 0 loop
             for i in i_words'range loop
-                s_vec(i) := i_words(i).DATA(n) and i_sel(i);
+                if (i_sel'low <= i and i <= i_sel'high) then
+                    s_vec(i) := i_words(i).DATA(n) and i_sel(i);
+                else
+                    s_vec(i) := '0';
+                end if;
             end loop;
             result.DATA(n) := or_reduce(s_vec);
         end loop;
         for n in STRB_BITS-1 downto 0 loop
             for i in i_words'range loop
-                s_vec(i) := i_words(i).STRB(n) and i_sel(i);
+                if (i_sel'low <= i and i <= i_sel'high) then
+                    s_vec(i) := i_words(i).STRB(n) and i_sel(i);
+                else
+                    s_vec(i) := '0';
+                end if;
             end loop;
             result.STRB(n) := or_reduce(s_vec);
         end loop;
         for i in i_words'range loop
-            if (i_words(i).VAL and i_sel(i) = '1') then
-                s_vec(i) := '1';
+            if (i_sel'low <= i and i <= i_sel'high) then
+                if (i_words(i).VAL and i_sel(i) = '1') then
+                    s_vec(i) := '1';
+                else
+                    s_vec(i) := '0';
+                end if;
             else
-                s_vec(i) := '0';
+                    s_vec(i) := '0';
             end if;
         end loop;
         result.VAL := (or_reduce(s_vec) = '1');
         return result;
     end function;
     -------------------------------------------------------------------------------
-    --! @brief キューの最後にワードを追加するプロシージャ.
+    --! @brief キューの最後にワードを追加した新しいキューを求める関数.
     -------------------------------------------------------------------------------
-    procedure append_words(
-        variable QUEUE : inout WORD_VECTOR;
-                 WORDS : in    WORD_VECTOR
-    ) is
-        alias    i_vec :       WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
-        variable i_val :       std_logic_vector(0 to WORDS'length-1);
-        variable i_sel :       std_logic_vector(0 to WORDS'length-1);
-        type     bv    is      array (INTEGER range <>) of boolean;
-        variable q_val :       bv(QUEUE'low to QUEUE'high);
+    function  append_words(
+                 QUEUE   :  WORD_VECTOR;
+                 WORDS   :  WORD_VECTOR
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_val   :  std_logic_vector(0 to WORDS'length-1);
+        variable i_sel   :  std_logic_vector(0 to WORDS'length-1);
+        type     bv      is array (INTEGER range <>) of boolean;
+        variable q_val   :  bv(QUEUE'low to QUEUE'high);
+        variable result  :  WORD_VECTOR     (QUEUE'range);
     begin
         for q in QUEUE'range loop
             q_val(q) := QUEUE(q).VAL;
@@ -353,22 +409,69 @@ architecture RTL of REDUCER is
                     end if;
                 end loop;
                 i_sel := priority_encoder(i_val);
-                QUEUE(q) := select_word(WORDS=>i_vec, SEL=>i_sel);
+                result(q) := select_word(WORDS=>i_vec, SEL=>i_sel);
+            else
+                result(q) := QUEUE(q);
             end if;
         end loop;
-    end append_words;
+        return result;
+    end function;
     -------------------------------------------------------------------------------
-    --! @brief ワード配列の有効なデータをLOW側に詰めたワード配列を返す関数.
+    --! @brief O_SHIFT信号からONE-HOTのセレクト信号を生成する関数.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- 例) SHIFT(3 downto 0)="0000" => SEL(0 to 4)=(1=>'0',1=>'0',2=>'0',3=>'0',4=>'0')
+    --     SHIFT(3 downto 0)="0001" => SEL(0 to 4)=(0=>'0',1=>'1',2=>'0',3=>'0',4=>'0')
+    --     SHIFT(3 downto 0)="0011" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'1',3=>'0',4=>'0')
+    --     SHIFT(3 downto 0)="0111" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'0',3=>'1',4=>'0')
+    --     SHIFT(3 downto 0)="1111" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'0',3=>'0',4=>'1')
+    -------------------------------------------------------------------------------
+    function  shift_to_select(
+                 SHIFT   :  std_logic_vector;
+                 MIN     :  integer;
+                 MAX     :  integer
+    )            return     std_logic_vector
+    is
+        variable result  :  std_logic_vector(MIN to MAX);
+    begin
+        for i in result'range loop
+            if    (i < SHIFT'low ) then
+                    result(i) := '0';
+            elsif (i = SHIFT'low ) then
+                if (SHIFT(i) = '0') then
+                    result(i) := '1';
+                else
+                    result(i) := '0';
+                end if;
+            elsif (i <= SHIFT'high) then
+                if (SHIFT(i) = '0' and SHIFT(i-1) = '1') then
+                    result(i) := '1';
+                else
+                    result(i) := '0';
+                end if;
+            elsif (i = SHIFT'high+1) then
+                if (SHIFT(i-1) = '1') then
+                    result(i) := '1';
+                else
+                    result(i) := '0';
+                end if;
+            else
+                    result(i) := '0';
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief ワード配列の有効なデータをLOW側に詰めたワード配列を求める関数.
     -------------------------------------------------------------------------------
     function  justify_words(
-                 WORDS   : WORD_VECTOR
-    )            return    WORD_VECTOR
+                 WORDS   :  WORD_VECTOR
+    )            return     WORD_VECTOR
     is
-        alias    i_vec   : WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
-        variable i_val   : std_logic_vector(0 to WORDS'length-1);
-        variable s_vec   : WORD_VECTOR     (0 to WORDS'length-1);
-        variable s_sel   : std_logic_vector(0 to WORDS'length-1);
-        variable result  : WORD_VECTOR     (0 to WORDS'length-1);
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_val   :  std_logic_vector(0 to WORDS'length-1);
+        variable s_vec   :  WORD_VECTOR     (0 to WORDS'length-1);
+        variable s_sel   :  std_logic_vector(0 to WORDS'length-1);
+        variable result  :  WORD_VECTOR     (0 to WORDS'length-1);
     begin
         for i in i_vec'range loop
             if (i_vec(i).VAL) then
@@ -379,13 +482,103 @@ architecture RTL of REDUCER is
         end loop;
         s_sel := priority_encoder(i_val);
         for i in result'range loop
-            for n in 0 to WORDS'length-i-1 loop
-                s_vec(n) := i_vec(i+n);
-            end loop;
             result(i) := select_word(
                 WORDS => i_vec(i to WORDS'length-1  ),
                 SEL   => s_sel(0 to WORDS'length-i-1)
             );
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューを指定した分だけLOW側にシフトした新しいキューを求める関数.
+    -------------------------------------------------------------------------------
+    function  shift_words(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_sel   :  std_logic_vector(0 to SHIFT'high  +1);
+        variable result  :  WORD_VECTOR     (0 to WORDS'length-1);
+    begin
+        i_sel := shift_to_select(SHIFT, i_sel'low, i_sel'high);
+        for i in result'range loop
+            result(i) := select_word(
+                WORDS => i_vec(i to minimum(i+i_sel'high,i_vec'high)),
+                SEL   => i_sel
+            );
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューから指定した分だけキューに残して残りを削除したキューを求める関数.
+    -------------------------------------------------------------------------------
+    function  flush_words(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR(0 to WORDS'length-1) is WORDS;
+        variable result  :  WORD_VECTOR(0 to WORDS'length-1);
+    begin
+        for i in result'range loop
+            if    (i <  SHIFT'low ) then
+                result(i).VAL := i_vec(i).VAL;
+            elsif (i <= O_SHIFT'high) then
+                result(i).VAL := i_vec(i).VAL and (SHIFT(i) = '1');
+            else
+                result(i).VAL := FALSE;
+            end if;
+            result(i).DATA := (others => '0');
+            result(i).STRB := (others => '0');
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューに入っているワード数がSHIFTで指定された数未満かどうかを求める関数
+    -------------------------------------------------------------------------------
+    function  words_less_than_shift_size(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     boolean
+    is
+        alias    i_vec   :  WORD_VECTOR(0 to WORDS'length-1) is WORDS;
+        variable result  :  boolean;
+    begin
+        result := FALSE;
+        for i in SHIFT'high downto i_vec'low loop
+            if (i < SHIFT'low) then
+                if (i_vec(i).VAL = FALSE) then
+                    result := TRUE;
+                end if;
+            else
+                if (i_vec(i).VAL = FALSE and SHIFT(i) = '1') then
+                    result := TRUE;
+                end if;
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューに入っているワード数がSHIFTで指定された数を越えているかどうかを求める関数
+    -------------------------------------------------------------------------------
+    function  words_more_than_shift_size(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     boolean
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_sel   :  std_logic_vector(0 to SHIFT'high  +1);
+        variable result  :  boolean;
+    begin
+        i_sel  := shift_to_select(SHIFT, i_sel'low, i_sel'high);
+        result := FALSE;
+        for i in i_vec'range loop
+            if (i_sel'low <= i and i <= i_sel'high) then
+                if (i_sel(i) = '1' and i_vec(i).VAL) then
+                    result := TRUE;
+                end if;
+            end if;
         end loop;
         return result;
     end function;
@@ -455,6 +648,8 @@ begin
         variable    next_done_pending : std_logic;
         variable    next_done_fall    : std_logic;
         variable    pending_flag      : boolean;
+        variable    flush_output_done : boolean;
+        variable    flush_output_last : boolean;
     begin
         if (RST = '1') then
                 curr_queue    <= (others => WORD_NULL);
@@ -477,11 +672,12 @@ begin
                 curr_busy     <= '0';
             else
                 -------------------------------------------------------------------
-                -- 次のクロックでのキューの状態を示す変数に現在のキューの状態をセット
+                -- 次のクロックでのキューの状態を示す変数に現在のキューの状態をセット.
                 -------------------------------------------------------------------
                 next_queue := curr_queue;
                 -------------------------------------------------------------------
-                -- キュー初期化時の次のクロックでのキューの状態に更新
+                -- キュー初期化時は、OFFSETで指定された分だけ、あらかじめキューに
+                -- ダミーのデータを入れておく.
                 -------------------------------------------------------------------
                 if (START = '1') then
                     for i in next_queue'range loop
@@ -495,7 +691,7 @@ begin
                     end loop;
                 end if;
                 -------------------------------------------------------------------
-                -- データ入力時の次のクロックでのキューの状態に更新
+                -- データ入力時は、キューに入力されたワードを追加する.
                 -------------------------------------------------------------------
                 if (I_VAL = '1' and i_ready = '1') then
                     for i in in_words'range loop
@@ -507,34 +703,29 @@ begin
                        (in_words'length > 1) then
                         in_words := justify_words(in_words);
                     end if;
-                    append_words(next_queue, in_words);
+                    next_queue := append_words(next_queue, in_words);
                 end if;
                 -------------------------------------------------------------------
-                -- データ出力時の次のクロックでのキューの状態に更新
+                -- データ出力時は、キューの先頭からO_SHIFTで指定された分だけ、
+                -- データを取り除く.
                 -------------------------------------------------------------------
                 if (o_valid = '1' and O_RDY = '1') then
                     if (FLUSH_ENABLE >  0 ) and
-                       (flush_output = '1') and
-                       (O_WIDTH      >  1 ) and
-                       (next_queue(O_WIDTH-1).VAL = FALSE) then
-                        for i in next_queue'low to next_queue'high loop
-                            if (i < O_WIDTH-1) then
-                                next_queue(i).VAL := next_queue(i).VAL;
-                            else
-                                next_queue(i).VAL := FALSE;
-                            end if;
-                            next_queue(i).DATA := (others => '0');
-                            next_queue(i).STRB := (others => '0');
-                        end loop;
+                       (flush_output = '1') then
+                        flush_output_last :=     words_less_than_shift_size(next_queue, O_SHIFT);
+                        flush_output_done := not words_more_than_shift_size(next_queue, O_SHIFT);
                     else
-                        for i in next_queue'low to next_queue'high loop
-                            if (i+O_WIDTH > next_queue'high) then
-                                next_queue(i) := WORD_NULL;
-                            else
-                                next_queue(i) := next_queue(i+O_WIDTH);
-                            end if;
-                        end loop;
+                        flush_output_last := FALSE;
+                        flush_output_done := FALSE;
                     end if;
+                    if (flush_output_last) then
+                        next_queue := flush_words(next_queue, O_SHIFT);
+                    else
+                        next_queue := shift_words(next_queue, O_SHIFT);
+                    end if;
+                else
+                        flush_output_last := FALSE;
+                        flush_output_done := FALSE;
                 end if;
                 -------------------------------------------------------------------
                 -- 次のクロックでのキューの状態をレジスタに保持
@@ -543,6 +734,9 @@ begin
                 -------------------------------------------------------------------
                 -- 次のクロックでのキューの状態でO_WIDTHの位置にデータが入って
                 -- いるか否かをチェック.
+                -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                -- この位置にデータがある場合は、O_DONE、O_FLUSH はまだアサートせ
+                -- ずに、一旦ペンディングしておく.
                 -------------------------------------------------------------------
                 if (next_queue'high >= O_WIDTH) then
                     pending_flag := (next_queue(O_WIDTH).VAL);
@@ -557,7 +751,7 @@ begin
                         next_flush_pending := '0';
                         next_flush_fall    := '0';
                 elsif (flush_output = '1') then
-                    if (o_valid = '1' and O_RDY = '1') then
+                    if (flush_output_done) then
                         next_flush_output  := '0';
                         next_flush_pending := '0';
                         next_flush_fall    := '1';
@@ -589,7 +783,7 @@ begin
                 -- DONE制御
                 -------------------------------------------------------------------
                 if    (done_output = '1') then
-                    if (o_valid = '1' and O_RDY = '1') then
+                    if (next_queue(next_queue'low).VAL = FALSE) then
                         next_done_output   := '0';
                         next_done_pending  := '0';
                         next_done_fall     := '1';
@@ -618,7 +812,7 @@ begin
                 done_output   <= next_done_output;
                 done_pending  <= next_done_pending;
                 -------------------------------------------------------------------
-                -- 出力有効信号の生成
+                -- 出力有効信号の生成.
                 -------------------------------------------------------------------
                 if (O_ENABLE = '1') and
                    ((next_done_output  = '1') or
@@ -629,7 +823,7 @@ begin
                     o_valid <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- 入力可能信号の生成
+                -- 入力可能信号の生成.
                 -------------------------------------------------------------------
                 if (I_ENABLE = '1') and 
                    (next_done_output  = '0' and next_done_pending  = '0') and
@@ -640,7 +834,8 @@ begin
                     i_ready <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- 現在処理中であることを示すフラグ
+                -- 現在処理中であることを示すフラグ.
+                -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 -- 最初に入力があった時点で'1'になり、O_DONEまたはO_FLUSHが出力完了
                 -- した時点で'0'になる。
                 -------------------------------------------------------------------
@@ -662,7 +857,7 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- 各種出力信号の生成
+    -- 各種出力信号の生成.
     -------------------------------------------------------------------------------
     O_FLUSH <= flush_output when(FLUSH_ENABLE > 0) else '0';
     O_DONE  <= done_output;

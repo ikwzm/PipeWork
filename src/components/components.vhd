@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.3                                                           --
---!     @date    2014/01/25                                                      --
+--!     @version 1.5.4                                                           --
+--!     @date    2014/02/09                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -226,10 +226,10 @@ component REDUCER
                       integer := 1;
         I_WIDTH     : --! @brief INPUT WORD WIDTH :
                       --! 入力側のデータのワード数を指定する.
-                      integer := 4;
+                      integer := 1;
         O_WIDTH     : --! @brief OUTPUT WORD WIDTH :
                       --! 出力側のデータのワード数を指定する.
-                      integer := 4;
+                      integer := 1;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
                       --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
@@ -243,6 +243,12 @@ component REDUCER
         VALID_MAX   : --! @brief BUFFER VALID MAXIMUM NUMBER :
                       --! VALID信号の配列の最大値を指定する.
                       integer := 0;
+        O_SHIFT_MIN : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
+                      --! O_SHIFT信号の配列の最小値を指定する.
+                      integer := 1;
+        O_SHIFT_MAX : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
+                      --! O_SHIFT信号の配列の最大値を指定する.
+                      integer := 1;
         I_JUSTIFIED : --! @brief INPUT WORD JUSTIFIED :
                       --! 入力側の有効なデータが常にLOW側に詰められていることを
                       --! 示すフラグ.
@@ -393,7 +399,34 @@ component REDUCER
                       --! 出力レディ信号.
                       --! * キューから次のワードを取り除く準備が出来ていることを示す.
                       --! * O_VAL='1'and O_RDY='1'でワードデータがキューから取り除かれる.
-                      in  std_logic
+                      in  std_logic;
+        O_SHIFT     : --! @brief OUTPUT SHIFT SIZE :
+                      --! 出力シフトサイズ信号.
+                      --! * キューからワードを出力する際に、何ワード取り除くかを指定する.
+                      --! * O_VAL='1' and O_RDY='1'の場合にのみこの信号は有効.
+                      --! * 取り除くワードの位置に'1'をセットする.
+                      --! * 例) O_SHIFT_MAX=3、O_SHIFT_MIN=0の場合、    
+                      --!   O_SHIFT(3 downto 0)="1111" で4ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0111" で3ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0011" で2ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0001" で1ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0000" で取り除かない.    
+                      --!   上記以外の値を指定した場合は動作を保証しない.
+                      --! * 例) O_SHIFT_MAX=3、O_SHIFT_MIN=2の場合、    
+                      --!   O_SHIFT(3 downto 2)="11" で4ワード取り除く.    
+                      --!   O_SHIFT(3 downto 2)="01" で3ワード取り除く.    
+                      --!   O_SHIFT(3 downto 2)="00" で2ワード取り除く.    
+                      --!   上記以外の値を指定した場合は動作を保証しない.
+                      --! * 例) O_SHIFT_MAX=1、O_SHIFT_MIN=1の場合、    
+                      --!   O_SHIFT(1 downto 1)="1" で2ワード取り除く.    
+                      --!   O_SHIFT(1 downto 1)="0" で1ワード取り除く.
+                      --! * 例) O_SHIFT_MAX=0、O_SHIFT_MIN=0の場合、    
+                      --!   O_SHIFT(0 downto 0)="1" で1ワード取り除く.    
+                      --!   O_SHIFT(0 downto 0)="0" で取り除かない.
+                      --! * 出力ワード数(O_WIDTH)分だけ取り除きたい場合は、
+                      --!   O_SHIFT_MAX=O_WIDTH、O_SHIFT_MIN=O_WIDTH、
+                      --!   O_SHIFT=(others => '0') としておくと良い.
+                      in  std_logic_vector(O_SHIFT_MAX downto O_SHIFT_MIN) := (others => '0')
     );
 end component;
 -----------------------------------------------------------------------------------
