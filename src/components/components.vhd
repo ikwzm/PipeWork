@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.4                                                           --
---!     @date    2014/02/09                                                      --
+--!     @date    2014/02/15                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -2277,6 +2277,169 @@ component FLOAT_OUTLET_MANIFOLD_VALVE
                           --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
                           --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief REGISTER_ACCESS_SYNCRONIZER                                           --
+-----------------------------------------------------------------------------------
+component REGISTER_ACCESS_SYNCRONIZER
+    generic (
+        ADDR_WIDTH  : --! @brief REGISTER ADDRESS WIDTH :
+                      --! レジスタアクセスインターフェースのアドレスのビット幅を
+                      --! 指定する.
+                      integer := 32;
+        DATA_WIDTH  : --! @brief REGISTER DATA WIDTH :
+                      --! レジスタアクセスインターフェースのデータのビット幅を
+                      --! 指定する.
+                      integer := 32;
+        I_CLK_RATE  : --! @brief INPUT CLOCK RATE :
+                      --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
+                      --! ク(O_CLK)との関係を指定する. 詳細は O_CLK_RATE を参照.
+                      integer :=  1;
+        O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
+                      --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
+                      --! ク(O_CLK)との関係を指定する.
+                      --! * I_CLK_RATE = 0 かつ O_CLK_RATE = 0 の場合は I_CLK と 
+                      --!   O_CLK は非同期.
+                      --! * I_CLK_RATE = 1 かつ O_CLK_RATE = 1 の場合は I_CLK と 
+                      --!   O_CLK は完全に同期している.
+                      --! * I_CLK_RATE > 1 かつ O_CLK_RATE = 1 の場合は I_CLK は 
+                      --!   O_CLK のI_CLK_RATE倍の周波数.
+                      --!   ただし I_CLK の立上りは O_CLK の立上りと一致している.
+                      --! * I_CLK_RATE = 1 かつ O_CLK_RATE > 1 の場合は O_CLK は 
+                      --!   I_CLK の O_CLK_RATE倍の周波数.
+                      --!   ただし I_CLK の立上りは O_CLK の立上りと一致している.
+                      --! * 例1)I_CLK_RATE=1 & O_CLK_RATE=1          \n
+                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
+                      --!       O_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
+                      --! * 例2)I_CLK_RATE=2 & O_CLK_RATE=1          \n
+                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
+                      --!       O_CLK _|~~~|___|~~~|___|~~~|___|~~~  \n
+                      --!       I_CKE ~~~|___|~~~|___|~~~|___|~~~|_  \n
+                      --! * 例3)I_CLK_RATE=3 & O_CLK_RATE=1          \n
+                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
+                      --!       O_CLK _|~~~~~|_____|~~~~~|_____|~~~  \n
+                      --!       I_CKE ~~~|_______|~~~|_______|~~~|_  \n
+                      --! * 例4)I_CLK_RATE=1 & O_CLK_RATE=2          \n
+                      --!       I_CLK _|~~~|___|~~~|___|~~~|___|~~~  \n
+                      --!       O_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
+                      --!       O_CKE ~~~|___|~~~|___|~~~|___|~~~|_  \n
+                      integer :=  1;
+        O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
+                      --! 出力側の各種信号(O_REQ/O_WRITE/O_WDATA/O_BEN)をレジスタ
+                      --! 出力するかどうかを指定する.
+                      --! * この変数は I_CLK_RATE > 0 の場合のみ有効. 
+                      --!   I_CLK_RATE = 0 の場合は、常にレジスタ出力になる.
+                      --! * O_CLK_REGS = 0 の場合はレジスタ出力しない.
+                      --! * O_CLK_REGS = 1 の場合はレジスタ出力する.
+                      integer range 0 to 1 :=  0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- リセット信号
+    -------------------------------------------------------------------------------
+        RST         : --! @brief RESET :
+                      --! 非同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側のクロック信号/同期リセット信号
+    -------------------------------------------------------------------------------
+        I_CLK       : --! @brief INPUT CLOCK :
+                      --! 入力側のクロック信号.
+                      in  std_logic;
+        I_CLR       : --! @brief INPUT CLEAR :
+                      --! 入力側の同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+        I_CKE       : --! @brief INPUT CLOCK ENABLE :
+                      --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
+                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
+                      --!   関係を示す時に使用する.
+                      --! * I_CLKの立上り時とOCLKの立上り時が同じ時にアサートするよ
+                      --!   うに入力されなければならない.
+                      --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時のみ有
+                      --!   効. それ以外は未使用.
+                      in  std_logic := '1';
+    -------------------------------------------------------------------------------
+    -- 入力側のレジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        I_REQ       : --! @brief INPUT REGISTER ACCESS REQUEST :
+                      --! レジスタアクセス要求信号.
+                      in  std_logic;
+        I_SEL       : --! @brief INPUT REGISTER ACCESS SELECT :
+                      --! レジスタアクセス選択信号.
+                      --! * I_REQ='1'の際、この信号が'1'の時にのみレジスタアクセス
+                      --!   を開始する.
+                      in  std_logic := '1';
+        I_WRITE     : --! @brief INPUT REGISTER WRITE ACCESS :
+                      --! レジスタライトアクセス信号.
+                      --! * この信号が'1'の時はライトアクセスを行う.
+                      --! * この信号が'0'の時はリードアクセスを行う.
+                      in  std_logic;
+        I_ADDR      : --! @brief INPUT REGISTER ACCESS ADDRESS :
+                      --! レジスタアクセスアドレス信号.
+                      in  std_logic_vector(ADDR_WIDTH  -1 downto 0);
+        I_BEN       : --! @brief INPUT REGISTER BYTE ENABLE :
+                      --! レジスタアクセスバイトイネーブル信号.
+                      in  std_logic_vector(DATA_WIDTH/8-1 downto 0);
+        I_WDATA     : --! @brief INPUT REGISTER ACCESS WRITE DATA :
+                      --! レジスタアクセスライトデータ.
+                      in  std_logic_vector(DATA_WIDTH  -1 downto 0);
+        I_RDATA     : --! @brief INPUT REGISTER ACCESS READ DATA :
+                      --! レジスタアクセスリードデータ.
+                      out std_logic_vector(DATA_WIDTH  -1 downto 0);
+        I_ACK       : --! @brief INPUT REGISTER ACCESS ACKNOWLEDGE :
+                      --! レジスタアクセス応答信号.
+                      out std_logic;
+        I_ERR       : --! @brief INPUT REGISTER ACCESS ERROR ACKNOWLEDGE :
+                      --! レジスタアクセスエラー応答信号.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側のクロック信号/同期リセット信号
+    -------------------------------------------------------------------------------
+        O_CLK       : --! @brief OUTPUT CLK :
+                      --! 出力側のクロック信号.
+                      in  std_logic;
+        O_CLR       : --! @brief OUTPUT CLEAR :
+                      --! 出力側の同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+        O_CKE       : --! @brief OUTPUT CLOCK ENABLE :
+                      --! 出力側のクロック(O_CLK)の立上りが有効であることを示す信号.
+                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
+                      --!   関係を示す時に使用する.
+                      --! * I_CLKの立上り時とO_CLKの立上り時が同じ時にアサートする
+                      --!   ように入力されなければならない.
+                      --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ有
+                      --!   効. それ以外は未使用.
+                      in  std_logic := '1';
+    -------------------------------------------------------------------------------
+    -- 出力側のレジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        O_REQ       : --! @brief OUTNPUT REGISTER ACCESS REQUEST :
+                      --! レジスタアクセス要求信号.
+                      out std_logic;
+        O_WRITE     : --! @brief OUTPUT REGISTER WRITE ACCESS :
+                      --! レジスタライトアクセス信号.
+                      --! * この信号が'1'の時はライトアクセスを行う.
+                      --! * この信号が'0'の時はリードアクセスを行う.
+                      out std_logic;
+        O_ADDR      : --! @brief OUTPUT REGISTER ACCESS ADDRESS :
+                      --! レジスタアクセスアドレス信号.
+                      out std_logic_vector(ADDR_WIDTH  -1 downto 0);
+        O_BEN       : --! @brief OUTPUT REGISTER BYTE ENABLE :
+                      --! レジスタアクセスバイトイネーブル信号.
+                      out std_logic_vector(DATA_WIDTH/8-1 downto 0);
+        O_WDATA     : --! @brief OUTPUT REGISTER ACCESS WRITE DATA :
+                      --! レジスタアクセスライトデータ.
+                      out std_logic_vector(DATA_WIDTH  -1 downto 0);
+        O_RDATA     : --! @brief OUTPUT REGISTER ACCESS READ DATA :
+                      --! レジスタアクセスリードデータ.
+                      in  std_logic_vector(DATA_WIDTH  -1 downto 0);
+        O_ACK       : --! @brief OUTPUT REGISTER ACCESS ACKNOWLEDGE :
+                      --! レジスタアクセス応答信号.
+                      in  std_logic;
+        O_ERR       : --! @brief OUTPUT REGISTER ACCESS ERROR ACKNOWLEDGE :
+                      --! レジスタアクセスエラー応答信号.
+                      in  std_logic
     );
 end component;
 end COMPONENTS;
