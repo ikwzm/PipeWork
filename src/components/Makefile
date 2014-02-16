@@ -16,6 +16,7 @@ ENTITY_FILES = chopper.vhd                             \
                float_intake_manifold_valve.vhd         \
                float_outlet_valve.vhd                  \
                float_outlet_manifold_valve.vhd         \
+               register_access_decoder.vhd             \
                register_access_syncronizer.vhd         \
                ${ENDLIST}
 

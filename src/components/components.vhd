@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.4                                                           --
---!     @date    2014/02/15                                                      --
+--!     @date    2014/02/16                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -2280,50 +2280,90 @@ component FLOAT_OUTLET_MANIFOLD_VALVE
     );
 end component;
 -----------------------------------------------------------------------------------
+--! @brief REGISTER_ACCESS_DECODER                                               --
+-----------------------------------------------------------------------------------
+component REGISTER_ACCESS_DECODER
+    generic (
+        ADDR_WIDTH  : --! @brief REGISTER ADDRESS WIDTH :
+                      --! レジスタアクセスインターフェースのアドレスのビット幅を指
+                      --! 定する.
+                      integer := 8;
+        DATA_WIDTH  : --! @brief REGISTER DATA WIDTH :
+                      --! レジスタアクセスインターフェースのデータのビット幅を指定
+                      --! する.
+                      integer := 32;
+        WBIT_MIN    : --! @brief REGISTER WRITE BIT MIN INDEX :
+                      integer := 0;
+        WBIT_MAX    : --! @brief REGISTER WRITE BIT MAX INDEX :
+                      integer := (2**8)*8-1;
+        RBIT_MIN    : --! @brief REGISTER READ  BIT MIN INDEX :
+                      integer := 0;
+        RBIT_MAX    : --! @brief REGISTER READ  BIT MAX INDEX :
+                      integer := (2**8)*8-1
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- 入力側のレジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        REGS_REQ    : --! @brief REGISTER ACCESS REQUEST :
+                      --! レジスタアクセス要求信号.
+                      in  std_logic;
+        REGS_WRITE  : --! @brief REGISTER WRITE ACCESS :
+                      --! レジスタライトアクセス信号.
+                      --! * この信号が'1'の時はライトアクセスを行う.
+                      --! * この信号が'0'の時はリードアクセスを行う.
+                      in  std_logic;
+        REGS_ADDR   : --! @brief REGISTER ACCESS ADDRESS :
+                      --! レジスタアクセスアドレス信号.
+                      in  std_logic_vector(ADDR_WIDTH  -1 downto 0);
+        REGS_BEN    : --! @brief REGISTER BYTE ENABLE :
+                      --! レジスタアクセスバイトイネーブル信号.
+                      in  std_logic_vector(DATA_WIDTH/8-1 downto 0);
+        REGS_WDATA  : --! @brief REGISTER ACCESS WRITE DATA :
+                      --! レジスタアクセスライトデータ.
+                      in  std_logic_vector(DATA_WIDTH  -1 downto 0);
+        REGS_RDATA  : --! @brief REGISTER ACCESS READ DATA :
+                      --! レジスタアクセスリードデータ.
+                      out std_logic_vector(DATA_WIDTH  -1 downto 0);
+        REGS_ACK    : --! @brief REGISTER ACCESS ACKNOWLEDGE :
+                      --! レジスタアクセス応答信号.
+                      out std_logic;
+        REGS_ERR    : --! @brief REGISTER ACCESS ERROR ACKNOWLEDGE :
+                      --! レジスタアクセスエラー応答信号.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- レジスタライトデータ/ロード出力
+    -------------------------------------------------------------------------------
+        W_DATA      : out std_logic_vector(WBIT_MAX downto WBIT_MIN);
+        W_LOAD      : out std_logic_vector(WBIT_MAX downto WBIT_MIN);
+    -------------------------------------------------------------------------------
+    -- レジスタリードデータ入力
+    -------------------------------------------------------------------------------
+        R_DATA      : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
+    );
+end component;
+-----------------------------------------------------------------------------------
 --! @brief REGISTER_ACCESS_SYNCRONIZER                                           --
 -----------------------------------------------------------------------------------
 component REGISTER_ACCESS_SYNCRONIZER
     generic (
         ADDR_WIDTH  : --! @brief REGISTER ADDRESS WIDTH :
-                      --! レジスタアクセスインターフェースのアドレスのビット幅を
-                      --! 指定する.
+                      --! レジスタアクセスインターフェースのアドレスのビット幅を指
+                      --! 定する.
                       integer := 32;
         DATA_WIDTH  : --! @brief REGISTER DATA WIDTH :
-                      --! レジスタアクセスインターフェースのデータのビット幅を
-                      --! 指定する.
+                      --! レジスタアクセスインターフェースのデータのビット幅を指定
+                      --! する.
                       integer := 32;
         I_CLK_RATE  : --! @brief INPUT CLOCK RATE :
                       --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
-                      --! ク(O_CLK)との関係を指定する. 詳細は O_CLK_RATE を参照.
+                      --! ク(O_CLK)との関係を指定する. 
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
         O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
                       --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
                       --! ク(O_CLK)との関係を指定する.
-                      --! * I_CLK_RATE = 0 かつ O_CLK_RATE = 0 の場合は I_CLK と 
-                      --!   O_CLK は非同期.
-                      --! * I_CLK_RATE = 1 かつ O_CLK_RATE = 1 の場合は I_CLK と 
-                      --!   O_CLK は完全に同期している.
-                      --! * I_CLK_RATE > 1 かつ O_CLK_RATE = 1 の場合は I_CLK は 
-                      --!   O_CLK のI_CLK_RATE倍の周波数.
-                      --!   ただし I_CLK の立上りは O_CLK の立上りと一致している.
-                      --! * I_CLK_RATE = 1 かつ O_CLK_RATE > 1 の場合は O_CLK は 
-                      --!   I_CLK の O_CLK_RATE倍の周波数.
-                      --!   ただし I_CLK の立上りは O_CLK の立上りと一致している.
-                      --! * 例1)I_CLK_RATE=1 & O_CLK_RATE=1          \n
-                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --! * 例2)I_CLK_RATE=2 & O_CLK_RATE=1          \n
-                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CLK _|~~~|___|~~~|___|~~~|___|~~~  \n
-                      --!       I_CKE ~~~|___|~~~|___|~~~|___|~~~|_  \n
-                      --! * 例3)I_CLK_RATE=3 & O_CLK_RATE=1          \n
-                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CLK _|~~~~~|_____|~~~~~|_____|~~~  \n
-                      --!       I_CKE ~~~|_______|~~~|_______|~~~|_  \n
-                      --! * 例4)I_CLK_RATE=1 & O_CLK_RATE=2          \n
-                      --!       I_CLK _|~~~|___|~~~|___|~~~|___|~~~  \n
-                      --!       O_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CKE ~~~|___|~~~|___|~~~|___|~~~|_  \n
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_REQ/O_WRITE/O_WDATA/O_BEN)をレジスタ
