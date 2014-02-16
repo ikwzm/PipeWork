@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.3                                                           --
---!     @date    2014/01/25                                                      --
+--!     @version 1.5.4                                                           --
+--!     @date    2014/02/16                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -226,10 +226,10 @@ component REDUCER
                       integer := 1;
         I_WIDTH     : --! @brief INPUT WORD WIDTH :
                       --! 入力側のデータのワード数を指定する.
-                      integer := 4;
+                      integer := 1;
         O_WIDTH     : --! @brief OUTPUT WORD WIDTH :
                       --! 出力側のデータのワード数を指定する.
-                      integer := 4;
+                      integer := 1;
         QUEUE_SIZE  : --! @brief QUEUE SIZE :
                       --! キューの大きさをワード数で指定する.
                       --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
@@ -243,6 +243,12 @@ component REDUCER
         VALID_MAX   : --! @brief BUFFER VALID MAXIMUM NUMBER :
                       --! VALID信号の配列の最大値を指定する.
                       integer := 0;
+        O_SHIFT_MIN : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
+                      --! O_SHIFT信号の配列の最小値を指定する.
+                      integer := 1;
+        O_SHIFT_MAX : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
+                      --! O_SHIFT信号の配列の最大値を指定する.
+                      integer := 1;
         I_JUSTIFIED : --! @brief INPUT WORD JUSTIFIED :
                       --! 入力側の有効なデータが常にLOW側に詰められていることを
                       --! 示すフラグ.
@@ -393,7 +399,34 @@ component REDUCER
                       --! 出力レディ信号.
                       --! * キューから次のワードを取り除く準備が出来ていることを示す.
                       --! * O_VAL='1'and O_RDY='1'でワードデータがキューから取り除かれる.
-                      in  std_logic
+                      in  std_logic;
+        O_SHIFT     : --! @brief OUTPUT SHIFT SIZE :
+                      --! 出力シフトサイズ信号.
+                      --! * キューからワードを出力する際に、何ワード取り除くかを指定する.
+                      --! * O_VAL='1' and O_RDY='1'の場合にのみこの信号は有効.
+                      --! * 取り除くワードの位置に'1'をセットする.
+                      --! * 例) O_SHIFT_MAX=3、O_SHIFT_MIN=0の場合、    
+                      --!   O_SHIFT(3 downto 0)="1111" で4ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0111" で3ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0011" で2ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0001" で1ワード取り除く.    
+                      --!   O_SHIFT(3 downto 0)="0000" で取り除かない.    
+                      --!   上記以外の値を指定した場合は動作を保証しない.
+                      --! * 例) O_SHIFT_MAX=3、O_SHIFT_MIN=2の場合、    
+                      --!   O_SHIFT(3 downto 2)="11" で4ワード取り除く.    
+                      --!   O_SHIFT(3 downto 2)="01" で3ワード取り除く.    
+                      --!   O_SHIFT(3 downto 2)="00" で2ワード取り除く.    
+                      --!   上記以外の値を指定した場合は動作を保証しない.
+                      --! * 例) O_SHIFT_MAX=1、O_SHIFT_MIN=1の場合、    
+                      --!   O_SHIFT(1 downto 1)="1" で2ワード取り除く.    
+                      --!   O_SHIFT(1 downto 1)="0" で1ワード取り除く.
+                      --! * 例) O_SHIFT_MAX=0、O_SHIFT_MIN=0の場合、    
+                      --!   O_SHIFT(0 downto 0)="1" で1ワード取り除く.    
+                      --!   O_SHIFT(0 downto 0)="0" で取り除かない.
+                      --! * 出力ワード数(O_WIDTH)分だけ取り除きたい場合は、
+                      --!   O_SHIFT_MAX=O_WIDTH、O_SHIFT_MIN=O_WIDTH、
+                      --!   O_SHIFT=(others => '0') としておくと良い.
+                      in  std_logic_vector(O_SHIFT_MAX downto O_SHIFT_MIN) := (others => '0')
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -2244,6 +2277,209 @@ component FLOAT_OUTLET_MANIFOLD_VALVE
                           --! * バルブが開固定(FIXED=2)の時は常に'1'を出力する.
                           --! * バルブが閉固定(FIXED=1)の時は常に'0'を出力する.
                           out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief REGISTER_ACCESS_DECODER                                               --
+-----------------------------------------------------------------------------------
+component REGISTER_ACCESS_DECODER
+    generic (
+        ADDR_WIDTH  : --! @brief REGISTER ADDRESS WIDTH :
+                      --! レジスタアクセスインターフェースのアドレスのビット幅を指
+                      --! 定する.
+                      integer := 8;
+        DATA_WIDTH  : --! @brief REGISTER DATA WIDTH :
+                      --! レジスタアクセスインターフェースのデータのビット幅を指定
+                      --! する.
+                      integer := 32;
+        WBIT_MIN    : --! @brief REGISTER WRITE BIT MIN INDEX :
+                      integer := 0;
+        WBIT_MAX    : --! @brief REGISTER WRITE BIT MAX INDEX :
+                      integer := (2**8)*8-1;
+        RBIT_MIN    : --! @brief REGISTER READ  BIT MIN INDEX :
+                      integer := 0;
+        RBIT_MAX    : --! @brief REGISTER READ  BIT MAX INDEX :
+                      integer := (2**8)*8-1
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- 入力側のレジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        REGS_REQ    : --! @brief REGISTER ACCESS REQUEST :
+                      --! レジスタアクセス要求信号.
+                      in  std_logic;
+        REGS_WRITE  : --! @brief REGISTER WRITE ACCESS :
+                      --! レジスタライトアクセス信号.
+                      --! * この信号が'1'の時はライトアクセスを行う.
+                      --! * この信号が'0'の時はリードアクセスを行う.
+                      in  std_logic;
+        REGS_ADDR   : --! @brief REGISTER ACCESS ADDRESS :
+                      --! レジスタアクセスアドレス信号.
+                      in  std_logic_vector(ADDR_WIDTH  -1 downto 0);
+        REGS_BEN    : --! @brief REGISTER BYTE ENABLE :
+                      --! レジスタアクセスバイトイネーブル信号.
+                      in  std_logic_vector(DATA_WIDTH/8-1 downto 0);
+        REGS_WDATA  : --! @brief REGISTER ACCESS WRITE DATA :
+                      --! レジスタアクセスライトデータ.
+                      in  std_logic_vector(DATA_WIDTH  -1 downto 0);
+        REGS_RDATA  : --! @brief REGISTER ACCESS READ DATA :
+                      --! レジスタアクセスリードデータ.
+                      out std_logic_vector(DATA_WIDTH  -1 downto 0);
+        REGS_ACK    : --! @brief REGISTER ACCESS ACKNOWLEDGE :
+                      --! レジスタアクセス応答信号.
+                      out std_logic;
+        REGS_ERR    : --! @brief REGISTER ACCESS ERROR ACKNOWLEDGE :
+                      --! レジスタアクセスエラー応答信号.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- レジスタライトデータ/ロード出力
+    -------------------------------------------------------------------------------
+        W_DATA      : out std_logic_vector(WBIT_MAX downto WBIT_MIN);
+        W_LOAD      : out std_logic_vector(WBIT_MAX downto WBIT_MIN);
+    -------------------------------------------------------------------------------
+    -- レジスタリードデータ入力
+    -------------------------------------------------------------------------------
+        R_DATA      : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief REGISTER_ACCESS_SYNCRONIZER                                           --
+-----------------------------------------------------------------------------------
+component REGISTER_ACCESS_SYNCRONIZER
+    generic (
+        ADDR_WIDTH  : --! @brief REGISTER ADDRESS WIDTH :
+                      --! レジスタアクセスインターフェースのアドレスのビット幅を指
+                      --! 定する.
+                      integer := 32;
+        DATA_WIDTH  : --! @brief REGISTER DATA WIDTH :
+                      --! レジスタアクセスインターフェースのデータのビット幅を指定
+                      --! する.
+                      integer := 32;
+        I_CLK_RATE  : --! @brief INPUT CLOCK RATE :
+                      --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
+                      --! ク(O_CLK)との関係を指定する. 
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer :=  1;
+        O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
+                      --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
+                      --! ク(O_CLK)との関係を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer :=  1;
+        O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
+                      --! 出力側の各種信号(O_REQ/O_WRITE/O_WDATA/O_BEN)をレジスタ
+                      --! 出力するかどうかを指定する.
+                      --! * この変数は I_CLK_RATE > 0 の場合のみ有効. 
+                      --!   I_CLK_RATE = 0 の場合は、常にレジスタ出力になる.
+                      --! * O_CLK_REGS = 0 の場合はレジスタ出力しない.
+                      --! * O_CLK_REGS = 1 の場合はレジスタ出力する.
+                      integer range 0 to 1 :=  0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- リセット信号
+    -------------------------------------------------------------------------------
+        RST         : --! @brief RESET :
+                      --! 非同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側のクロック信号/同期リセット信号
+    -------------------------------------------------------------------------------
+        I_CLK       : --! @brief INPUT CLOCK :
+                      --! 入力側のクロック信号.
+                      in  std_logic;
+        I_CLR       : --! @brief INPUT CLEAR :
+                      --! 入力側の同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+        I_CKE       : --! @brief INPUT CLOCK ENABLE :
+                      --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
+                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
+                      --!   関係を示す時に使用する.
+                      --! * I_CLKの立上り時とOCLKの立上り時が同じ時にアサートするよ
+                      --!   うに入力されなければならない.
+                      --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時のみ有
+                      --!   効. それ以外は未使用.
+                      in  std_logic := '1';
+    -------------------------------------------------------------------------------
+    -- 入力側のレジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        I_REQ       : --! @brief INPUT REGISTER ACCESS REQUEST :
+                      --! レジスタアクセス要求信号.
+                      in  std_logic;
+        I_SEL       : --! @brief INPUT REGISTER ACCESS SELECT :
+                      --! レジスタアクセス選択信号.
+                      --! * I_REQ='1'の際、この信号が'1'の時にのみレジスタアクセス
+                      --!   を開始する.
+                      in  std_logic := '1';
+        I_WRITE     : --! @brief INPUT REGISTER WRITE ACCESS :
+                      --! レジスタライトアクセス信号.
+                      --! * この信号が'1'の時はライトアクセスを行う.
+                      --! * この信号が'0'の時はリードアクセスを行う.
+                      in  std_logic;
+        I_ADDR      : --! @brief INPUT REGISTER ACCESS ADDRESS :
+                      --! レジスタアクセスアドレス信号.
+                      in  std_logic_vector(ADDR_WIDTH  -1 downto 0);
+        I_BEN       : --! @brief INPUT REGISTER BYTE ENABLE :
+                      --! レジスタアクセスバイトイネーブル信号.
+                      in  std_logic_vector(DATA_WIDTH/8-1 downto 0);
+        I_WDATA     : --! @brief INPUT REGISTER ACCESS WRITE DATA :
+                      --! レジスタアクセスライトデータ.
+                      in  std_logic_vector(DATA_WIDTH  -1 downto 0);
+        I_RDATA     : --! @brief INPUT REGISTER ACCESS READ DATA :
+                      --! レジスタアクセスリードデータ.
+                      out std_logic_vector(DATA_WIDTH  -1 downto 0);
+        I_ACK       : --! @brief INPUT REGISTER ACCESS ACKNOWLEDGE :
+                      --! レジスタアクセス応答信号.
+                      out std_logic;
+        I_ERR       : --! @brief INPUT REGISTER ACCESS ERROR ACKNOWLEDGE :
+                      --! レジスタアクセスエラー応答信号.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側のクロック信号/同期リセット信号
+    -------------------------------------------------------------------------------
+        O_CLK       : --! @brief OUTPUT CLK :
+                      --! 出力側のクロック信号.
+                      in  std_logic;
+        O_CLR       : --! @brief OUTPUT CLEAR :
+                      --! 出力側の同期リセット信号(ハイ・アクティブ).
+                      in  std_logic;
+        O_CKE       : --! @brief OUTPUT CLOCK ENABLE :
+                      --! 出力側のクロック(O_CLK)の立上りが有効であることを示す信号.
+                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
+                      --!   関係を示す時に使用する.
+                      --! * I_CLKの立上り時とO_CLKの立上り時が同じ時にアサートする
+                      --!   ように入力されなければならない.
+                      --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ有
+                      --!   効. それ以外は未使用.
+                      in  std_logic := '1';
+    -------------------------------------------------------------------------------
+    -- 出力側のレジスタアクセスインターフェース
+    -------------------------------------------------------------------------------
+        O_REQ       : --! @brief OUTNPUT REGISTER ACCESS REQUEST :
+                      --! レジスタアクセス要求信号.
+                      out std_logic;
+        O_WRITE     : --! @brief OUTPUT REGISTER WRITE ACCESS :
+                      --! レジスタライトアクセス信号.
+                      --! * この信号が'1'の時はライトアクセスを行う.
+                      --! * この信号が'0'の時はリードアクセスを行う.
+                      out std_logic;
+        O_ADDR      : --! @brief OUTPUT REGISTER ACCESS ADDRESS :
+                      --! レジスタアクセスアドレス信号.
+                      out std_logic_vector(ADDR_WIDTH  -1 downto 0);
+        O_BEN       : --! @brief OUTPUT REGISTER BYTE ENABLE :
+                      --! レジスタアクセスバイトイネーブル信号.
+                      out std_logic_vector(DATA_WIDTH/8-1 downto 0);
+        O_WDATA     : --! @brief OUTPUT REGISTER ACCESS WRITE DATA :
+                      --! レジスタアクセスライトデータ.
+                      out std_logic_vector(DATA_WIDTH  -1 downto 0);
+        O_RDATA     : --! @brief OUTPUT REGISTER ACCESS READ DATA :
+                      --! レジスタアクセスリードデータ.
+                      in  std_logic_vector(DATA_WIDTH  -1 downto 0);
+        O_ACK       : --! @brief OUTPUT REGISTER ACCESS ACKNOWLEDGE :
+                      --! レジスタアクセス応答信号.
+                      in  std_logic;
+        O_ERR       : --! @brief OUTPUT REGISTER ACCESS ERROR ACKNOWLEDGE :
+                      --! レジスタアクセスエラー応答信号.
+                      in  std_logic
     );
 end component;
 end COMPONENTS;

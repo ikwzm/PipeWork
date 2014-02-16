@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.4
+--!     @date    2014/2/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -876,6 +876,7 @@ begin
         constant o_enable       : std_logic := '1';
         constant done           : std_logic := '0';
         constant flush          : std_logic := '0';
+        constant o_shift        : std_logic_vector(O_WIDTH   downto O_WIDTH) := "0";
         signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
     begin
         ---------------------------------------------------------------------------
@@ -917,6 +918,8 @@ begin
                 QUEUE_SIZE      => 0              ,
                 VALID_MIN       => 0              ,
                 VALID_MAX       => 0              ,
+                O_SHIFT_MIN     => o_shift'low    ,
+                O_SHIFT_MAX     => o_shift'high   ,
                 I_JUSTIFIED     => 0              ,
                 FLUSH_ENABLE    => 0                     
             )
@@ -955,7 +958,8 @@ begin
                 O_DONE          => data_last      , -- Out :
                 O_FLUSH         => open           , -- Out :
                 O_VAL           => data_valid     , -- Out :
-                O_RDY           => WREADY           -- In  :
+                O_RDY           => WREADY         , -- In  :
+                O_SHIFT         => o_shift          -- In  :
         );
         WVALID <= data_valid;
         WLAST  <= data_last;

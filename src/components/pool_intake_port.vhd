@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
---!     @version 1.5.0
---!     @date    2013/4/29
+--!     @version 1.5.4
+--!     @date    2014/2/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -199,6 +199,7 @@ architecture RTL of POOL_INTAKE_PORT is
     constant O_WORDS        : integer   := (POOL_DATA'length/WORD_BITS);
     constant done           : std_logic := '0';
     constant flush          : std_logic := '0';
+    constant o_shift        : std_logic_vector(O_WORDS downto O_WORDS) := "0";
     signal   offset         : std_logic_vector(O_WORDS-1 downto 0);
     signal   queue_busy     : std_logic;
     signal   i_strobe       : std_logic_vector(PORT_DVAL'length-1 downto 0);   
@@ -288,7 +289,9 @@ begin
             O_WIDTH         => O_WORDS        , -- 
             QUEUE_SIZE      => QUEUE_SIZE     , -- 
             VALID_MIN       => 0              , -- 
-            VALID_MAX       => 0              , -- 
+            VALID_MAX       => 0              , --
+            O_SHIFT_MIN     => o_shift'low    , --
+            O_SHIFT_MAX     => o_shift'high   , --
             I_JUSTIFIED     => 0              , -- 
             FLUSH_ENABLE    => 0                -- 
         )                                       -- 
@@ -327,7 +330,8 @@ begin
             O_DONE          => o_last         , -- Out :
             O_FLUSH         => open           , -- Out :
             O_VAL           => o_valid        , -- Out :
-            O_RDY           => o_ready          -- In  :
+            O_RDY           => o_ready        , -- In  :
+            O_SHIFT         => o_shift          -- In  :
     );
     BUSY     <= queue_busy;
     PORT_RDY <= i_ready;

@@ -16,12 +16,14 @@ ENTITY_FILES = chopper.vhd                             \
                float_intake_manifold_valve.vhd         \
                float_outlet_valve.vhd                  \
                float_outlet_manifold_valve.vhd         \
+               register_access_decoder.vhd             \
+               register_access_syncronizer.vhd         \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK COMPONENT LIBRARY DESCRIPTION' \
-            --version 1.5.3 \
+            --version 1.5.4 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package COMPONENTS \
