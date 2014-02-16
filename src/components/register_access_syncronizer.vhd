@@ -3,7 +3,7 @@
 --!     @brief   REGISTER ACCESS SYNCRONIZER MODULE :
 --!              異なるクロックドメイン間でレジスタアクセスを中継するモジュール.
 --!     @version 1.5.4
---!     @date    2014/2/15
+--!     @date    2014/2/16
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -49,45 +49,22 @@ use     ieee.std_logic_1164.all;
 entity  REGISTER_ACCESS_SYNCRONIZER is
     generic (
         ADDR_WIDTH  : --! @brief REGISTER ADDRESS WIDTH :
-                      --! レジスタアクセスインターフェースのアドレスのビット幅を
-                      --! 指定する.
+                      --! レジスタアクセスインターフェースのアドレスのビット幅を指
+                      --! 定する.
                       integer := 32;
         DATA_WIDTH  : --! @brief REGISTER DATA WIDTH :
-                      --! レジスタアクセスインターフェースのデータのビット幅を
-                      --! 指定する.
+                      --! レジスタアクセスインターフェースのデータのビット幅を指定
+                      --! する.
                       integer := 32;
         I_CLK_RATE  : --! @brief INPUT CLOCK RATE :
                       --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
-                      --! ク(O_CLK)との関係を指定する. 詳細は O_CLK_RATE を参照.
+                      --! ク(O_CLK)との関係を指定する. 
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
         O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
                       --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
                       --! ク(O_CLK)との関係を指定する.
-                      --! * I_CLK_RATE = 0 かつ O_CLK_RATE = 0 の場合は I_CLK と 
-                      --!   O_CLK は非同期.
-                      --! * I_CLK_RATE = 1 かつ O_CLK_RATE = 1 の場合は I_CLK と 
-                      --!   O_CLK は完全に同期している.
-                      --! * I_CLK_RATE > 1 かつ O_CLK_RATE = 1 の場合は I_CLK は 
-                      --!   O_CLK のI_CLK_RATE倍の周波数.
-                      --!   ただし I_CLK の立上りは O_CLK の立上りと一致している.
-                      --! * I_CLK_RATE = 1 かつ O_CLK_RATE > 1 の場合は O_CLK は 
-                      --!   I_CLK の O_CLK_RATE倍の周波数.
-                      --!   ただし I_CLK の立上りは O_CLK の立上りと一致している.
-                      --! * 例1)I_CLK_RATE=1 & O_CLK_RATE=1          \n
-                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --! * 例2)I_CLK_RATE=2 & O_CLK_RATE=1          \n
-                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CLK _|~~~|___|~~~|___|~~~|___|~~~  \n
-                      --!       I_CKE ~~~|___|~~~|___|~~~|___|~~~|_  \n
-                      --! * 例3)I_CLK_RATE=3 & O_CLK_RATE=1          \n
-                      --!       I_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CLK _|~~~~~|_____|~~~~~|_____|~~~  \n
-                      --!       I_CKE ~~~|_______|~~~|_______|~~~|_  \n
-                      --! * 例4)I_CLK_RATE=1 & O_CLK_RATE=2          \n
-                      --!       I_CLK _|~~~|___|~~~|___|~~~|___|~~~  \n
-                      --!       O_CLK _|~|_|~|_|~|_|~|_|~|_|~|_|~|_  \n
-                      --!       O_CKE ~~~|___|~~~|___|~~~|___|~~~|_  \n
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_REQ/O_WRITE/O_WDATA/O_BEN)をレジスタ
