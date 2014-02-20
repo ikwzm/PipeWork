@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
---!     @version 1.5.0
---!     @date    2013/8/2
+--!     @version 1.5.4
+--!     @date    2014/2/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@ entity  PIPE_CORE_UNIT is
                               --! * ADDR_VALID>0で有効.
                               integer :=  1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
-                              --! REQ_SIZE/ACK_SIZE信号のビット数を指定する.
+                              --! 各種サイズ信号のビット幅を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
@@ -82,12 +82,12 @@ entity  PIPE_CORE_UNIT is
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
+        COUNT_BITS          : --! @brief Transfer Counter Bits :
+                              --! このモジュール内で使用している各種カウンタのビット
+                              --! 幅を指定する.
+                              integer := 32;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
-                              integer := 12;
-        M_COUNT_BITS        : --! @brief Requester Flow Counter Bits :
-                              integer := 12;
-        T_COUNT_BITS        : --! @brief Responder Flow Counter Bits :
                               integer := 12;
         M_O_FIXED_CLOSE     : --! @brief OUTLET VALVE FIXED CLOSE :
                               --! フローカウンタによるフロー制御を行わず、常に栓が
@@ -211,7 +211,12 @@ entity  PIPE_CORE_UNIT is
         T_ACK_STOP          : out std_logic;
         T_ACK_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- リクエスタ側からのステータス信号入力.
+    -- レスポンダ側からの制御信号入力.
+    -------------------------------------------------------------------------------
+        T_REQ_PAUSE         : in  std_logic;
+        T_REQ_STOP          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- レスポンダ側からのステータス信号入力.
     -------------------------------------------------------------------------------
         T_XFER_BUSY         : in  std_logic;
         T_XFER_DONE         : in  std_logic;
@@ -456,7 +461,7 @@ begin
             SIZE_BITS               => SIZE_BITS                   ,
             SIZE_VALID              => SIZE_VALID                  ,
             MODE_BITS               => MODE_BITS                   ,
-            COUNT_BITS              => T_COUNT_BITS                ,
+            COUNT_BITS              => COUNT_BITS                  ,
             BUF_DEPTH               => BUF_DEPTH                   ,
             O_FIXED_CLOSE           => T_O_FIXED_CLOSE             ,
             O_FIXED_FLOW_OPEN       => T_O_FIXED_FLOW_OPEN         ,
@@ -497,6 +502,11 @@ begin
             T_ACK_ERROR             => T_ACK_ERROR                 , -- Out :
             T_ACK_STOP              => T_ACK_STOP                  , -- Out :
             T_ACK_SIZE              => T_ACK_SIZE                  , -- Out :
+        ---------------------------------------------------------------------------
+        -- Control from Responder Signals.
+        ---------------------------------------------------------------------------
+            T_REQ_STOP              => T_REQ_STOP                  , -- In  :
+            T_REQ_PAUSE             => T_REQ_PAUSE                 , -- In  :
         ---------------------------------------------------------------------------
         -- Status from Responder Signals.
         ---------------------------------------------------------------------------
@@ -979,7 +989,7 @@ begin
             SIZE_BITS               => SIZE_BITS                   ,
             SIZE_VALID              => SIZE_VALID                  ,
             MODE_BITS               => MODE_BITS                   ,
-            COUNT_BITS              => M_COUNT_BITS                ,
+            COUNT_BITS              => COUNT_BITS                  ,
             BUF_DEPTH               => BUF_DEPTH                   ,
             T_XFER_MAX_SIZE         => T_XFER_MAX_SIZE             ,
             O_FIXED_CLOSE           => M_O_FIXED_CLOSE             ,

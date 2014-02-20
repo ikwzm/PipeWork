@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_components.vhd                                             --
 --!     @brief   PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.5.0                                                           --
---!     @date    2013/08/02                                                      --
+--!     @version 1.5.4                                                           --
+--!     @date    2014/02/20                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2013 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2014 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -596,7 +596,7 @@ component PIPE_REQUESTER_INTERFACE
                               --! 最初のトランザクションであることを示す.
                               --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
                               --!   トランザクションを開始する.
-                              in  std_logic;
+                              in  std_logic := '1';
         T_REQ_LAST          : --! @brief Request Last transaction from responder :
                               --! 最後のトランザクションであることを示す.
                               --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
@@ -605,7 +605,7 @@ component PIPE_REQUESTER_INTERFACE
                               --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
-                              in  std_logic;
+                              in  std_logic := '1';
         T_REQ_DONE          : --! @brief Request Done signal from responder :
                               --! トランザクションの終了を指示する.
                               in  std_logic;
@@ -840,7 +840,7 @@ component PIPE_RESPONDER_INTERFACE
                               --! 最初のトランザクションであることを示す.
                               --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
                               --!   トランザクションを開始する.
-                              in  std_logic;
+                              in  std_logic := '1';
         T_REQ_LAST          : --! @brief Request Last transaction from responder :
                               --! 最後のトランザクションであることを示す.
                               --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
@@ -849,7 +849,7 @@ component PIPE_RESPONDER_INTERFACE
                               --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
-                              in  std_logic;
+                              in  std_logic := '1';
         T_REQ_VALID         : --! @brief Request Valid signal from responder  :
                               --! 上記の各種リクエスト信号が有効であることを示す.
                               --! * この信号のアサートでもってトランザクションを開始する.
@@ -886,15 +886,26 @@ component PIPE_RESPONDER_INTERFACE
                               --! 転送したバイト数を示す.
                               out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Control from Responder Signals.
+    -------------------------------------------------------------------------------
+        T_REQ_STOP          : --! @brief Transfer Stop Request.
+                              --! レスポンダ側から強制的にデータ転送を中止すること
+                              --! を要求する信号.
+                              in  std_logic := '0';
+        T_REQ_PAUSE         : --! @brief Transfer Pause Request.
+                              --! レスポンダ側から強制的にデータ転送を一時的に中断
+                              --! することを要求する信号.
+                              in  std_logic := '0';
+    -------------------------------------------------------------------------------
     -- Status from Responder Signals.
     -------------------------------------------------------------------------------
         T_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
         T_XFER_DONE         : --! @brief Transfer Done.
-                              --! データ転送中かつ、次のクロックで M_XFER_BUSY が
+                              --! データ転送中かつ、次のクロックで T_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
-                              --! * ただし、M_XFER_BUSY のネゲート前に 必ずしもこの
+                              --! * ただし、T_XFER_BUSY のネゲート前に 必ずしもこの
                               --!   信号がアサートされるわけでは無い.
                               in  std_logic;
     -------------------------------------------------------------------------------
@@ -1182,7 +1193,7 @@ component PIPE_CORE_UNIT
                               --! * ADDR_VALID>0で有効.
                               integer :=  1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
-                              --! REQ_SIZE/ACK_SIZE信号のビット数を指定する.
+                              --! 各種サイズ信号のビット幅を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
@@ -1192,12 +1203,12 @@ component PIPE_CORE_UNIT
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
+        COUNT_BITS          : --! @brief Transfer Counter Bits :
+                              --! このモジュール内で使用している各種カウンタのビット
+                              --! 幅を指定する.
+                              integer := 32;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
-                              integer := 12;
-        M_COUNT_BITS        : --! @brief Requester Flow Counter Bits :
-                              integer := 12;
-        T_COUNT_BITS        : --! @brief Responder Flow Counter Bits :
                               integer := 12;
         M_O_FIXED_CLOSE     : --! @brief OUTLET VALVE FIXED CLOSE :
                               --! フローカウンタによるフロー制御を行わず、常に栓が
@@ -1321,7 +1332,12 @@ component PIPE_CORE_UNIT
         T_ACK_STOP          : out std_logic;
         T_ACK_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- リクエスタ側からのステータス信号入力.
+    -- レスポンダ側からの制御信号入力.
+    -------------------------------------------------------------------------------
+        T_REQ_PAUSE         : in  std_logic;
+        T_REQ_STOP          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- レスポンダ側からのステータス信号入力.
     -------------------------------------------------------------------------------
         T_XFER_BUSY         : in  std_logic;
         T_XFER_DONE         : in  std_logic;
