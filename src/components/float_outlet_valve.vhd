@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_outlet_valve.vhd
 --!     @brief   FLOAT OUTLET VALVE
---!     @version 1.5.0
---!     @date    2013/5/19
+--!     @version 1.5.4
+--!     @date    2014/2/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -83,7 +83,7 @@ entity  FLOAT_OUTLET_VALVE is
                           --! 一時停止する/しないを指示するための閾値.
                           --! * フローカウンタの値がこの値以上の時に出力を開始する.
                           --! * フローカウンタの値がこの値未満の時に出力を一時停止.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Flow Counter Load Signals.
     -------------------------------------------------------------------------------
@@ -305,6 +305,20 @@ begin
     FLOW_LAST  <= '1' when (last_flag  = TRUE ) else '0';
     -------------------------------------------------------------------------------
     -- FLOW_SIZE  : 出力可能なバイト数(すなわちflow_counterの値)を出力.
+    --              ただし、FLOW_SIZEのビット幅がflow_counterのビット幅に満たない
+    --              場合は、最大でも 2**(FLOW_SIZE'high) 以下の値しか出力しない.
     -------------------------------------------------------------------------------
-    FLOW_SIZE  <= std_logic_vector(flow_counter);
+    process (flow_counter)
+        constant MAX_FLOW_SIZE : integer := 2**(FLOW_SIZE'high);
+    begin
+        if (flow_counter'length > FLOW_SIZE'length) then
+            if (flow_counter > MAX_FLOW_SIZE) then
+                FLOW_SIZE <= std_logic_vector(to_unsigned(MAX_FLOW_SIZE, FLOW_SIZE'length));
+            else
+                FLOW_SIZE <= std_logic_vector(resize     (flow_counter , FLOW_SIZE'length));
+            end if;
+        else
+                FLOW_SIZE <= std_logic_vector(resize     (flow_counter , FLOW_SIZE'length));
+        end if;
+    end process;
 end RTL;
