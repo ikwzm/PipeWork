@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.4
+--!     @date    2014/2/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -59,9 +59,6 @@ entity  AXI4_MASTER_READ_INTERFACE is
         VAL_BITS        : --! @brief VALID BITS :
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
-        SIZE_BITS       : --! @brief SIZE BITS :
-                          --! 各種サイズカウンタのビット数を指定する.
-                          integer := 32;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
                           integer := 32;
@@ -85,6 +82,10 @@ entity  AXI4_MASTER_READ_INTERFACE is
         ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
                           --! アライメントサイズのビット数を指定する.
                           integer := 8;
+        XFER_SIZE_BITS  : --! @brief Transfer Size Bits :
+                          --! １回の転送バイト数入出力信号(ACK_SIZE/FLOW_SIZE/
+                          --! PULL_SIZE/PUSH_SIZEなど)のビット幅を指定する.
+                          integer := 12;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
                           integer := 4;
@@ -278,7 +279,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --!   やかに REQ_VAL 信号をネゲートして Request を取り下
                           --!   げるか、REQ_VALをアサートしたままで次の Request 情
                           --!   報を用意しておかなければならない.
-                          out   std_logic_vector(VAL_BITS-1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
                           --! この信号がアサートされる.
@@ -303,7 +304,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! 転送するバイト数を示す.
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
-                          out   std_logic_vector(SIZE_BITS        -1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Transfer Status Signal.
     -------------------------------------------------------------------------------
@@ -355,7 +356,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! * 例えば FIFO の空き容量を入力すると、この容量を越え
                           --!   た転送は行わない.
                           --! * FLOW_VALID=0の場合、この信号は無視される.
-                          in    std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
+                          in    std_logic_vector(XFER_SIZE_BITS   -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
@@ -371,14 +372,14 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           out   std_logic;
         PUSH_RSV_SIZE   : --! @brief Push Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Final Size Signals.
     -------------------------------------------------------------------------------
         PUSH_FIN_VAL    : --! @brief Push Final Valid.
                           --! PUSH_FIN_LAST/PUSH_FIN_ERROR/PUSH_FIN_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_FIN_LAST   : --! @brief Push Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
@@ -387,17 +388,17 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           out   std_logic;
         PUSH_FIN_SIZE   : --! @brief Push Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Buffer Size Signals.
     -------------------------------------------------------------------------------
         PUSH_BUF_RESET  : --! @brief Push Buffer Counter Reset.
                           --! バッファのカウンタをリセットする信号.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_BUF_VAL    : --! @brief Push Buffer Valid.
                           --! PUSH_BUF_LAST/PUSH_BUF_ERROR/PUSH_BUF_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_BUF_LAST   : --! @brief Push Buffer Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
@@ -406,16 +407,16 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           out   std_logic;
         PUSH_BUF_SIZE   : --! @brief Push Buffer Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
                           --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS -1 downto 0);
+                          in    std_logic_vector(VAL_BITS         -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
         BUF_WEN         : --! @brief Buffer Write Enable.
                           --! バッファにデータをライトすることを示す.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_BEN         : --! @brief Buffer Byte Enable.
                           --! バッファにデータをライトする際のバイトイネーブル信号.
                           --! * BUF_WEN='1'の場合にのみ有効.
@@ -473,7 +474,7 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   xfer_ack_select    : std_logic_vector(VAL_BITS   -1  downto 0);
+    signal   xfer_ack_select    : std_logic_vector(VAL_BITS    -1 downto 0);
     signal   xfer_ack_valid     : std_logic;
     signal   xfer_ack_size      : std_logic_vector(XFER_MAX_SIZE  downto 0);
     signal   xfer_ack_next      : std_logic;
@@ -497,8 +498,8 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     signal   xfer_queue_first   : std_logic;
     signal   xfer_queue_safety  : std_logic;
     signal   xfer_queue_empty   : std_logic;
-    signal   xfer_queue_select  : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   xfer_queue_valid   : std_logic_vector(QUEUE_SIZE downto 0);
+    signal   xfer_queue_select  : std_logic_vector(VAL_BITS    -1 downto 0);
+    signal   xfer_queue_valid   : std_logic_vector(QUEUE_SIZE     downto 0);
     signal   xfer_queue_ready   : std_logic;
     -------------------------------------------------------------------------------
     -- 
@@ -506,7 +507,7 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     constant xfer_beat_sel      : std_logic_vector(AXI4_DATA_SIZE downto AXI4_DATA_SIZE) := "1";
     signal   xfer_beat_chop     : std_logic;
     signal   xfer_beat_last     : std_logic;
-    signal   xfer_beat_size     : std_logic_vector(SIZE_BITS        -1 downto 0);
+    signal   xfer_beat_size     : std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -520,10 +521,10 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   outlet_valid       : std_logic_vector(VAL_BITS -1 downto 0);
+    signal   outlet_valid       : std_logic_vector(VAL_BITS         -1 downto 0);
     signal   outlet_error       : std_logic;
     signal   outlet_last        : std_logic;
-    signal   outlet_size        : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal   outlet_size        : std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     signal   outlet_ready       : std_logic;
     signal   outlet_done        : std_logic;
     signal   port_busy          : std_logic;
@@ -541,11 +542,11 @@ begin
             VAL_BITS        => VAL_BITS          , --
             DATA_SIZE       => AXI4_DATA_SIZE    , --
             ADDR_BITS       => AXI4_ADDR_WIDTH   , --
-            SIZE_BITS       => SIZE_BITS         , --
             ALEN_BITS       => AXI4_ALEN_WIDTH   , --
             REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
             REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
             FLOW_VALID      => FLOW_VALID        , --
+            XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE       --
         )
@@ -934,7 +935,7 @@ begin
             PORT_DATA_BITS  => AXI4_DATA_WIDTH     , --
             POOL_DATA_BITS  => BUF_DATA_WIDTH      , -- 
             SEL_BITS        => VAL_BITS            , -- 
-            SIZE_BITS       => SIZE_BITS           , --
+            SIZE_BITS       => XFER_SIZE_BITS      , --
             PTR_BITS        => BUF_PTR_BITS        , -- 
             QUEUE_SIZE      => 0                     -- 
         )                                            -- 

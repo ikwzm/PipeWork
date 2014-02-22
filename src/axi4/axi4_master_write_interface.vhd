@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.4
---!     @date    2014/2/9
+--!     @date    2014/2/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -59,9 +59,6 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         VAL_BITS        : --! @brief VALID BITS :
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
-        SIZE_BITS       : --! @brief SIZE BITS :
-                          --! 各種サイズカウンタのビット数を指定する.
-                          integer := 32;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
                           integer := 32;
@@ -85,6 +82,10 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
                           --! アライメントサイズのビット数を指定する.
                           integer := 8;
+        XFER_SIZE_BITS  : --! @brief Transfer Size Bits :
+                          --! １回の転送バイト数入出力信号(ACK_SIZE/FLOW_SIZE/
+                          --! PULL_SIZE/PUSH_SIZEなど)のビット幅を指定する.
+                          integer := 12;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
                           integer := 4;
@@ -281,7 +282,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! * この信号のアサートでもってトランザクションを開始する.
                           --! * 一度この信号をアサートすると Acknowledge を返すまで、
                           --!   この信号はアサートされなくてはならない.
-                          in    std_logic_vector(VAL_BITS-1 downto 0);
+                          in    std_logic_vector(VAL_BITS         -1 downto 0);
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
@@ -304,7 +305,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --!   やかに REQ_VAL 信号をネゲートして Request を取り下
                           --!   げるか、REQ_VALをアサートしたままで次の Request 情
                           --!   報を用意しておかなければならない.
-                          out   std_logic_vector(VAL_BITS-1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         ACK_NEXT        : --! @brief Acknowledge with need Next transaction.
                           --! すべてのトランザクションが終了かつ REQ_LAST=0 の場合、
                           --! この信号がアサートされる.
@@ -329,7 +330,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! 転送するバイト数を示す.
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Transfer Status Signal.
     -------------------------------------------------------------------------------
@@ -384,14 +385,14 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! * 例えば FIFO に残っているデータの容量を入力しておく
                           --!   と、そのバイト数を越えた転送は行わない.
                           --! * FLOW_VALID=0の場合、この信号は無視される.
-                          in    std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
+                          in    std_logic_vector(XFER_SIZE_BITS   -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Pull Reserve Size Signals.
     -------------------------------------------------------------------------------
         PULL_RSV_VAL    : --! @brief Pull Reserve Valid.
                           --! PULL_RSV_LAST/PULL_RSV_ERROR/PULL_RSV_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_RSV_LAST   : --! @brief Pull Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
@@ -400,14 +401,14 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           out   std_logic;
         PULL_RSV_SIZE   : --! @brief Pull Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
         PULL_FIN_VAL    : --! @brief Pull Final Valid.
                           --! PULL_FIN_LAST/PULL_FIN_ERROR/PULL_FIN_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_FIN_LAST   : --! @brief Pull Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
@@ -416,17 +417,17 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           out   std_logic;
         PULL_FIN_SIZE   : --! @brief Pull Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Pull Buffer Size Signals.
     -------------------------------------------------------------------------------
         PULL_BUF_RESET  : --! @brief Pull Buffer Counter Reset.
                           --! バッファのカウンタをリセットする信号.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_BUF_VAL    : --! @brief Pull Buffer Valid.
                           --! PULL_BUF_LAST/PULL_BUF_ERROR/PULL_BUF_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic_vector(VAL_BITS -1 downto 0);
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PULL_BUF_LAST   : --! @brief Pull Buffer Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
@@ -435,10 +436,10 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           out   std_logic;
         PULL_BUF_SIZE   : --! @brief Pull Buffer Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
                           --! バッファからデータを読み出し可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS -1 downto 0);
+                          in    std_logic_vector(VAL_BITS         -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -580,11 +581,11 @@ begin
             VAL_BITS        => VAL_BITS          , --
             DATA_SIZE       => AXI4_DATA_SIZE    , --
             ADDR_BITS       => AXI4_ADDR_WIDTH   , --
-            SIZE_BITS       => SIZE_BITS         , --
             ALEN_BITS       => AXI4_ALEN_WIDTH   , --
             REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
             REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
             FLOW_VALID      => FLOW_VALID        , --
+            XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE       --
         )
