@@ -2,7 +2,7 @@
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
 --!     @version 1.5.4
---!     @date    2014/2/20
+--!     @date    2014/2/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -82,10 +82,14 @@ entity  PIPE_CORE_UNIT is
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
-        COUNT_BITS          : --! @brief Transfer Counter Bits :
+        XFER_COUNT_BITS     : --! @brief Transfer Counter Bits :
                               --! このモジュール内で使用している各種カウンタのビット
                               --! 幅を指定する.
-                              integer := 32;
+                              integer := 12;
+        XFER_SIZE_BITS      : --! @brief Transfer Size Bits :
+                              --! １回の転送バイト数入力信号(FLOW_SIZE/PULL_SIZE/
+                              --! PUSH_SIZEなど)のビット幅を指定する.
+                              integer := 12;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -223,51 +227,51 @@ entity  PIPE_CORE_UNIT is
     -------------------------------------------------------------------------------
     -- レスポンダ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
-        T_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         T_I_FLOW_READY      : out std_logic;
         T_I_FLOW_PAUSE      : out std_logic;
         T_I_FLOW_STOP       : out std_logic;
         T_I_FLOW_LAST       : out std_logic;
-        T_I_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        T_I_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_FIN_VALID    : in  std_logic;
         T_PUSH_FIN_LAST     : in  std_logic;
         T_PUSH_FIN_ERROR    : in  std_logic;
-        T_PUSH_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_RSV_VALID    : in  std_logic;
         T_PUSH_RSV_LAST     : in  std_logic;
         T_PUSH_RSV_ERROR    : in  std_logic;
-        T_PUSH_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PUSH_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         T_PUSH_BUF_RESET    : in  std_logic;
         T_PUSH_BUF_VALID    : in  std_logic;
         T_PUSH_BUF_LAST     : in  std_logic;
         T_PUSH_BUF_ERROR    : in  std_logic;
-        T_PUSH_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- レスポンダ側へのデータ出力のフロー制御信号入出力
     -------------------------------------------------------------------------------
-        T_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         T_O_FLOW_READY      : out std_logic;
         T_O_FLOW_PAUSE      : out std_logic;
         T_O_FLOW_STOP       : out std_logic;
         T_O_FLOW_LAST       : out std_logic;
-        T_O_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        T_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_FIN_VALID    : in  std_logic;
         T_PULL_FIN_LAST     : in  std_logic;
         T_PULL_FIN_ERROR    : in  std_logic;
-        T_PULL_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_RSV_VALID    : in  std_logic;
         T_PULL_RSV_LAST     : in  std_logic;
         T_PULL_RSV_ERROR    : in  std_logic;
-        T_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PULL_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_RSV_SIZE     : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_RESET    : in  std_logic;
         T_PULL_BUF_VALID    : in  std_logic;
         T_PULL_BUF_LAST     : in  std_logic;
         T_PULL_BUF_ERROR    : in  std_logic;
-        T_PULL_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスト側クロック.
@@ -308,24 +312,24 @@ entity  PIPE_CORE_UNIT is
         M_I_FLOW_PAUSE      : out std_logic;
         M_I_FLOW_STOP       : out std_logic;
         M_I_FLOW_LAST       : out std_logic;
-        M_I_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_I_FLOW_READY      : out std_logic;
-        M_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        M_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PUSH_FIN_VALID    : in  std_logic;
         M_PUSH_FIN_LAST     : in  std_logic;
         M_PUSH_FIN_ERROR    : in  std_logic;
-        M_PUSH_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_RSV_VALID    : in  std_logic;
         M_PUSH_RSV_LAST     : in  std_logic;
         M_PUSH_RSV_ERROR    : in  std_logic;
-        M_PUSH_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PUSH_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PUSH_BUF_RESET    : in  std_logic;
         M_PUSH_BUF_VALID    : in  std_logic;
         M_PUSH_BUF_LAST     : in  std_logic;
         M_PUSH_BUF_ERROR    : in  std_logic;
-        M_PUSH_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側へのデータ出力のフロー制御信号入出力
@@ -333,23 +337,23 @@ entity  PIPE_CORE_UNIT is
         M_O_FLOW_PAUSE      : out std_logic;
         M_O_FLOW_STOP       : out std_logic;
         M_O_FLOW_LAST       : out std_logic;
-        M_O_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_O_FLOW_READY      : out std_logic;
-        M_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PULL_FIN_VALID    : in  std_logic;
         M_PULL_FIN_LAST     : in  std_logic;
         M_PULL_FIN_ERROR    : in  std_logic;
-        M_PULL_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_RSV_VALID    : in  std_logic;
         M_PULL_RSV_LAST     : in  std_logic;
         M_PULL_RSV_ERROR    : in  std_logic;
-        M_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PULL_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PULL_BUF_RESET    : in  std_logic;
         M_PULL_BUF_VALID    : in  std_logic;
         M_PULL_BUF_LAST     : in  std_logic;
         M_PULL_BUF_ERROR    : in  std_logic;
-        M_PULL_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_BUF_READY    : out std_logic
     );
 end PIPE_CORE_UNIT;
@@ -391,22 +395,22 @@ architecture RTL of PIPE_CORE_UNIT is
     signal    s_push_fin_valid  : std_logic;
     signal    s_push_fin_last   : std_logic;
     constant  s_push_fin_error  : std_logic := '0';
-    signal    s_push_fin_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    s_push_fin_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     signal    s_push_rsv_valid  : std_logic;
     signal    s_push_rsv_last   : std_logic;
     constant  s_push_rsv_error  : std_logic := '0';
-    signal    s_push_rsv_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    s_push_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     signal    s_pull_fin_valid  : std_logic;
     signal    s_pull_fin_last   : std_logic;
     constant  s_pull_fin_error  : std_logic := '0';
-    signal    s_pull_fin_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    s_pull_fin_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     signal    s_pull_rsv_valid  : std_logic;
     signal    s_pull_rsv_last   : std_logic;
     constant  s_pull_rsv_error  : std_logic := '0';
-    signal    s_pull_rsv_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    s_pull_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -432,22 +436,22 @@ architecture RTL of PIPE_CORE_UNIT is
     signal    q_push_fin_valid  : std_logic;
     signal    q_push_fin_last   : std_logic;
     constant  q_push_fin_error  : std_logic := '0';
-    signal    q_push_fin_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    q_push_fin_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     signal    q_push_rsv_valid  : std_logic;
     signal    q_push_rsv_last   : std_logic;
     constant  q_push_rsv_error  : std_logic := '0';
-    signal    q_push_rsv_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    q_push_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     signal    q_pull_fin_valid  : std_logic;
     signal    q_pull_fin_last   : std_logic;
     constant  q_pull_fin_error  : std_logic := '0';
-    signal    q_pull_fin_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    q_pull_fin_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     signal    q_pull_rsv_valid  : std_logic;
     signal    q_pull_rsv_last   : std_logic;
     constant  q_pull_rsv_error  : std_logic := '0';
-    signal    q_pull_rsv_size   : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    q_pull_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     --
@@ -461,7 +465,8 @@ begin
             SIZE_BITS               => SIZE_BITS                   ,
             SIZE_VALID              => SIZE_VALID                  ,
             MODE_BITS               => MODE_BITS                   ,
-            COUNT_BITS              => COUNT_BITS                  ,
+            XFER_COUNT_BITS         => XFER_COUNT_BITS             ,
+            XFER_SIZE_BITS          => XFER_SIZE_BITS              ,
             BUF_DEPTH               => BUF_DEPTH                   ,
             O_FIXED_CLOSE           => T_O_FIXED_CLOSE             ,
             O_FIXED_FLOW_OPEN       => T_O_FIXED_FLOW_OPEN         ,
@@ -770,7 +775,7 @@ begin
                 O_CLK_RATE          => M_CLK_RATE                  , --
                 OPEN_INFO_BITS      => OPEN_INFO_RANGE.BITS        , --
                 CLOSE_INFO_BITS     => CLOSE_INFO_BITS             , --
-                SIZE_BITS           => SIZE_BITS                   , --
+                XFER_SIZE_BITS      => XFER_SIZE_BITS              , --
                 PUSH_FIN_VALID      => SYNC_PARAM.PUSH_FIN_VALID   , --
                 PUSH_FIN_DELAY      => SYNC_PARAM.PUSH_FIN_DELAY   , --
                 PUSH_RSV_VALID      => SYNC_PARAM.PUSH_RSV_VALID   , --
@@ -919,7 +924,7 @@ begin
                 O_CLK_RATE          => T_CLK_RATE                  , --
                 OPEN_INFO_BITS      => 1                           , --
                 CLOSE_INFO_BITS     => 1                           , --
-                SIZE_BITS           => SIZE_BITS                   , --
+                XFER_SIZE_BITS      => XFER_SIZE_BITS              , --
                 PUSH_FIN_VALID      => SYNC_PARAM.PUSH_FIN_VALID   , --
                 PUSH_FIN_DELAY      => SYNC_PARAM.PUSH_FIN_DELAY   , --
                 PUSH_RSV_VALID      => SYNC_PARAM.PUSH_RSV_VALID   , --
@@ -989,7 +994,8 @@ begin
             SIZE_BITS               => SIZE_BITS                   ,
             SIZE_VALID              => SIZE_VALID                  ,
             MODE_BITS               => MODE_BITS                   ,
-            COUNT_BITS              => COUNT_BITS                  ,
+            XFER_COUNT_BITS         => XFER_COUNT_BITS             ,
+            XFER_SIZE_BITS          => XFER_SIZE_BITS              ,
             BUF_DEPTH               => BUF_DEPTH                   ,
             T_XFER_MAX_SIZE         => T_XFER_MAX_SIZE             ,
             O_FIXED_CLOSE           => M_O_FIXED_CLOSE             ,

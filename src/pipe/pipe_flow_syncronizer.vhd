@@ -4,7 +4,7 @@
 --!              Pipe の Requester 側から Responder 側へ、またはResponder 側から
 --!              Requester側 へ、各種情報を伝達するモジュール.
 --!     @version 1.5.4
---!     @date    2014/2/20
+--!     @date    2014/2/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -59,7 +59,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
         CLOSE_INFO_BITS : --! @brief CLOSE INFOMATION BITS :
                           --! I_CLOSE_INFO/O_CLOSE_INFOのビット数を指定する.
                           integer :=  1;
-        SIZE_BITS       : --! @brief SIZE BITS :
+        XFER_SIZE_BITS  : --! @brief SIZE BITS :
                           --! 各種サイズ信号のビット数を指定する.
                           integer :=  8;
         PUSH_FIN_VALID  : --! @brief PUSH FINAL SIZE VALID :
@@ -151,7 +151,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           in  std_logic := '0';
         I_PUSH_FIN_SIZE : --! @brief INPUT PUSH FINAL SIZE :
                           --! 入力側から出力側への転送が"確定した"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からの、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           in  std_logic := '0';
         I_PUSH_RSV_SIZE : --! @brief INPUT PUSH RESERVE SIZE :
                           --! 入力側から出力側への転送が"予定された"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からの、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -175,7 +175,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           in  std_logic := '0';
         I_PULL_FIN_SIZE : --! @brief INPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送が"確定した"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からの、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           in  std_logic := '0';
         I_PULL_RSV_SIZE : --! @brief INPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送"が予定された"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Output Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
@@ -242,7 +242,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           out std_logic;
         O_PUSH_FIN_SIZE : --! @brief OUTPUT PUSH FINAL SIZE :
                           --! 入力側から出力側への転送が"確定した"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側への、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -254,7 +254,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           out std_logic;
         O_PUSH_RSV_SIZE : --! @brief OUTPUT PUSH RESERVE SIZE :
                           --! 入力側から出力側への転送が"予定された"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側への、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -266,7 +266,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           out std_logic;
         O_PULL_FIN_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送が"確定した"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側への、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -278,7 +278,7 @@ entity  PIPE_FLOW_SYNCRONIZER is
                           out std_logic;
         O_PULL_RSV_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送"が予定された"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0)
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0)
     );
 end PIPE_FLOW_SYNCRONIZER;
 -----------------------------------------------------------------------------------
@@ -377,16 +377,16 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
         SET_INFO_RANGE(v.OPEN_INFO , OPEN_INFO_BITS );
         SET_INFO_RANGE(v.CLOSE_INFO, CLOSE_INFO_BITS);
         if (PUSH_FIN_VALID /= 0) then
-            SET_SIZE_RANGE(v.PUSH_FIN, SIZE_BITS);
+            SET_SIZE_RANGE(v.PUSH_FIN, XFER_SIZE_BITS);
         end if;
         if (PUSH_RSV_VALID /= 0) then
-            SET_SIZE_RANGE(v.PUSH_RSV, SIZE_BITS);
+            SET_SIZE_RANGE(v.PUSH_RSV, XFER_SIZE_BITS);
         end if;
         if (PULL_FIN_VALID /= 0) then
-            SET_SIZE_RANGE(v.PULL_FIN, SIZE_BITS);
+            SET_SIZE_RANGE(v.PULL_FIN, XFER_SIZE_BITS);
         end if;
         if (PULL_RSV_VALID /= 0) then
-            SET_SIZE_RANGE(v.PULL_RSV, SIZE_BITS);
+            SET_SIZE_RANGE(v.PULL_RSV, XFER_SIZE_BITS);
         end if;
         ---------------------------------------------------------------------------
         -- この段階で必要な分のビット割り当ては終了.
@@ -397,16 +397,16 @@ architecture  RTL of PIPE_FLOW_SYNCRONIZER is
         -- 後は必要無いが、放っておくのも気持ち悪いので、ダミーの値をセット.
         ---------------------------------------------------------------------------
         if (PUSH_FIN_VALID = 0) then
-            SET_SIZE_RANGE(v.PUSH_FIN, SIZE_BITS);
+            SET_SIZE_RANGE(v.PUSH_FIN, XFER_SIZE_BITS);
         end if;
         if (PUSH_RSV_VALID = 0) then
-            SET_SIZE_RANGE(v.PUSH_RSV, SIZE_BITS);
+            SET_SIZE_RANGE(v.PUSH_RSV, XFER_SIZE_BITS);
         end if;
         if (PULL_FIN_VALID = 0) then
-            SET_SIZE_RANGE(v.PULL_FIN, SIZE_BITS);
+            SET_SIZE_RANGE(v.PULL_FIN, XFER_SIZE_BITS);
         end if;
         if (PULL_RSV_VALID = 0) then
-            SET_SIZE_RANGE(v.PULL_RSV, SIZE_BITS);
+            SET_SIZE_RANGE(v.PULL_RSV, XFER_SIZE_BITS);
         end if;
         ---------------------------------------------------------------------------
         --
@@ -483,7 +483,7 @@ begin
     I_PUSH_FIN_REGS: if (PUSH_FIN_VALID /= 0) generate              --
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
             generic map (                                           --
-                DATA_BITS   => SIZE_BITS                          , -- 
+                DATA_BITS   => XFER_SIZE_BITS                     , -- 
                 OPERATION   => 2                                    -- 
             )                                                       -- 
             port map (                                              -- 
@@ -527,7 +527,7 @@ begin
     I_PUSH_RSV_REGS: if (PUSH_RSV_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
             generic map (                                           --
-                DATA_BITS   => SIZE_BITS                          , -- 
+                DATA_BITS   => XFER_SIZE_BITS                     , -- 
                 OPERATION   => 2                                    -- 
             )                                                       -- 
             port map (                                              -- 
@@ -571,7 +571,7 @@ begin
     I_PULL_FIN_REGS: if (PULL_FIN_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
             generic map (                                           --
-                DATA_BITS   => SIZE_BITS                          , -- 
+                DATA_BITS   => XFER_SIZE_BITS                     , -- 
                 OPERATION   => 2                                    -- 
             )                                                       -- 
             port map (                                              -- 
@@ -615,7 +615,7 @@ begin
     I_PULL_RSV_REGS: if (PULL_RSV_VALID /= 0) generate              -- 
         SIZE: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
             generic map (                                           --
-                DATA_BITS   => SIZE_BITS                          , -- 
+                DATA_BITS   => XFER_SIZE_BITS                     , -- 
                 OPERATION   => 2                                    -- 
             )                                                       -- 
             port map (                                              -- 

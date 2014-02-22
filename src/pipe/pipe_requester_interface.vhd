@@ -2,7 +2,7 @@
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
 --!     @version 1.5.4
---!     @date    2014/2/20
+--!     @date    2014/2/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -55,7 +55,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
-                          integer := 32;
+                              integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
@@ -72,9 +72,13 @@ entity  PIPE_REQUESTER_INTERFACE is
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
-        COUNT_BITS          : --! @brief Flow Counter Bits :
+        XFER_COUNT_BITS     : --! @brief Flow Counter Bits :
                               --! フロー制御用カウンタのビット数を指定する.
                               integer := 32;
+        XFER_SIZE_BITS      : --! @brief Transfer Size Bits :
+                              --! １回の転送バイト数入力信号(FLOW_SIZE/PULL_SIZE/
+                              --! PUSH_SIZEなど)のビット幅を指定する.
+                              integer := 12;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -245,11 +249,11 @@ entity  PIPE_REQUESTER_INTERFACE is
         M_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from requester :
                               in  std_logic;
         M_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from requester :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   requester :
                               out std_logic;
         M_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -260,11 +264,11 @@ entity  PIPE_REQUESTER_INTERFACE is
         M_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from requester :
                               in  std_logic;
         M_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from requester :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   requester :
                               out std_logic;
         M_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Requester.
     -------------------------------------------------------------------------------
@@ -281,7 +285,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               out std_logic;
         O_FLOW_SIZE         : --! @brief Outlet Valve Flow Enable Size :
                               --! 出力可能なバイト数を出力.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         O_FLOW_READY        : --! @brief Outlet Valve Flow Ready :
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
@@ -290,7 +294,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Requester.
     -------------------------------------------------------------------------------
@@ -307,7 +311,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               out std_logic;
         I_FLOW_SIZE         : --! @brief Intake Valve Flow Enable Size :
                               --! 入力可能なバイト数
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         I_FLOW_READY        : --! @brief Intake Valve Flow Ready :
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
@@ -315,12 +319,12 @@ entity  PIPE_REQUESTER_INTERFACE is
         I_BUF_SIZE          : --! @brief Intake Buffer Size :
                               --! 入力用プールの総容量を指定する.
                               --! I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request from Responder.
     -------------------------------------------------------------------------------
@@ -396,7 +400,7 @@ entity  PIPE_REQUESTER_INTERFACE is
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
                               --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
@@ -422,7 +426,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from Responder.
     -------------------------------------------------------------------------------
@@ -443,7 +447,7 @@ entity  PIPE_REQUESTER_INTERFACE is
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
                               --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
@@ -469,7 +473,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
     );
 end PIPE_REQUESTER_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -757,8 +761,8 @@ begin
             FIXED_POOL_OPEN => O_FIXED_POOL_OPEN   , --
             USE_PUSH_RSV    => USE_T_PUSH_RSV      , --
             USE_POOL_PULL   => USE_M_PULL_BUF      , --
-            COUNT_BITS      => COUNT_BITS          , -- 
-            SIZE_BITS       => SIZE_BITS             -- 
+            COUNT_BITS      => XFER_COUNT_BITS     , -- 
+            SIZE_BITS       => XFER_SIZE_BITS        -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------
@@ -831,8 +835,8 @@ begin
             FIXED_POOL_OPEN => I_FIXED_POOL_OPEN   , --
             USE_PULL_RSV    => USE_T_PULL_RSV      , --
             USE_POOL_PUSH   => USE_M_PUSH_BUF      , --
-            COUNT_BITS      => COUNT_BITS          , -- 
-            SIZE_BITS       => SIZE_BITS             -- 
+            COUNT_BITS      => XFER_COUNT_BITS     , -- 
+            SIZE_BITS       => XFER_SIZE_BITS        -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------

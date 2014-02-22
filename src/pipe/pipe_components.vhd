@@ -2,7 +2,7 @@
 --!     @file    pipe_components.vhd                                             --
 --!     @brief   PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.4                                                           --
---!     @date    2014/02/20                                                      --
+--!     @date    2014/02/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ component PIPE_FLOW_SYNCRONIZER
         CLOSE_INFO_BITS : --! @brief CLOSE INFOMATION BITS :
                           --! I_CLOSE_INFO/O_CLOSE_INFOのビット数を指定する.
                           integer :=  1;
-        SIZE_BITS       : --! @brief SIZE BITS :
+        XFER_SIZE_BITS  : --! @brief SIZE BITS :
                           --! 各種サイズ信号のビット数を指定する.
                           integer :=  8;
         PUSH_FIN_VALID  : --! @brief PUSH FINAL SIZE VALID :
@@ -154,7 +154,7 @@ component PIPE_FLOW_SYNCRONIZER
                           in  std_logic := '0';
         I_PUSH_FIN_SIZE : --! @brief INPUT PUSH FINAL SIZE :
                           --! 入力側から出力側への転送が"確定した"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からの、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ component PIPE_FLOW_SYNCRONIZER
                           in  std_logic := '0';
         I_PUSH_RSV_SIZE : --! @brief INPUT PUSH RESERVE SIZE :
                           --! 入力側から出力側への転送が"予定された"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からの、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ component PIPE_FLOW_SYNCRONIZER
                           in  std_logic := '0';
         I_PULL_FIN_SIZE : --! @brief INPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送が"確定した"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からの、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -190,7 +190,7 @@ component PIPE_FLOW_SYNCRONIZER
                           in  std_logic := '0';
         I_PULL_RSV_SIZE : --! @brief INPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送"が予定された"バイト数を入力.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Output Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ component PIPE_FLOW_SYNCRONIZER
                           out std_logic;
         O_PUSH_FIN_SIZE : --! @brief OUTPUT PUSH FINAL SIZE :
                           --! 入力側から出力側への転送が"確定した"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側への、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -257,7 +257,7 @@ component PIPE_FLOW_SYNCRONIZER
                           out std_logic;
         O_PUSH_RSV_SIZE : --! @brief OUTPUT PUSH RESERVE SIZE :
                           --! 入力側から出力側への転送が"予定された"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側への、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -269,7 +269,7 @@ component PIPE_FLOW_SYNCRONIZER
                           out std_logic;
         O_PULL_FIN_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送が"確定した"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0);
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側への、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
@@ -281,7 +281,7 @@ component PIPE_FLOW_SYNCRONIZER
                           out std_logic;
         O_PULL_RSV_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
                           --! 出力側から入力側への転送"が予定された"バイト数を出力.
-                          out std_logic_vector(SIZE_BITS-1 downto 0)
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -303,7 +303,7 @@ component PIPE_REQUESTER_INTERFACE
                               integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
-                          integer := 32;
+                              integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
@@ -320,9 +320,13 @@ component PIPE_REQUESTER_INTERFACE
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
-        COUNT_BITS          : --! @brief Flow Counter Bits :
+        XFER_COUNT_BITS     : --! @brief Flow Counter Bits :
                               --! フロー制御用カウンタのビット数を指定する.
                               integer := 32;
+        XFER_SIZE_BITS      : --! @brief Transfer Size Bits :
+                              --! １回の転送バイト数入力信号(FLOW_SIZE/PULL_SIZE/
+                              --! PUSH_SIZEなど)のビット幅を指定する.
+                              integer := 12;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -493,11 +497,11 @@ component PIPE_REQUESTER_INTERFACE
         M_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from requester :
                               in  std_logic;
         M_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from requester :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   requester :
                               out std_logic;
         M_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -508,11 +512,11 @@ component PIPE_REQUESTER_INTERFACE
         M_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from requester :
                               in  std_logic;
         M_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from requester :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   requester :
                               out std_logic;
         M_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Requester.
     -------------------------------------------------------------------------------
@@ -529,7 +533,7 @@ component PIPE_REQUESTER_INTERFACE
                               out std_logic;
         O_FLOW_SIZE         : --! @brief Outlet Valve Flow Enable Size :
                               --! 出力可能なバイト数を出力.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         O_FLOW_READY        : --! @brief Outlet Valve Flow Ready :
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
@@ -538,7 +542,7 @@ component PIPE_REQUESTER_INTERFACE
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Requester.
     -------------------------------------------------------------------------------
@@ -555,7 +559,7 @@ component PIPE_REQUESTER_INTERFACE
                               out std_logic;
         I_FLOW_SIZE         : --! @brief Intake Valve Flow Enable Size :
                               --! 入力可能なバイト数
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         I_FLOW_READY        : --! @brief Intake Valve Flow Ready :
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
@@ -563,12 +567,12 @@ component PIPE_REQUESTER_INTERFACE
         I_BUF_SIZE          : --! @brief Intake Buffer Size :
                               --! 入力用プールの総容量を指定する.
                               --! I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request from Responder.
     -------------------------------------------------------------------------------
@@ -644,7 +648,7 @@ component PIPE_REQUESTER_INTERFACE
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
                               --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
@@ -670,7 +674,7 @@ component PIPE_REQUESTER_INTERFACE
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from Responder.
     -------------------------------------------------------------------------------
@@ -691,7 +695,7 @@ component PIPE_REQUESTER_INTERFACE
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
                               --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
@@ -717,7 +721,7 @@ component PIPE_REQUESTER_INTERFACE
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -738,8 +742,8 @@ component PIPE_RESPONDER_INTERFACE
                               --! * PULL_VALID=0でデータ転送を行わない.
                               integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
-                             --! REQ_ADDR信号のビット数を指定する.
-                          integer := 32;
+                              --! REQ_ADDR信号のビット数を指定する.
+                              integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
@@ -756,9 +760,13 @@ component PIPE_RESPONDER_INTERFACE
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
-        COUNT_BITS          : --! @brief Flow Counter Bits :
+        XFER_COUNT_BITS     : --! @brief Flow Counter Bits :
                               --! フロー制御用カウンタのビット数を指定する.
                               integer := 32;
+        XFER_SIZE_BITS      : --! @brief Transfer Size Bits :
+                              --! １回の転送バイト数入力信号(FLOW_SIZE/PULL_SIZE/
+                              --! PUSH_SIZEなど)のビット幅を指定する.
+                              integer := 12;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -923,7 +931,7 @@ component PIPE_RESPONDER_INTERFACE
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals from Requester.
     -------------------------------------------------------------------------------
@@ -939,7 +947,7 @@ component PIPE_RESPONDER_INTERFACE
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -950,11 +958,11 @@ component PIPE_RESPONDER_INTERFACE
         T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
                               in  std_logic;
         T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
                               out std_logic;
         T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -965,11 +973,11 @@ component PIPE_RESPONDER_INTERFACE
         T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
                               in  std_logic;
         T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
                               out std_logic;
         T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
@@ -986,7 +994,7 @@ component PIPE_RESPONDER_INTERFACE
                               out std_logic;
         O_FLOW_SIZE         : --! @brief Outlet Valve Flow Enable Size :
                               --! 出力可能なバイト数を出力.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         O_FLOW_READY        : --! @brief Outlet Valve Flow Ready :
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
@@ -995,7 +1003,7 @@ component PIPE_RESPONDER_INTERFACE
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Responder.
     -------------------------------------------------------------------------------
@@ -1012,7 +1020,7 @@ component PIPE_RESPONDER_INTERFACE
                               out std_logic;
         I_FLOW_SIZE         : --! @brief Intake Valve Flow Enable Size :
                               --! 入力可能なバイト数
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         I_FLOW_READY        : --! @brief Intake Valve Flow Ready :
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
@@ -1025,11 +1033,11 @@ component PIPE_RESPONDER_INTERFACE
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         I_BUF_SIZE          : --! @brief Intake Pool Size :
                               --! 入力用プールの総容量を指定する.
                               --! I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request to Requester Signals.
     -------------------------------------------------------------------------------
@@ -1100,7 +1108,7 @@ component PIPE_RESPONDER_INTERFACE
         M_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from requester :
                               --! M_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
@@ -1119,7 +1127,7 @@ component PIPE_RESPONDER_INTERFACE
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from requester.
     -------------------------------------------------------------------------------
@@ -1135,7 +1143,7 @@ component PIPE_RESPONDER_INTERFACE
         M_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from requester :
                               --! M_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
@@ -1154,7 +1162,7 @@ component PIPE_RESPONDER_INTERFACE
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -1203,10 +1211,14 @@ component PIPE_CORE_UNIT
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
-        COUNT_BITS          : --! @brief Transfer Counter Bits :
+        XFER_COUNT_BITS     : --! @brief Transfer Counter Bits :
                               --! このモジュール内で使用している各種カウンタのビット
                               --! 幅を指定する.
-                              integer := 32;
+                              integer := 12;
+        XFER_SIZE_BITS      : --! @brief Transfer Size Bits :
+                              --! １回の転送バイト数入力信号(FLOW_SIZE/PULL_SIZE/
+                              --! PUSH_SIZEなど)のビット幅を指定する.
+                              integer := 12;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -1344,51 +1356,51 @@ component PIPE_CORE_UNIT
     -------------------------------------------------------------------------------
     -- レスポンダ側からデータ入力のフロー制御信号入出力.
     -------------------------------------------------------------------------------
-        T_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         T_I_FLOW_READY      : out std_logic;
         T_I_FLOW_PAUSE      : out std_logic;
         T_I_FLOW_STOP       : out std_logic;
         T_I_FLOW_LAST       : out std_logic;
-        T_I_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        T_I_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_FIN_VALID    : in  std_logic;
         T_PUSH_FIN_LAST     : in  std_logic;
         T_PUSH_FIN_ERROR    : in  std_logic;
-        T_PUSH_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_RSV_VALID    : in  std_logic;
         T_PUSH_RSV_LAST     : in  std_logic;
         T_PUSH_RSV_ERROR    : in  std_logic;
-        T_PUSH_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PUSH_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         T_PUSH_BUF_RESET    : in  std_logic;
         T_PUSH_BUF_VALID    : in  std_logic;
         T_PUSH_BUF_LAST     : in  std_logic;
         T_PUSH_BUF_ERROR    : in  std_logic;
-        T_PUSH_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- レスポンダ側へのデータ出力のフロー制御信号入出力
     -------------------------------------------------------------------------------
-        T_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         T_O_FLOW_READY      : out std_logic;
         T_O_FLOW_PAUSE      : out std_logic;
         T_O_FLOW_STOP       : out std_logic;
         T_O_FLOW_LAST       : out std_logic;
-        T_O_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        T_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_FIN_VALID    : in  std_logic;
         T_PULL_FIN_LAST     : in  std_logic;
         T_PULL_FIN_ERROR    : in  std_logic;
-        T_PULL_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_RSV_VALID    : in  std_logic;
         T_PULL_RSV_LAST     : in  std_logic;
         T_PULL_RSV_ERROR    : in  std_logic;
-        T_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_PULL_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_RSV_SIZE     : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_RESET    : in  std_logic;
         T_PULL_BUF_VALID    : in  std_logic;
         T_PULL_BUF_LAST     : in  std_logic;
         T_PULL_BUF_ERROR    : in  std_logic;
-        T_PULL_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスト側クロック.
@@ -1429,24 +1441,24 @@ component PIPE_CORE_UNIT
         M_I_FLOW_PAUSE      : out std_logic;
         M_I_FLOW_STOP       : out std_logic;
         M_I_FLOW_LAST       : out std_logic;
-        M_I_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_I_FLOW_READY      : out std_logic;
-        M_I_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_I_BUF_SIZE        : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        M_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PUSH_FIN_VALID    : in  std_logic;
         M_PUSH_FIN_LAST     : in  std_logic;
         M_PUSH_FIN_ERROR    : in  std_logic;
-        M_PUSH_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_RSV_VALID    : in  std_logic;
         M_PUSH_RSV_LAST     : in  std_logic;
         M_PUSH_RSV_ERROR    : in  std_logic;
-        M_PUSH_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PUSH_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PUSH_BUF_RESET    : in  std_logic;
         M_PUSH_BUF_VALID    : in  std_logic;
         M_PUSH_BUF_LAST     : in  std_logic;
         M_PUSH_BUF_ERROR    : in  std_logic;
-        M_PUSH_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側へのデータ出力のフロー制御信号入出力
@@ -1454,23 +1466,23 @@ component PIPE_CORE_UNIT
         M_O_FLOW_PAUSE      : out std_logic;
         M_O_FLOW_STOP       : out std_logic;
         M_O_FLOW_LAST       : out std_logic;
-        M_O_FLOW_SIZE       : out std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_O_FLOW_READY      : out std_logic;
-        M_O_FLOW_LEVEL      : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PULL_FIN_VALID    : in  std_logic;
         M_PULL_FIN_LAST     : in  std_logic;
         M_PULL_FIN_ERROR    : in  std_logic;
-        M_PULL_FIN_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_RSV_VALID    : in  std_logic;
         M_PULL_RSV_LAST     : in  std_logic;
         M_PULL_RSV_ERROR    : in  std_logic;
-        M_PULL_RSV_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        M_PULL_BUF_LEVEL    : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PULL_BUF_RESET    : in  std_logic;
         M_PULL_BUF_VALID    : in  std_logic;
         M_PULL_BUF_LAST     : in  std_logic;
         M_PULL_BUF_ERROR    : in  std_logic;
-        M_PULL_BUF_SIZE     : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_BUF_READY    : out std_logic
     );
 end component;
