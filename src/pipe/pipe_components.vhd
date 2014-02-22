@@ -474,7 +474,7 @@ component PIPE_REQUESTER_INTERFACE
                               --! 転送するバイト数を示す.
                               --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で
                               --! 示されるバイト数分を加算/減算すると良い.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Status from Requester Signals.
     -------------------------------------------------------------------------------
@@ -1429,7 +1429,7 @@ component PIPE_CORE_UNIT
         M_ACK_ERROR         : in  std_logic;
         M_ACK_STOP          : in  std_logic;
         M_ACK_NONE          : in  std_logic;
-        M_ACK_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_ACK_SIZE          : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- リクエスタ側からのステータス信号入力.
     -------------------------------------------------------------------------------

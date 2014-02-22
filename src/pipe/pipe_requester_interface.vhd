@@ -226,7 +226,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! 転送するバイト数を示す.
                               --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で
                               --! 示されるバイト数分を加算/減算すると良い.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Status from Requester Signals.
     -------------------------------------------------------------------------------

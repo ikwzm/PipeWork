@@ -300,7 +300,7 @@ entity  PIPE_CORE_UNIT is
         M_ACK_ERROR         : in  std_logic;
         M_ACK_STOP          : in  std_logic;
         M_ACK_NONE          : in  std_logic;
-        M_ACK_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
+        M_ACK_SIZE          : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- リクエスタ側からのステータス信号入力.
     -------------------------------------------------------------------------------
