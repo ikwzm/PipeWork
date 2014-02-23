@@ -2,7 +2,7 @@
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
 --!     @version 1.5.4
---!     @date    2014/2/22
+--!     @date    2014/2/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -524,7 +524,7 @@ begin
     -- XFER_REQ_SAFETY : セーフティモード.
     -------------------------------------------------------------------------------
     XFER_REQ_VAL    <= req_xfer_valid;
-    XFER_REQ_SEL    <= curr_valid;
+    XFER_REQ_SEL    <= curr_valid when (VAL_BITS > 1) else (others => '1');
     XFER_REQ_ADDR   <= REQ_ADDR;
     XFER_REQ_SIZE   <= req_xfer_size;
     XFER_REQ_NEXT   <= req_xfer_next;

@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.4                                                           --
---!     @date    2014/02/22                                                      --
+--!     @date    2014/02/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -438,13 +438,13 @@ component AXI4_MASTER_READ_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
                           --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
                           --!   アサートされるわけでは無い.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -856,13 +856,13 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
                           --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
                           --!   アサートされるわけでは無い.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Control Signals.
     -------------------------------------------------------------------------------
