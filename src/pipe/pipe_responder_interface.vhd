@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
---!     @version 1.5.0
---!     @date    2013/8/2
+--!     @version 1.5.4
+--!     @date    2014/2/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,8 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! * PULL_VALID=0でデータ転送を行わない.
                               integer :=  1;
         ADDR_BITS           : --! @brief Request Address Bits :
-                             --! REQ_ADDR信号のビット数を指定する.
-                          integer := 32;
+                              --! REQ_ADDR信号のビット数を指定する.
+                              integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
@@ -72,9 +72,13 @@ entity  PIPE_RESPONDER_INTERFACE is
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
-        COUNT_BITS          : --! @brief Flow Counter Bits :
+        XFER_COUNT_BITS     : --! @brief Flow Counter Bits :
                               --! フロー制御用カウンタのビット数を指定する.
                               integer := 32;
+        XFER_SIZE_BITS      : --! @brief Transfer Size Bits :
+                              --! １回の転送バイト数入力信号(FLOW_SIZE/PULL_SIZE/
+                              --! PUSH_SIZEなど)のビット幅を指定する.
+                              integer := 12;
         BUF_DEPTH           : --! @brief Buffer Depth :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -156,7 +160,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! 最初のトランザクションであることを示す.
                               --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
                               --!   トランザクションを開始する.
-                              in  std_logic;
+                              in  std_logic := '1';
         T_REQ_LAST          : --! @brief Request Last transaction from responder :
                               --! 最後のトランザクションであることを示す.
                               --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
@@ -165,7 +169,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
-                              in  std_logic;
+                              in  std_logic := '1';
         T_REQ_VALID         : --! @brief Request Valid signal from responder  :
                               --! 上記の各種リクエスト信号が有効であることを示す.
                               --! * この信号のアサートでもってトランザクションを開始する.
@@ -202,15 +206,26 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! 転送したバイト数を示す.
                               out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
+    -- Control from Responder Signals.
+    -------------------------------------------------------------------------------
+        T_REQ_STOP          : --! @brief Transfer Stop Request.
+                              --! レスポンダ側から強制的にデータ転送を中止すること
+                              --! を要求する信号.
+                              in  std_logic := '0';
+        T_REQ_PAUSE         : --! @brief Transfer Pause Request.
+                              --! レスポンダ側から強制的にデータ転送を一時的に中断
+                              --! することを要求する信号.
+                              in  std_logic := '0';
+    -------------------------------------------------------------------------------
     -- Status from Responder Signals.
     -------------------------------------------------------------------------------
         T_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
         T_XFER_DONE         : --! @brief Transfer Done.
-                              --! データ転送中かつ、次のクロックで M_XFER_BUSY が
+                              --! データ転送中かつ、次のクロックで T_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
-                              --! * ただし、M_XFER_BUSY のネゲート前に 必ずしもこの
+                              --! * ただし、T_XFER_BUSY のネゲート前に 必ずしもこの
                               --!   信号がアサートされるわけでは無い.
                               in  std_logic;
     -------------------------------------------------------------------------------
@@ -228,7 +243,7 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals from Requester.
     -------------------------------------------------------------------------------
@@ -244,7 +259,7 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -255,11 +270,11 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
                               in  std_logic;
         T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
                               out std_logic;
         T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -270,11 +285,11 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
                               in  std_logic;
         T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
                               out std_logic;
         T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
@@ -291,7 +306,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               out std_logic;
         O_FLOW_SIZE         : --! @brief Outlet Valve Flow Enable Size :
                               --! 出力可能なバイト数を出力.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         O_FLOW_READY        : --! @brief Outlet Valve Flow Ready :
                               --! プールバッファに O_FLOW_READY_LEVEL 以上のデータがある
                               --! ことを示す.
@@ -300,7 +315,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以上の時に転送を開始する.
                               --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals to Responder.
     -------------------------------------------------------------------------------
@@ -317,7 +332,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               out std_logic;
         I_FLOW_SIZE         : --! @brief Intake Valve Flow Enable Size :
                               --! 入力可能なバイト数
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         I_FLOW_READY        : --! @brief Intake Valve Flow Ready :
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
@@ -330,11 +345,11 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         I_BUF_SIZE          : --! @brief Intake Pool Size :
                               --! 入力用プールの総容量を指定する.
                               --! I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request to Requester Signals.
     -------------------------------------------------------------------------------
@@ -405,7 +420,7 @@ entity  PIPE_RESPONDER_INTERFACE is
         M_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from requester :
                               --! M_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
@@ -424,7 +439,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from requester.
     -------------------------------------------------------------------------------
@@ -440,7 +455,7 @@ entity  PIPE_RESPONDER_INTERFACE is
         M_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from requester :
                               --! M_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
@@ -459,7 +474,7 @@ entity  PIPE_RESPONDER_INTERFACE is
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(SIZE_BITS-1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
     );
 end PIPE_RESPONDER_INTERFACE;
 -----------------------------------------------------------------------------------
@@ -480,12 +495,13 @@ architecture RTL of PIPE_RESPONDER_INTERFACE is
     constant  pause             : std_logic := '0';
     constant  stop              : std_logic := '0';
     signal    start             : std_logic;
-    type      STATE_TYPE    is  ( IDLE_STATE, REQ_STATE, ACK_STATE );
+    type      STATE_TYPE    is  ( IDLE_STATE, REQ_STATE, STOP_STATE, ACK_STATE );
     signal    curr_state        : STATE_TYPE;
     signal    xfer_dir          : std_logic;
     signal    xfer_last         : std_logic;
     signal    ack_error         : std_logic;
     signal    ack_last          : std_logic;
+    signal    ack_stop          : std_logic;
     signal    push_mode         : boolean;
     signal    pull_mode         : boolean;
     constant  size_all_clr      : std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
@@ -502,7 +518,13 @@ architecture RTL of PIPE_RESPONDER_INTERFACE is
     signal    o_valve_o_open    : std_logic;
     signal    i_valve_i_open    : std_logic;
     signal    i_valve_o_open    : std_logic;
-    signal    done_state        : std_logic_vector(1 downto 0);
+    type      DONE_STATE_TYPE is( DONE_IDLE_STATE   ,
+                                  DONE_REQUEST_STATE,
+                                  STOP_REQUEST_STATE,
+                                  DONE_PENDING_STATE,
+                                  STOP_TURN_AR_STATE
+                                );
+    signal    done_state        : DONE_STATE_TYPE;
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -516,19 +538,21 @@ begin
     begin
         if (RST = '1') then
                 curr_state <= IDLE_STATE;
-                done_state <= "00";
+                done_state <= DONE_IDLE_STATE;
                 xfer_dir   <= '0';
                 xfer_last  <= '1';
                 ack_error  <= '0';
                 ack_last   <= '0';
+                ack_stop   <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
                 curr_state <= IDLE_STATE;
-                done_state <= "00";
+                done_state <= DONE_IDLE_STATE;
                 xfer_dir   <= '0';
                 xfer_last  <= '1';
                 ack_error  <= '0';
                 ack_last   <= '0';
+                ack_stop   <= '0';
             else
                 case curr_state is
                     when IDLE_STATE =>
@@ -537,13 +561,21 @@ begin
                         else
                             next_state := IDLE_STATE;
                         end if;
-                    when REQ_STATE =>
+                    when REQ_STATE  =>
                         if    (M_RES_DONE = '1') then
                             next_state := ACK_STATE;
+                        elsif (T_REQ_STOP = '1') then
+                            next_state := STOP_STATE;
                         else
                             next_state := REQ_STATE;
                         end if;
-                    when ACK_STATE =>
+                    when STOP_STATE =>
+                        if    (M_RES_DONE = '1') then
+                            next_state := ACK_STATE;
+                        else
+                            next_state := STOP_STATE;
+                        end if;
+                    when ACK_STATE  =>
                             next_state := IDLE_STATE;
                     when others =>
                             next_state := IDLE_STATE;
@@ -553,37 +585,49 @@ begin
                     xfer_dir  <= T_REQ_DIR;
                     xfer_last <= T_REQ_LAST;
                 end if;
-                if (curr_state = REQ_STATE and M_RES_DONE = '1') then
-                    if    (M_RES_ERROR = '1') then
-                        ack_error <= '1';
-                        ack_last  <= '0';
-                    elsif (xfer_last = '1') then
-                        ack_error <= '0';
-                        ack_last  <= '1';
-                    else
+                case next_state is
+                    when IDLE_STATE =>
                         ack_error <= '0';
                         ack_last  <= '0';
-                    end if;
-                end if;
+                        ack_stop  <= '0';
+                    when STOP_STATE =>
+                        ack_stop  <= '1';
+                    when ACK_STATE  =>
+                        ack_error <=     M_RES_ERROR;
+                        ack_last  <= not M_RES_ERROR and xfer_last;
+                    when others     => 
+                        null;
+                end case;
                 case done_state is
-                    when "00" =>
-                        if (next_state = ACK_STATE) then
+                    when DONE_IDLE_STATE =>
+                        if    (next_state = STOP_STATE) then
+                                done_state <= STOP_REQUEST_STATE;
+                        elsif (next_state = ACK_STATE ) then
                             if (T_XFER_BUSY = '0' or T_XFER_DONE = '1') then
-                                done_state <= "01";
+                                done_state <= DONE_REQUEST_STATE;
                             else
-                                done_state <= "10";
+                                done_state <= DONE_PENDING_STATE;
                             end if;
                         else
-                                done_state <= "00";
+                                done_state <= DONE_IDLE_STATE;
                         end if;
-                    when "10" =>
-                        if (T_XFER_BUSY = '0' or T_XFER_DONE = '1') then
-                                done_state <= "01";
+                    when STOP_REQUEST_STATE |
+                         STOP_TURN_AR_STATE =>
+                        if (next_state /= STOP_STATE ) then
+                                done_state <= DONE_IDLE_STATE;
                         else
-                                done_state <= "10";
+                                done_state <= STOP_TURN_AR_STATE;
                         end if;
+                    when DONE_PENDING_STATE =>
+                        if (T_XFER_BUSY = '0' or T_XFER_DONE = '1') then
+                                done_state <= DONE_REQUEST_STATE;
+                        else
+                                done_state <= DONE_PENDING_STATE;
+                        end if;
+                    when DONE_REQUEST_STATE =>
+                                done_state <= DONE_IDLE_STATE;
                     when others => 
-                                done_state <= "00";
+                                done_state <= DONE_IDLE_STATE;
                 end case;
             end if;
         end if;
@@ -603,7 +647,7 @@ begin
     T_ACK_ERROR <= '1' when (curr_state = ACK_STATE  and ack_error   = '1') else '0';
     T_ACK_NEXT  <= '1' when (curr_state = ACK_STATE  and ack_last    = '0') else '0';
     T_ACK_LAST  <= '1' when (curr_state = ACK_STATE  and ack_last    = '1') else '0';
-    T_ACK_STOP  <= '0';
+    T_ACK_STOP  <= '1' when (curr_state = ACK_STATE  and ack_stop    = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -633,7 +677,7 @@ begin
     --
     -------------------------------------------------------------------------------
     M_REQ_START   <= start;
-    M_REQ_VALID   <= '1' when (curr_state = REQ_STATE) else '0';
+    M_REQ_VALID   <= '1' when (start = '1' or curr_state = REQ_STATE) else '0';
     M_REQ_ADDR    <= T_REQ_ADDR;
     M_REQ_SIZE    <= T_REQ_SIZE;
     M_REQ_BUF_PTR <= T_REQ_BUF_PTR;
@@ -642,8 +686,8 @@ begin
     M_REQ_LAST    <= T_REQ_LAST;
     M_REQ_DIR     <= '1' when (PUSH_VALID /= 0 and PULL_VALID  = 0) else
                      '0' when (PUSH_VALID  = 0 and PULL_VALID /= 0) else T_REQ_DIR;
-    M_REQ_DONE    <= done_state(0);
-    M_REQ_STOP    <= '0';
+    M_REQ_DONE    <= '1' when (done_state = DONE_REQUEST_STATE) else '0';
+    M_REQ_STOP    <= '1' when (done_state = STOP_REQUEST_STATE) else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -699,8 +743,8 @@ begin
             FIXED_POOL_OPEN => O_FIXED_POOL_OPEN   , --
             USE_PUSH_RSV    => USE_M_PUSH_RSV      , --
             USE_POOL_PULL   => USE_T_PULL_BUF      , --
-            COUNT_BITS      => COUNT_BITS          , -- 
-            SIZE_BITS       => SIZE_BITS             -- 
+            COUNT_BITS      => XFER_COUNT_BITS     , -- 
+            SIZE_BITS       => XFER_SIZE_BITS        -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------
@@ -713,8 +757,8 @@ begin
         -- Control Signals.
         ---------------------------------------------------------------------------
             RESET           => reset               , -- In  :
-            PAUSE           => pause               , -- In  :
-            STOP            => stop                , -- In  :
+            PAUSE           => T_REQ_PAUSE         , -- In  :
+            STOP            => T_REQ_STOP          , -- In  :
             INTAKE_OPEN     => o_valve_i_open      , -- In  :
             OUTLET_OPEN     => o_valve_o_open      , -- In  :
             FLOW_READY_LEVEL=> O_FLOW_LEVEL        , -- In  :
@@ -771,8 +815,8 @@ begin
             FIXED_POOL_OPEN => I_FIXED_POOL_OPEN   , --
             USE_PULL_RSV    => USE_M_PULL_RSV      , --
             USE_POOL_PUSH   => USE_T_PUSH_BUF      , --
-            COUNT_BITS      => COUNT_BITS          , -- 
-            SIZE_BITS       => SIZE_BITS             -- 
+            COUNT_BITS      => XFER_COUNT_BITS     , -- 
+            SIZE_BITS       => XFER_SIZE_BITS        -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------
@@ -785,8 +829,8 @@ begin
         -- Control Signals.
         ---------------------------------------------------------------------------
             RESET           => reset               , -- In  :
-            PAUSE           => pause               , -- In  :
-            STOP            => stop                , -- In  :
+            PAUSE           => T_REQ_PAUSE         , -- In  :
+            STOP            => T_REQ_STOP          , -- In  :
             INTAKE_OPEN     => i_valve_i_open      , -- In  :
             OUTLET_OPEN     => i_valve_o_open      , -- In  :
             POOL_SIZE       => I_BUF_SIZE          , -- In  :

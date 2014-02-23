@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
---!     @version 1.5.0
---!     @date    2013/5/13
+--!     @version 1.5.4
+--!     @date    2014/2/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -386,6 +386,7 @@ begin
         constant  O_WORDS       : integer   := PORT_DATA_BITS/WORD_BITS;
         constant  flush         : std_logic := '0';
         constant  done          : std_logic := '0';
+        constant  o_shift       : std_logic_vector(O_WORDS   downto O_WORDS) := "0";
         signal    offset        : std_logic_vector(O_WORDS-1 downto 0);
         signal    error_flag    : boolean;
     begin
@@ -455,6 +456,8 @@ begin
                 QUEUE_SIZE      => Q_SIZE         , -- 
                 VALID_MIN       => 0              , -- 
                 VALID_MAX       => 0              , -- 
+                O_SHIFT_MIN     => o_shift'low    , --
+                O_SHIFT_MAX     => o_shift'high   , --
                 I_JUSTIFIED     => 0              , -- 
                 FLUSH_ENABLE    => 0                -- 
             )                                       -- 
@@ -493,7 +496,8 @@ begin
                 O_DONE          => outlet_last    , -- Out :
                 O_FLUSH         => open           , -- Out :
                 O_VAL           => outlet_valid   , -- Out :
-                O_RDY           => outlet_ready     -- In  :
+                O_RDY           => outlet_ready   , -- In  :
+                O_SHIFT         => o_shift          -- In  :
         );
         ---------------------------------------------------------------------------
         --

@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_intake_valve.vhd
 --!     @brief   FLOAT INTAKE VALVE
---!     @version 1.5.0
---!     @date    2013/5/19
+--!     @version 1.5.4
+--!     @date    2014/2/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -81,12 +81,12 @@ entity  FLOAT_INTAKE_VALVE is
                           in  std_logic;
         POOL_SIZE       : --! @brief POOL SIZE :
                           --! プールの大きさをバイト数で指定する.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
                           --! * フローカウンタの値がこの値以下の時に入力を開始する.
                           --! * フローカウンタの値がこの値を越えた時に入力を一時停止.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter Load Signals.
     -------------------------------------------------------------------------------
@@ -206,7 +206,7 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- flow_counter : 現在バッファに入っている(または入る予定)の量をカウント
+    -- flow_counter  : 現在バッファに入っている(または入る予定)の量をカウント
     -- flow_positive : フローカウンタの値が正(>0)になったことを示すフラグ.
     -- flow_negative : フローカウンタの値が負(<0)になったことを示すフラグ.
     -- flow_eq_zero  : フローカウンタの値が0になったことを示すフラグ.
@@ -287,6 +287,22 @@ begin
     FLOW_LAST  <= '0';
     -------------------------------------------------------------------------------
     -- FLOW_SIZE  : 入力可能なバイト数を出力.
+    --              INTAKE側では、現在のフローカウンタの状態に関わらず、常に一定の
+    --              値(POOL_SIZE-FLOW_READY_LEVEL)を出力する.
     -------------------------------------------------------------------------------
-    FLOW_SIZE  <= std_logic_vector(to_01(unsigned(POOL_SIZE)) - to_01(unsigned(FLOW_READY_LEVEL)));
+    process (POOL_SIZE, FLOW_READY_LEVEL)
+        variable reserve_size  : unsigned(COUNT_BITS-1 downto 0);
+        constant MAX_FLOW_SIZE : integer := 2**(FLOW_SIZE'high);
+    begin
+        reserve_size := to_01(unsigned(POOL_SIZE)) - to_01(unsigned(FLOW_READY_LEVEL));
+        if (reserve_size'length > FLOW_SIZE'length) then
+            if (reserve_size > MAX_FLOW_SIZE) then
+                FLOW_SIZE <= std_logic_vector(to_unsigned(MAX_FLOW_SIZE, FLOW_SIZE'length));
+            else
+                FLOW_SIZE <= std_logic_vector(resize     (reserve_size , FLOW_SIZE'length));
+            end if;
+        else
+                FLOW_SIZE <= std_logic_vector(resize     (reserve_size , FLOW_SIZE'length));
+        end if;
+    end process;
 end RTL;

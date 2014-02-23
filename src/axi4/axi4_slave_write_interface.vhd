@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.4
+--!     @date    2014/2/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -56,9 +56,13 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           --! AXI4 アドレスチャネルおよびライトレスポンスチャネルの
                           --! ID信号のビット幅.
                           integer := 4;
-        SIZE_BITS       : --! @brief SIZE BITS :
+        XFER_SIZE_BITS  : --! @brief TRANSFER SIZE BITS :
                           --! 各種サイズカウンタのビット数を指定する.
                           integer := 32;
+        VAL_BITS        : --! @brief VALID BITS :
+                          --! XFER_BUSY、XFER_DONE、PUSH_FIN_VAL、PUSH_RSV_VAL信号の
+                          --! ビット数を指定する.
+                          integer := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
                           integer := 32;
@@ -164,30 +168,15 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           --! * このモジュールでは AXI4_ABURST_INCR と AXI4_ABURST_FIXED
                           --!   のみをサポートしている.
                           out   AXI4_ABURST_TYPE;
-        REQ_BUF_PTR     : --! @brief Request Write Buffer Pointer.
-                          --! ライトバッファの先頭ポインタの値を指定する.
-                          --! * ライトバッファのこのポインタの位置からRDATAを書き込
-                          --!   む.
-                          out   std_logic_vector(BUF_PTR_BITS     -1 downto 0);
-        REQ_FIRST       : --! @brief Request First Transaction.
-                          --! 最初のトランザクションであることを示す.
-                          --! * REQ_FIRST=1の場合、内部状態を初期化してからトランザ
-                          --!   クションを開始する.
-                          out   std_logic;
-        REQ_LAST        : --! @brief Request Last Transaction.
-                          --! 最後のトランザクションであることを示す.
-                          --! * REQ_LAST=1の場合、Acknowledge を返す際に、すべての
-                          --!   トランザクションが終了していると、ACK_LAST 信号をア
-                          --!   サートする.
-                          --! * REQ_LAST=0の場合、Acknowledge を返す際に、すべての
-                          --!   トランザクションが終了していると、ACK_NEXT 信号をア
-                          --!   サートする.
-                          out   std_logic;
         REQ_VAL         : --! @brief Request Valid Signal.
                           --! 上記の各種リクエスト信号が有効であることを示す.
                           --! * この信号のアサートでもってトランザクションを開始する.
                           --! * 一度この信号をアサートすると Acknowledge を返すまで、
                           --!   この信号はアサートされなくてはならない.
+                          out   std_logic;
+        REQ_START       : --! @brief Request Start Signal.
+                          --! REQ_VAL信号がアサートされた最初のサイクルだけアサート
+                          --! される.
                           out   std_logic;
         REQ_RDY         : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
@@ -225,7 +214,29 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           --! 転送するバイト数を示す.
                           --! REQ_ADDR、REQ_SIZE、REQ_BUF_PTRなどは、この信号で示さ
                           --! れるバイト数分を加算/減算すると良い.
-                          in    std_logic_vector(SIZE_BITS        -1 downto 0);
+                          in    std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Transfer Control Signal.
+    -------------------------------------------------------------------------------
+        XFER_START      : --! @brief Transfer Start.
+                          --! データ転送開始を指示する信号.
+                          --! * 下記の各種リクエスト信号が有効であることを示す.
+                          in    std_logic;
+        XFER_LAST       : --! @brief Transfer Last.
+                          --! 最後の転送であることを指示する信号.
+                          --! * XFER_START 信号がアサートされている時のみ有効.
+                          in    std_logic;
+        XFER_SEL        : --! @brief Transfer Select.
+                          --! XFER_BUSY、XFER_DONE、PULL_FIN_VAL、PULL_RSV_VAL 信号
+                          --! の生成パターンを指定する.
+                          --! * XFER_START 信号がアサートされている時のみ有効.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_BUF_PTR    : --! @brief Transfer Write Buffer Pointer.
+                          --! ライトバッファの先頭ポインタの値を指定する.
+                          --! * XFER_START 信号がアサートされている時のみ有効.
+                          --! * ライトバッファのこのポインタの位置からRDATAを書き込
+                          --!   む.
+                          in    std_logic_vector(BUF_PTR_BITS     -1 downto 0);
     -------------------------------------------------------------------------------
     -- Transfer Status Signal.
     -------------------------------------------------------------------------------
@@ -234,20 +245,20 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
                           --! * ただし、XFER_BUSY のネゲート前に 必ずしもこの信号が
                           --!   アサートされるわけでは無い.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
         PUSH_RSV_VAL    : --! @brief Push Reserve Valid.
                           --! PUSH_RSV_LAST/PUSH_RSV_ERROR/PUSH_RSV_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_RSV_LAST   : --! @brief Push Reserve Last.
                           --! 最後の転送"する予定"である事を示すフラグ.
                           out   std_logic;
@@ -256,14 +267,14 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           out   std_logic;
         PUSH_RSV_SIZE   : --! @brief Push Reserve Size.
                           --! 転送"する予定"のバイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Final Size Signals.
     -------------------------------------------------------------------------------
         PUSH_FIN_VAL    : --! @brief Push Final Valid.
                           --! PUSH_FIN_LAST/PUSH_FIN_ERROR/PUSH_FIN_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_FIN_LAST   : --! @brief Push Final Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
@@ -272,17 +283,17 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           out   std_logic;
         PUSH_FIN_SIZE   : --! @brief Push Final Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
     -- Push Buffer Size Signals.
     -------------------------------------------------------------------------------
         PUSH_BUF_RESET  : --! @brief Push Buffer Counter Reset.
                           --! バッファのカウンタをリセットする信号.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_BUF_VAL    : --! @brief Push Buffer Valid.
                           --! PUSH_BUF_LAST/PUSH_BUF_ERROR/PUSH_BUF_SIZEが有効で
                           --! あることを示す.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         PUSH_BUF_LAST   : --! @brief Push Buffer Last.
                           --! 最後の転送"した事"を示すフラグ.
                           out   std_logic;
@@ -291,16 +302,16 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           out   std_logic;
         PUSH_BUF_SIZE   : --! @brief Push Buffer Size.
                           --! 転送"した"バイト数を出力する.
-                          out   std_logic_vector(SIZE_BITS-1 downto 0);
+                          out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
                           --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic;
+                          in    std_logic_vector(VAL_BITS         -1 downto 0);
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
         BUF_WEN         : --! @brief Buffer Write Enable.
                           --! バッファにデータをライトすることを示す.
-                          out   std_logic;
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         BUF_BEN         : --! @brief Buffer Byte Enable.
                           --! バッファにデータをライトする際のバイトイネーブル信号.
                           --! * BUF_WEN='1'の場合にのみ有効.
@@ -325,43 +336,21 @@ use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.COMPONENTS.POOL_INTAKE_PORT;
 architecture RTL of AXI4_SLAVE_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
-    -- データバスのバイト数の２のべき乗値を計算する関数.
-    -------------------------------------------------------------------------------
-    function CALC_DATA_SIZE(WIDTH:integer) return integer is
-        variable value : integer;
-    begin
-        value := 0;
-        while (2**(value+3) < WIDTH) loop
-            value := value + 1;
-        end loop;
-        return value;
-    end function;
-    -------------------------------------------------------------------------------
-    -- アライメントのバイト数を２のべき乗値で示す.
-    -------------------------------------------------------------------------------
-    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS);
-    -------------------------------------------------------------------------------
-    -- バッファの先頭ポインタ
-    -------------------------------------------------------------------------------
-    signal   start_ptr          : std_logic_vector(BUF_PTR_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    -- 各種定数
-    -------------------------------------------------------------------------------
-    constant sig0               : std_logic := '0';
-    constant sig1               : std_logic := '1';
-    -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
     type     STATE_TYPE        is (IDLE_STATE, REQ_STATE, TAR_STATE, RESP_STATE);
     signal   curr_state         : STATE_TYPE;
-    signal   xfer_start         : std_logic;
+    signal   curr_select        : std_logic_vector(VAL_BITS-1 downto 0);
     signal   xfer_error         : std_logic;
     signal   prev_busy          : std_logic;
     signal   port_busy          : std_logic;
-    signal   o_push_valid       : std_logic;
+    signal   push_buf_ready     : std_logic;
+    signal   push_buf_done      : std_logic;
+    constant PUSH_BUF_ALL0      : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
+    signal   o_push_valid       : std_logic_vector(VAL_BITS-1 downto 0);
     signal   o_push_last        : std_logic;
     signal   o_push_error       : std_logic;
-    signal   o_push_size        : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal   o_push_size        : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- ステートマシン
@@ -456,33 +445,24 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    xfer_start  <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
-    XFER_BUSY   <= '1' when (prev_busy = '1' or port_busy = '1') else '0';
-    XFER_DONE   <= '1' when (o_push_valid = '1' and o_push_last = '1') else '0';
+    XFER_BUSY   <= curr_select when (prev_busy = '1' or port_busy = '1') else (others => '0');
+    XFER_DONE   <= curr_select when (push_buf_done = '1') else (others => '0');
     AWREADY     <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1') else '0';
     BRESP       <= AXI4_RESP_SLVERR when (xfer_error = '1') else AXI4_RESP_OKAY;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    process (AWADDR) begin
-        for i in start_ptr'range loop
-            if (i < ALIGNMENT_SIZE) then
-                start_ptr(i) <= AWADDR(i);
-            else
-                start_ptr(i) <= '0';
-            end if;
-        end loop;
-    end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    REQ_VAL     <= '1' when (curr_state = IDLE_STATE and AWVALID = '1') else '0';
+    REQ_START   <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
+    REQ_VAL     <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') or
+                            (curr_state = REQ_STATE                                     ) else '0';
     REQ_ADDR    <= AWADDR;
     REQ_BURST   <= AWBURST;
     REQ_ID      <= AWID;
-    REQ_BUF_PTR <= start_ptr;
-    REQ_FIRST   <= '1';
-    REQ_LAST    <= '1';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    push_buf_ready  <= '1' when ((PUSH_BUF_RDY and curr_select) /= PUSH_BUF_ALL0) else '0';
+    push_buf_done   <= '1' when ((o_push_valid and curr_select) /= PUSH_BUF_ALL0) else '0';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -492,8 +472,8 @@ begin
             WORD_BITS       => 8               , -- 
             PORT_DATA_BITS  => AXI4_DATA_WIDTH , -- 
             POOL_DATA_BITS  =>  BUF_DATA_WIDTH , -- 
-            SEL_BITS        => 1               , -- 
-            SIZE_BITS       => SIZE_BITS       , -- 
+            SEL_BITS        => VAL_BITS        , -- 
+            SIZE_BITS       => XFER_SIZE_BITS  , -- 
             PTR_BITS        => BUF_PTR_BITS    , -- 
             QUEUE_SIZE      => 0                 -- 
         )                                        -- 
@@ -507,10 +487,10 @@ begin
         ---------------------------------------------------------------------------
         -- Control Signals.
         ---------------------------------------------------------------------------
-            START           => xfer_start      , -- In  :
-            START_PTR       => start_ptr       , -- In  :
-            XFER_LAST       => sig1            , -- In  :
-            XFER_SEL(0)     => sig1            , -- In  :
+            START           => XFER_START      , -- In  :
+            START_PTR       => XFER_BUF_PTR    , -- In  :
+            XFER_LAST       => XFER_LAST       , -- In  :
+            XFER_SEL        => XFER_SEL        , -- In  :
         -------------------------------------------------------------------------------
         -- Intake Port Signals.
         -------------------------------------------------------------------------------
@@ -523,23 +503,44 @@ begin
         -------------------------------------------------------------------------------
         -- Push Size Signals.
         -------------------------------------------------------------------------------
-            PUSH_VAL(0)     => o_push_valid    , -- Out :
+            PUSH_VAL        => o_push_valid    , -- Out :
             PUSH_LAST       => o_push_last     , -- Out :
             PUSH_ERROR      => o_push_error    , -- Out :
             PUSH_SIZE       => o_push_size     , -- Out :
         -------------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
         -------------------------------------------------------------------------------
-            POOL_WEN(0)     => BUF_WEN         , -- Out :
+            POOL_WEN        => BUF_WEN         , -- Out :
             POOL_DVAL       => BUF_BEN         , -- Out :
             POOL_DATA       => BUF_DATA        , -- Out :
             POOL_PTR        => BUF_PTR         , -- Out :
-            POOL_RDY        => PUSH_BUF_RDY    , -- In  :
+            POOL_RDY        => push_buf_ready  , -- In  :
         -------------------------------------------------------------------------------
         -- Status Signals.
         -------------------------------------------------------------------------------
             BUSY            => port_busy         -- Out :
         );
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    VAL_BIT_GT_1: if (VAL_BITS > 1) generate
+        process (CLK, RST) begin
+            if (RST = '1') then
+                    curr_select <= (others => '0');
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    curr_select <= (others => '0');
+                elsif (XFER_START    = '1') then
+                    curr_select <= XFER_SEL;
+                elsif (push_buf_done = '1') then
+                    curr_select <= (others => '0');
+                end if;
+            end if;
+        end process;
+    end generate;
+    VAL_BIT_LE_1: if (VAL_BITS <= 1) generate
+        curr_select <= (others => '1');
+    end generate;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -557,7 +558,7 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    PUSH_BUF_RESET <= '0';
+    PUSH_BUF_RESET <= XFER_SEL when (XFER_START = '1') else (others => '0');
     PUSH_BUF_VAL   <= o_push_valid;
     PUSH_BUF_LAST  <= o_push_last;
     PUSH_BUF_ERROR <= o_push_error;
