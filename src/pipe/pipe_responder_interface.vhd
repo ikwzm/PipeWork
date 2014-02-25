@@ -2,7 +2,7 @@
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
 --!     @version 1.5.4
---!     @date    2014/2/22
+--!     @date    2014/2/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -507,7 +507,7 @@ architecture RTL of PIPE_RESPONDER_INTERFACE is
     constant  size_all_clr      : std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     constant  size_all_set      : std_logic_vector(SIZE_BITS-1 downto 0) := (others => '1');
     signal    size_load         : std_logic_vector(SIZE_BITS-1 downto 0);
-    signal    size_up_size      : std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    size_up_size      : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     signal    size_up_valid     : std_logic;
     signal    size_up_select    : boolean;
     signal    m_valve_open      : std_logic;
