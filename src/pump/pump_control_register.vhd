@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.5.0
---!     @date    2013/5/24
+--!     @version 1.5.4
+--!     @date    2014/2/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -295,6 +295,7 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   done_bit           : std_logic;
     signal   error_bit          : std_logic;
     signal   error_flag         : std_logic;
+    signal   request_bit        : std_logic;
     signal   mode_regs          : std_logic_vector(MODE_BITS-1 downto 0);
     signal   stat_regs          : std_logic_vector(STAT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
@@ -341,6 +342,7 @@ begin
                 error_flag  <= '0';
                 mode_regs   <= (others => '0');
                 stat_regs   <= (others => '0');
+                request_bit <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1') then
                 curr_state  <= IDLE_STATE;
@@ -357,6 +359,7 @@ begin
                 error_flag  <= '0';
                 mode_regs   <= (others => '0');
                 stat_regs   <= (others => '0');
+                request_bit <= '0';
             else
                 -------------------------------------------------------------------
                 --
@@ -534,6 +537,14 @@ begin
                     end loop;
                 end if;
                 -------------------------------------------------------------------
+                -- REQ_VALID   : 
+                -------------------------------------------------------------------
+                if (next_state = REQ_STATE or next_state = ACK_STATE) then
+                    request_bit <= '1';
+                else
+                    request_bit <= '0';
+                end if;
+                -------------------------------------------------------------------
                 -- first_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
@@ -589,7 +600,7 @@ begin
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-    REQ_VALID    <= '1' when (curr_state = REQ_STATE  ) else '0';
+    REQ_VALID    <= request_bit;
     REQ_FIRST    <= first_state(0);
     REQ_LAST     <= last_bit;
 end RTL;
