@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_port.vhd
 --!     @brief   AXI4 DATA PORT
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.4
+--!     @date    2014/2/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -428,81 +428,95 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        function  GEN_STRB_MASK(POS:unsigned;WIDTH:integer) return STRB_MASK_TYPE is
-            function GEN(POS:unsigned;W:integer) return STRB_MASK_TYPE is
-                variable  S : STRB_MASK_TYPE;
-                constant  N : integer := STRB_BITS/W;
-            begin
-                for i in 0 to N-1 loop
-                    if (i = POS) then
-                        S.enable(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '1');
-                    else
-                        S.enable(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '0');
-                    end if;
-                    if (i > POS) then
-                        S.remain(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '1');
-                    else
-                        S.remain(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '0');
-                    end if;
-                end loop;
-                return S;
-            end function;
+        function GEN_STRB_MASK(
+                      WORD_POS   : unsigned;  -- 現在の出力中のワード位置
+            constant  WORD_BITS  : integer    -- ASIZEで指定された1ワードのバイト数
+        )             return       STRB_MASK_TYPE
+        is
+            variable  STRB_MASK  : STRB_MASK_TYPE;
+            constant  N          : integer := STRB_BITS/WORD_BITS;
+            constant  ALL1       : std_logic_vector(WORD_BITS-1 downto 0) := (others => '1');
+            constant  ALL0       : std_logic_vector(WORD_BITS-1 downto 0) := (others => '0');
+        begin
+            for i in 0 to N-1 loop
+                if (i = WORD_POS) then
+                    STRB_MASK.enable(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL1;
+                else
+                    STRB_MASK.enable(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL0;
+                end if;
+                if (i > WORD_POS) then
+                    STRB_MASK.remain(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL1;
+                else
+                    STRB_MASK.remain(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL0;
+                end if;
+            end loop;
+            return STRB_MASK;
+        end function;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        function  GEN_STRB_MASK(
+                      BYTE_POS   : unsigned;  -- 現在の出力中のバイト位置
+                      WORD_WIDTH : integer ;  -- ASIZEで指定された1ワードのバイト数(2のべき乗値)
+            constant  DATA_WIDTH : integer    -- データ入出力信号のバイト数(2のべき乗値)
+        )             return       STRB_MASK_TYPE
+        is
         begin
             case DATA_WIDTH is
                 when DATA_WIDTH_2BYTE   =>
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(0 downto 0),  1);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(0 downto 0),  1);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_4BYTE   =>
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(1 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(1 downto 1),  2);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(1 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(1 downto 1),  2);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_8BYTE   =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(2 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(2 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(2 downto 2),  4);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(2 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(2 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(2 downto 2),  4);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_16BYTE  =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(3 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(3 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(3 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(3 downto 3),  8);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 3),  8);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_32BYTE  =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(4 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(4 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(4 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(4 downto 3),  8);
-                        when DATA_WIDTH_16BYTE => return GEN(POS(4 downto 4), 16);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 3),  8);
+                        when DATA_WIDTH_16BYTE => return GEN_STRB_MASK(BYTE_POS(4 downto 4), 16);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_64BYTE  =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(5 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(5 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(5 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(5 downto 3),  8);
-                        when DATA_WIDTH_16BYTE => return GEN(POS(5 downto 4), 16);
-                        when DATA_WIDTH_32BYTE => return GEN(POS(5 downto 5), 32);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 3),  8);
+                        when DATA_WIDTH_16BYTE => return GEN_STRB_MASK(BYTE_POS(5 downto 4), 16);
+                        when DATA_WIDTH_32BYTE => return GEN_STRB_MASK(BYTE_POS(5 downto 5), 32);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_128BYTE =>
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(6 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(6 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(6 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(6 downto 3),  8);
-                        when DATA_WIDTH_16BYTE => return GEN(POS(6 downto 4), 16);
-                        when DATA_WIDTH_32BYTE => return GEN(POS(6 downto 5), 32);
-                        when DATA_WIDTH_64BYTE => return GEN(POS(6 downto 6), 64);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 3),  8);
+                        when DATA_WIDTH_16BYTE => return GEN_STRB_MASK(BYTE_POS(6 downto 4), 16);
+                        when DATA_WIDTH_32BYTE => return GEN_STRB_MASK(BYTE_POS(6 downto 5), 32);
+                        when DATA_WIDTH_64BYTE => return GEN_STRB_MASK(BYTE_POS(6 downto 6), 64);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when others                    => return STRB_MASK_ALL1;
@@ -643,7 +657,11 @@ begin
                     curr_word_bytes <= next_word_bytes;
                     curr_word_width <= next_word_width;
                     curr_pos        <= next_pos;
-                    strb_mask       <= GEN_STRB_MASK(next_pos, next_word_width);
+                    strb_mask       <= GEN_STRB_MASK(
+                                           BYTE_POS   => next_pos,
+                                           WORD_WIDTH => next_word_width,
+                                           DATA_WIDTH => DATA_WIDTH
+                                       );
                 end if;
             end if;
         end process;

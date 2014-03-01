@@ -2,7 +2,7 @@
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
 --!     @version 1.5.4
---!     @date    2014/2/23
+--!     @date    2014/3/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -319,7 +319,7 @@ begin
                 BURST       => 1                     , --
                 MIN_PIECE   => XFER_MIN_SIZE         , --
                 MAX_PIECE   => XFER_MAX_SIZE         , --
-                MAX_SIZE    => XFER_SIZE_BITS+1      , --
+                MAX_SIZE    => REQ_SIZE'length       , --
                 ADDR_BITS   => REQ_ADDR'length       , --
                 SIZE_BITS   => REQ_SIZE'length       , --
                 COUNT_BITS  => 1                     , --
@@ -369,7 +369,7 @@ begin
                 BURST       => 1                     , --
                 MIN_PIECE   => XFER_MIN_SIZE         , --
                 MAX_PIECE   => XFER_MAX_SIZE         , --
-                MAX_SIZE    => XFER_SIZE_BITS+1      , --
+                MAX_SIZE    => MAX_REQ_SIZE'length   , --
                 ADDR_BITS   => REQ_ADDR'length       , --
                 SIZE_BITS   => MAX_REQ_SIZE'length   , --
                 COUNT_BITS  => 1                     , --

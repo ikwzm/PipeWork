@@ -2,7 +2,7 @@
 --!     @file    pipe_components.vhd                                             --
 --!     @brief   PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.4                                                           --
---!     @date    2014/02/22                                                      --
+--!     @date    2014/02/26                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
