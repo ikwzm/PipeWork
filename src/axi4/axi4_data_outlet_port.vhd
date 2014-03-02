@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -86,6 +86,18 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --!   サポートする. その際の１ワード毎の転送バイト数は
                           --!   BURST_SIZE で指定される.
                           integer range 0 to 1 := 1;
+        CHECK_BURST_LEN : --! @brief CHECK BURST LENGTH :
+                          --! BURST_LEN で指定されたバースト数とI_LASTによるバースト
+                          --! 転送の最後が一致するかどうかチェックするか否かを指定す
+                          --! る.
+                          --! * CHECK_BURST_LEN=0かつUSE_BURST_SIZE=0を指定した場合、
+                          --!   バースト長をチェックしない. 
+                          --! * CHECK_BURST_LEN=1またはUSE_BURST_SIZE=0を指定した場
+                          --!   合、バースト長をチェックする.
+                          integer range 0 to 1 := 1;
+        TRAN_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
+                          --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
+                          integer := 4;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
@@ -284,18 +296,13 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
         return value;
     end function;
     -------------------------------------------------------------------------------
-    -- AXI4 データバスのバイト数の２のべき乗値.
-    -------------------------------------------------------------------------------
-    constant PORT_DATA_SIZE : integer := CALC_DATA_SIZE(PORT_DATA_BITS);
-    -------------------------------------------------------------------------------
-    -- レジスタインターフェース側のデータバスのバイト数の２のべき乗値.
+    -- データバスのバイト数の２のべき乗値.
     -------------------------------------------------------------------------------
     constant POOL_DATA_SIZE : integer := CALC_DATA_SIZE(POOL_DATA_BITS);
     -------------------------------------------------------------------------------
-    -- 最大転送バイト数
+    -- データバスのバイト数選択定数.
     -------------------------------------------------------------------------------
-    constant XFER_MAX_SIZE  : integer := BURST_LEN_BITS + PORT_DATA_SIZE;
-    constant XFER_BEAT_SEL  : std_logic_vector(XFER_MAX_SIZE downto XFER_MAX_SIZE) := "1";
+    constant POOL_DATA_SEL  : std_logic_vector(POOL_DATA_SIZE downto POOL_DATA_SIZE) := "1";
     -------------------------------------------------------------------------------
     -- 内部サイズビット数
     -------------------------------------------------------------------------------
@@ -397,19 +404,19 @@ begin
     -- i_size : １ワード毎のリードバイト数.
     -- i_last : 最後のワードであることを示すフラグ.
     -------------------------------------------------------------------------------
-    BEN: CHOPPER
-        generic map (
-            BURST           => 1               ,
-            MIN_PIECE       => POOL_DATA_SIZE  ,
-            MAX_PIECE       => POOL_DATA_SIZE  ,
-            MAX_SIZE        => XFER_MAX_SIZE   ,
-            ADDR_BITS       => POOL_PTR_BITS   ,
-            SIZE_BITS       => TRAN_SIZE_BITS  ,
-            COUNT_BITS      => 1               ,
-            PSIZE_BITS      => SIZE_BITS       ,
-            GEN_VALID       => 1
-        )
-        port map (
+    BEN: CHOPPER                                 -- 
+        generic map (                            -- 
+            BURST           => 1               , -- 
+            MIN_PIECE       => POOL_DATA_SIZE  , -- 
+            MAX_PIECE       => POOL_DATA_SIZE  , -- 
+            MAX_SIZE        => TRAN_MAX_SIZE   , -- 
+            ADDR_BITS       => START_PTR'length, -- 
+            SIZE_BITS       => TRAN_SIZE'length, -- 
+            COUNT_BITS      => 1               , -- 
+            PSIZE_BITS      => SIZE_BITS       , -- 
+            GEN_VALID       => 1                 -- 
+        )                                        -- 
+        port map (                               -- 
         ---------------------------------------------------------------------------
         -- Clock and Reset Signals.
         ---------------------------------------------------------------------------
@@ -421,7 +428,7 @@ begin
         ---------------------------------------------------------------------------
             ADDR            => START_PTR       , -- In  :
             SIZE            => TRAN_SIZE       , -- In  :
-            SEL             => XFER_BEAT_SEL   , -- In  :
+            SEL             => POOL_DATA_SEL   , -- In  :
             LOAD            => TRAN_START      , -- In  :
         ---------------------------------------------------------------------------
         -- 制御信号
@@ -445,7 +452,7 @@ begin
         ---------------------------------------------------------------------------
             VALID           => i_ben           , -- Out :
             NEXT_VALID      => open              -- Out :
-        );
+        );                                       -- 
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -512,7 +519,7 @@ begin
             POOL_BUSY       => POOL_BUSY       , -- Out :
             POOL_DONE       => POOL_DONE       , -- Out :
             BUSY            => q_busy            -- Out :
-        );
+        );                                       -- 
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -540,6 +547,7 @@ begin
             USER_BITS       => USER_BITS       , --
             ALEN_BITS       => BURST_LEN_BITS  , --
             USE_ASIZE       => USE_BURST_SIZE  , --
+            CHECK_ALEN      => CHECK_BURST_LEN , -- 
             I_REGS_SIZE     => SET.O_I_SIZE    , --
             O_REGS_SIZE     => SET.O_O_SIZE      --
         )                                        -- 
