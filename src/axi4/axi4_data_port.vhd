@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_port.vhd
 --!     @brief   AXI4 DATA PORT
---!     @version 1.5.4
---!     @date    2014/2/25
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -65,9 +65,18 @@ entity  AXI4_DATA_PORT is
                           --! 指定する.
                           --! * USE_ASIZE=0を指定した場合、Narrow transfers をサポ
                           --!   ートしない.
+                          --!   この場合、ASIZE信号は未使用.
                           --! * USE_ASIZE=1を指定した場合、Narrow transfers をサポ
                           --!   ートする. その際の１ワード毎の転送バイト数は
                           --!   ASIZE で指定される.
+                          integer range 0 to 1 := 1;
+        CHECK_ALEN      : --! @brief CHECK BURST LENGTH :
+                          --! ALEN で指定されたバースト数とI_LASTによるバースト転送
+                          --! の最後が一致するかどうかチェックするか否かを指定する.
+                          --! * CHECK_ALEN=0かつUSE_ASIZE=0を指定した場合、バースト
+                          --!   長をチェックしない. 
+                          --! * CHECK_ALEN=1またはUSE_ASIZEを指定した場合、バースト
+                          --!   長をチェックする.
                           integer range 0 to 1 := 1;
         I_REGS_SIZE     : --! @brief PORT INTAKE REGS SIZE :
                           --! 入力側に挿入するパイプラインレジスタの段数を指定する.
@@ -115,8 +124,10 @@ entity  AXI4_DATA_PORT is
                           --! * 最初にデータ入力と同時にアサートしても構わない.
                           in  std_logic;
         ASIZE           : --! @brief AXI4 BURST SIZE :
+                          --! AXI4 によるバーストサイズを指定する.
                           in  AXI4_ASIZE_TYPE;
         ALEN            : --! @brief AXI4 BURST LENGTH :
+                          --! AXI4 によるバースト数を指定する.
                           in  std_logic_vector(ALEN_BITS-1 downto 0);
         ADDR            : --! @brief START TRANSFER ADDRESS :
                           --! 出力側のアドレス.
@@ -694,9 +705,9 @@ begin
         l_ready <= '1' when (m_ready = '1' or m_skip = '1') else '0';
     end generate;
     -------------------------------------------------------------------------------
-    -- OUTLET_CTRL
+    -- CHECK_ALEN によるバースト長のチェックを行う場合の制御部
     -------------------------------------------------------------------------------
-    OUTLET_CTRL: block
+    CHECK_ALEN_T: if (CHECK_ALEN /= 0 or USE_ASIZE /= 0) generate
         type     STATE_TYPE  is (IDLE_STATE, XFER_STATE, DUMMY_STATE, SKIP_STATE);
         signal   curr_state  : STATE_TYPE;
         signal   curr_length : std_logic_vector(ALEN'range);
@@ -791,7 +802,56 @@ begin
                                 (curr_state = DUMMY_STATE) or
                                 (curr_state = SKIP_STATE ) or
                                 (o_busy     = '1'        ) else '0';
-    end block;
+    end generate;
+    -------------------------------------------------------------------------------
+    -- CHECK_ALEN によるバースト長のチェックを行わない場合の制御部
+    -------------------------------------------------------------------------------
+    CHECK_ALEN_F: if (CHECK_ALEN = 0 and USE_ASIZE = 0) generate
+        type     STATE_TYPE  is (IDLE_STATE, XFER_STATE);
+        signal   curr_state  : STATE_TYPE;
+    begin
+        process (CLK, RST)
+            variable m_done : boolean;
+        begin
+            if (RST = '1') then
+                    curr_state  <= IDLE_STATE;
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    curr_state  <= IDLE_STATE;
+                else
+                    m_done := (m_last = '1' or m_error = '1');
+                    case curr_state is
+                        when IDLE_STATE =>
+                            if (START = '1') then
+                                curr_state <= XFER_STATE;
+                            else
+                                curr_state <= IDLE_STATE;
+                            end if;
+                        when XFER_STATE =>
+                            if (m_valid = '1' and m_ready = '1' and m_done = TRUE) then
+                                curr_state <= IDLE_STATE;
+                            else
+                                curr_state <= XFER_STATE;
+                            end if;
+                        when others =>
+                                curr_state <= IDLE_STATE;
+                    end case;
+                end if;
+            end if;
+        end process;
+        n_data   <= m_data;
+        n_user   <= m_user;
+        n_last   <= m_last;
+        n_error  <= m_error;
+        n_strb   <= m_strb;
+        n_size   <= m_size;
+        n_valid  <= m_valid;
+        m_ready  <= n_ready;
+        m_skip   <= '0';
+        i_enable <= '1' when (curr_state = XFER_STATE ) else '0';
+        BUSY     <= '1' when (curr_state = XFER_STATE ) or
+                             (o_busy     = '1'        ) else '0';
+    end generate;
     -------------------------------------------------------------------------------
     -- OUTLET PORT
     -------------------------------------------------------------------------------
