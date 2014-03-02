@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.5.4
---!     @date    2014/2/23
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -539,8 +539,8 @@ begin
     -------------------------------------------------------------------------------
     -- AXI4 Read Address Channel Controller.
     -------------------------------------------------------------------------------
-    AR: AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
-        generic map (
+    AR: AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER     -- 
+        generic map (                              -- 
             VAL_BITS        => VAL_BITS          , --
             DATA_SIZE       => AXI4_DATA_SIZE    , --
             ADDR_BITS       => AXI4_ADDR_WIDTH   , --
@@ -551,8 +551,8 @@ begin
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE       --
-        )
-        port map (
+        )                                          -- 
+        port map (                                 -- 
         --------------------------------------------------------------------------
         -- Clock and Reset Signals.
         --------------------------------------------------------------------------
@@ -604,6 +604,7 @@ begin
         ---------------------------------------------------------------------------
             XFER_REQ_ADDR   => xfer_req_addr     , -- Out : 
             XFER_REQ_SIZE   => xfer_req_size     , -- Out :
+            XFER_REQ_ALEN   => open              , -- Out :
             XFER_REQ_FIRST  => xfer_req_first    , -- Out :
             XFER_REQ_LAST   => xfer_req_last     , -- Out :
             XFER_REQ_NEXT   => xfer_req_next     , -- Out :
@@ -620,7 +621,7 @@ begin
             XFER_ACK_LAST   => xfer_ack_last     , -- In  :
             XFER_ACK_ERR    => xfer_ack_error    , -- In  :
             XFER_RUNNING    => xfer_running        -- In  :
-        );
+        );                                         -- 
     -------------------------------------------------------------------------------
     -- AXI4 Read Address Channel Signals Output.
     -------------------------------------------------------------------------------
@@ -715,19 +716,19 @@ begin
     -- recv_data_ben : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
     --                 ここで作っておく.
     -------------------------------------------------------------------------------
-    BEN: CHOPPER
-        generic map (
-            BURST           => 1                     ,              
-            MIN_PIECE       => AXI4_DATA_SIZE        ,
-            MAX_PIECE       => AXI4_DATA_SIZE        ,
-            MAX_SIZE        => XFER_MAX_SIZE         ,
-            ADDR_BITS       => xfer_queue_addr'length,
-            SIZE_BITS       => xfer_queue_size'length,
-            COUNT_BITS      => 1                     ,
-            PSIZE_BITS      => xfer_beat_size'length ,
-            GEN_VALID       => 1
-        )
-        port map (
+    BEN: CHOPPER                                       -- 
+        generic map (                                  -- 
+            BURST           => 1                     , --           
+            MIN_PIECE       => AXI4_DATA_SIZE        , -- 
+            MAX_PIECE       => AXI4_DATA_SIZE        , -- 
+            MAX_SIZE        => XFER_MAX_SIZE         , -- 
+            ADDR_BITS       => xfer_queue_addr'length, -- 
+            SIZE_BITS       => xfer_queue_size'length, -- 
+            COUNT_BITS      => 1                     , -- 
+            PSIZE_BITS      => xfer_beat_size'length , -- 
+            GEN_VALID       => 1                       -- 
+        )                                              -- 
+        port map (                                     -- 
         ---------------------------------------------------------------------------
         -- Clock and Reset Signals.
         ---------------------------------------------------------------------------
@@ -763,7 +764,7 @@ begin
         ---------------------------------------------------------------------------
             VALID           => recv_data_ben         , -- Out :
             NEXT_VALID      => open                    -- Out :
-        );
+        );                                             -- 
     -------------------------------------------------------------------------------
     -- 応答側の状態遷移
     -------------------------------------------------------------------------------

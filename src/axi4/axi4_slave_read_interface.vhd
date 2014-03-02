@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
---!     @version 1.5.4
---!     @date    2014/2/23
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -526,7 +526,7 @@ begin
     REQ_ID      <= identifier;
     REQ_BURST   <= burst_type;
     -------------------------------------------------------------------------------
-    --
+    -- AXI4 用データ出力ポート
     -------------------------------------------------------------------------------
     OUTLET_PORT: AXI4_DATA_OUTLET_PORT           -- 
         generic map (                            -- 
@@ -534,13 +534,15 @@ begin
             POOL_DATA_BITS  =>  BUF_DATA_WIDTH , -- 
             TRAN_ADDR_BITS  => AXI4_ADDR_WIDTH , -- 
             TRAN_SIZE_BITS  => XFER_MAX_SIZE+1 , --
-            TRAN_SEL_BITS   => VAL_BITS        , -- 
+            TRAN_SEL_BITS   => XFER_SEL'length , -- 
             BURST_LEN_BITS  => AXI4_ALEN_WIDTH , -- 
             ALIGNMENT_BITS  => ALIGNMENT_BITS  , --
             PULL_SIZE_BITS  => XFER_SIZE_BITS  , --
             EXIT_SIZE_BITS  => XFER_SIZE_BITS  , --
             POOL_PTR_BITS   => BUF_PTR_BITS    , --
+            TRAN_MAX_SIZE   => XFER_MAX_SIZE   , --
             USE_BURST_SIZE  => 1               , --
+            CHECK_BURST_LEN => 1               , -- 
             PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 

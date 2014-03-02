@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.4                                                           --
---!     @date    2014/03/01                                                      --
+--!     @version 1.5.5                                                           --
+--!     @date    2014/03/02                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -143,6 +143,7 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS     -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE    downto 0);
         XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_REQ_ALEN   : out   std_logic_vector(ALEN_BITS     -1 downto 0);
         XFER_REQ_FIRST  : out   std_logic;
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
@@ -1987,9 +1988,18 @@ component AXI4_DATA_PORT
                           --! 指定する.
                           --! * USE_ASIZE=0を指定した場合、Narrow transfers をサポ
                           --!   ートしない.
+                          --!   この場合、ASIZE信号は未使用.
                           --! * USE_ASIZE=1を指定した場合、Narrow transfers をサポ
                           --!   ートする. その際の１ワード毎の転送バイト数は
                           --!   ASIZE で指定される.
+                          integer range 0 to 1 := 1;
+        CHECK_ALEN      : --! @brief CHECK BURST LENGTH :
+                          --! ALEN で指定されたバースト数とI_LASTによるバースト転送
+                          --! の最後が一致するかどうかチェックするか否かを指定する.
+                          --! * CHECK_ALEN=0かつUSE_ASIZE=0を指定した場合、バースト
+                          --!   長をチェックしない. 
+                          --! * CHECK_ALEN=1またはUSE_ASIZEを指定した場合、バースト
+                          --!   長をチェックする.
                           integer range 0 to 1 := 1;
         I_REGS_SIZE     : --! @brief PORT INTAKE REGS SIZE :
                           --! 入力側に挿入するパイプラインレジスタの段数を指定する.
@@ -2037,8 +2047,10 @@ component AXI4_DATA_PORT
                           --! * 最初にデータ入力と同時にアサートしても構わない.
                           in  std_logic;
         ASIZE           : --! @brief AXI4 BURST SIZE :
+                          --! AXI4 によるバーストサイズを指定する.
                           in  AXI4_ASIZE_TYPE;
         ALEN            : --! @brief AXI4 BURST LENGTH :
+                          --! AXI4 によるバースト数を指定する.
                           in  std_logic_vector(ALEN_BITS-1 downto 0);
         ADDR            : --! @brief START TRANSFER ADDRESS :
                           --! 出力側のアドレス.
@@ -2173,6 +2185,18 @@ component AXI4_DATA_OUTLET_PORT
                           --!   サポートする. その際の１ワード毎の転送バイト数は
                           --!   BURST_SIZE で指定される.
                           integer range 0 to 1 := 1;
+        CHECK_BURST_LEN : --! @brief CHECK BURST LENGTH :
+                          --! BURST_LEN で指定されたバースト数とI_LASTによるバースト
+                          --! 転送の最後が一致するかどうかチェックするか否かを指定す
+                          --! る.
+                          --! * CHECK_BURST_LEN=0かつUSE_BURST_SIZE=0を指定した場合、
+                          --!   バースト長をチェックしない. 
+                          --! * CHECK_BURST_LEN=1またはUSE_BURST_SIZE=0を指定した場
+                          --!   合、バースト長をチェックする.
+                          integer range 0 to 1 := 1;
+        TRAN_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
+                          --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
+                          integer := 4;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ

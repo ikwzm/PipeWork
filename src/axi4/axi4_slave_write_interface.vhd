@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
---!     @version 1.5.4
---!     @date    2014/2/23
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
