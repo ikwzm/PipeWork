@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.4
---!     @date    2014/2/23
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -463,11 +463,10 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.COMPONENTS.CHOPPER;
-use     PIPEWORK.COMPONENTS.REDUCER;
 use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
 use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.AXI4_COMPONENTS.AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;
+use     PIPEWORK.AXI4_COMPONENTS.AXI4_DATA_OUTLET_PORT;
 architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- データバスのバイト数の２のべき乗値を計算する.
@@ -485,10 +484,29 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     constant BUF_DATA_SIZE      : integer := CALC_DATA_SIZE( BUF_DATA_WIDTH);
     constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS );
     -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function CALC_AXI4_BURST_SIZE(SIZE:integer) return AXI4_ASIZE_TYPE is
+    begin
+        case SIZE is
+            when 0      => return AXI4_ASIZE_1BYTE;
+            when 1      => return AXI4_ASIZE_2BYTE;
+            when 2      => return AXI4_ASIZE_4BYTE;
+            when 3      => return AXI4_ASIZE_8BYTE;
+            when 4      => return AXI4_ASIZE_16BYTE;
+            when 5      => return AXI4_ASIZE_32BYTE;
+            when 6      => return AXI4_ASIZE_64BYTE;
+            when 7      => return AXI4_ASIZE_128BYTE;
+            when others => return AXI4_ASIZE_128BYTE;
+        end case;
+    end function;
+    constant AXI4_BURST_SIZE    : AXI4_ASIZE_TYPE := CALC_AXI4_BURST_SIZE(AXI4_DATA_SIZE);
+    -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
     signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
+    signal   xfer_req_alen      : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0);
     signal   xfer_req_select    : std_logic_vector(VAL_BITS       -1 downto 0);
     signal   xfer_req_valid     : std_logic;
     signal   xfer_req_ready     : std_logic;
@@ -531,18 +549,12 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    constant xfer_beat_sel      : std_logic_vector(BUF_DATA_SIZE downto BUF_DATA_SIZE) := "1";
-    signal   xfer_beat_chop     : std_logic;
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
+    signal   buf_start_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     signal   buf_busy           : std_logic;
-    signal   buf_enable         : std_logic;
+    constant buf_push_error     : std_logic := '0';
     signal   buf_push_valid     : std_logic;
-    signal   buf_push_ben       : std_logic_vector(BUF_DATA_WIDTH/8-1 downto 0);
-    signal   buf_push_size      : std_logic_vector(BUF_DATA_SIZE      downto 0);
-    signal   buf_push_last      : std_logic;
     signal   buf_push_ready     : std_logic;
+    signal   buf_push_enable    : std_logic;
     signal   buf_pull_ready     : std_logic;
     constant BUF_SEL_ALL0       : std_logic_vector(VAL_BITS    -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
@@ -550,12 +562,6 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   data_valid         : std_logic;
     signal   data_last          : std_logic;
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    signal   buf_start_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
-    signal   next_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
-    signal   curr_read_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -570,15 +576,15 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    type     STATE_TYPE      is ( IDLE, WAIT_WFIRST, WAIT_WLAST, TURN_AR);
+    type     STATE_TYPE      is ( IDLE_STATE, XFER_STATE );
     signal   curr_state         : STATE_TYPE;
     signal   curr_select        : std_logic_vector(VAL_BITS   -1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- AXI4 Write Address Channel Controller.
     -------------------------------------------------------------------------------
-    AW: AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
-        generic map (
+    AW: AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER     -- 
+        generic map (                              -- 
             VAL_BITS        => VAL_BITS          , --
             DATA_SIZE       => AXI4_DATA_SIZE    , --
             ADDR_BITS       => AXI4_ADDR_WIDTH   , --
@@ -589,8 +595,8 @@ begin
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE       --
-        )
-        port map (
+        )                                          -- 
+        port map (                                 -- 
         --------------------------------------------------------------------------
         -- Clock and Reset Signals.
         --------------------------------------------------------------------------
@@ -642,6 +648,7 @@ begin
         ---------------------------------------------------------------------------
             XFER_REQ_ADDR   => xfer_req_addr     , -- Out : 
             XFER_REQ_SIZE   => xfer_req_size     , -- Out :
+            XFER_REQ_ALEN   => xfer_req_alen     , -- Out :
             XFER_REQ_FIRST  => xfer_req_first    , -- Out :
             XFER_REQ_LAST   => xfer_req_last     , -- Out :
             XFER_REQ_NEXT   => xfer_req_next     , -- Out :
@@ -658,7 +665,7 @@ begin
             XFER_ACK_LAST   => xfer_ack_last     , -- In  :
             XFER_ACK_ERR    => xfer_ack_error    , -- In  :
             XFER_RUNNING    => xfer_running        -- In  :
-        );
+        );                                         -- 
     -------------------------------------------------------------------------------
     -- AXI4 Write Address Channel Signals Output.
     -------------------------------------------------------------------------------
@@ -675,66 +682,50 @@ begin
     -------------------------------------------------------------------------------
     WDT_FSM: process(CLK, RST) begin
         if (RST = '1') then
-                curr_state  <= IDLE;
+                curr_state  <= IDLE_STATE;
                 curr_select <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
-                curr_state  <= IDLE;
+                curr_state  <= IDLE_STATE;
                 curr_select <= (others => '0');
             else
                 case curr_state is
                     ---------------------------------------------------------------
                     -- Transfer Request の受け付け待ち.
                     ---------------------------------------------------------------
-                    when IDLE =>
-                        if (xfer_req_valid = '1' and ack_queue_ready = '1') then
-                            curr_state  <= WAIT_WFIRST;
+                    when IDLE_STATE =>
+                        if (xfer_start = '1') then
+                            curr_state  <= XFER_STATE;
                             curr_select <= xfer_req_select;
                         else
-                            curr_state  <= IDLE;
+                            curr_state  <= IDLE_STATE;
                         end if;
                     ---------------------------------------------------------------
                     -- AXI4 Write Data Channel に最初のデータを出力するのを待つ.
                     ---------------------------------------------------------------
-                    when WAIT_WFIRST =>
-                        if    (data_valid = '1' and WREADY = '1' and data_last = '1') then
-                            curr_state  <= TURN_AR;
-                        elsif (data_valid = '1' and WREADY = '1' and data_last = '0') then
-                            curr_state  <= WAIT_WLAST;
+                    when XFER_STATE =>
+                        if (buf_busy = '0') then
+                            curr_state  <= IDLE_STATE;
                         else
-                            curr_state  <= WAIT_WFIRST;
+                            curr_state  <= XFER_STATE;
                         end if;
-                    ---------------------------------------------------------------
-                    -- AXI4 Write Data Channel に最初のデータを出力するのを待つ.
-                    ---------------------------------------------------------------
-                    when WAIT_WLAST  =>
-                        if    (data_valid = '1' and WREADY = '1' and data_last = '1') then
-                            curr_state  <= TURN_AR;
-                        else
-                            curr_state  <= WAIT_WLAST;
-                        end if;
-                    ---------------------------------------------------------------
-                    -- １クロック待ってから IDLE に戻る.
-                    ---------------------------------------------------------------
-                    when TURN_AR   =>
-                            curr_state  <= IDLE;
                     ---------------------------------------------------------------
                     -- 念のため.
                     ---------------------------------------------------------------
                     when others      =>
-                            curr_state  <= IDLE;
+                            curr_state  <= IDLE_STATE;
                 end case;
             end if;
         end if;
     end process;
     -------------------------------------------------------------------------------
+    -- xfer_req_ready : Transfer Requestを受け付けることが出来ることを示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_req_ready <= '1' when (curr_state = IDLE_STATE and ack_queue_ready = '1') else '0';
+    -------------------------------------------------------------------------------
     -- xfer_start     : この信号がトリガーとなっていろいろと処理を開始する.
     -------------------------------------------------------------------------------
     xfer_start     <= '1' when (xfer_req_ready = '1' and xfer_req_valid = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- xfer_req_ready : Transfer Requestを受け付けることが出来ることを示すフラグ.
-    -------------------------------------------------------------------------------
-    xfer_req_ready <= '1' when (curr_state = IDLE and ack_queue_ready = '1') else '0';
     -------------------------------------------------------------------------------
     -- xfer_select    : xfer_req_select を データ転送中の間保持しておく. ただし、
     --                  VAL_BIT=0 の場合は常に"1"にしておいて回路を簡略化する.
@@ -744,15 +735,13 @@ begin
     -- xfer_running   : データ転送中である事を示すフラグ.
     -- XFER_BUSY      : データ転送中である事を示すフラグ.
     -------------------------------------------------------------------------------
-    xfer_running   <= '1' when (curr_state = WAIT_WFIRST or
-                                curr_state = WAIT_WLAST  or
-                                curr_state = TURN_AR     or
-                                ack_queue_valid = '1' ) else '0';
+    xfer_running   <= '1' when (curr_state = XFER_STATE) or
+                               (ack_queue_valid = '1'  ) else '0';
     XFER_BUSY      <= xfer_select when (xfer_running    = '1') else (others => '0');
     -------------------------------------------------------------------------------
     -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
     -------------------------------------------------------------------------------
-    XFER_DONE      <= xfer_select when (curr_state = TURN_AR  and
+    XFER_DONE      <= xfer_select when (curr_state = XFER_STATE and buf_busy = '0' and
                                         ack_queue_empty = '1') else (others => '0');
     -------------------------------------------------------------------------------
     -- buf_start_ptr  : バッファのリード開始ポインタ
@@ -767,210 +756,103 @@ begin
         end loop;
     end process;
     -------------------------------------------------------------------------------
-    -- buf_push_ben   : 送信バッファに書き込むためのバイトイネーブル信号.
-    -- buf_push_size  : 送信バッファに書き込むバイト数を１ビート毎に出力する.
-    -- buf_push_last  : 送信バッファに書き込む最後のビートであることを示す.
+    -- AXI4 用データ出力ポート
     -------------------------------------------------------------------------------
-    BEN: CHOPPER
-        generic map (
-            BURST           => 1                     ,
-            MIN_PIECE       => BUF_DATA_SIZE         ,
-            MAX_PIECE       => BUF_DATA_SIZE         ,
-            MAX_SIZE        => XFER_MAX_SIZE         ,
-            ADDR_BITS       => buf_start_ptr'length  ,
-            SIZE_BITS       => xfer_req_size'length  ,
-            COUNT_BITS      => 1                     ,
-            PSIZE_BITS      => buf_push_size'length  ,
-            GEN_VALID       => 1
-        )
-        port map (
+    OUTLET_PORT: AXI4_DATA_OUTLET_PORT             -- 
+        generic map (                              -- 
+            PORT_DATA_BITS  => AXI4_DATA_WIDTH   , -- 
+            POOL_DATA_BITS  =>  BUF_DATA_WIDTH   , -- 
+            TRAN_ADDR_BITS  => AXI4_ADDR_WIDTH   , -- 
+            TRAN_SIZE_BITS  => XFER_MAX_SIZE+1   , --
+            TRAN_SEL_BITS   => VAL_BITS          , -- 
+            BURST_LEN_BITS  => AXI4_ALEN_WIDTH   , -- 
+            ALIGNMENT_BITS  => ALIGNMENT_BITS    , --
+            PULL_SIZE_BITS  => XFER_SIZE_BITS    , --
+            EXIT_SIZE_BITS  => XFER_SIZE_BITS    , --
+            POOL_PTR_BITS   => BUF_PTR_BITS      , --
+            TRAN_MAX_SIZE   => XFER_MAX_SIZE     , --
+            USE_BURST_SIZE  => 0                 , --
+            CHECK_BURST_LEN => 0                 , --
+            PORT_REGS_SIZE  => 0                   --
+        )                                          -- 
+        port map (                                 -- 
         ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
+        -- クロック&リセット信号
         ---------------------------------------------------------------------------
-            CLK             => CLK                   , -- In  :
-            RST             => RST                   , -- In  :
-            CLR             => CLR                   , -- In  :
+            CLK             => CLK               , -- In  :
+            RST             => RST               , -- In  :
+            CLR             => CLR               , -- In  :
         ---------------------------------------------------------------------------
-        -- 各種初期値
+        -- Control Signals.
         ---------------------------------------------------------------------------
-            ADDR            => buf_start_ptr         , -- In  :
-            SIZE            => xfer_req_size         , -- In  :
-            SEL             => xfer_beat_sel         , -- In  :
-            LOAD            => xfer_start            , -- In  :
+            TRAN_START      => xfer_start        , -- In  :
+            TRAN_ADDR       => xfer_req_addr     , -- In  :
+            TRAN_SIZE       => xfer_req_size     , -- In  :
+            BURST_LEN       => xfer_req_alen     , -- In  :
+            BURST_SIZE      => AXI4_BURST_SIZE   , -- In  :
+            START_PTR       => buf_start_ptr     , -- In  :
+            TRAN_LAST       => xfer_req_last     , -- In  :
+            TRAN_SEL        => xfer_req_select   , -- In  :
+            XFER_VAL        => open              , -- Out :
+            XFER_DVAL       => open              , -- Out :
+            XFER_LAST       => open              , -- Out :
+            XFER_NONE       => open              , -- Out :
         ---------------------------------------------------------------------------
-        -- 制御信号
+        -- AXI4 Outlet Port Signals.
         ---------------------------------------------------------------------------
-            CHOP            => xfer_beat_chop        , -- In  :
+            PORT_DATA       => WDATA             , -- Out :
+            PORT_STRB       => WSTRB             , -- Out :
+            PORT_LAST       => data_last         , -- Out :
+            PORT_ERROR      => open              , -- Out :
+            PORT_VAL        => data_valid        , -- Out :
+            PORT_RDY        => WREADY            , -- In  :
         ---------------------------------------------------------------------------
-        -- ピースカウンタ/フラグ出力
+        -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            COUNT           => open                  , -- Out :
-            NONE            => open                  , -- Out :
-            LAST            => buf_push_last         , -- Out :
-            NEXT_NONE       => open                  , -- Out :
-            NEXT_LAST       => open                  , -- Out :
+            PULL_VAL        => PULL_BUF_VAL      , -- Out :
+            PULL_LAST       => PULL_BUF_LAST     , -- Out :
+            PULL_ERROR      => PULL_BUF_ERROR    , -- Out :
+            PULL_SIZE       => PULL_BUF_SIZE     , -- Out :
         ---------------------------------------------------------------------------
-        -- １ワードのバイト数
+        -- Outlet Size Signals.
         ---------------------------------------------------------------------------
-            PSIZE           => buf_push_size         , -- Out :
-            NEXT_PSIZE      => open                  , -- Out :
+            EXIT_VAL        => open              , -- Out :
+            EXIT_LAST       => open              , -- Out :
+            EXIT_ERROR      => open              , -- Out :
+            EXIT_SIZE       => open              , -- Out :
         ---------------------------------------------------------------------------
-        -- バイトイネーブル信号
+        -- Pool Buffer Interface Signals.
         ---------------------------------------------------------------------------
-            VALID           => buf_push_ben          , -- Out :
-            NEXT_VALID      => open                    -- Out :
-        );
+            POOL_REN        => BUF_REN           , -- Out :
+            POOL_PTR        => BUF_PTR           , -- Out :
+            POOL_DATA       => BUF_DATA          , -- In  :
+            POOL_ERROR      => buf_push_error    , -- In  :
+            POOL_VAL        => buf_push_valid    , -- In  :
+            POOL_RDY        => buf_push_ready    , -- Out :
+        ---------------------------------------------------------------------------
+        -- Status Signals.
+        ---------------------------------------------------------------------------
+            POOL_BUSY       => buf_push_enable   , -- Out :
+            POOL_DONE       => open              , -- Out :
+            BUSY            => buf_busy            -- Out :
+        );                                         -- 
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    WVALID <= data_valid;
+    WLAST  <= data_last;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    next_read_ptr <= std_logic_vector(to_01(unsigned(curr_read_ptr)) +
-                                      to_01(unsigned(buf_push_size)));
-    process(CLK, RST) begin
-        if (RST = '1') then
-                curr_read_ptr <= (others => '0');
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then 
-                curr_read_ptr <= (others => '0');
-            elsif (xfer_start = '1') then
-                curr_read_ptr <= buf_start_ptr;
-            elsif (xfer_beat_chop = '1') then
-                curr_read_ptr <= next_read_ptr;
-            end if;
-        end if;
-    end process;
-    BUF_PTR <= buf_start_ptr   when (xfer_start     = '1') else
-               next_read_ptr   when (xfer_beat_chop = '1') else
-               curr_read_ptr;
-    BUF_REN <= xfer_req_select when (xfer_start     = '1') else
-               xfer_select     when (buf_enable     = '1') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    process(CLK, RST) begin
-        if (RST = '1') then
-                buf_enable <= '0';
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then 
-                buf_enable <= '0';
-            elsif (xfer_start = '1') then
-                buf_enable <= '1';
-            elsif (buf_push_valid = '1' and buf_push_ready = '1' and buf_push_last = '1') then
-                buf_enable <= '0';
-            end if;
-        end if;
-    end process;
+    PULL_BUF_RESET <= xfer_req_select when (xfer_start = '1') else (others => '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     buf_pull_ready <= '1' when ((PULL_BUF_RDY and xfer_select) /= BUF_SEL_ALL0) else '0';
     -------------------------------------------------------------------------------
-    -- 
+    --
     -------------------------------------------------------------------------------
-    buf_push_valid <= '1' when (buf_enable     = '1' and buf_pull_ready = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    xfer_beat_chop <= '1' when (buf_push_valid = '1' and buf_push_ready = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- 送信バッファ : 
-    -------------------------------------------------------------------------------
-    SBUF: block
-        constant WORD_BITS      : integer := ALIGNMENT_BITS;
-        constant STRB_BITS      : integer := ALIGNMENT_BITS/8;
-        constant I_WIDTH        : integer :=  BUF_DATA_WIDTH/WORD_BITS;
-        constant O_WIDTH        : integer := AXI4_DATA_WIDTH/WORD_BITS;
-        constant i_enable       : std_logic := '1';
-        constant o_enable       : std_logic := '1';
-        constant done           : std_logic := '0';
-        constant flush          : std_logic := '0';
-        constant o_shift        : std_logic_vector(O_WIDTH   downto O_WIDTH) := "0";
-        signal   offset         : std_logic_vector(O_WIDTH-1 downto 0);
-    begin
-        ---------------------------------------------------------------------------
-        -- 
-        ---------------------------------------------------------------------------
-        process (xfer_req_addr)
-            variable addr : unsigned(AXI4_DATA_SIZE-ALIGNMENT_SIZE downto 0);
-        begin
-            for i in addr'range loop
-                if (i+ALIGNMENT_SIZE <  AXI4_DATA_SIZE    ) and
-                   (i+ALIGNMENT_SIZE <= xfer_req_addr'high) and
-                   (i+ALIGNMENT_SIZE >= xfer_req_addr'low ) then
-                    if (xfer_req_addr(i+ALIGNMENT_SIZE) = '1') then
-                        addr(i) := '1';
-                    else
-                        addr(i) := '0';
-                    end if;
-                else
-                        addr(i) := '0';
-                end if;
-            end loop;
-            for i in offset'range loop
-                if (i < addr) then
-                    offset(i) <= '1';
-                else
-                    offset(i) <= '0';
-                end if;
-            end loop;
-        end process;
-        ---------------------------------------------------------------------------
-        -- 
-        ---------------------------------------------------------------------------
-        B: REDUCER
-            generic map (
-                WORD_BITS       => WORD_BITS      ,
-                STRB_BITS       => STRB_BITS      ,
-                I_WIDTH         => I_WIDTH        ,
-                O_WIDTH         => O_WIDTH        ,
-                QUEUE_SIZE      => 0              ,
-                VALID_MIN       => 0              ,
-                VALID_MAX       => 0              ,
-                O_SHIFT_MIN     => o_shift'low    ,
-                O_SHIFT_MAX     => o_shift'high   ,
-                I_JUSTIFIED     => 0              ,
-                FLUSH_ENABLE    => 0                     
-            )
-            port map (
-            -----------------------------------------------------------------------
-            -- クロック&リセット信号
-            -----------------------------------------------------------------------
-                CLK             => CLK            , -- In  :
-                RST             => RST            , -- In  :
-                CLR             => CLR            , -- In  :
-            -----------------------------------------------------------------------
-            -- 各種制御信号
-            -----------------------------------------------------------------------
-                START           => xfer_start     , -- In  :
-                OFFSET          => offset         , -- In  :
-                DONE            => done           , -- In  :
-                FLUSH           => flush          , -- In  :
-                BUSY            => buf_busy       , -- Out :
-                VALID           => open           , -- Out :
-            -----------------------------------------------------------------------
-            -- 入力側 I/F
-            -----------------------------------------------------------------------
-                I_ENABLE        => i_enable       , -- In  :
-                I_DATA          => BUF_DATA       , -- In  :
-                I_STRB          => buf_push_ben   , -- In  :
-                I_DONE          => buf_push_last  , -- In  :
-                I_FLUSH         => flush          , -- In  :
-                I_VAL           => buf_push_valid , -- In  :
-                I_RDY           => buf_push_ready , -- Out :
-            -----------------------------------------------------------------------
-            -- 出力側 I/F
-            -----------------------------------------------------------------------
-                O_ENABLE        => o_enable       , -- In  :
-                O_DATA          => WDATA          , -- Out :
-                O_STRB          => WSTRB          , -- Out :
-                O_DONE          => data_last      , -- Out :
-                O_FLUSH         => open           , -- Out :
-                O_VAL           => data_valid     , -- Out :
-                O_RDY           => WREADY         , -- In  :
-                O_SHIFT         => o_shift          -- In  :
-        );
-        WVALID <= data_valid;
-        WLAST  <= data_last;
-    end block;
+    buf_push_valid <= '1' when (buf_push_enable = '1' and buf_pull_ready = '1') else '0';
     -------------------------------------------------------------------------------
     -- Non Safety(Risky) Return Response.
     -------------------------------------------------------------------------------
@@ -1094,12 +976,4 @@ begin
     PULL_FIN_ERROR <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
     PULL_FIN_SIZE  <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
                       std_logic_vector(RESIZE(unsigned(ack_queue_size), PULL_FIN_SIZE'length));
-    -------------------------------------------------------------------------------
-    -- Pull Buffer Size and Last
-    -------------------------------------------------------------------------------
-    PULL_BUF_RESET <= xfer_req_select  when (xfer_start     = '1') else (others => '0');
-    PULL_BUF_VAL   <= xfer_select      when (xfer_beat_chop = '1') else (others => '0');
-    PULL_BUF_LAST  <= buf_push_last;
-    PULL_BUF_ERROR <= '0';
-    PULL_BUF_SIZE  <= std_logic_vector(RESIZE(unsigned(buf_push_size) , PULL_BUF_SIZE'length));
 end RTL;
