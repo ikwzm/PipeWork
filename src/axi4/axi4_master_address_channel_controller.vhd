@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.5.4
---!     @date    2014/3/1
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -138,6 +138,7 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS     -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE    downto 0);
         XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_REQ_ALEN   : out   std_logic_vector(ALEN_BITS     -1 downto 0);
         XFER_REQ_FIRST  : out   std_logic;
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
@@ -518,6 +519,7 @@ begin
     -- XFER_REQ_SEL    : 転送要求選択信号
     -- XFER_REQ_ADDR   : 転送要求開始アドレス
     -- XFER_REQ_SIZE   : 転送要求サイズ.
+    -- XFER_REQ_ALEN   : 転送要求バースト長(-1されていることに注意)
     -- XFER_REQ_END    : 最後の転送要求であることを示すフラグ.
     -- XFER_REQ_LAST   : 最後の転送要求(かつLAST='1')であることを示すフラグ.
     -- XFER_REQ_FIRST  : 最初の転送要求であることを示すフラグ.
@@ -527,6 +529,7 @@ begin
     XFER_REQ_SEL    <= curr_valid when (VAL_BITS > 1) else (others => '1');
     XFER_REQ_ADDR   <= REQ_ADDR;
     XFER_REQ_SIZE   <= req_xfer_size;
+    XFER_REQ_ALEN   <= burst_length;
     XFER_REQ_NEXT   <= req_xfer_next;
     XFER_REQ_LAST   <= req_xfer_last;
     XFER_REQ_FIRST  <= REQ_FIRST;
