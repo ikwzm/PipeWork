@@ -2,7 +2,7 @@
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
 --!     @version 1.5.5
---!     @date    2014/3/2
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -204,13 +204,21 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --!   取り出される.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Pull Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         PULL_VAL        : --! @brief PULL VALID: 
-                          --! PULL_LAST/PULL_SIZEが有効であることを示す.
+                          --! PULL_LAST/PULL_XFER_LAST/PULL_XFER_DONE/PULL_ERROR/
+                          --! PULL_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の転送"する事"を示すフラグ.
+                          out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことを示すフラグ.
@@ -219,13 +227,21 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --! 転送"する"バイト数を出力する.
                           out std_logic_vector(PULL_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Size Signals.
+    -- Outlet Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         EXIT_VAL        : --! @brief EXIT VALID: 
-                          --! EXIT_LAST/EXIT_SIZEが有効であることを示す.
+                          --! EXIT_LAST/EXIT_XFER_LAST/EXIT_XFER_DONE/EXIT_ERROR/
+                          --! EXIT_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         EXIT_LAST       : --! @brief EXIT LAST : 
                           --! 最後の出力"した事"を示すフラグ.
+                          out std_logic;
+        EXIT_XFER_LAST  : --! @brief EXIT TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        EXIT_XFER_DONE  : --! @brief EXIT TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         EXIT_ERROR      : --! @brief EXIT ERROR : 
                           --! エラーが発生したことを示すフラグ.
@@ -360,9 +376,6 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal   o_pull_valid   : std_logic_vector(TRAN_SEL_BITS -1 downto 0);
-    signal   o_pull_last    : std_logic;
-    signal   o_pull_error   : std_logic;
     signal   o_pull_size    : std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
@@ -371,7 +384,6 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     signal   q_strb         : std_logic_vector(PORT_DATA_BITS/8-1 downto 0);
     signal   q_size         : std_logic_vector(SIZE_BITS-1 downto 0);
     signal   q_user         : std_logic_vector(USER_HI downto USER_LO);
-    signal   q_done         : std_logic;
     signal   q_last         : std_logic;
     signal   q_error        : std_logic;
     signal   q_valid        : std_logic;
@@ -383,7 +395,7 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     signal   o_size         : std_logic_vector(SIZE_BITS-1 downto 0);
     signal   o_sel          : std_logic_vector(TRAN_SEL_BITS -1 downto 0);
     signal   o_user         : std_logic_vector(USER_HI downto USER_LO);
-    signal   o_done         : std_logic;
+    signal   o_xfer_last    : std_logic;
     signal   o_error        : std_logic;
     signal   o_last         : std_logic;
     signal   o_valid        : std_logic;
@@ -497,9 +509,11 @@ begin
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PULL_VAL        => o_pull_valid    , -- Out :
-            PULL_LAST       => o_pull_last     , -- Out :
-            PULL_ERROR      => o_pull_error    , -- Out :
+            PULL_VAL        => PULL_VAL        , -- Out :
+            PULL_LAST       => PULL_LAST       , -- Out :
+            PULL_XFER_LAST  => PULL_XFER_LAST  , -- Out :
+            PULL_XFER_DONE  => PULL_XFER_DONE  , -- Out :
+            PULL_ERROR      => PULL_ERROR      , -- Out :
             PULL_SIZE       => o_pull_size     , -- Out :
         ---------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
@@ -535,7 +549,6 @@ begin
             end if;
         end if;
     end process;
-    q_done <= q_user(USER_DONE_POS);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -599,19 +612,19 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    PULL_VAL   <= o_pull_valid;
-    PULL_ERROR <= o_pull_error;
-    PULL_LAST  <= '1' when (o_pull_last = '1' and q_done = '1') else '0';
-    PULL_SIZE  <= std_logic_vector(resize(unsigned(o_pull_size), PULL_SIZE_BITS));
+    o_sel          <= o_user(USER_SEL_HI downto USER_SEL_LO) when (TRAN_SEL_BITS > 1) else (others => '1');
+    o_xfer_last    <= o_user(USER_DONE_POS);
+    EXIT_VAL       <= o_sel when (o_valid = '1' and o_ready = '1') else (others => '0');
+    EXIT_ERROR     <= o_error;
+    EXIT_LAST      <= '1' when (o_last      = '1') else '0';
+    EXIT_XFER_LAST <= '1' when (o_xfer_last = '1') else '0';
+    EXIT_XFER_DONE <= '1' when (o_last      = '1') and
+                               (o_xfer_last = '1') else '0';
+    EXIT_SIZE      <= std_logic_vector(resize(unsigned(o_size     ), EXIT_SIZE_BITS));
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    o_sel      <= o_user(USER_SEL_HI downto USER_SEL_LO);
-    o_done     <= o_user(USER_DONE_POS);
-    EXIT_VAL   <= o_sel when (o_valid = '1' and o_ready = '1') else (others => '0');
-    EXIT_ERROR <= o_error;
-    EXIT_LAST  <= '1' when (o_last  = '1' and o_done = '1') else '0';
-    EXIT_SIZE  <= std_logic_vector(resize(unsigned(o_size     ), EXIT_SIZE_BITS));
+    PULL_SIZE      <= std_logic_vector(resize(unsigned(o_pull_size), PULL_SIZE_BITS));
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------

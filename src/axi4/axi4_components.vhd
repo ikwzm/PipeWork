@@ -2303,13 +2303,21 @@ component AXI4_DATA_OUTLET_PORT
                           --!   取り出される.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Pull Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         PULL_VAL        : --! @brief PULL VALID: 
-                          --! PULL_LAST/PULL_SIZEが有効であることを示す.
+                          --! PULL_LAST/PULL_XFER_LAST/PULL_XFER_DONE/PULL_ERROR/
+                          --! PULL_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の転送"する事"を示すフラグ.
+                          out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことを示すフラグ.
@@ -2318,13 +2326,21 @@ component AXI4_DATA_OUTLET_PORT
                           --! 転送"する"バイト数を出力する.
                           out std_logic_vector(PULL_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Size Signals.
+    -- Outlet Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         EXIT_VAL        : --! @brief EXIT VALID: 
-                          --! EXIT_LAST/EXIT_SIZEが有効であることを示す.
+                          --! EXIT_LAST/EXIT_XFER_LAST/EXIT_XFER_DONE/EXIT_ERROR/
+                          --! EXIT_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         EXIT_LAST       : --! @brief EXIT LAST : 
                           --! 最後の出力"した事"を示すフラグ.
+                          out std_logic;
+        EXIT_XFER_LAST  : --! @brief EXIT TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        EXIT_XFER_DONE  : --! @brief EXIT TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         EXIT_ERROR      : --! @brief EXIT ERROR : 
                           --! エラーが発生したことを示すフラグ.
