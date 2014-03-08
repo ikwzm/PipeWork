@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
---!     @version 1.5.4
---!     @date    2014/2/9
+--!     @version 1.5.5
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -324,8 +324,16 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        next_read_ptr   <= std_logic_vector(to_01(unsigned(curr_read_ptr)) +
-                                            to_01(unsigned(intake_size)));
+        process (curr_read_ptr, intake_size)
+            variable u_intake_size   : unsigned(  intake_size'range);
+            variable u_add_ptr       : unsigned(next_read_ptr'range);
+            variable u_curr_read_ptr : unsigned(next_read_ptr'range);
+        begin
+            u_curr_read_ptr := to_01(unsigned(curr_read_ptr));
+            u_intake_size   := to_01(unsigned(intake_size  ));
+            u_add_ptr       := resize(u_intake_size, u_add_ptr'length);
+            next_read_ptr   <= std_logic_vector(u_curr_read_ptr + u_add_ptr);
+        end process;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
