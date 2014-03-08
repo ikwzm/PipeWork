@@ -358,7 +358,7 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     signal   outlet_error       : std_logic;
     signal   exit_valid         : std_logic_vector(VAL_BITS-1 downto 0);
     signal   exit_error         : std_logic;
-    signal   exit_last          : std_logic;
+    signal   exit_xfer_done     : std_logic;
     signal   exit_size          : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     signal   size_error         : boolean;
     type     STATE_TYPE        is (IDLE_STATE, REQ_STATE, ACK_STATE, ERR_STATE, TURN_AR);
@@ -580,14 +580,18 @@ begin
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
             PULL_VAL        => PULL_BUF_VAL    , -- Out :
-            PULL_LAST       => PULL_BUF_LAST   , -- Out :
+            PULL_LAST       => open            , -- Out :
+            PULL_XFER_LAST  => open            , -- Out :
+            PULL_XFER_DONE  => PULL_BUF_LAST   , -- Out :
             PULL_ERROR      => PULL_BUF_ERROR  , -- Out :
             PULL_SIZE       => PULL_BUF_SIZE   , -- Out :
         ---------------------------------------------------------------------------
         -- Outlet Size Signals.
         ---------------------------------------------------------------------------
             EXIT_VAL        => exit_valid      , -- Out :
-            EXIT_LAST       => exit_last       , -- Out :
+            EXIT_LAST       => open            , -- Out :
+            EXIT_XFER_LAST  => open            , -- Out :
+            EXIT_XFER_DONE  => exit_xfer_done  , -- Out :
             EXIT_ERROR      => exit_error      , -- Out :
             EXIT_SIZE       => exit_size       , -- Out :
         ---------------------------------------------------------------------------
@@ -639,14 +643,14 @@ begin
     --
     -------------------------------------------------------------------------------
     PULL_FIN_VAL   <= exit_valid;
-    PULL_FIN_LAST  <= exit_last;
+    PULL_FIN_LAST  <= exit_xfer_done;
     PULL_FIN_ERROR <= exit_error;
     PULL_FIN_SIZE  <= exit_size;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     PULL_RSV_VAL   <= exit_valid;
-    PULL_RSV_LAST  <= exit_last;
+    PULL_RSV_LAST  <= exit_xfer_done;
     PULL_RSV_ERROR <= exit_error;
     PULL_RSV_SIZE  <= exit_size;
     -------------------------------------------------------------------------------

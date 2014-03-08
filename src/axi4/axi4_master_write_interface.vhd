@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.5
---!     @date    2014/3/2
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -527,7 +527,8 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
     signal   xfer_running       : std_logic;
-    signal   xfer_select        : std_logic_vector(VAL_BITS   -1 downto 0);
+    signal   xfer_select        : std_logic_vector(VAL_BITS-1 downto 0);
+    constant SEL_ALL0           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -556,12 +557,11 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   buf_push_ready     : std_logic;
     signal   buf_push_enable    : std_logic;
     signal   buf_pull_ready     : std_logic;
-    constant BUF_SEL_ALL0       : std_logic_vector(VAL_BITS    -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   data_valid         : std_logic;
-    signal   data_last          : std_logic;
+    signal   exit_valid         : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   exit_last          : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -569,8 +569,8 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   ack_queue_valid    : std_logic;
     signal   ack_queue_next     : std_logic;
     signal   ack_queue_last     : std_logic;
-    signal   ack_queue_select   : std_logic_vector(VAL_BITS    -1 downto 0);
-    signal   ack_queue_size     : std_logic_vector(XFER_MAX_SIZE  downto 0);
+    signal   ack_queue_select   : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   ack_queue_size     : std_logic_vector(XFER_MAX_SIZE downto 0);
     signal   ack_queue_empty    : std_logic;
     signal   ack_queue_safety   : std_logic;
     -------------------------------------------------------------------------------
@@ -578,7 +578,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     type     STATE_TYPE      is ( IDLE_STATE, XFER_STATE );
     signal   curr_state         : STATE_TYPE;
-    signal   curr_select        : std_logic_vector(VAL_BITS   -1 downto 0);
+    signal   curr_select        : std_logic_vector(VAL_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- AXI4 Write Address Channel Controller.
@@ -802,22 +802,26 @@ begin
         ---------------------------------------------------------------------------
             PORT_DATA       => WDATA             , -- Out :
             PORT_STRB       => WSTRB             , -- Out :
-            PORT_LAST       => data_last         , -- Out :
+            PORT_LAST       => WLAST             , -- Out :
             PORT_ERROR      => open              , -- Out :
-            PORT_VAL        => data_valid        , -- Out :
+            PORT_VAL        => WVALID            , -- Out :
             PORT_RDY        => WREADY            , -- In  :
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
             PULL_VAL        => PULL_BUF_VAL      , -- Out :
-            PULL_LAST       => PULL_BUF_LAST     , -- Out :
+            PULL_LAST       => open              , -- Out :
+            PULL_XFER_LAST  => open              , -- Out :
+            PULL_XFER_DONE  => PULL_BUF_LAST     , -- Out :
             PULL_ERROR      => PULL_BUF_ERROR    , -- Out :
             PULL_SIZE       => PULL_BUF_SIZE     , -- Out :
         ---------------------------------------------------------------------------
         -- Outlet Size Signals.
         ---------------------------------------------------------------------------
-            EXIT_VAL        => open              , -- Out :
-            EXIT_LAST       => open              , -- Out :
+            EXIT_VAL        => exit_valid        , -- Out :
+            EXIT_LAST       => exit_last         , -- Out :
+            EXIT_XFER_LAST  => open              , -- Out :
+            EXIT_XFER_DONE  => open              , -- Out :
             EXIT_ERROR      => open              , -- Out :
             EXIT_SIZE       => open              , -- Out :
         ---------------------------------------------------------------------------
@@ -837,18 +841,13 @@ begin
             BUSY            => buf_busy            -- Out :
         );                                         -- 
     -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    WVALID <= data_valid;
-    WLAST  <= data_last;
-    -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     PULL_BUF_RESET <= xfer_req_select when (xfer_start = '1') else (others => '0');
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    buf_pull_ready <= '1' when ((PULL_BUF_RDY and xfer_select) /= BUF_SEL_ALL0) else '0';
+    buf_pull_ready <= '1' when ((PULL_BUF_RDY and xfer_select) /= SEL_ALL0) else '0';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -888,7 +887,9 @@ begin
             end if;
         end if;
     end process;
-    risky_ack_valid <= '1' when (risky_ack_mode and data_valid = '1' and data_last = '1' and WREADY = '1') else '0';
+    risky_ack_valid <= '1' when (risky_ack_mode        ) and
+                                (exit_valid /= SEL_ALL0) and
+                                (exit_last   = '1'     ) else '0';
     risky_ack_error <= '0';
     -------------------------------------------------------------------------------
     -- Transfer Response Queue.

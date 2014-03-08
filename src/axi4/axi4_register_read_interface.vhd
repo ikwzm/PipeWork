@@ -2,7 +2,7 @@
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
 --!     @version 1.5.5
---!     @date    2014/3/2
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -437,6 +437,8 @@ begin
         ---------------------------------------------------------------------------
             PULL_VAL(0)     => xfer_beat_chop  , -- Out :
             PULL_LAST       => xfer_beat_last  , -- Out :
+            PULL_XFER_LAST  => open            , -- Out :
+            PULL_XFER_DONE  => open            , -- Out :
             PULL_ERROR      => xfer_beat_error , -- Out :
             PULL_SIZE       => xfer_beat_size  , -- Out :
         ---------------------------------------------------------------------------
@@ -444,6 +446,8 @@ begin
         ---------------------------------------------------------------------------
             EXIT_VAL        => open            , -- Out :
             EXIT_LAST       => open            , -- Out :
+            EXIT_XFER_LAST  => open            , -- Out :
+            EXIT_XFER_DONE  => open            , -- Out :
             EXIT_ERROR      => open            , -- Out :
             EXIT_SIZE       => open            , -- Out :
         ---------------------------------------------------------------------------
