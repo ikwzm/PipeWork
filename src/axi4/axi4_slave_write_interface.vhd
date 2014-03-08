@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
 --!     @version 1.5.5
---!     @date    2014/3/2
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -504,7 +504,9 @@ begin
         -- Push Size Signals.
         -------------------------------------------------------------------------------
             PUSH_VAL        => o_push_valid    , -- Out :
-            PUSH_LAST       => o_push_last     , -- Out :
+            PUSH_LAST       => open            , -- Out :
+            PUSH_XFER_LAST  => open            , -- Out :
+            PUSH_XFER_DONE  => o_push_last     , -- Out :
             PUSH_ERROR      => o_push_error    , -- Out :
             PUSH_SIZE       => o_push_size     , -- Out :
         -------------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
---!     @version 1.5.4
---!     @date    2014/2/9
+--!     @version 1.5.5
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -143,10 +143,17 @@ entity  POOL_INTAKE_PORT is
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VAL        : --! @brief PUSH VALID: 
-                          --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
+                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す信号.
                           out std_logic_vector(SEL_BITS-1 downto 0);
         PUSH_LAST       : --! @brief PUSH LAST : 
-                          --! 最後の転送"した事"を示すフラグ.
+                          --! 最後の転送"した"ワードであることを示すフラグ.
+                          out std_logic;
+        PUSH_XFER_LAST  : --! @brief PUSH TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PUSH_XFER_DONE  : --! @brief PUSH TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PUSH_ERROR      : --! @brief PUSH ERROR : 
                           --! 転送"した事"がエラーだった事を示すフラグ.
@@ -418,23 +425,29 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- PUSH_SIZE  : 何バイト書き込んだかを示す信号.
-    -- PUSH_LAST  : 最後のデータ書き込みであることを示す信号.
-    -- PUSH_ERROR : エラーが発生したことを示す信号.
-    -- PUSH_VAL   : PUSH_LAST、PUSH_ERROR、PUSH_SIZE が有効であることを示す信号.
+    -- PUSH_SIZE      : 何バイト書き込んだかを示す信号.
+    -- PUSH_LAST      : 最後の転送"した"ワードであることを示すフラグ.
+    -- PUSH_XFER_LAST : 最後のトランザクションであることを示すフラグ.
+    -- PUSH_XFER_DONE : 最後のトランザクションの最後のワードを転送"した事"を示すフラグ.
+    -- PUSH_ERROR     : エラーが発生したことを示す信号.
+    -- PUSH_VAL       : PUSH_LAST、PUSH_ERROR、PUSH_SIZE が有効であることを示す信号.
     -------------------------------------------------------------------------------
     PUSH: block
-        signal error  : boolean;
-        signal last   : boolean;
-        signal valid  : boolean;
+        signal error     : boolean;
+        signal data_last : boolean;
+        signal xfer_last : boolean;
+        signal valid     : boolean;
     begin
-        error      <= (o_valid = '1' and o_last  = '1' and o_error     = '1');
-        last       <= (o_valid = '1' and o_last  = '1' and o_xfer_last = '1');
-        valid      <= (o_valid = '1' and o_ready = '1');
-        PUSH_VAL   <= o_xfer_select   when (valid) else (others => '0');
-        PUSH_LAST  <= '1'             when (last ) else '0';
-        PUSH_ERROR <= '1'             when (error) else '0';
-        PUSH_SIZE  <= (others => '0') when (error) else o_size;
+        error          <= (o_valid = '1' and o_last  = '1' and o_error = '1');
+        xfer_last      <= (o_valid = '1' and o_xfer_last = '1');
+        data_last      <= (o_valid = '1' and o_last      = '1');
+        valid          <= (o_valid = '1' and o_ready     = '1');
+        PUSH_VAL       <= o_xfer_select when (valid                  ) else (others => '0');
+        PUSH_LAST      <= '1'           when (data_last              ) else '0';
+        PUSH_XFER_LAST <= '1'           when (xfer_last              ) else '0';
+        PUSH_XFER_DONE <= '1'           when (data_last and xfer_last) else '0';
+        PUSH_ERROR     <= '1'           when (error = TRUE           ) else '0';
+        PUSH_SIZE      <= o_size        when (error = FALSE          ) else (others => '0');
     end block;
     -------------------------------------------------------------------------------
     -- POOL_WEN   : 外部プールバッファへの書き込み信号.

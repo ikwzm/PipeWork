@@ -1324,10 +1324,17 @@ component POOL_INTAKE_PORT
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VAL        : --! @brief PUSH VALID: 
-                          --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
+                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す信号.
                           out std_logic_vector(SEL_BITS-1 downto 0);
         PUSH_LAST       : --! @brief PUSH LAST : 
-                          --! 最後の転送"した事"を示すフラグ.
+                          --! 最後の転送"した"ワードであることを示すフラグ.
+                          out std_logic;
+        PUSH_XFER_LAST  : --! @brief PUSH TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PUSH_XFER_DONE  : --! @brief PUSH TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PUSH_ERROR      : --! @brief PUSH ERROR : 
                           --! 転送"した事"がエラーだった事を示すフラグ.

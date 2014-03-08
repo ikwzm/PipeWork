@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.5
---!     @date    2014/3/2
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -524,7 +524,7 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     signal   outlet_valid       : std_logic_vector(VAL_BITS         -1 downto 0);
     signal   outlet_error       : std_logic;
-    signal   outlet_last        : std_logic;
+    signal   outlet_xfer_done   : std_logic;
     signal   outlet_size        : std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     signal   outlet_ready       : std_logic;
     signal   outlet_done        : std_logic;
@@ -977,7 +977,9 @@ begin
         -- Push Size Signals.
         ---------------------------------------------------------------------------
             PUSH_VAL        => outlet_valid        , -- Out:
-            PUSH_LAST       => outlet_last         , -- Out:
+            PUSH_LAST       => open                , -- Out:
+            PUSH_XFER_LAST  => open                , -- Out:
+            PUSH_XFER_DONE  => outlet_xfer_done    , -- Out:
             PUSH_ERROR      => outlet_error        , -- Out:
             PUSH_SIZE       => outlet_size         , -- Out:
         ---------------------------------------------------------------------------
@@ -1029,7 +1031,7 @@ begin
     PUSH_FIN: block
     begin 
         PUSH_FIN_VAL   <= outlet_valid;
-        PUSH_FIN_LAST  <= outlet_last;
+        PUSH_FIN_LAST  <= outlet_xfer_done;
         PUSH_FIN_ERROR <= outlet_error;
         PUSH_FIN_SIZE  <= outlet_size;
     end block;
@@ -1045,11 +1047,11 @@ begin
     begin
         PUSH_BUF_RESET <= xfer_queue_select when (xfer_start = '1') else (others => '0');
         PUSH_BUF_VAL   <= outlet_valid;
-        PUSH_BUF_LAST  <= outlet_last;
+        PUSH_BUF_LAST  <= outlet_xfer_done;
         PUSH_BUF_ERROR <= outlet_error;
         PUSH_BUF_SIZE  <= outlet_size;
         outlet_ready   <= '1' when ((xfer_run_select and PUSH_BUF_RDY) /= SEL_ALL0) else '0';
-        outlet_done    <= '1' when (outlet_valid /= SEL_ALL0 and outlet_last = '1') else '0';
+        outlet_done    <= '1' when (outlet_valid /= SEL_ALL0 and outlet_xfer_done = '1') else '0';
     end block;
 end RTL;
 
