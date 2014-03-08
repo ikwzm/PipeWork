@@ -1496,6 +1496,13 @@ component POOL_OUTLET_PORT
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の入力"した事"を示すフラグ.
                           out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
+                          out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことをし示すフラグ.
                           out std_logic;

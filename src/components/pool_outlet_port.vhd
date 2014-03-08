@@ -159,6 +159,13 @@ entity  POOL_OUTLET_PORT is
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の入力"した事"を示すフラグ.
                           out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
+                          out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことをし示すフラグ.
                           out std_logic;
@@ -289,17 +296,21 @@ architecture RTL of POOL_OUTLET_PORT is
     signal    outlet_error  : std_logic;
     signal    outlet_size   : std_logic_vector(SIZE_BITS-1 downto 0);
     signal    outlet_strobe : std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+    constant  SEL_ALL0      : std_logic_vector(SEL_BITS -1 downto 0) := (others => '0');
+    constant  SEL_ALL1      : std_logic_vector(SEL_BITS -1 downto 0) := (others => '1');
 begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     INTAKE_CTRL: block
-        signal   next_read_ptr  : std_logic_vector(POOL_PTR_BITS-1 downto 0);
-        signal   curr_read_ptr  : std_logic_vector(POOL_PTR_BITS-1 downto 0);
-        signal   intake_done    : boolean;
-        signal   intake_continue: boolean;
-        signal   intake_chop    : std_logic;
-        signal   strb_size      : std_logic_vector(SIZE_BITS-1 downto 0);
+        signal   next_read_ptr    : std_logic_vector(POOL_PTR_BITS-1 downto 0);
+        signal   curr_read_ptr    : std_logic_vector(POOL_PTR_BITS-1 downto 0);
+        signal   curr_select      : std_logic_vector(SEL_BITS -1 downto 0);
+        signal   curr_xfer_last   : boolean;
+        signal   intake_done      : boolean;
+        signal   intake_continue  : boolean;
+        signal   intake_chop      : std_logic;
+        signal   strb_size        : std_logic_vector(SIZE_BITS-1 downto 0);
     begin
         ---------------------------------------------------------------------------
         --
@@ -340,16 +351,19 @@ begin
         process(CLK, RST) begin
             if (RST = '1') then
                     intake_running <= FALSE;
-                    intake_select  <= (others => '0');
+                    curr_xfer_last <= FALSE;
+                    curr_select    <= (others => '0');
                     curr_read_ptr  <= (others => '0');
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then 
                     intake_running <= FALSE;
-                    intake_select  <= (others => '0');
+                    curr_xfer_last <= FALSE;
+                    curr_select    <= (others => '0');
                     curr_read_ptr  <= (others => '0');
                 elsif (START = '1') then
                     intake_running <= TRUE;
-                    intake_select  <= XFER_SEL;
+                    curr_xfer_last <= (XFER_LAST = '1');
+                    curr_select    <= XFER_SEL;
                     curr_read_ptr  <= START_POOL_PTR;
                 else
                     intake_running <= intake_continue;
@@ -362,19 +376,30 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        POOL_BUSY  <= '1' when (intake_running = TRUE) else '0';
-        POOL_DONE  <= '1' when (intake_done    = TRUE) else '0';
-        POOL_PTR   <= START_POOL_PTR when (START       = '1') else
-                      next_read_ptr  when (intake_chop = '1') else
-                      curr_read_ptr;
-        POOL_REN   <= XFER_SEL       when (START       = '1') else
-                      intake_select  when (intake_continue  ) else
-                     (others => '0');
-        PULL_VAL   <= intake_select  when (intake_chop = '1') else (others => '0');
-        PULL_LAST  <= POOL_LAST;
-        PULL_ERROR <= POOL_ERROR;
-        PULL_SIZE  <= intake_size;
-        BUSY       <= '1' when (intake_running = TRUE or regs_busy = '1') else '0';
+        intake_select <= curr_select when (SEL_BITS > 1) else SEL_ALL1;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        POOL_BUSY <= '1' when (intake_running = TRUE) else '0';
+        POOL_DONE <= '1' when (intake_done    = TRUE) else '0';
+        POOL_PTR  <= START_POOL_PTR when (START       = '1') else
+                     next_read_ptr  when (intake_chop = '1') else
+                     curr_read_ptr;
+        POOL_REN  <= XFER_SEL       when (START = '1' and SEL_BITS > 1) else
+                     SEL_ALL1       when (START = '1' and SEL_BITS = 1) else
+                     intake_select  when (intake_continue             ) else
+                     SEL_ALL0;
+        BUSY      <= '1' when (intake_running = TRUE or regs_busy = '1') else '0';
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        PULL_VAL       <= intake_select when (intake_chop = '1') else SEL_ALL0;
+        PULL_LAST      <= '1' when (POOL_LAST = '1') else '0';
+        PULL_XFER_LAST <= '1' when (curr_xfer_last ) else '0';
+        PULL_XFER_DONE <= '1' when (POOL_LAST = '1') and
+                                   (curr_xfer_last ) else '0';
+        PULL_ERROR     <= POOL_ERROR;
+        PULL_SIZE      <= intake_size;
     end block;
     -------------------------------------------------------------------------------
     -- 
