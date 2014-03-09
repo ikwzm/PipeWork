@@ -466,6 +466,7 @@ library PIPEWORK;
 use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
 use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.AXI4_COMPONENTS.AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;
+use     PIPEWORK.AXI4_COMPONENTS.AXI4_MASTER_TRANSFER_QUEUE;
 use     PIPEWORK.AXI4_COMPONENTS.AXI4_DATA_OUTLET_PORT;
 architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
@@ -508,6 +509,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
     signal   xfer_req_alen      : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0);
     signal   xfer_req_select    : std_logic_vector(VAL_BITS       -1 downto 0);
+    signal   xfer_req_ptr       : std_logic_vector(BUF_PTR_BITS   -1 downto 0);
     signal   xfer_req_valid     : std_logic;
     signal   xfer_req_ready     : std_logic;
     signal   xfer_req_next      : std_logic;
@@ -527,8 +529,42 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
     signal   xfer_running       : std_logic;
-    signal   xfer_select        : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_busy_flag     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_busy_assert   : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_busy_negate   : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   response_valid     : std_logic_vector(VAL_BITS-1 downto 0);
     constant SEL_ALL0           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
+    constant SEL_ALL1           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '1');
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    signal   req_queue_addr     : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
+    signal   req_queue_size     : std_logic_vector(XFER_MAX_SIZE     downto 0);
+    signal   req_queue_ptr      : std_logic_vector(BUF_PTR_BITS   -1 downto 0);
+    signal   req_queue_alen     : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0);
+    signal   req_queue_next     : std_logic;
+    signal   req_queue_last     : std_logic;
+    signal   req_queue_first    : std_logic;
+    signal   req_queue_safety   : std_logic;
+    signal   req_queue_empty    : std_logic;
+    signal   req_queue_valid    : std_logic;
+    signal   req_queue_ready    : std_logic;
+    signal   req_queue_select   : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   req_queue_busy     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   req_queue_done     : std_logic_vector(VAL_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    constant xfer_run_addr      : std_logic_vector(AXI4_DATA_SIZE    downto 0) := (others => '0');
+    constant xfer_run_ptr       : std_logic_vector(BUF_PTR_BITS   -1 downto 0) := (others => '0');
+    constant xfer_run_alen      : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0) := (others => '0');
+    constant xfer_run_first     : std_logic := '0';
+    signal   xfer_run_select    : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_run_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
+    signal   xfer_run_next      : std_logic;
+    signal   xfer_run_last      : std_logic;
+    signal   xfer_run_safety    : std_logic;
+    signal   xfer_run_done      : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -550,35 +586,29 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   buf_start_ptr      : std_logic_vector(BUF_PTR_BITS-1 downto 0);
-    signal   buf_busy           : std_logic;
-    constant buf_push_error     : std_logic := '0';
-    signal   buf_push_valid     : std_logic;
-    signal   buf_push_ready     : std_logic;
-    signal   buf_push_enable    : std_logic;
-    signal   buf_pull_ready     : std_logic;
+    signal   port_busy          : std_logic;
+    signal   port_select        : std_logic_vector(VAL_BITS-1 downto 0);
+    constant port_push_error    : std_logic := '0';
+    signal   port_push_valid    : std_logic;
+    signal   port_push_ready    : std_logic;
+    signal   port_push_enable   : std_logic;
+    signal   port_push_done     : std_logic;
+    signal   port_pull_ready    : std_logic;
+    signal   port_exit_valid    : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   port_exit_last     : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   exit_valid         : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   exit_last          : std_logic;
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    signal   ack_queue_ready    : std_logic;
-    signal   ack_queue_valid    : std_logic;
-    signal   ack_queue_next     : std_logic;
-    signal   ack_queue_last     : std_logic;
-    signal   ack_queue_select   : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   ack_queue_size     : std_logic_vector(XFER_MAX_SIZE downto 0);
-    signal   ack_queue_empty    : std_logic;
-    signal   ack_queue_safety   : std_logic;
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    type     STATE_TYPE      is ( IDLE_STATE, XFER_STATE );
-    signal   curr_state         : STATE_TYPE;
-    signal   curr_select        : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   res_queue_size     : std_logic_vector(XFER_MAX_SIZE downto 0);
+    signal   res_queue_select   : std_logic_vector(VAL_BITS   -1 downto 0);
+    signal   res_queue_busy     : std_logic_vector(VAL_BITS   -1 downto 0);
+    signal   res_queue_done     : std_logic_vector(VAL_BITS   -1 downto 0);
+    signal   res_queue_ready    : std_logic;
+    signal   res_queue_valid    : std_logic;
+    signal   res_queue_next     : std_logic;
+    signal   res_queue_last     : std_logic;
+    signal   res_queue_safety   : std_logic;
+    signal   res_queue_empty    : std_logic;
 begin
     -------------------------------------------------------------------------------
     -- AXI4 Write Address Channel Controller.
@@ -678,83 +708,86 @@ begin
     AWID     <= REQ_ID;
     WID      <= REQ_ID;
     -------------------------------------------------------------------------------
-    -- ライトデータチャネルの状態遷移
-    -------------------------------------------------------------------------------
-    WDT_FSM: process(CLK, RST) begin
-        if (RST = '1') then
-                curr_state  <= IDLE_STATE;
-                curr_select <= (others => '0');
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then 
-                curr_state  <= IDLE_STATE;
-                curr_select <= (others => '0');
-            else
-                case curr_state is
-                    ---------------------------------------------------------------
-                    -- Transfer Request の受け付け待ち.
-                    ---------------------------------------------------------------
-                    when IDLE_STATE =>
-                        if (xfer_start = '1') then
-                            curr_state  <= XFER_STATE;
-                            curr_select <= xfer_req_select;
-                        else
-                            curr_state  <= IDLE_STATE;
-                        end if;
-                    ---------------------------------------------------------------
-                    -- AXI4 Write Data Channel に最初のデータを出力するのを待つ.
-                    ---------------------------------------------------------------
-                    when XFER_STATE =>
-                        if (buf_busy = '0') then
-                            curr_state  <= IDLE_STATE;
-                        else
-                            curr_state  <= XFER_STATE;
-                        end if;
-                    ---------------------------------------------------------------
-                    -- 念のため.
-                    ---------------------------------------------------------------
-                    when others      =>
-                            curr_state  <= IDLE_STATE;
-                end case;
-            end if;
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    -- xfer_req_ready : Transfer Requestを受け付けることが出来ることを示すフラグ.
-    -------------------------------------------------------------------------------
-    xfer_req_ready <= '1' when (curr_state = IDLE_STATE and ack_queue_ready = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- xfer_start     : この信号がトリガーとなっていろいろと処理を開始する.
-    -------------------------------------------------------------------------------
-    xfer_start     <= '1' when (xfer_req_ready = '1' and xfer_req_valid = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- xfer_select    : xfer_req_select を データ転送中の間保持しておく. ただし、
-    --                  VAL_BIT=0 の場合は常に"1"にしておいて回路を簡略化する.
-    -------------------------------------------------------------------------------
-    xfer_select    <= curr_select when (VAL_BITS > 1) else (others => '1');
-    -------------------------------------------------------------------------------
-    -- xfer_running   : データ転送中である事を示すフラグ.
-    -- XFER_BUSY      : データ転送中である事を示すフラグ.
-    -------------------------------------------------------------------------------
-    xfer_running   <= '1' when (curr_state = XFER_STATE) or
-                               (ack_queue_valid = '1'  ) else '0';
-    XFER_BUSY      <= xfer_select when (xfer_running    = '1') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
-    -------------------------------------------------------------------------------
-    XFER_DONE      <= xfer_select when (curr_state = XFER_STATE and buf_busy = '0' and
-                                        ack_queue_empty = '1') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- buf_start_ptr  : バッファのリード開始ポインタ
+    -- xfer_req_ptr  : バッファのリード開始ポインタ
     -------------------------------------------------------------------------------
     process (REQ_ADDR, REQ_BUF_PTR) begin
-        for i in buf_start_ptr'range loop
+        for i in xfer_req_ptr'range loop
             if (i < ALIGNMENT_SIZE) then
-                buf_start_ptr(i) <= REQ_ADDR(i);
+                xfer_req_ptr(i) <= REQ_ADDR(i);
             else
-                buf_start_ptr(i) <= REQ_BUF_PTR(i);
+                xfer_req_ptr(i) <= REQ_BUF_PTR(i);
             end if;
         end loop;
     end process;
+    -------------------------------------------------------------------------------
+    -- Transfer Request Queue.
+    -------------------------------------------------------------------------------
+    REQ_QUEUE: AXI4_MASTER_TRANSFER_QUEUE              -- 
+        generic map (                                  -- 
+            SEL_BITS        => VAL_BITS              , --
+            SIZE_BITS       => req_queue_size'length , --
+            ADDR_BITS       => req_queue_addr'length , --
+            ALEN_BITS       => req_queue_alen'length , --
+            PTR_BITS        => req_queue_ptr 'length , --
+            QUEUE_SIZE      => 0                       --
+        )                                              --
+        port map (                                     --
+            CLK             => CLK                   , -- In  :
+            RST             => RST                   , -- In  :
+            CLR             => CLR                   , -- In  :
+            I_VALID         => xfer_req_valid        , -- In  :
+            I_SEL           => xfer_req_select       , -- In  :
+            I_SIZE          => xfer_req_size         , -- In  :
+            I_ADDR          => xfer_req_addr         , -- In  :
+            I_ALEN          => xfer_req_alen         , -- In  :
+            I_PTR           => xfer_req_ptr          , -- In  :
+            I_NEXT          => xfer_req_next         , -- In  :
+            I_LAST          => xfer_req_last         , -- In  :
+            I_FIRST         => xfer_req_first        , -- In  :
+            I_SAFETY        => xfer_req_safety       , -- In  :
+            I_READY         => xfer_req_ready        , -- Out :
+            O_VALID         => req_queue_valid       , -- Out :
+            O_SEL           => req_queue_select      , -- Out :
+            O_SIZE          => req_queue_size        , -- Out :
+            O_ADDR          => req_queue_addr        , -- Out :
+            O_ALEN          => req_queue_alen        , -- Out :
+            O_PTR           => req_queue_ptr         , -- Out :
+            O_NEXT          => req_queue_next        , -- Out :
+            O_LAST          => req_queue_last        , -- Out :
+            O_FIRST         => req_queue_first       , -- Out :
+            O_SAFETY        => req_queue_safety      , -- Out :
+            O_READY         => req_queue_ready       , -- In  :
+            BUSY            => req_queue_busy        , -- Out :
+            DONE            => req_queue_done        , -- Out :
+            EMPTY           => req_queue_empty         -- Out :
+        );                                             -- 
+    -------------------------------------------------------------------------------
+    -- req_queue_ready : Transfer Requestを受け付けることが出来ることを示すフラグ.
+    -------------------------------------------------------------------------------
+    req_queue_ready <= '1' when (port_busy = '0' and res_queue_ready = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- xfer_start       : この信号がトリガーとなっていろいろと処理を開始する.
+    -------------------------------------------------------------------------------
+    xfer_start      <= '1' when (req_queue_ready = '1' and req_queue_valid = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- xfer_running   : データ転送中である事を示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_running    <= '1' when (req_queue_empty = '0') or
+                                (port_busy       = '1') or
+                                (res_queue_empty = '0') else '0';
+    -------------------------------------------------------------------------------
+    -- XFER_BUSY      : データ転送中である事を示すフラグ.
+    -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
+    -------------------------------------------------------------------------------
+    XFER_GEN: for i in XFER_BUSY'range generate
+        XFER_BUSY(i) <= '1' when (req_queue_busy (i) = '1') or
+                                 (xfer_run_select(i) = '1') or
+                                 (res_queue_busy (i) = '1') else '0';
+        XFER_DONE(i) <= '1' when (req_queue_busy (i) = '0') and
+                                 (xfer_run_select(i) = '0') and
+                                 (res_queue_busy (i) = '1') and
+                                 (res_queue_done (i) = '1') else '0';
+    end generate;
     -------------------------------------------------------------------------------
     -- AXI4 用データ出力ポート
     -------------------------------------------------------------------------------
@@ -786,13 +819,13 @@ begin
         -- Control Signals.
         ---------------------------------------------------------------------------
             TRAN_START      => xfer_start        , -- In  :
-            TRAN_ADDR       => xfer_req_addr     , -- In  :
-            TRAN_SIZE       => xfer_req_size     , -- In  :
-            BURST_LEN       => xfer_req_alen     , -- In  :
+            TRAN_ADDR       => req_queue_addr    , -- In  :
+            TRAN_SIZE       => req_queue_size    , -- In  :
+            BURST_LEN       => req_queue_alen    , -- In  :
             BURST_SIZE      => AXI4_BURST_SIZE   , -- In  :
-            START_PTR       => buf_start_ptr     , -- In  :
-            TRAN_LAST       => xfer_req_last     , -- In  :
-            TRAN_SEL        => xfer_req_select   , -- In  :
+            START_PTR       => req_queue_ptr     , -- In  :
+            TRAN_LAST       => req_queue_last    , -- In  :
+            TRAN_SEL        => req_queue_select  , -- In  :
             XFER_VAL        => open              , -- Out :
             XFER_DVAL       => open              , -- Out :
             XFER_LAST       => open              , -- Out :
@@ -818,8 +851,8 @@ begin
         ---------------------------------------------------------------------------
         -- Outlet Size Signals.
         ---------------------------------------------------------------------------
-            EXIT_VAL        => exit_valid        , -- Out :
-            EXIT_LAST       => exit_last         , -- Out :
+            EXIT_VAL        => port_exit_valid   , -- Out :
+            EXIT_LAST       => port_exit_last    , -- Out :
             EXIT_XFER_LAST  => open              , -- Out :
             EXIT_XFER_DONE  => open              , -- Out :
             EXIT_ERROR      => open              , -- Out :
@@ -830,151 +863,176 @@ begin
             POOL_REN        => BUF_REN           , -- Out :
             POOL_PTR        => BUF_PTR           , -- Out :
             POOL_DATA       => BUF_DATA          , -- In  :
-            POOL_ERROR      => buf_push_error    , -- In  :
-            POOL_VAL        => buf_push_valid    , -- In  :
-            POOL_RDY        => buf_push_ready    , -- Out :
+            POOL_ERROR      => port_push_error   , -- In  :
+            POOL_VAL        => port_push_valid   , -- In  :
+            POOL_RDY        => port_push_ready   , -- Out :
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
-            POOL_BUSY       => buf_push_enable   , -- Out :
-            POOL_DONE       => open              , -- Out :
-            BUSY            => buf_busy            -- Out :
+            POOL_BUSY       => port_push_enable  , -- Out :
+            POOL_DONE       => port_push_done    , -- Out :
+            BUSY            => port_busy           -- Out :
         );                                         -- 
     -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    PULL_BUF_RESET <= xfer_req_select when (xfer_start = '1') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    buf_pull_ready <= '1' when ((PULL_BUF_RDY and xfer_select) /= SEL_ALL0) else '0';
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    buf_push_valid <= '1' when (buf_push_enable = '1' and buf_pull_ready = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- Non Safety(Risky) Return Response.
+    -- 転送期間中、情報を保持しておくためのレジスタ群.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- xfer_run_size  : Transfer Request Queue から取り出したサイズ情報を保持.
+    -- xfer_run_select: Transfer Request Queue から取り出した選択情報を保持.
+    -- xfer_run_next  : Transfer Request Queue から取り出したNEXTを保持.
+    -- xfer_run_last  : Transfer Request Queue から取り出したLASTを保持.
+    -- xfer_run_safety: Transfer Request Queue から取り出したSAFETYを保持.
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                risky_ack_size <= (others => '0');
-                risky_ack_next <= '0';
-                risky_ack_last <= '0';
+                xfer_run_select <= (others => '0');
+                xfer_run_size   <= (others => '0');
+                xfer_run_next   <= '0';
+                xfer_run_last   <= '0';
+                xfer_run_safety <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') or
+               (xfer_run_done = '1') then
+                xfer_run_select <= (others => '0');
+                xfer_run_size   <= (others => '0');
+                xfer_run_next   <= '0';
+                xfer_run_last   <= '0';
+                xfer_run_safety <= '0';
+            elsif (xfer_start = '1') then
+                xfer_run_select <= req_queue_select;
+                xfer_run_size   <= req_queue_size;
+                xfer_run_next   <= req_queue_next;
+                xfer_run_last   <= req_queue_last;
+                xfer_run_safety <= req_queue_safety;
+            end if;
+        end if;
+    end process;
+    xfer_run_done <= '1' when (port_exit_valid /= SEL_ALL0) and
+                              (port_exit_last   = '1'     ) else '0';
+    -------------------------------------------------------------------------------
+    -- port_pull_ready:
+    -------------------------------------------------------------------------------
+    port_pull_ready <= '1' when ((PULL_BUF_RDY and xfer_run_select) /= SEL_ALL0) else '0';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    port_push_valid <= '1' when (port_push_enable = '1' and port_pull_ready = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    PULL_BUF_RESET  <= req_queue_select when (xfer_start = '1') else (others => '0');
+    -------------------------------------------------------------------------------
+    -- Non Safety(Risky) Return Response.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- ここで言うリスキーとは、スレーブからの書き込み応答を待たずに、書き込みが成功
+    -- するという前提で、処理を終えてしまうことを指す.
+    -- 具体的には、すべてのライトデータを出力し終えた時点で、(スレーブからの応答を
+    -- 待たずに)処理を終了する.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
                 risky_ack_mode <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
-                risky_ack_size <= (others => '0');
-                risky_ack_next <= '0';
-                risky_ack_last <= '0';
                 risky_ack_mode <= FALSE;
             elsif (xfer_start = '1') then
-                if (xfer_req_safety = '0') then
-                    risky_ack_size <= xfer_req_size;
-                    risky_ack_next <= xfer_req_next;
-                    risky_ack_last <= xfer_req_last;
+                if (req_queue_safety = '0') then
                     risky_ack_mode <= TRUE;
                 else
-                    risky_ack_size <= (others => '0');
-                    risky_ack_next <= '0';
-                    risky_ack_last <= '0';
                     risky_ack_mode <= FALSE;
                 end if;
             elsif (risky_ack_valid = '1') then
-                    risky_ack_size <= (others => '0');
-                    risky_ack_next <= '0';
-                    risky_ack_last <= '0';
                     risky_ack_mode <= FALSE;
             end if;
         end if;
     end process;
-    risky_ack_valid <= '1' when (risky_ack_mode        ) and
-                                (exit_valid /= SEL_ALL0) and
-                                (exit_last   = '1'     ) else '0';
+    risky_ack_size  <= xfer_run_size when (risky_ack_mode) else (others => '0');
+    risky_ack_valid <= xfer_run_done when (risky_ack_mode) else '0';
+    risky_ack_next  <= xfer_run_next when (risky_ack_mode) else '0';
+    risky_ack_last  <= xfer_run_last when (risky_ack_mode) else '0';
     risky_ack_error <= '0';
     -------------------------------------------------------------------------------
     -- Transfer Response Queue.
     -------------------------------------------------------------------------------
-    RES: block
-        constant VEC_LO         : integer := 0;
-        constant VEC_SIZE_LO    : integer := VEC_LO;
-        constant VEC_SIZE_HI    : integer := VEC_SIZE_LO  + XFER_MAX_SIZE;
-        constant VEC_SEL_LO     : integer := VEC_SIZE_HI  + 1;
-        constant VEC_SEL_HI     : integer := VEC_SEL_LO   + VAL_BITS-1;
-        constant VEC_NEXT_POS   : integer := VEC_SEL_HI   + 1;
-        constant VEC_LAST_POS   : integer := VEC_NEXT_POS + 1;
-        constant VEC_SAFETY_POS : integer := VEC_LAST_POS + 1;
-        constant VEC_HI         : integer := VEC_SAFETY_POS;
-        signal   i_vec          : std_logic_vector(VEC_HI downto VEC_LO);
-        signal   q_vec          : std_logic_vector(VEC_HI downto VEC_LO);
-        signal   o_val          : std_logic_vector(QUEUE_SIZE downto 0);
-        signal   q_val          : std_logic_vector(QUEUE_SIZE downto 0);
-    begin
-        i_vec(VEC_SIZE_HI downto VEC_SIZE_LO) <= xfer_req_size;
-        i_vec(VEC_SEL_HI  downto VEC_SEL_LO ) <= xfer_req_select;
-        i_vec(VEC_NEXT_POS)                   <= xfer_req_next;
-        i_vec(VEC_LAST_POS)                   <= xfer_req_last;
-        i_vec(VEC_SAFETY_POS)                 <= xfer_req_safety;
-        QUEUE: QUEUE_REGISTER
-            generic map (
-                QUEUE_SIZE  => QUEUE_SIZE        ,
-                DATA_BITS   => i_vec'length      ,
-                LOWPOWER    => 1
-            )
-            port map (
-                CLK         => CLK               , -- In  :
-                RST         => RST               , -- In  :
-                CLR         => CLR               , -- In  :
-                I_DATA      => i_vec             , -- In  :
-                I_VAL       => xfer_start        , -- In  :
-                I_RDY       => ack_queue_ready   , -- Out :
-                O_DATA      => open              , -- Out :
-                O_VAL       => o_val             , -- Out :
-                Q_DATA      => q_vec             , -- Out :
-                Q_VAL       => q_val             , -- Out :
-                Q_RDY       => BVALID              -- In  :
-            );
-        ack_queue_size   <= q_vec(VEC_SIZE_HI downto VEC_SIZE_LO);
-        ack_queue_select <= q_vec(VEC_SEL_HI  downto VEC_SEL_LO);
-        ack_queue_next   <= q_vec(VEC_NEXT_POS);
-        ack_queue_last   <= q_vec(VEC_LAST_POS);
-        ack_queue_safety <= q_vec(VEC_SAFETY_POS);
-        ack_queue_valid  <= q_val(0);
-        ack_queue_empty  <= '1' when (o_val(0) = '0') else '0';
-    end block;
+    RES_QUEUE: AXI4_MASTER_TRANSFER_QUEUE              -- 
+        generic map (                                  -- 
+            SEL_BITS        => VAL_BITS              , --
+            SIZE_BITS       => xfer_run_size'length  , --
+            ADDR_BITS       => xfer_run_addr'length  , --
+            ALEN_BITS       => xfer_run_alen'length  , --
+            PTR_BITS        => xfer_run_ptr 'length  , --
+            QUEUE_SIZE      => QUEUE_SIZE              --
+        )                                              --
+        port map (                                     --
+            CLK             => CLK                   , -- In  :
+            RST             => RST                   , -- In  :
+            CLR             => CLR                   , -- In  :
+            I_VALID         => xfer_run_done         , -- In  :
+            I_SEL           => xfer_run_select       , -- In  :
+            I_SIZE          => xfer_run_size         , -- In  :
+            I_ADDR          => xfer_run_addr         , -- In  :
+            I_ALEN          => xfer_run_alen         , -- In  :
+            I_PTR           => xfer_run_ptr          , -- In  :
+            I_NEXT          => xfer_run_next         , -- In  :
+            I_LAST          => xfer_run_last         , -- In  :
+            I_FIRST         => xfer_run_first        , -- In  :
+            I_SAFETY        => xfer_run_safety       , -- In  :
+            I_READY         => res_queue_ready       , -- Out :
+            O_VALID         => res_queue_valid       , -- Out :
+            O_SEL           => res_queue_select      , -- Out :
+            O_SIZE          => res_queue_size        , -- Out :
+            O_ADDR          => open                  , -- Out :
+            O_ALEN          => open                  , -- Out :
+            O_PTR           => open                  , -- Out :
+            O_NEXT          => res_queue_next        , -- Out :
+            O_LAST          => res_queue_last        , -- Out :
+            O_FIRST         => open                  , -- Out :
+            O_SAFETY        => res_queue_safety      , -- Out :
+            O_READY         => BVALID                , -- In  :
+            BUSY            => res_queue_busy        , -- Out :
+            DONE            => res_queue_done        , -- Out :
+            EMPTY           => res_queue_empty         -- Out :
+        );                                             -- 
     -------------------------------------------------------------------------------
     -- BREADY : Write Response Ready
     -------------------------------------------------------------------------------
-    BREADY  <= '1' when (ack_queue_valid = '1') else '0';
+    BREADY  <= '1' when (res_queue_valid = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    response_valid   <= res_queue_select when (res_queue_valid = '1' and BVALID = '1') else SEL_ALL0;
     -------------------------------------------------------------------------------
     -- Safety Return Response.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- セーフティでは、スレーブからの書き込み応答を待って、書き込みが成功したことを
+    -- 確認してから、処理を終える.
     -------------------------------------------------------------------------------
-    safety_ack_mode  <= (ack_queue_safety = '1');
-    safety_ack_valid <= '1' when (safety_ack_mode and ack_queue_valid = '1' and BVALID = '1') else '0';
+    safety_ack_mode  <= (res_queue_safety = '1');
+    safety_ack_valid <= '1' when (safety_ack_mode and res_queue_valid = '1' and BVALID = '1') else '0';
     safety_ack_error <= '1' when (safety_ack_mode and (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR)) else '0';
-    safety_ack_next  <= '1' when (safety_ack_mode and ack_queue_next = '1') else '0';
-    safety_ack_last  <= '1' when (safety_ack_mode and ack_queue_last = '1') else '0';
-    safety_ack_size  <= ack_queue_size when (safety_ack_mode and safety_ack_error = '0') else (others => '0');
+    safety_ack_next  <= '1' when (safety_ack_mode and res_queue_next = '1') else '0';
+    safety_ack_last  <= '1' when (safety_ack_mode and res_queue_last = '1') else '0';
+    safety_ack_size  <= res_queue_size when (safety_ack_mode and safety_ack_error = '0') else (others => '0');
     -------------------------------------------------------------------------------
     -- Return Response.
     -------------------------------------------------------------------------------
-    xfer_ack_valid <= risky_ack_valid or safety_ack_valid;
-    xfer_ack_error <= risky_ack_error or safety_ack_error;
-    xfer_ack_next  <= risky_ack_next  or safety_ack_next;
-    xfer_ack_last  <= risky_ack_last  or safety_ack_last;
-    xfer_ack_size  <= risky_ack_size  or safety_ack_size;
+    xfer_ack_valid   <= risky_ack_valid or safety_ack_valid;
+    xfer_ack_error   <= risky_ack_error or safety_ack_error;
+    xfer_ack_next    <= risky_ack_next  or safety_ack_next;
+    xfer_ack_last    <= risky_ack_last  or safety_ack_last;
+    xfer_ack_size    <= risky_ack_size  or safety_ack_size;
     -------------------------------------------------------------------------------
     -- Pull Reserve Size and Last
     -------------------------------------------------------------------------------
-    PULL_RSV_VAL   <= xfer_req_select when (xfer_start    = '1') else (others => '0');
-    PULL_RSV_LAST  <= xfer_req_last;
-    PULL_RSV_ERROR <= '0';
-    PULL_RSV_SIZE  <= std_logic_vector(RESIZE(unsigned(xfer_req_size) , PULL_RSV_SIZE'length));
+    PULL_RSV_VAL     <= req_queue_select when (xfer_start = '1') else SEL_ALL0;
+    PULL_RSV_LAST    <= req_queue_last;
+    PULL_RSV_ERROR   <= '0';
+    PULL_RSV_SIZE    <= std_logic_vector(RESIZE(unsigned(req_queue_size) , PULL_RSV_SIZE'length));
     -------------------------------------------------------------------------------
     -- Pull Final Size and Last
     -------------------------------------------------------------------------------
-    PULL_FIN_VAL   <= ack_queue_select when (ack_queue_valid = '1' and BVALID = '1') else (others => '0');
-    PULL_FIN_LAST  <= ack_queue_last;
-    PULL_FIN_ERROR <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
-    PULL_FIN_SIZE  <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
-                      std_logic_vector(RESIZE(unsigned(ack_queue_size), PULL_FIN_SIZE'length));
+    PULL_FIN_VAL     <= res_queue_select when (res_queue_valid = '1' and BVALID = '1') else SEL_ALL0;
+    PULL_FIN_LAST    <= res_queue_last;
+    PULL_FIN_ERROR   <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
+    PULL_FIN_SIZE    <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
+                        std_logic_vector(RESIZE(unsigned(res_queue_size), PULL_FIN_SIZE'length));
 end RTL;
