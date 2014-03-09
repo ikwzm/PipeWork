@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.5
---!     @date    2014/3/8
+--!     @date    2014/3/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -529,10 +529,6 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
     signal   xfer_running       : std_logic;
-    signal   xfer_busy_flag     : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   xfer_busy_assert   : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   xfer_busy_negate   : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   response_valid     : std_logic_vector(VAL_BITS-1 downto 0);
     constant SEL_ALL0           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
     constant SEL_ALL1           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
@@ -559,7 +555,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     constant xfer_run_ptr       : std_logic_vector(BUF_PTR_BITS   -1 downto 0) := (others => '0');
     constant xfer_run_alen      : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0) := (others => '0');
     constant xfer_run_first     : std_logic := '0';
-    signal   xfer_run_select    : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_run_select    : std_logic_vector(VAL_BITS   -1 downto 0);
     signal   xfer_run_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
     signal   xfer_run_next      : std_logic;
     signal   xfer_run_last      : std_logic;
@@ -587,14 +583,14 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   port_busy          : std_logic;
-    signal   port_select        : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   port_select        : std_logic_vector(VAL_BITS   -1 downto 0);
     constant port_push_error    : std_logic := '0';
     signal   port_push_valid    : std_logic;
     signal   port_push_ready    : std_logic;
     signal   port_push_enable   : std_logic;
     signal   port_push_done     : std_logic;
     signal   port_pull_ready    : std_logic;
-    signal   port_exit_valid    : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   port_exit_valid    : std_logic_vector(VAL_BITS   -1 downto 0);
     signal   port_exit_last     : std_logic;
     -------------------------------------------------------------------------------
     -- 
@@ -906,8 +902,8 @@ begin
             end if;
         end if;
     end process;
-    xfer_run_done <= '1' when (port_exit_valid /= SEL_ALL0) and
-                              (port_exit_last   = '1'     ) else '0';
+    xfer_run_done   <= '1' when (port_exit_valid /= SEL_ALL0) and
+                                (port_exit_last   = '1'     ) else '0';
     -------------------------------------------------------------------------------
     -- port_pull_ready:
     -------------------------------------------------------------------------------
@@ -935,13 +931,9 @@ begin
             if (CLR = '1') then 
                 risky_ack_mode <= FALSE;
             elsif (xfer_start = '1') then
-                if (req_queue_safety = '0') then
-                    risky_ack_mode <= TRUE;
-                else
-                    risky_ack_mode <= FALSE;
-                end if;
+                risky_ack_mode <= (req_queue_safety = '0');
             elsif (risky_ack_valid = '1') then
-                    risky_ack_mode <= FALSE;
+                risky_ack_mode <= FALSE;
             end if;
         end if;
     end process;
@@ -997,17 +989,13 @@ begin
     -------------------------------------------------------------------------------
     BREADY  <= '1' when (res_queue_valid = '1') else '0';
     -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    response_valid   <= res_queue_select when (res_queue_valid = '1' and BVALID = '1') else SEL_ALL0;
-    -------------------------------------------------------------------------------
     -- Safety Return Response.
     -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     -- セーフティでは、スレーブからの書き込み応答を待って、書き込みが成功したことを
     -- 確認してから、処理を終える.
     -------------------------------------------------------------------------------
-    safety_ack_mode  <= (res_queue_safety = '1');
-    safety_ack_valid <= '1' when (safety_ack_mode and res_queue_valid = '1' and BVALID = '1') else '0';
+    safety_ack_mode  <= (res_queue_safety = '1' and res_queue_valid = '1');
+    safety_ack_valid <= '1' when (safety_ack_mode and BVALID = '1') else '0';
     safety_ack_error <= '1' when (safety_ack_mode and (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR)) else '0';
     safety_ack_next  <= '1' when (safety_ack_mode and res_queue_next = '1') else '0';
     safety_ack_last  <= '1' when (safety_ack_mode and res_queue_last = '1') else '0';

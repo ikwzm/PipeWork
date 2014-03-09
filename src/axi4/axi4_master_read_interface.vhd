@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.5
---!     @date    2014/3/8
+--!     @date    2014/3/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -476,8 +476,8 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   xfer_ack_select    : std_logic_vector(VAL_BITS    -1 downto 0);
     signal   xfer_ack_valid     : std_logic;
+    signal   xfer_ack_select    : std_logic_vector(VAL_BITS    -1 downto 0);
     signal   xfer_ack_size      : std_logic_vector(XFER_MAX_SIZE  downto 0);
     signal   xfer_ack_next      : std_logic;
     signal   xfer_ack_last      : std_logic;
@@ -486,7 +486,6 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    constant port_enable        : std_logic := '1';
     signal   xfer_start         : std_logic;
     signal   xfer_running       : std_logic;
     signal   xfer_run_select    : std_logic_vector(VAL_BITS-1 downto 0);
@@ -535,6 +534,7 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     signal   outlet_xfer_done   : std_logic;
     signal   outlet_size        : std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     signal   outlet_ready       : std_logic;
+    constant port_enable        : std_logic := '1';
     signal   port_busy          : std_logic;
     signal   port_done          : std_logic;
     signal   port_ready_or_done : boolean;
@@ -683,7 +683,7 @@ begin
             O_SEL           => req_queue_select      , -- Out :
             O_SIZE          => req_queue_size        , -- Out :
             O_ADDR          => req_queue_addr        , -- Out :
-            O_ALEN          => open                  , -- Out :
+            O_ALEN          => req_queue_alen        , -- Out :
             O_PTR           => req_queue_ptr         , -- Out :
             O_NEXT          => req_queue_next        , -- Out :
             O_LAST          => req_queue_last        , -- Out :
@@ -831,31 +831,31 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- xfer_run_select  : req_queue_select を データ転送中の間保持しておく. ただし、
-    --                    VAL_BIT=0 の場合は常に"1"にしておいて回路を簡略化する.
+    -- xfer_run_select : req_queue_select を データ転送中の間保持しておく. ただし、
+    --                   VAL_BIT=0 の場合は常に"1"にしておいて回路を簡略化する.
     -------------------------------------------------------------------------------
     xfer_run_select <= xfer_ack_select when (VAL_BITS > 1) else (others => '1');
     -------------------------------------------------------------------------------
-    -- recv_busy      : データリード中 または Transfer Request Queue にまだ
-    --                  リクエストが残っていることを示す.
+    -- recv_busy       : データリード中 または Transfer Request Queue にまだ
+    --                   リクエストが残っていることを示す.
     -------------------------------------------------------------------------------
     recv_busy       <= '1' when (curr_state = WAIT_RFIRST or
                                  curr_state = WAIT_RLAST  or
                                  req_queue_empty = '0' ) else '0';
     -------------------------------------------------------------------------------
-    -- xfer_running   : データ転送中である事を示すフラグ.
+    -- xfer_running    : データ転送中である事を示すフラグ.
     -------------------------------------------------------------------------------
     xfer_running    <= '1' when (recv_busy = '1' or port_busy  = '1') else '0';
     -------------------------------------------------------------------------------
-    -- XFER_BUSY      : データ転送中である事を示すフラグ.
+    -- XFER_BUSY       : データ転送中である事を示すフラグ.
     -------------------------------------------------------------------------------
     XFER_BUSY       <= req_queue_busy or xfer_ack_select;
     -------------------------------------------------------------------------------
-    -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
-    --                  このモジュールでは、XFER_BUSY がネゲートする前に 必ずしも 
-    --                  XFER_DONE がアサートされるわけでは無い.
-    --                  全てのデータリードが終了した後で、最後のデータを出力する時
-    --                  にのみ XFER_DONE はアサートされる.
+    -- XFER_DONE       : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
+    --                   このモジュールでは、XFER_BUSY がネゲートする前に 必ずしも 
+    --                   XFER_DONE がアサートされるわけでは無い.
+    --                   全てのデータリードが終了した後で、最後のデータを出力する時
+    --                   にのみ XFER_DONE はアサートされる.
     -------------------------------------------------------------------------------
     XFER_DONE       <= xfer_run_select when (curr_state = TURN_AR) and
                                             (port_ready_or_done  ) else (others => '0');
@@ -864,38 +864,38 @@ begin
     -------------------------------------------------------------------------------
     req_queue_ready <= '1' when (curr_state = IDLE) else '0';
     -------------------------------------------------------------------------------
-    -- xfer_start       : この信号がトリガーとなっていろいろと処理を開始する.
+    -- xfer_start      : この信号がトリガーとなっていろいろと処理を開始する.
     -------------------------------------------------------------------------------
     xfer_start      <= '1' when (curr_state = IDLE and req_queue_valid = '1') else '0';
     -------------------------------------------------------------------------------
-    -- xfer_beat_chop   : バイトイネーブル信号生成用のトリガー信号.
+    -- xfer_beat_chop  : バイトイネーブル信号生成用のトリガー信号.
     -------------------------------------------------------------------------------
     xfer_beat_chop  <= '1' when (recv_data_valid = '1' and recv_data_ready = '1') else '0';
     -------------------------------------------------------------------------------
-    -- recv_enable      : レシーブバッファを有効にするための信号.
+    -- recv_enable     : レシーブバッファを有効にするための信号.
     -------------------------------------------------------------------------------
     recv_enable     <= '1' when (curr_state = WAIT_RFIRST or curr_state = WAIT_RLAST) else '0';
     -------------------------------------------------------------------------------
-    -- recv_data_valid  : レシーブバッファにRDATAを書き込むための信号.
+    -- recv_data_valid : レシーブバッファにRDATAを書き込むための信号.
     -------------------------------------------------------------------------------
     recv_data_valid <= '1' when (recv_enable = '1' and RVALID = '1') else '0';
     -------------------------------------------------------------------------------
-    -- recv_data_error  : エラーレスンポンス
+    -- recv_data_error : エラーレスンポンス
     -------------------------------------------------------------------------------
     recv_data_error <= '1' when (RRESP = AXI4_RESP_SLVERR or RRESP = AXI4_RESP_DECERR) else '0';
     -------------------------------------------------------------------------------
-    -- xfer_ack_valid   : 
+    -- xfer_ack_valid  : 
     -------------------------------------------------------------------------------
     xfer_ack_valid  <= '1' when ((xfer_safety = '0' and curr_state = WAIT_RFIRST                ) or
                                  (xfer_safety = '1' and curr_state = WAIT_RFIRST and RLAST = '1') or
                                  (xfer_safety = '1' and curr_state = WAIT_RLAST  and RLAST = '1')) and
                                  (RVALID = '1' and recv_data_ready = '1') else '0';
     -------------------------------------------------------------------------------
-    -- xfer_ack_error   : 
+    -- xfer_ack_error  : 
     -------------------------------------------------------------------------------
     xfer_ack_error  <= '1' when (recv_data_error = '1' or response_error = '1') else '0';
     -------------------------------------------------------------------------------
-    -- response_error   : 
+    -- response_error  : 
     -------------------------------------------------------------------------------
     process(CLK, RST) begin
         if (RST = '1') then
@@ -972,16 +972,20 @@ begin
         -- Status Signals.
         ---------------------------------------------------------------------------
             BUSY            => port_busy             -- Out:
-        );
+        );                                           -- 
     -------------------------------------------------------------------------------
-    -- port_ready_or_done : INTAKE_PORT が'次のクロックで'入力可能状態になることを示す信号.
+    -- outlet_ready  : バッファにデータを書き込む用意が出来ているかどうかを示す信号.
+    -------------------------------------------------------------------------------
+    outlet_ready <= '1' when ((xfer_run_select and PUSH_BUF_RDY) /= SEL_ALL0) else '0';
+    -------------------------------------------------------------------------------
+    -- port_done     : INTAKE_PORT が'次のクロックで'ビジー状態から開放されることを示す信号.
+    -------------------------------------------------------------------------------
+    port_done    <= '1' when (outlet_valid /= SEL_ALL0 and outlet_last = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- 
     -------------------------------------------------------------------------------
     port_ready_or_done <= (port_busy = '0') or
                           (port_busy = '1' and port_done = '1');
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    port_done <= '1' when (outlet_valid /= SEL_ALL0 and outlet_last = '1') else '0';
     -------------------------------------------------------------------------------
     -- PUSH_RSV_SIZE : 何バイト書き込む予定かを示す信号.
     -- PUSH_RSV_LAST : 最後のデータを書き込む予定であることを示す信号.
@@ -1031,7 +1035,6 @@ begin
         PUSH_BUF_LAST  <= outlet_xfer_done;
         PUSH_BUF_ERROR <= outlet_error;
         PUSH_BUF_SIZE  <= outlet_size;
-        outlet_ready   <= '1' when ((xfer_run_select and PUSH_BUF_RDY) /= SEL_ALL0) else '0';
     end block;
 end RTL;
 
