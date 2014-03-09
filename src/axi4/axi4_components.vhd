@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.5                                                           --
---!     @date    2014/03/08                                                      --
+--!     @date    2014/03/09                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -162,6 +162,76 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
     -- Transfer Status Signals.
     -------------------------------------------------------------------------------
         XFER_RUNNING    : in    std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief AXI4_MASTER_TRANSFER_QUEUE                                            --
+-----------------------------------------------------------------------------------
+component AXI4_MASTER_TRANSFER_QUEUE
+    -------------------------------------------------------------------------------
+    -- ジェネリック変数.
+    -------------------------------------------------------------------------------
+    generic (
+        SEL_BITS        : --! @brief SELECT BITS :
+                          --! I_SEL、O_SEL のビット数を指定する.
+                          integer := 1;
+        SIZE_BITS       : --! @brief SIZE BITS:
+                          --! I_SIZE、O_SIZE信号のビット数を指定する.
+                          integer := 32;
+        ADDR_BITS       : --! @brief ADDR BITS:
+                          --! I_ADDR、O_ADDR信号のビット数を指定する.
+                          integer := 32;
+        ALEN_BITS       : --! @brief ALEN BITS:
+                          --! I_ALEN、O_ALEN信号のビット数を指定する.
+                          integer := 32;
+        PTR_BITS        : --! @brief PTR BITS:
+                          --! I_PTR、O_PTR信号のビット数を指定する.
+                          integer := 32;
+        QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
+                          --! キューの大きさを指定する.
+                          integer := 1
+    );
+    port(
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
+        CLK             : in    std_logic;
+        RST             : in    std_logic;
+        CLR             : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
+        I_VALID         : in    std_logic;
+        I_SEL           : in    std_logic_vector( SEL_BITS-1 downto 0);
+        I_SIZE          : in    std_logic_vector(SIZE_BITS-1 downto 0);
+        I_ADDR          : in    std_logic_vector(ADDR_BITS-1 downto 0);
+        I_ALEN          : in    std_logic_vector(ALEN_BITS-1 downto 0);
+        I_PTR           : in    std_logic_vector( PTR_BITS-1 downto 0);
+        I_NEXT          : in    std_logic;
+        I_LAST          : in    std_logic;
+        I_FIRST         : in    std_logic;
+        I_SAFETY        : in    std_logic;
+        I_READY         : out   std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
+        O_VALID         : out   std_logic;
+        O_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
+        O_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        O_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
+        O_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
+        O_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
+        O_NEXT          : out   std_logic;
+        O_LAST          : out   std_logic;
+        O_FIRST         : out   std_logic;
+        O_SAFETY        : out   std_logic;
+        O_READY         : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
+        BUSY            : out   std_logic_vector( SEL_BITS-1 downto 0);
+        DONE            : out   std_logic_vector( SEL_BITS-1 downto 0);
+        EMPTY           : out   std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
