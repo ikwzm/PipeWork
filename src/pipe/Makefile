@@ -7,7 +7,7 @@ ENTITY_FILES = pipe_flow_syncronizer.vhd               \
 pipe_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION' \
-            --version 1.5.0 \
+            --version 1.5.4 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package PIPE_COMPONENTS \

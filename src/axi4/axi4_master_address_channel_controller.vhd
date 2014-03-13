@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.5
+--!     @date    2014/3/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -55,9 +55,6 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
         ADDR_BITS       : --! @brief ADDRESS BITS :
                           --! アドレス信号のビット数を指定する.
                           integer := 32;
-        SIZE_BITS       : --! @brief SIZE BITS :
-                          --! 各種SIZE信号のビット数を指定する.
-                          integer := 32;
         ALEN_BITS       : --! @brief BURST LENGTH BITS :
                           --! バースト長を示す信号のビット幅を指定する.
                           integer := AXI4_ALEN_WIDTH;
@@ -78,6 +75,9 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
                           --! * FLOW_VALID=0で無効.
                           --! * FLOW_VALID=1で有効.
                           integer range 0 to 1 := 1;
+        XFER_SIZE_BITS  : --! @brief TRANSFER SIZE BITS :
+                          --! ACK_SIZE/FLOW_SIZE信号のビット数を指定する.
+                          integer := 4;
         XFER_MIN_SIZE   : --! @brief TRANSFER MINIMUM SIZE :
                           --! 一回の転送サイズの最小バイト数を２のべき乗で指定する.
                           integer := 4;
@@ -95,49 +95,50 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     ------------------------------------------------------------------------------
     -- AXI4 Address Channel Signals.
     ------------------------------------------------------------------------------
-        AADDR           : out   std_logic_vector(ADDR_BITS    -1 downto 0);
-        ALEN            : out   std_logic_vector(ALEN_BITS    -1 downto 0);
+        AADDR           : out   std_logic_vector(ADDR_BITS     -1 downto 0);
+        ALEN            : out   std_logic_vector(ALEN_BITS     -1 downto 0);
         ASIZE           : out   AXI4_ASIZE_TYPE;
         AVALID          : out   std_logic;
         AREADY          : in    std_logic;
     -------------------------------------------------------------------------------
     -- Command Request Signals.
     -------------------------------------------------------------------------------
-        REQ_ADDR        : in    std_logic_vector(ADDR_BITS    -1 downto 0);
-        REQ_SIZE        : in    std_logic_vector(REQ_SIZE_BITS-1 downto 0);
+        REQ_ADDR        : in    std_logic_vector(ADDR_BITS     -1 downto 0);
+        REQ_SIZE        : in    std_logic_vector(REQ_SIZE_BITS -1 downto 0);
         REQ_FIRST       : in    std_logic;
         REQ_LAST        : in    std_logic;
         REQ_SPECULATIVE : in    std_logic;
         REQ_SAFETY      : in    std_logic;
-        REQ_VAL         : in    std_logic_vector(VAL_BITS     -1 downto 0);
+        REQ_VAL         : in    std_logic_vector(VAL_BITS      -1 downto 0);
         REQ_RDY         : out   std_logic;
     -------------------------------------------------------------------------------
     -- Command Acknowledge Signals.
     -------------------------------------------------------------------------------
-        ACK_VAL         : out   std_logic_vector(VAL_BITS     -1 downto 0);
+        ACK_VAL         : out   std_logic_vector(VAL_BITS      -1 downto 0);
         ACK_NEXT        : out   std_logic;
         ACK_LAST        : out   std_logic;
         ACK_ERROR       : out   std_logic;
         ACK_STOP        : out   std_logic;
         ACK_NONE        : out   std_logic;
-        ACK_SIZE        : out   std_logic_vector(SIZE_BITS    -1 downto 0);
+        ACK_SIZE        : out   std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Control Signals.
     -------------------------------------------------------------------------------
         FLOW_PAUSE      : in    std_logic := '0';
         FLOW_STOP       : in    std_logic := '0';
         FLOW_LAST       : in    std_logic := '1';
-        FLOW_SIZE       : in    std_logic_vector(SIZE_BITS    -1 downto 0) := (others => '1');
+        FLOW_SIZE       : in    std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Transfer Size Select Signals.
     -------------------------------------------------------------------------------
-        XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE   downto XFER_MIN_SIZE) := (others => '1');
+        XFER_SIZE_SEL   : in    std_logic_vector(XFER_MAX_SIZE    downto XFER_MIN_SIZE) := (others => '1');
     -------------------------------------------------------------------------------
     -- Transfer Request Signals.
     -------------------------------------------------------------------------------
-        XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS    -1 downto 0);
-        XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE   downto 0);
-        XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS     -1 downto 0);
+        XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS     -1 downto 0);
+        XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE    downto 0);
+        XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_REQ_ALEN   : out   std_logic_vector(ALEN_BITS     -1 downto 0);
         XFER_REQ_FIRST  : out   std_logic;
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
@@ -147,7 +148,7 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -------------------------------------------------------------------------------
     -- Transfer Response Signals.
     -------------------------------------------------------------------------------
-        XFER_ACK_SIZE   : in    std_logic_vector(XFER_MAX_SIZE   downto 0);
+        XFER_ACK_SIZE   : in    std_logic_vector(XFER_MAX_SIZE    downto 0);
         XFER_ACK_VAL    : in    std_logic;
         XFER_ACK_NEXT   : in    std_logic;
         XFER_ACK_LAST   : in    std_logic;
@@ -195,7 +196,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     signal   ack_xfer_error     : std_logic;
     signal   ack_xfer_last      : std_logic;
     signal   ack_xfer_next      : std_logic;
-    signal   ack_xfer_size      : std_logic_vector(SIZE_BITS-1   downto 0);
+    signal   ack_xfer_size      : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -206,7 +207,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   burst_length       : std_logic_vector(ALEN_BITS-1   downto 0);
+    signal   burst_length       : std_logic_vector(ALEN_BITS-1 downto 0);
     signal   addr_valid         : std_logic;
     signal   speculative        : boolean;
     -------------------------------------------------------------------------------
@@ -319,7 +320,7 @@ begin
                 BURST       => 1                     , --
                 MIN_PIECE   => XFER_MIN_SIZE         , --
                 MAX_PIECE   => XFER_MAX_SIZE         , --
-                MAX_SIZE    => SIZE_BITS+1           , --
+                MAX_SIZE    => REQ_SIZE'length       , --
                 ADDR_BITS   => REQ_ADDR'length       , --
                 SIZE_BITS   => REQ_SIZE'length       , --
                 COUNT_BITS  => 1                     , --
@@ -369,7 +370,7 @@ begin
                 BURST       => 1                     , --
                 MIN_PIECE   => XFER_MIN_SIZE         , --
                 MAX_PIECE   => XFER_MAX_SIZE         , --
-                MAX_SIZE    => SIZE_BITS+1           , --
+                MAX_SIZE    => MAX_REQ_SIZE'length   , --
                 ADDR_BITS   => REQ_ADDR'length       , --
                 SIZE_BITS   => MAX_REQ_SIZE'length   , --
                 COUNT_BITS  => 1                     , --
@@ -491,8 +492,8 @@ begin
                                (speculative = FALSE and XFER_ACK_LAST   = '1') else '0';
     ack_xfer_next  <= '1' when (speculative = TRUE  and q_ack_xfer_next = '1') or
                                (speculative = FALSE and XFER_ACK_NEXT   = '1') else '0';
-    ack_xfer_size  <= std_logic_vector(RESIZE(unsigned(q_ack_xfer_size),SIZE_BITS)) when (speculative) else
-                      std_logic_vector(RESIZE(unsigned(  XFER_ACK_SIZE),SIZE_BITS));
+    ack_xfer_size  <= std_logic_vector(RESIZE(unsigned(q_ack_xfer_size),XFER_SIZE_BITS)) when (speculative) else
+                      std_logic_vector(RESIZE(unsigned(  XFER_ACK_SIZE),XFER_SIZE_BITS));
     -------------------------------------------------------------------------------
     -- ACK_VAL         : 転送応答有効信号出力.
     -- ACK_NEXT        : 転送が終わって次の転送があることを示すフラグ.
@@ -518,15 +519,17 @@ begin
     -- XFER_REQ_SEL    : 転送要求選択信号
     -- XFER_REQ_ADDR   : 転送要求開始アドレス
     -- XFER_REQ_SIZE   : 転送要求サイズ.
+    -- XFER_REQ_ALEN   : 転送要求バースト長(-1されていることに注意)
     -- XFER_REQ_END    : 最後の転送要求であることを示すフラグ.
     -- XFER_REQ_LAST   : 最後の転送要求(かつLAST='1')であることを示すフラグ.
     -- XFER_REQ_FIRST  : 最初の転送要求であることを示すフラグ.
     -- XFER_REQ_SAFETY : セーフティモード.
     -------------------------------------------------------------------------------
     XFER_REQ_VAL    <= req_xfer_valid;
-    XFER_REQ_SEL    <= curr_valid;
+    XFER_REQ_SEL    <= curr_valid when (VAL_BITS > 1) else (others => '1');
     XFER_REQ_ADDR   <= REQ_ADDR;
     XFER_REQ_SIZE   <= req_xfer_size;
+    XFER_REQ_ALEN   <= burst_length;
     XFER_REQ_NEXT   <= req_xfer_next;
     XFER_REQ_LAST   <= req_xfer_last;
     XFER_REQ_FIRST  <= REQ_FIRST;

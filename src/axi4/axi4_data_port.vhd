@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_port.vhd
 --!     @brief   AXI4 DATA PORT
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.5
+--!     @date    2014/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -65,9 +65,18 @@ entity  AXI4_DATA_PORT is
                           --! 指定する.
                           --! * USE_ASIZE=0を指定した場合、Narrow transfers をサポ
                           --!   ートしない.
+                          --!   この場合、ASIZE信号は未使用.
                           --! * USE_ASIZE=1を指定した場合、Narrow transfers をサポ
                           --!   ートする. その際の１ワード毎の転送バイト数は
                           --!   ASIZE で指定される.
+                          integer range 0 to 1 := 1;
+        CHECK_ALEN      : --! @brief CHECK BURST LENGTH :
+                          --! ALEN で指定されたバースト数とI_LASTによるバースト転送
+                          --! の最後が一致するかどうかチェックするか否かを指定する.
+                          --! * CHECK_ALEN=0かつUSE_ASIZE=0を指定した場合、バースト
+                          --!   長をチェックしない. 
+                          --! * CHECK_ALEN=1またはUSE_ASIZEを指定した場合、バースト
+                          --!   長をチェックする.
                           integer range 0 to 1 := 1;
         I_REGS_SIZE     : --! @brief PORT INTAKE REGS SIZE :
                           --! 入力側に挿入するパイプラインレジスタの段数を指定する.
@@ -115,8 +124,10 @@ entity  AXI4_DATA_PORT is
                           --! * 最初にデータ入力と同時にアサートしても構わない.
                           in  std_logic;
         ASIZE           : --! @brief AXI4 BURST SIZE :
+                          --! AXI4 によるバーストサイズを指定する.
                           in  AXI4_ASIZE_TYPE;
         ALEN            : --! @brief AXI4 BURST LENGTH :
+                          --! AXI4 によるバースト数を指定する.
                           in  std_logic_vector(ALEN_BITS-1 downto 0);
         ADDR            : --! @brief START TRANSFER ADDRESS :
                           --! 出力側のアドレス.
@@ -428,81 +439,95 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        function  GEN_STRB_MASK(POS:unsigned;WIDTH:integer) return STRB_MASK_TYPE is
-            function GEN(POS:unsigned;W:integer) return STRB_MASK_TYPE is
-                variable  S : STRB_MASK_TYPE;
-                constant  N : integer := STRB_BITS/W;
-            begin
-                for i in 0 to N-1 loop
-                    if (i = POS) then
-                        S.enable(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '1');
-                    else
-                        S.enable(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '0');
-                    end if;
-                    if (i > POS) then
-                        S.remain(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '1');
-                    else
-                        S.remain(W*(i+1)-1 downto W*i) := (W*(i+1)-1 downto W*i => '0');
-                    end if;
-                end loop;
-                return S;
-            end function;
+        function GEN_STRB_MASK(
+                      WORD_POS   : unsigned;  -- 現在の出力中のワード位置
+            constant  WORD_BITS  : integer    -- ASIZEで指定された1ワードのバイト数
+        )             return       STRB_MASK_TYPE
+        is
+            variable  STRB_MASK  : STRB_MASK_TYPE;
+            constant  N          : integer := STRB_BITS/WORD_BITS;
+            constant  ALL1       : std_logic_vector(WORD_BITS-1 downto 0) := (others => '1');
+            constant  ALL0       : std_logic_vector(WORD_BITS-1 downto 0) := (others => '0');
+        begin
+            for i in 0 to N-1 loop
+                if (i = WORD_POS) then
+                    STRB_MASK.enable(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL1;
+                else
+                    STRB_MASK.enable(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL0;
+                end if;
+                if (i > WORD_POS) then
+                    STRB_MASK.remain(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL1;
+                else
+                    STRB_MASK.remain(WORD_BITS*(i+1)-1 downto WORD_BITS*i) := ALL0;
+                end if;
+            end loop;
+            return STRB_MASK;
+        end function;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        function  GEN_STRB_MASK(
+                      BYTE_POS   : unsigned;  -- 現在の出力中のバイト位置
+                      WORD_WIDTH : integer ;  -- ASIZEで指定された1ワードのバイト数(2のべき乗値)
+            constant  DATA_WIDTH : integer    -- データ入出力信号のバイト数(2のべき乗値)
+        )             return       STRB_MASK_TYPE
+        is
         begin
             case DATA_WIDTH is
                 when DATA_WIDTH_2BYTE   =>
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(0 downto 0),  1);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(0 downto 0),  1);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_4BYTE   =>
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(1 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(1 downto 1),  2);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(1 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(1 downto 1),  2);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_8BYTE   =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(2 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(2 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(2 downto 2),  4);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(2 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(2 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(2 downto 2),  4);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_16BYTE  =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(3 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(3 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(3 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(3 downto 3),  8);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(3 downto 3),  8);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_32BYTE  =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(4 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(4 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(4 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(4 downto 3),  8);
-                        when DATA_WIDTH_16BYTE => return GEN(POS(4 downto 4), 16);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(4 downto 3),  8);
+                        when DATA_WIDTH_16BYTE => return GEN_STRB_MASK(BYTE_POS(4 downto 4), 16);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_64BYTE  =>                               
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(5 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(5 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(5 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(5 downto 3),  8);
-                        when DATA_WIDTH_16BYTE => return GEN(POS(5 downto 4), 16);
-                        when DATA_WIDTH_32BYTE => return GEN(POS(5 downto 5), 32);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(5 downto 3),  8);
+                        when DATA_WIDTH_16BYTE => return GEN_STRB_MASK(BYTE_POS(5 downto 4), 16);
+                        when DATA_WIDTH_32BYTE => return GEN_STRB_MASK(BYTE_POS(5 downto 5), 32);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when DATA_WIDTH_128BYTE =>
-                    case WIDTH is
-                        when DATA_WIDTH_1BYTE  => return GEN(POS(6 downto 0),  1);
-                        when DATA_WIDTH_2BYTE  => return GEN(POS(6 downto 1),  2);
-                        when DATA_WIDTH_4BYTE  => return GEN(POS(6 downto 2),  4);
-                        when DATA_WIDTH_8BYTE  => return GEN(POS(6 downto 3),  8);
-                        when DATA_WIDTH_16BYTE => return GEN(POS(6 downto 4), 16);
-                        when DATA_WIDTH_32BYTE => return GEN(POS(6 downto 5), 32);
-                        when DATA_WIDTH_64BYTE => return GEN(POS(6 downto 6), 64);
+                    case WORD_WIDTH is
+                        when DATA_WIDTH_1BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 0),  1);
+                        when DATA_WIDTH_2BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 1),  2);
+                        when DATA_WIDTH_4BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 2),  4);
+                        when DATA_WIDTH_8BYTE  => return GEN_STRB_MASK(BYTE_POS(6 downto 3),  8);
+                        when DATA_WIDTH_16BYTE => return GEN_STRB_MASK(BYTE_POS(6 downto 4), 16);
+                        when DATA_WIDTH_32BYTE => return GEN_STRB_MASK(BYTE_POS(6 downto 5), 32);
+                        when DATA_WIDTH_64BYTE => return GEN_STRB_MASK(BYTE_POS(6 downto 6), 64);
                         when others            => return STRB_MASK_ALL1;
                     end case;
                 when others                    => return STRB_MASK_ALL1;
@@ -643,7 +668,11 @@ begin
                     curr_word_bytes <= next_word_bytes;
                     curr_word_width <= next_word_width;
                     curr_pos        <= next_pos;
-                    strb_mask       <= GEN_STRB_MASK(next_pos, next_word_width);
+                    strb_mask       <= GEN_STRB_MASK(
+                                           BYTE_POS   => next_pos,
+                                           WORD_WIDTH => next_word_width,
+                                           DATA_WIDTH => DATA_WIDTH
+                                       );
                 end if;
             end if;
         end process;
@@ -676,9 +705,9 @@ begin
         l_ready <= '1' when (m_ready = '1' or m_skip = '1') else '0';
     end generate;
     -------------------------------------------------------------------------------
-    -- OUTLET_CTRL
+    -- CHECK_ALEN によるバースト長のチェックを行う場合の制御部
     -------------------------------------------------------------------------------
-    OUTLET_CTRL: block
+    CHECK_ALEN_T: if (CHECK_ALEN /= 0 or USE_ASIZE /= 0) generate
         type     STATE_TYPE  is (IDLE_STATE, XFER_STATE, DUMMY_STATE, SKIP_STATE);
         signal   curr_state  : STATE_TYPE;
         signal   curr_length : std_logic_vector(ALEN'range);
@@ -773,7 +802,56 @@ begin
                                 (curr_state = DUMMY_STATE) or
                                 (curr_state = SKIP_STATE ) or
                                 (o_busy     = '1'        ) else '0';
-    end block;
+    end generate;
+    -------------------------------------------------------------------------------
+    -- CHECK_ALEN によるバースト長のチェックを行わない場合の制御部
+    -------------------------------------------------------------------------------
+    CHECK_ALEN_F: if (CHECK_ALEN = 0 and USE_ASIZE = 0) generate
+        type     STATE_TYPE  is (IDLE_STATE, XFER_STATE);
+        signal   curr_state  : STATE_TYPE;
+    begin
+        process (CLK, RST)
+            variable m_done : boolean;
+        begin
+            if (RST = '1') then
+                    curr_state  <= IDLE_STATE;
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    curr_state  <= IDLE_STATE;
+                else
+                    m_done := (m_last = '1' or m_error = '1');
+                    case curr_state is
+                        when IDLE_STATE =>
+                            if (START = '1') then
+                                curr_state <= XFER_STATE;
+                            else
+                                curr_state <= IDLE_STATE;
+                            end if;
+                        when XFER_STATE =>
+                            if (m_valid = '1' and m_ready = '1' and m_done = TRUE) then
+                                curr_state <= IDLE_STATE;
+                            else
+                                curr_state <= XFER_STATE;
+                            end if;
+                        when others =>
+                                curr_state <= IDLE_STATE;
+                    end case;
+                end if;
+            end if;
+        end process;
+        n_data   <= m_data;
+        n_user   <= m_user;
+        n_last   <= m_last;
+        n_error  <= m_error;
+        n_strb   <= m_strb;
+        n_size   <= m_size;
+        n_valid  <= m_valid;
+        m_ready  <= n_ready;
+        m_skip   <= '0';
+        i_enable <= '1' when (curr_state = XFER_STATE ) else '0';
+        BUSY     <= '1' when (curr_state = XFER_STATE ) or
+                             (o_busy     = '1'        ) else '0';
+    end generate;
     -------------------------------------------------------------------------------
     -- OUTLET PORT
     -------------------------------------------------------------------------------
