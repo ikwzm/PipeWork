@@ -4,6 +4,18 @@ WORK=PIPEWORK
 
 SRC_PATH  = ../../src
 
+
+pipework-obj93.cf : pipework.vhd
+	$(GHDL) -a $(GHDLFLAGS) --work=$(WORK) pipework.vhd
+
+pipework.vhd : 
+	../../tools/MakeSerializedPackageList.rb \
+            --library $(WORK) \
+            --use_entity 'QUEUE_ARBITER(INTEGER_ARCH)' \
+            --use_entity 'SDPRAM(MODEL)' \
+            --archive    pipework.vhd \
+            $(SRC_PATH)
+
 analyze:
 	../../tools/MakeSerializedPackageList.rb \
             --library $(WORK) \
@@ -13,5 +25,5 @@ analyze:
             $(SRC_PATH)
 
 clean:
-	rm -f *.o *.cf 
+	rm -f pipework.vhd *.o *.cf 
 
