@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
---!     @version 1.5.4
---!     @date    2014/2/26
+--!     @version 1.5.5
+--!     @date    2014/3/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -272,8 +272,12 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
                               in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
+                              --! プールバッファに T_PUSH_BUF_LEVEL 以下のデータし
+                              --! かないことを示すフラグ.
                               out std_logic;
         T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
+                              --! T_PUSH_BUF_READY 信号をアサートするかしないかを
+                              --! 指示するための閾値.
                               in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
@@ -287,8 +291,12 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
                               in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
+                              --! プールバッファに T_PULL_BUF_LEVEL 以上のデータが
+                              --! あることを示すフラグ.
                               out std_logic;
         T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
+                              --! T_PULL_BUF_READY 信号をアサートするかしないかを
+                              --! 指示するための閾値.
                               in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
@@ -336,10 +344,6 @@ entity  PIPE_RESPONDER_INTERFACE is
         I_FLOW_READY        : --! @brief Intake Valve Flow Ready :
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
-                              out std_logic;
-        I_POOL_READY        : --! @brief Intake Valve Pool Ready :
-                              --! 先行モード(I_VALVE_PRECEDE=1)の時、プールバッファに 
-                              --! I_POOL_READY_LEVEL以下のデータしか無いことを示す.
                               out std_logic;
         I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
