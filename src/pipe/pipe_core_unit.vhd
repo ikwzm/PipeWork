@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
---!     @version 1.5.4
---!     @date    2014/2/22
+--!     @version 1.5.5
+--!     @date    2014/3/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -188,91 +188,264 @@ entity  PIPE_CORE_UNIT is
                               --! 非同期リセット信号(ハイ・アクティブ).
                               in  std_logic;
     -------------------------------------------------------------------------------
-    -- レスポンダ側クロック.
+    -- Responder Side Clock.
     -------------------------------------------------------------------------------
-        T_CLK               : in  std_logic;
-        T_CLR               : in  std_logic;
-        T_CKE               : in  std_logic;
+        T_CLK               : --! @brief Responder Clock :
+                              --! クロック信号
+                              in  std_logic;
+        T_CLR               : --! @brief Responder Side Syncronouse Reset :
+                              --! 同期リセット信号.アクティブハイ.
+                              in  std_logic;
+        T_CKE               : --! @brief Responder Side Clock Enable :
+                              --! レスポンダ側のクロック(T_CLK)の立上りが有効である
+                              --! ことを示す信号.
+                              --! * この信号は T_CLK_RATE > 1 の時に、T_CLK と M_CLK 
+                              --!   の位相関係を示す時に使用する.
+                              --! * T_CLKの立上り時とM_CLKの立上り時が同じ時にアサー
+                              --!   トするように入力されなければならない.
+                              --! * この信号は T_CLK_RATE > 1 かつ M_CLK_RATE = 1の
+                              --!   時のみ有効. それ以外は未使用.
+                              in  std_logic;
     -------------------------------------------------------------------------------
-    -- レスポンダ側からの要求信号入力.
+    -- Request from Responder Signals.
     -------------------------------------------------------------------------------
-        T_REQ_ADDR          : in  std_logic_vector(ADDR_BITS-1 downto 0);
-        T_REQ_SIZE          : in  std_logic_vector(SIZE_BITS-1 downto 0);
-        T_REQ_BUF_PTR       : in  std_logic_vector(BUF_DEPTH-1 downto 0);
-        T_REQ_MODE          : in  std_logic_vector(MODE_BITS-1 downto 0);
-        T_REQ_DIR           : in  std_logic;
-        T_REQ_FIRST         : in  std_logic;
-        T_REQ_LAST          : in  std_logic;
-        T_REQ_VALID         : in  std_logic;
-        T_REQ_READY         : out std_logic;
+        T_REQ_ADDR          : --! @brief Request Address from responder :
+                              --! 転送開始アドレスを入力する.  
+                              in  std_logic_vector(ADDR_BITS-1 downto 0);
+        T_REQ_SIZE          : --! @brief Request transfer Size from responder :
+                              --! 転送したいバイト数を入力する. 
+                              in  std_logic_vector(SIZE_BITS-1 downto 0);
+        T_REQ_BUF_PTR       : --! @brief Request Buffer Pointer from responder :
+                              --! 転送時のバッファポインタを入力する.
+                              in  std_logic_vector(BUF_DEPTH-1 downto 0);
+        T_REQ_MODE          : --! @brief Request Mode signals from responder :
+                              --! 転送開始時に指定された各種情報を入力する.
+                              in  std_logic_vector(MODE_BITS-1 downto 0);
+        T_REQ_DIR           : --! @brief Request Direction from responder :
+                              --! 転送方向(PUSH/PULL)を指定する.
+                              --! * T_REQ_DIR='1' : PUSH(Responder側からRequester側へデータ転送)
+                              --! * T_REQ_DIR='0' : PULL(Requester側からResponder側へデータ転送)
+                              in  std_logic;
+        T_REQ_FIRST         : --! @brief Request First transaction from responder :
+                              --! 最初のトランザクションであることを示す.
+                              --! * T_REQ_FIRST=1の場合、内部状態を初期化してから
+                              --!   トランザクションを開始する.
+                              in  std_logic;
+        T_REQ_LAST          : --! @brief Request Last transaction from responder :
+                              --! 最後のトランザクションであることを示す.
+                              --! * T_REQ_LAST=1の場合、Acknowledge を返す際に、
+                              --!   すべてのトランザクションが終了していると、
+                              --!   ACK_LAST 信号をアサートする.
+                              --! * T_REQ_LAST=0の場合、Acknowledge を返す際に、
+                              --!   すべてのトランザクションが終了していると、
+                              --!   ACK_NEXT 信号をアサートする.
+                              in  std_logic;
+        T_REQ_VALID         : --! @brief Request Valid signal from responder  :
+                              --! 上記の各種リクエスト信号が有効であることを示す.
+                              --! * この信号のアサートでもってトランザクションを開始する.
+                              --! * 一度この信号をアサートすると Acknowledge を返す
+                              --!   まで、この信号はアサートされなくてはならない.
+                              in  std_logic;
+        T_REQ_READY         : --! @brief Request Ready signal from requester :
+                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
+                              out std_logic;
     -------------------------------------------------------------------------------
-    -- レスポンダ側への応答信号出力.
+    -- Acknowledge to Responder Signals.
     -------------------------------------------------------------------------------
-        T_ACK_VALID         : out std_logic;
-        T_ACK_NEXT          : out std_logic;
-        T_ACK_LAST          : out std_logic;
-        T_ACK_ERROR         : out std_logic;
-        T_ACK_STOP          : out std_logic;
-        T_ACK_SIZE          : out std_logic_vector(SIZE_BITS-1 downto 0);
+        T_ACK_VALID         : --! @brief Acknowledge Valid signal to responder :
+                              --! 上記の Command Request の応答信号.
+                              --! 下記の 各種 Acknowledge 信号が有効である事を示す.
+                              out std_logic;
+        T_ACK_NEXT          : --! @brief Acknowledge with need Next transaction to responder :
+                              --! すべてのトランザクションが終了かつ REQ_LAST=0 の
+                              --! 場合、この信号がアサートされる.
+                              out std_logic;
+        T_ACK_LAST          : --! @brief Acknowledge with Last transaction to responder :
+                              --! すべてのトランザクションが終了かつ REQ_LAST=1 の
+                              --! 場合、この信号がアサートされる.
+                              out std_logic;
+        T_ACK_ERROR         : --! @brief Acknowledge with Error to responder :
+                              --! トランザクション中になんらかのエラーが発生した場
+                              --! 合、この信号がアサートされる.
+                              out std_logic;
+        T_ACK_STOP          : --! @brief Acknowledge with Stop operation to responder :
+                              --! トランザクションが中止された場合、この信号がアサ
+                              --! ートされる.
+                              out std_logic;
+        T_ACK_SIZE          : --! @brief Acknowledge transfer Size to responder :
+                              --! 転送したバイト数を示す.
+                              out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- レスポンダ側からの制御信号入力.
+    -- Control from Responder Signals.
     -------------------------------------------------------------------------------
-        T_REQ_PAUSE         : in  std_logic;
-        T_REQ_STOP          : in  std_logic;
+        T_REQ_STOP          : --! @brief Transfer Stop Request.
+                              --! レスポンダ側から強制的にデータ転送を中止すること
+                              --! を要求する信号.
+                              in  std_logic := '0';
+        T_REQ_PAUSE         : --! @brief Transfer Pause Request.
+                              --! レスポンダ側から強制的にデータ転送を一時的に中断
+                              --! することを要求する信号.
+                              in  std_logic := '0';
     -------------------------------------------------------------------------------
-    -- レスポンダ側からのステータス信号入力.
+    -- Status from Responder Signals.
     -------------------------------------------------------------------------------
-        T_XFER_BUSY         : in  std_logic;
-        T_XFER_DONE         : in  std_logic;
+        T_XFER_BUSY         : --! @brief Transfer Busy.
+                              --! データ転送中であることを示すフラグ.
+                              in  std_logic;
+        T_XFER_DONE         : --! @brief Transfer Done.
+                              --! データ転送中かつ、次のクロックで T_XFER_BUSY が
+                              --! ネゲートされる事を示すフラグ.
+                              --! * ただし、T_XFER_BUSY のネゲート前に 必ずしもこの
+                              --!   信号がアサートされるわけでは無い.
+                              in  std_logic;
     -------------------------------------------------------------------------------
-    -- レスポンダ側からデータ入力のフロー制御信号入出力.
+    -- Intake Valve Signals from/to Responder.
     -------------------------------------------------------------------------------
-        T_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_I_FLOW_READY      : out std_logic;
-        T_I_FLOW_PAUSE      : out std_logic;
-        T_I_FLOW_STOP       : out std_logic;
-        T_I_FLOW_LAST       : out std_logic;
-        T_I_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_FIN_VALID    : in  std_logic;
-        T_PUSH_FIN_LAST     : in  std_logic;
-        T_PUSH_FIN_ERROR    : in  std_logic;
-        T_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_RSV_VALID    : in  std_logic;
-        T_PUSH_RSV_LAST     : in  std_logic;
-        T_PUSH_RSV_ERROR    : in  std_logic;
-        T_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_PUSH_BUF_RESET    : in  std_logic;
-        T_PUSH_BUF_VALID    : in  std_logic;
-        T_PUSH_BUF_LAST     : in  std_logic;
-        T_PUSH_BUF_ERROR    : in  std_logic;
-        T_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_BUF_READY    : out std_logic;
+        T_I_FLOW_LEVEL      : --! @brief Intake Valve Flow Ready Level :
+                              --! 一時停止する/しないを指示するための閾値.
+                              --! フローカウンタの値がこの値以下の時に入力を開始する.
+                              --! フローカウンタの値がこの値を越えた時に入力を一時停止.
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_I_BUF_SIZE        : --! @brief Intake Pool Size :
+                              --! 入力用プールの総容量を指定する.
+                              --! T_I_FLOW_SIZE を求めるのに使用する.
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_I_FLOW_READY      : --! @brief Intake Valve Flow Ready to responder :
+                              --! プールバッファに T_I_FLOW_LEVEL 以下のデータ
+                              --! しか無く、データの入力が可能な事を示す.
+                              out std_logic;
+        T_I_FLOW_PAUSE      : --! @brief Intake Valve Flow Pause to responder :
+                              --! 入力を一時的に止めたり、再開することを指示する信号.
+                              --! プールバッファに I_FLOW_READY_LEVEL を越えるデータ
+                              --! が溜っていて、これ以上データが入らないことを示す.
+                              out std_logic;
+        T_I_FLOW_STOP       : --! @brief Intake Valve Flow Stop to responder :
+                              --! 入力の中止を指示する信号.
+                              out std_logic;
+        T_I_FLOW_LAST       : --! @brief Intake Valve Flow Last to responder :
+                              --! リクエスタ側から最後の入力を示すフラグがあったこと
+                              --! を示す.
+                              out std_logic;
+        T_I_FLOW_SIZE       : --! @brief Intake Valve Flow Enable Size to responder :
+                              --! 入力可能なバイト数
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
+                              --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic;
+        T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
+                              --! レスポンダ側からの最後の"確定した"データ入力であ
+                              --! ることを示す.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic;
+        T_PUSH_FIN_ERROR    : --! @brief Push Final Error flags :
+                              --! レスポンダ側からのデータ入力時にエラーが発生した
+                              --! ことを示すフラグ.
+                              --! * 現在この信号は未使用.
+                              in  std_logic;
+        T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
+                              --! レスポンダ側からの"確定した"入力バイト数.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
+                              --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                              in  std_logic;
+        T_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
+                              in  std_logic;
+        T_PUSH_RSV_ERROR    : --! @brief Push Reserve Error flags :
+                              in  std_logic;
+        T_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
+                              in  std_logic;
+        T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
+                              in  std_logic;
+        T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
+                              in  std_logic;
+        T_PUSH_BUF_ERROR    : --! @brief Push Buffer Error from responder :
+                              in  std_logic;
+        T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
+                              --! プールバッファに T_PUSH_BUF_LEVEL 以下のデータし
+                              --! かないことを示すフラグ.
+                              out std_logic;
+        T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
+                              --! T_PUSH_BUF_READY 信号をアサートするかしないかを
+                              --! 指示するための閾値.
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- レスポンダ側へのデータ出力のフロー制御信号入出力
+    -- Outlet Valve Signals from/to Responder.
     -------------------------------------------------------------------------------
-        T_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_O_FLOW_READY      : out std_logic;
-        T_O_FLOW_PAUSE      : out std_logic;
-        T_O_FLOW_STOP       : out std_logic;
-        T_O_FLOW_LAST       : out std_logic;
-        T_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_FIN_VALID    : in  std_logic;
-        T_PULL_FIN_LAST     : in  std_logic;
-        T_PULL_FIN_ERROR    : in  std_logic;
-        T_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_RSV_VALID    : in  std_logic;
-        T_PULL_RSV_LAST     : in  std_logic;
-        T_PULL_RSV_ERROR    : in  std_logic;
-        T_PULL_RSV_SIZE     : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_BUF_RESET    : in  std_logic;
-        T_PULL_BUF_VALID    : in  std_logic;
-        T_PULL_BUF_LAST     : in  std_logic;
-        T_PULL_BUF_ERROR    : in  std_logic;
-        T_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_BUF_READY    : out std_logic;
+        T_O_FLOW_LEVEL      : --! @brief Outlet Valve Flow Ready Level :
+                              --! 一時停止する/しないを指示するための閾値.
+                              --! フローカウンタの値がこの値以上の時に転送を開始する.
+                              --! フローカウンタの値がこの値未満の時に転送を一時停止.
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_O_FLOW_READY      : --! @brief Outlet Valve Flow Ready to responder :
+                              --! プールバッファに O_FLOW_LEVEL 以上のデータがある
+                              --! ことを示す.
+                              out std_logic;
+        T_O_FLOW_PAUSE      : --! @brief Outlet Valve Flow Pause to responder :
+                              --! 出力を一時的に止めたり、再開することを指示する信号.
+                              --! プールバッファに O_FLOW_LEVEL 未満のデータしか無い
+                              --! ことを示す.
+                              out std_logic;
+        T_O_FLOW_STOP       : --! @brief Outlet Valve Flow Stop to responder :
+                              --! 出力の中止を指示する信号.
+                              out std_logic;
+        T_O_FLOW_LAST       : --! @brief Outlet Valve Flow Last :
+                              --! リクエスト側から最後の入力を示すフラグがあった
+                              --! ことを示す.
+                              out std_logic;
+        T_O_FLOW_SIZE       : --! @brief Outlet Valve Flow Enable Size to responder :
+                              --! 出力可能なバイト数を出力.
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
+                              --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic;
+        T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
+                              --! レスポンダ側からの最後の"確定した"データ出力で
+                              --! あることを示す.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic;
+        T_PULL_FIN_ERROR    : --! @brief Pull Final Error flags :
+                              --! レスポンダ側からのデータ出力時にエラーが発生した
+                              --! ことを示すフラグ.
+                              --! * 現在この信号は未使用.
+                              in  std_logic;
+        T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
+                              --! レスポンダ側からの"確定した"出力バイト数.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
+                              --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
+                              in  std_logic;
+        T_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
+                              in  std_logic;
+        T_PULL_RSV_ERROR    : --! @brief Pull Reserve Error flags :
+                              in  std_logic;
+        T_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
+                              in  std_logic;
+        T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
+                              in  std_logic;
+        T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
+                              in  std_logic;
+        T_PULL_BUF_ERROR    : --! @brief Pull Buffer Error from responder :
+                              in  std_logic;
+        T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
+                              --! プールバッファに T_PULL_BUF_LEVEL 以上のデータが
+                              --! あることを示すフラグ.
+                              out std_logic;
+        T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
+                              --! T_PULL_BUF_READY 信号をアサートするかしないかを
+                              --! 指示するための閾値.
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
     -------------------------------------------------------------------------------
     -- リクエスト側クロック.
     -------------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
---!     @version 1.5.4
---!     @date    2014/2/22
+--!     @version 1.5.5
+--!     @date    2014/3/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -316,14 +316,14 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
                               out std_logic;
-        I_BUF_SIZE          : --! @brief Intake Buffer Size :
-                              --! 入力用プールの総容量を指定する.
-                              --! I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        I_BUF_SIZE          : --! @brief Intake Buffer Size :
+                              --! 入力用プールの総容量を指定する.
+                              --! I_FLOW_SIZE を求めるのに使用する.
                               in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request from Responder.
