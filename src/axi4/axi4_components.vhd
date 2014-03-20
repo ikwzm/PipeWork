@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.5                                                           --
---!     @date    2014/03/09                                                      --
+--!     @date    2014/03/20                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -148,6 +148,7 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
         XFER_REQ_SAFETY : out   std_logic;
+        XFER_REQ_NOACK  : out   std_logic;
         XFER_REQ_VAL    : out   std_logic;
         XFER_REQ_RDY    : in    std_logic;
     -------------------------------------------------------------------------------
@@ -211,6 +212,7 @@ component AXI4_MASTER_TRANSFER_QUEUE
         I_LAST          : in    std_logic;
         I_FIRST         : in    std_logic;
         I_SAFETY        : in    std_logic;
+        I_NOACK         : in    std_logic;
         I_READY         : out   std_logic;
     ------------------------------------------------------------------------------
     -- 
@@ -225,6 +227,7 @@ component AXI4_MASTER_TRANSFER_QUEUE
         O_LAST          : out   std_logic;
         O_FIRST         : out   std_logic;
         O_SAFETY        : out   std_logic;
+        O_NOACK         : out   std_logic;
         O_READY         : in    std_logic;
     ------------------------------------------------------------------------------
     -- 

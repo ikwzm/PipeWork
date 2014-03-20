@@ -2,7 +2,7 @@
 --!     @file    axi4_master_transfer_queue.vhd
 --!     @brief   AXI4 Master Transfer Queue
 --!     @version 1.5.5
---!     @date    2014/3/9
+--!     @date    2014/3/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -83,6 +83,7 @@ entity  AXI4_MASTER_TRANSFER_QUEUE is
         I_LAST          : in    std_logic;
         I_FIRST         : in    std_logic;
         I_SAFETY        : in    std_logic;
+        I_NOACK         : in    std_logic;
         I_READY         : out   std_logic;
     ------------------------------------------------------------------------------
     -- 
@@ -97,6 +98,7 @@ entity  AXI4_MASTER_TRANSFER_QUEUE is
         O_LAST          : out   std_logic;
         O_FIRST         : out   std_logic;
         O_SAFETY        : out   std_logic;
+        O_NOACK         : out   std_logic;
         O_READY         : in    std_logic;
     ------------------------------------------------------------------------------
     -- 
@@ -126,6 +128,7 @@ begin
         O_LAST   <= I_LAST;
         O_FIRST  <= I_FIRST;
         O_SAFETY <= I_SAFETY;
+        O_NOACK  <= I_NOACK;
         O_VALID  <= I_VALID;
         I_READY  <= O_READY;
         BUSY     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
@@ -142,7 +145,7 @@ begin
                      ADDR           :  std_logic_vector(ADDR_BITS-1 downto 0);
                      ALEN           :  std_logic_vector(ALEN_BITS-1 downto 0);
                      PTR            :  std_logic_vector( PTR_BITS-1 downto 0);
-                     INFO           :  std_logic_vector(          3 downto 0);
+                     INFO           :  std_logic_vector(          4 downto 0);
         end record;
         constant QUEUE_DATA_NULL    :  QUEUE_DATA_TYPE := (
                      SEL            => (others => '0'),
@@ -267,7 +270,8 @@ begin
         ---------------------------------------------------------------------------
         -- next_queue_data  : 次のクロックでキューに格納されるデータ.
         ---------------------------------------------------------------------------
-        process (I_SEL, I_SIZE, I_ADDR, I_ALEN, I_PTR, I_NEXT, I_LAST, I_FIRST, I_SAFETY,
+        process (I_SEL , I_SIZE, I_ADDR , I_ALEN  , I_PTR  ,
+                 I_NEXT, I_LAST, I_FIRST, I_SAFETY, I_NOACK, 
                  queue_data_load, curr_queue_data, curr_queue_valid)
             variable i_data : QUEUE_DATA_TYPE;
         begin
@@ -280,6 +284,7 @@ begin
             i_data.INFO(1) := I_LAST;
             i_data.INFO(2) := I_FIRST;
             i_data.INFO(3) := I_SAFETY;
+            i_data.INFO(4) := I_NOACK;
             for i in FIRST_OF_QUEUE to LAST_OF_QUEUE loop
                 if (queue_data_load(i) = '1') then
                     if    (i = LAST_OF_QUEUE) then
@@ -360,6 +365,7 @@ begin
         O_LAST   <= curr_queue_data (FIRST_OF_QUEUE).INFO(1);
         O_FIRST  <= curr_queue_data (FIRST_OF_QUEUE).INFO(2);
         O_SAFETY <= curr_queue_data (FIRST_OF_QUEUE).INFO(3);
+        O_NOACK  <= curr_queue_data (FIRST_OF_QUEUE).INFO(4);
         O_VALID  <= curr_queue_valid(FIRST_OF_QUEUE);
         EMPTY    <= '1' when (curr_queue_valid = VALID_ALL_0) else '0';
     end generate;

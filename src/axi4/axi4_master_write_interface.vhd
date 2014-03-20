@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.5
---!     @date    2014/3/9
+--!     @date    2014/3/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -516,6 +516,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   xfer_req_last      : std_logic;
     signal   xfer_req_first     : std_logic;
     signal   xfer_req_safety    : std_logic;
+    signal   xfer_req_noack     : std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -542,6 +543,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   req_queue_last     : std_logic;
     signal   req_queue_first    : std_logic;
     signal   req_queue_safety   : std_logic;
+    signal   req_queue_noack    : std_logic;
     signal   req_queue_empty    : std_logic;
     signal   req_queue_valid    : std_logic;
     signal   req_queue_ready    : std_logic;
@@ -560,6 +562,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   xfer_run_next      : std_logic;
     signal   xfer_run_last      : std_logic;
     signal   xfer_run_safety    : std_logic;
+    signal   xfer_run_noack     : std_logic;
     signal   xfer_run_done      : std_logic;
     -------------------------------------------------------------------------------
     -- 
@@ -604,6 +607,7 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     signal   res_queue_next     : std_logic;
     signal   res_queue_last     : std_logic;
     signal   res_queue_safety   : std_logic;
+    signal   res_queue_noack    : std_logic;
     signal   res_queue_empty    : std_logic;
 begin
     -------------------------------------------------------------------------------
@@ -679,6 +683,7 @@ begin
             XFER_REQ_LAST   => xfer_req_last     , -- Out :
             XFER_REQ_NEXT   => xfer_req_next     , -- Out :
             XFER_REQ_SAFETY => xfer_req_safety   , -- Out :
+            XFER_REQ_NOACK  => xfer_req_noack    , -- Out :
             XFER_REQ_SEL    => xfer_req_select   , -- Out :
             XFER_REQ_VAL    => xfer_req_valid    , -- Out :
             XFER_REQ_RDY    => xfer_req_ready    , -- In  :
@@ -741,6 +746,7 @@ begin
             I_LAST          => xfer_req_last         , -- In  :
             I_FIRST         => xfer_req_first        , -- In  :
             I_SAFETY        => xfer_req_safety       , -- In  :
+            I_NOACK         => xfer_req_noack        , -- In  :
             I_READY         => xfer_req_ready        , -- Out :
             O_VALID         => req_queue_valid       , -- Out :
             O_SEL           => req_queue_select      , -- Out :
@@ -752,6 +758,7 @@ begin
             O_LAST          => req_queue_last        , -- Out :
             O_FIRST         => req_queue_first       , -- Out :
             O_SAFETY        => req_queue_safety      , -- Out :
+            O_NOACK         => req_queue_noack       , -- Out :
             O_READY         => req_queue_ready       , -- In  :
             BUSY            => req_queue_busy        , -- Out :
             DONE            => req_queue_done        , -- Out :
@@ -885,6 +892,7 @@ begin
                 xfer_run_next   <= '0';
                 xfer_run_last   <= '0';
                 xfer_run_safety <= '0';
+                xfer_run_noack  <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') or
                (xfer_run_done = '1') then
@@ -893,12 +901,14 @@ begin
                 xfer_run_next   <= '0';
                 xfer_run_last   <= '0';
                 xfer_run_safety <= '0';
+                xfer_run_noack  <= '0';
             elsif (xfer_start = '1') then
                 xfer_run_select <= req_queue_select;
                 xfer_run_size   <= req_queue_size;
                 xfer_run_next   <= req_queue_next;
                 xfer_run_last   <= req_queue_last;
                 xfer_run_safety <= req_queue_safety;
+                xfer_run_noack  <= req_queue_noack;
             end if;
         end if;
     end process;
@@ -931,7 +941,7 @@ begin
             if (CLR = '1') then 
                 risky_ack_mode <= FALSE;
             elsif (xfer_start = '1') then
-                risky_ack_mode <= (req_queue_safety = '0');
+                risky_ack_mode <= (req_queue_safety = '0' and req_queue_noack = '0');
             elsif (risky_ack_valid = '1') then
                 risky_ack_mode <= FALSE;
             end if;
@@ -968,6 +978,7 @@ begin
             I_LAST          => xfer_run_last         , -- In  :
             I_FIRST         => xfer_run_first        , -- In  :
             I_SAFETY        => xfer_run_safety       , -- In  :
+            I_NOACK         => xfer_run_noack        , -- In  :
             I_READY         => res_queue_ready       , -- Out :
             O_VALID         => res_queue_valid       , -- Out :
             O_SEL           => res_queue_select      , -- Out :
@@ -979,6 +990,7 @@ begin
             O_LAST          => res_queue_last        , -- Out :
             O_FIRST         => open                  , -- Out :
             O_SAFETY        => res_queue_safety      , -- Out :
+            O_NOACK         => res_queue_noack       , -- Out :
             O_READY         => BVALID                , -- In  :
             BUSY            => res_queue_busy        , -- Out :
             DONE            => res_queue_done        , -- Out :
@@ -994,7 +1006,7 @@ begin
     -- セーフティでは、スレーブからの書き込み応答を待って、書き込みが成功したことを
     -- 確認してから、処理を終える.
     -------------------------------------------------------------------------------
-    safety_ack_mode  <= (res_queue_safety = '1' and res_queue_valid = '1');
+    safety_ack_mode  <= (res_queue_safety = '1' and res_queue_noack = '0' and res_queue_valid = '1');
     safety_ack_valid <= '1' when (safety_ack_mode and BVALID = '1') else '0';
     safety_ack_error <= '1' when (safety_ack_mode and (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR)) else '0';
     safety_ack_next  <= '1' when (safety_ack_mode and res_queue_next = '1') else '0';
