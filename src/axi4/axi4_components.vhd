@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.5                                                           --
---!     @date    2014/03/20                                                      --
+--!     @date    2014/03/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -162,7 +162,9 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
     -------------------------------------------------------------------------------
     -- Transfer Status Signals.
     -------------------------------------------------------------------------------
-        XFER_RUNNING    : in    std_logic
+        XFER_BUSY       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_DONE       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_ERROR      : in    std_logic_vector(VAL_BITS      -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -512,6 +514,9 @@ component AXI4_MASTER_READ_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
@@ -931,6 +936,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -1242,6 +1250,9 @@ component AXI4_SLAVE_READ_INTERFACE
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -1523,6 +1534,9 @@ component AXI4_SLAVE_WRITE_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック

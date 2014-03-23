@@ -2,7 +2,7 @@
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
 --!     @version 1.5.5
---!     @date    2014/3/19
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -292,6 +292,9 @@ entity  PIPE_CORE_UNIT is
         T_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        T_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         T_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで T_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -478,6 +481,7 @@ entity  PIPE_CORE_UNIT is
     -- リクエスタ側からのステータス信号入力.
     -------------------------------------------------------------------------------
         M_XFER_BUSY         : in  std_logic;
+        M_XFER_ERROR        : in  std_logic;
         M_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側からデータ入力のフロー制御信号入出力.
@@ -689,6 +693,7 @@ begin
         -- Status from Responder Signals.
         ---------------------------------------------------------------------------
             T_XFER_BUSY             => T_XFER_BUSY                 , -- In  :
+            T_XFER_ERROR            => T_XFER_ERROR                , -- In  :
             T_XFER_DONE             => T_XFER_DONE                 , -- In  :
         ---------------------------------------------------------------------------
         -- Intake Valve Signals from Responder.
@@ -1215,6 +1220,7 @@ begin
         -- Requester Status Signals.
         ---------------------------------------------------------------------------
             M_XFER_BUSY             => M_XFER_BUSY                 , -- In  :
+            M_XFER_ERROR            => M_XFER_ERROR                , -- In  :
             M_XFER_DONE             => M_XFER_DONE                 , -- In  :
         ---------------------------------------------------------------------------
         --

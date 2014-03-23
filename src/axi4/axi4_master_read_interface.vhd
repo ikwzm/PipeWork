@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.5
---!     @date    2014/3/20
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -314,6 +314,9 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -489,8 +492,12 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
-    signal   xfer_running       : std_logic;
     signal   xfer_sel_valid     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_sel_busy      : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_sel_done      : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_sel_error     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_res_error     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_reg_error     : std_logic_vector(VAL_BITS-1 downto 0);
     constant SEL_ALL0           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
     constant SEL_ALL1           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
@@ -522,7 +529,6 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   recv_enable        : std_logic;
-    signal   recv_busy          : std_logic;
     signal   recv_data_valid    : std_logic;
     signal   recv_data_ready    : std_logic;
     signal   recv_data_ben      : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
@@ -632,7 +638,12 @@ begin
             XFER_ACK_NEXT   => xfer_ack_next     , -- In  :
             XFER_ACK_LAST   => xfer_ack_last     , -- In  :
             XFER_ACK_ERR    => xfer_ack_error    , -- In  :
-            XFER_RUNNING    => xfer_running        -- In  :
+        ---------------------------------------------------------------------------
+        -- Transfer Status Signals.
+        ---------------------------------------------------------------------------
+            XFER_BUSY       => xfer_sel_busy     , -- In  :
+            XFER_DONE       => xfer_sel_done     , -- In  :
+            XFER_ERROR      => xfer_sel_error      -- In  :
         );                                         -- 
     -------------------------------------------------------------------------------
     -- AXI4 Read Address Channel Signals Output.
@@ -854,19 +865,8 @@ begin
     -------------------------------------------------------------------------------
     xfer_sel_valid  <= xfer_run_busy when (VAL_BITS > 1) else (others => '1');
     -------------------------------------------------------------------------------
-    -- recv_busy       : データリード中 または Transfer Request Queue にまだ
-    --                   リクエストが残っていることを示す.
-    -------------------------------------------------------------------------------
-    recv_busy       <= '1' when (curr_state = WAIT_RFIRST or
-                                 curr_state = WAIT_RLAST  or
-                                 req_queue_empty = '0' ) else '0';
-    -------------------------------------------------------------------------------
-    -- xfer_running    : データ転送中である事を示すフラグ.
-    -------------------------------------------------------------------------------
-    xfer_running    <= '1' when (recv_busy = '1' or port_busy  = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- XFER_BUSY       : データ転送中である事を示すフラグ.
-    -- XFER_DONE       : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
+    -- xfer_sel_busy   : データ転送中である事を示すフラグ.
+    -- xfer_sel_done   : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
     --                   このモジュールでは、XFER_BUSY がネゲートする前に 必ずしも 
     --                   XFER_DONE がアサートされるわけでは無い.
     --                   全てのデータリードが終了した後で、最後のデータを出力する時
@@ -881,17 +881,48 @@ begin
         for i in 0 to VAL_BITS-1 loop
             req_queue_empty := not (req_queue_busy(i) = '1' and req_queue_done(i) = '0');
             if (xfer_run_busy(i) = '1' and req_queue_empty and xfer_run_done) then
-                XFER_DONE(i) <= '1';
+                xfer_sel_done(i) <= '1';
             else
-                XFER_DONE(i) <= '0';
+                xfer_sel_done(i) <= '0';
             end if;
             if (xfer_run_busy(i) = '1' or req_queue_busy(i) = '1') then
-                XFER_BUSY(i) <= '1';
+                xfer_sel_busy(i) <= '1';
             else
-                XFER_BUSY(i) <= '0';
+                xfer_sel_busy(i) <= '0';
             end if;
         end loop;
     end process;
+    -------------------------------------------------------------------------------
+    -- xfer_reg_error : データ転送中にエラーが発生した事を xfer_sel_busy = '1' の間
+    --                  保持しておくためのレジスタ.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                xfer_reg_error <= (others => '0');
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                xfer_reg_error <= (others => '0');
+            else
+                for i in 0 to VAL_BITS-1 loop
+                    if    (xfer_sel_busy(i) = '0' or xfer_sel_done(i) = '1') then
+                        xfer_reg_error(i) <= '0';
+                    elsif (xfer_res_error(i) = '1') then
+                        xfer_reg_error(i) <= '1';
+                    end if;
+                end loop;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- xfer_sel_error : データ転送中にエラーが発生した事を示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_sel_error <= (xfer_res_error or xfer_reg_error) and xfer_sel_busy;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    XFER_BUSY  <= xfer_sel_busy;
+    XFER_DONE  <= xfer_sel_done;
+    XFER_ERROR <= xfer_sel_error;
     -------------------------------------------------------------------------------
     -- req_queue_ready : Transfer Request Queue から情報を取り出すための信号.
     -------------------------------------------------------------------------------
@@ -943,6 +974,12 @@ begin
             end if;
         end if;
     end process;
+    -------------------------------------------------------------------------------
+    -- xfer_res_error : データ転送中にエラーが発生したことを示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_res_error <= xfer_sel_valid when (recv_data_ready  = '1') and
+                                          (RVALID           = '1') and
+                                          (recv_data_error  = '1') else SEL_ALL0;
     -------------------------------------------------------------------------------
     -- RREADY : AXI4 Read Data Channel の レディ信号出力.
     -------------------------------------------------------------------------------

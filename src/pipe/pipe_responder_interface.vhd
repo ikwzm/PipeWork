@@ -2,7 +2,7 @@
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
 --!     @version 1.5.5
---!     @date    2014/3/19
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -222,6 +222,9 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        T_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         T_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで T_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.

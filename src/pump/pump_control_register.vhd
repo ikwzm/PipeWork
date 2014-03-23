@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.5.4
---!     @date    2014/2/27
+--!     @version 1.5.5
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -242,6 +242,9 @@ entity  PUMP_CONTROL_REGISTER is
         XFER_BUSY       : --! @brief Transfer Busy.
                           --! データ転送中であることを示すフラグ.
                           in  std_logic;
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          in  std_logic := '0';
         XFER_DONE       : --! @brief Transfer Done.
                           --! データ転送中かつ、次のクロックで XFER_BUSY がネゲート
                           --! される事を示すフラグ.
@@ -497,7 +500,8 @@ begin
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     error_bit <= '0';
-                elsif (next_state = DONE_STATE and ACK_ERROR = '1') then
+                elsif (XFER_ERROR = '1') or
+                      (next_state = DONE_STATE and ACK_ERROR = '1') then
                     error_bit <= '1';
                 elsif (ERR_ST_L = '1' and ERR_ST_D = '0') then
                     error_bit  <= '0';
@@ -505,7 +509,8 @@ begin
                 -------------------------------------------------------------------
                 -- ERROR FLAG  :
                 -------------------------------------------------------------------
-                if    (next_state = DONE_STATE and ACK_ERROR = '1') then
+                if    (XFER_ERROR = '1') or
+                      (next_state = DONE_STATE and ACK_ERROR = '1') then
                     error_flag <= '1';
                 else
                     error_flag <= '0';

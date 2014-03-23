@@ -2,7 +2,7 @@
 --!     @file    pipe_components.vhd                                             --
 --!     @brief   PIPEWORK PIPE COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.5                                                           --
---!     @date    2014/03/19                                                      --
+--!     @date    2014/03/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -481,6 +481,9 @@ component PIPE_REQUESTER_INTERFACE
         M_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        M_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         M_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで M_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -910,6 +913,9 @@ component PIPE_RESPONDER_INTERFACE
         T_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        T_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         T_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで T_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -1425,6 +1431,9 @@ component PIPE_CORE_UNIT
         T_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        T_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         T_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで T_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -1611,6 +1620,7 @@ component PIPE_CORE_UNIT
     -- リクエスタ側からのステータス信号入力.
     -------------------------------------------------------------------------------
         M_XFER_BUSY         : in  std_logic;
+        M_XFER_ERROR        : in  std_logic;
         M_XFER_DONE         : in  std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側からデータ入力のフロー制御信号入出力.

@@ -2,7 +2,7 @@
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
 --!     @version 1.5.5
---!     @date    2014/3/19
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -233,6 +233,9 @@ entity  PIPE_REQUESTER_INTERFACE is
         M_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        M_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         M_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで M_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -690,6 +693,7 @@ begin
             ACK_NONE        => M_ACK_NONE          , -- In  :
             XFER_BUSY       => M_XFER_BUSY         , -- In  :
             XFER_DONE       => M_XFER_DONE         , -- In  :
+            XFER_ERROR      => M_XFER_ERROR        , -- In  :
             VALVE_OPEN      => m_valve_open        , -- Out :
             TRAN_START      => T_RES_START         , -- Out :
             TRAN_DONE       => T_RES_DONE          , -- Out :

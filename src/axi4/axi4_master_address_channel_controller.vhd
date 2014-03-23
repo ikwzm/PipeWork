@@ -157,7 +157,9 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     -------------------------------------------------------------------------------
     -- Transfer Status Signals.
     -------------------------------------------------------------------------------
-        XFER_RUNNING    : in    std_logic
+        XFER_BUSY       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_DONE       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_ERROR      : in    std_logic_vector(VAL_BITS      -1 downto 0)
     );
 end AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;
 -----------------------------------------------------------------------------------
@@ -184,6 +186,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     signal   req_xfer_start     : std_logic;
     signal   req_xfer_none      : std_logic;
     signal   req_xfer_stop      : std_logic;
+    signal   req_xfer_error     : std_logic;
     signal   req_xfer_pause     : std_logic;
     signal   req_xfer_valid     : std_logic;
     signal   req_xfer_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
@@ -191,6 +194,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     signal   req_xfer_next      : std_logic;
     signal   req_xfer_end       : std_logic;
     signal   req_xfer_safety    : std_logic;
+    signal   req_xfer_sel       : std_logic_vector(VAL_BITS -1   downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -212,12 +216,14 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     signal   burst_length       : std_logic_vector(ALEN_BITS-1 downto 0);
     signal   addr_valid         : std_logic;
     signal   speculative        : boolean;
+    signal   xfer_running       : boolean;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     type     STATE_TYPE     is  ( IDLE_STATE, 
                                   WAIT_STATE,
                                   XFER_STATE,
+                                  ERROR_STATE,
                                   STOP_STATE,
                                   NONE_STATE);
     signal   curr_state         : STATE_TYPE;
@@ -233,14 +239,20 @@ begin
     -------------------------------------------------------------------------------
     req_xfer_pause <= '1' when (FLOW_PAUSE    = '1' and FLOW_VALID /= 0) else '0';
     -------------------------------------------------------------------------------
+    -- req_xfer_error: 転送エラー応答要求.
+    -------------------------------------------------------------------------------
+    req_xfer_error <= '1' when ((XFER_ERROR and req_xfer_sel) /= NULL_VALID) else '0';
+    -------------------------------------------------------------------------------
     -- req_xfer_none : 転送無効要求.
     -------------------------------------------------------------------------------
-    req_xfer_none  <= '1' when (req_xfer_stop = '0'  and
-                                req_size_none = '1') else '0';
+    req_xfer_none  <= '1' when (req_xfer_error = '0' and
+                                req_xfer_stop  = '0'  and
+                                req_size_none  = '1') else '0';
     -------------------------------------------------------------------------------
     -- req_xfer_start: 転送開始要求.
     -------------------------------------------------------------------------------
     req_xfer_start <= '1' when (req_xfer_stop  = '0' and
+                                req_xfer_error = '0' and
                                 req_xfer_none  = '0' and 
                                 req_xfer_pause = '0' and
                                 XFER_REQ_RDY   = '1') else '0';
@@ -249,14 +261,18 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable next_state : STATE_TYPE;
+        variable run_busy   : boolean;
+        variable run_done   : boolean;
     begin
         if (RST = '1') then
                 curr_state    <= IDLE_STATE;
                 curr_valid    <= NULL_VALID;
+                xfer_running  <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 curr_state    <= IDLE_STATE;
                 curr_valid    <= NULL_VALID;
+                xfer_running  <= FALSE;
             else
                 case curr_state is
                     when IDLE_STATE =>
@@ -267,7 +283,9 @@ begin
                         end if;
                         curr_valid <= REQ_VAL;
                     when WAIT_STATE =>
-                        if    (req_xfer_stop  = '1') then
+                        if    (req_xfer_error = '1') then
+                            next_state := ERROR_STATE;
+                        elsif (req_xfer_stop  = '1') then
                             next_state := STOP_STATE;
                         elsif (req_xfer_none  = '1') then
                             next_state := NONE_STATE;
@@ -282,8 +300,14 @@ begin
                         else
                             next_state := XFER_STATE;
                         end if;
+                    when ERROR_STATE =>
+                        if (xfer_running) then
+                            next_state := ERROR_STATE;
+                        else 
+                            next_state := IDLE_STATE;
+                        end if;
                     when STOP_STATE =>
-                        if (XFER_RUNNING = '1') then
+                        if (xfer_running) then
                             next_state := STOP_STATE;
                         else 
                             next_state := IDLE_STATE;
@@ -294,9 +318,16 @@ begin
                         next_state := IDLE_STATE;
                 end case;
                 curr_state <= next_state;
+                run_busy := ((XFER_BUSY and req_xfer_sel) /= NULL_VALID);
+                run_done := ((XFER_DONE and req_xfer_sel) /= NULL_VALID);
+                xfer_running <= (run_busy = TRUE and run_done = FALSE);
             end if;
         end if;
     end process;
+    -------------------------------------------------------------------------------
+    -- req_xfer_sel    : 現在処理中のチャネルを示すフラグ.
+    -------------------------------------------------------------------------------
+    req_xfer_sel   <= curr_valid when (VAL_BITS > 1) else (others => '1');
     -------------------------------------------------------------------------------
     -- REQ_RDY
     -------------------------------------------------------------------------------
@@ -510,15 +541,17 @@ begin
     -- ACK_NONE        : 転送サイズが０の転送要求だったことを示すフラグ.
     -- ACK_SIZE        : 転送応答サイズ信号出力.
     -------------------------------------------------------------------------------
-    ACK_VAL   <= curr_valid    when (curr_state = XFER_STATE and ack_xfer_valid = '1') or
-                                    (curr_state = STOP_STATE and XFER_RUNNING   = '0') or
+    ACK_VAL   <= req_xfer_sel  when (curr_state = XFER_STATE  and ack_xfer_valid = '1') or
+                                    (curr_state = STOP_STATE  and xfer_running = FALSE) or
+                                    (curr_state = ERROR_STATE and xfer_running = FALSE) or
                                     (curr_state = NONE_STATE) else NULL_VALID;
-    ACK_NEXT  <= '1'           when (curr_state = XFER_STATE and ack_xfer_next  = '1') or
-                                    (curr_state = NONE_STATE and REQ_LAST       = '0') else '0';
-    ACK_LAST  <= '1'           when (curr_state = XFER_STATE and ack_xfer_last  = '1') or
-                                    (curr_state = NONE_STATE and REQ_LAST       = '1') else '0';
-    ACK_ERROR <= '1'           when (curr_state = XFER_STATE and ack_xfer_error = '1') else '0';
-    ACK_STOP  <= '1'           when (curr_state = STOP_STATE and XFER_RUNNING   = '0') else '0';
+    ACK_NEXT  <= '1'           when (curr_state = XFER_STATE  and ack_xfer_next  = '1') or
+                                    (curr_state = NONE_STATE  and REQ_LAST       = '0') else '0';
+    ACK_LAST  <= '1'           when (curr_state = XFER_STATE  and ack_xfer_last  = '1') or
+                                    (curr_state = NONE_STATE  and REQ_LAST       = '1') else '0';
+    ACK_ERROR <= '1'           when (curr_state = XFER_STATE  and ack_xfer_error = '1') or
+                                    (curr_state = ERROR_STATE and xfer_running = FALSE) else '0';
+    ACK_STOP  <= '1'           when (curr_state = STOP_STATE  and xfer_running = FALSE) else '0';
     ACK_NONE  <= '1'           when (curr_state = NONE_STATE) else '0';
     ACK_SIZE  <= ack_xfer_size when (curr_state = XFER_STATE) else (others => '0');
     -------------------------------------------------------------------------------
@@ -534,7 +567,7 @@ begin
     -- XFER_REQ_SAFETY : セーフティモード.
     -------------------------------------------------------------------------------
     XFER_REQ_VAL    <= req_xfer_valid;
-    XFER_REQ_SEL    <= curr_valid when (VAL_BITS > 1) else (others => '1');
+    XFER_REQ_SEL    <= req_xfer_sel;
     XFER_REQ_ADDR   <= REQ_ADDR;
     XFER_REQ_SIZE   <= req_xfer_size;
     XFER_REQ_ALEN   <= burst_length;

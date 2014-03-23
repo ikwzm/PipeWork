@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.5.0                                                           --
---!     @date    2014/02/27                                                      --
+--!     @version 1.5.5                                                           --
+--!     @date    2014/03/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -247,6 +247,9 @@ component PUMP_CONTROL_REGISTER
         XFER_BUSY       : --! @brief Transfer Busy.
                           --! データ転送中であることを示すフラグ.
                           in  std_logic;
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          in  std_logic := '0';
         XFER_DONE       : --! @brief Transfer Done.
                           --! データ転送中かつ、次のクロックで XFER_BUSY がネゲート
                           --! される事を示すフラグ.
@@ -667,6 +670,7 @@ component PUMP_CONTROLLER
     -------------------------------------------------------------------------------
         I_XFER_BUSY         : in  std_logic;
         I_XFER_DONE         : in  std_logic;
+        I_XFER_ERROR        : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -721,6 +725,7 @@ component PUMP_CONTROLLER
     -------------------------------------------------------------------------------
         O_XFER_BUSY         : in  std_logic;
         O_XFER_DONE         : in  std_logic;
+        O_XFER_ERROR        : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -855,6 +860,7 @@ component PUMP_OPERATION_PROCESSOR
         M_ACK_SIZE      : in  std_logic_vector(M_BUF_SIZE           downto 0);
         M_XFER_BUSY     : in  std_logic;
         M_XFER_DONE     : in  std_logic;
+        M_XFER_ERROR    : in  std_logic := '0';
         M_BUF_WE        : in  std_logic;
         M_BUF_BEN       : in  std_logic_vector(2**(M_BUF_WIDTH-3)-1 downto 0);
         M_BUF_DATA      : in  std_logic_vector(2**(M_BUF_WIDTH  )-1 downto 0);

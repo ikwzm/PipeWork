@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 1.5.0
---!     @date    2013/5/19
+--!     @version 1.5.5
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -311,6 +311,7 @@ entity  PUMP_CONTROLLER is
     -------------------------------------------------------------------------------
         I_XFER_BUSY         : in  std_logic;
         I_XFER_DONE         : in  std_logic;
+        I_XFER_ERROR        : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -365,6 +366,7 @@ entity  PUMP_CONTROLLER is
     -------------------------------------------------------------------------------
         O_XFER_BUSY         : in  std_logic;
         O_XFER_DONE         : in  std_logic;
+        O_XFER_ERROR        : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -594,6 +596,7 @@ begin
             ACK_NONE        => I_ACK_NONE          , -- In  :
             XFER_BUSY       => I_XFER_BUSY         , -- In  :
             XFER_DONE       => I_XFER_DONE         , -- In  :
+            XFER_ERROR      => I_XFER_ERROR        , -- In  :
             VALVE_OPEN      => i_valve_open        , -- Out :
             TRAN_DONE       => I_DONE              , -- Out :
             TRAN_ERROR      => I_ERROR             , -- Out :
@@ -782,6 +785,7 @@ begin
             ACK_NONE        => O_ACK_NONE          , -- In  :
             XFER_BUSY       => O_XFER_BUSY         , -- In  :
             XFER_DONE       => O_XFER_DONE         , -- In  :
+            XFER_ERROR      => O_XFER_ERROR        , -- In  :
             VALVE_OPEN      => o_valve_open        , -- Out :
             TRAN_DONE       => O_DONE              , -- Out :
             TRAN_ERROR      => O_ERROR             , -- Out :

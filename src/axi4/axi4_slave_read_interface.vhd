@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 1.5.5
---!     @date    2014/3/2
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -233,6 +233,9 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -340,15 +343,15 @@ architecture RTL of AXI4_SLAVE_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
-    signal   xfer_error         : std_logic;
     signal   xfer_req_addr      : std_logic_vector(AXI4_ADDR_WIDTH-1 downto 0);
     signal   xfer_req_size      : std_logic_vector(XFER_MAX_SIZE     downto 0);
     signal   identifier         : std_logic_vector(AXI4_ID_WIDTH  -1 downto 0);
     signal   burst_type         : AXI4_ABURST_TYPE;
     signal   burst_length       : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0);
     signal   word_size          : AXI4_ASIZE_TYPE;
-    signal   xfer_valid         : std_logic;
-    signal   xfer_ready         : std_logic;
+    signal   intake_valid       : std_logic;
+    signal   intake_ready       : std_logic;
+    signal   intake_error       : std_logic;
     signal   xfer_none          : std_logic;
     signal   port_busy          : std_logic;
     signal   outlet_busy        : std_logic;
@@ -420,9 +423,9 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    xfer_error <= '1' when (curr_state = ERR_STATE) else '0';
-    xfer_valid <= '1' when ((PULL_BUF_RDY and curr_select) /= PULL_BUF_RDY_ALL0) or
-                           (curr_state = ERR_STATE) else '0';
+    intake_error <= '1' when (curr_state = ERR_STATE) else '0';
+    intake_valid <= '1' when ((PULL_BUF_RDY and curr_select) /= PULL_BUF_RDY_ALL0) or
+                             (curr_state = ERR_STATE) else '0';
     -------------------------------------------------------------------------------
     -- ARVALID='1' and ARREADY='1'の時に、各種情報をレジスタに保存しておく.
     -------------------------------------------------------------------------------
@@ -600,9 +603,9 @@ begin
             POOL_REN        => BUF_REN         , -- Out :
             POOL_PTR        => BUF_PTR         , -- Out :
             POOL_DATA       => BUF_DATA        , -- In  :
-            POOL_ERROR      => xfer_error      , -- In  :
-            POOL_VAL        => xfer_valid      , -- In  :
-            POOL_RDY        => xfer_ready      , -- Out :
+            POOL_ERROR      => intake_error    , -- In  :
+            POOL_VAL        => intake_valid    , -- In  :
+            POOL_RDY        => intake_ready    , -- Out :
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
@@ -632,8 +635,9 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    XFER_BUSY <= curr_select  when (outlet_busy  = '1') else (others => '0');
-    XFER_DONE <= curr_select  when (outlet_done  = '1') else (others => '0');
+    XFER_BUSY  <= curr_select  when (outlet_busy  = '1') else (others => '0');
+    XFER_DONE  <= curr_select  when (outlet_done  = '1') else (others => '0');
+    XFER_ERROR <= (others => '0');
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------

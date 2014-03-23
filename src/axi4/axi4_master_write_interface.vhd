@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 1.5.5
---!     @date    2014/3/20
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -340,6 +340,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -529,7 +532,11 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -- 
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
-    signal   xfer_running       : std_logic;
+    signal   xfer_sel_busy      : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_sel_done      : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_sel_error     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_res_error     : std_logic_vector(VAL_BITS-1 downto 0);
+    signal   xfer_reg_error     : std_logic_vector(VAL_BITS-1 downto 0);
     constant SEL_ALL0           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '0');
     constant SEL_ALL1           : std_logic_vector(VAL_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
@@ -695,7 +702,12 @@ begin
             XFER_ACK_NEXT   => xfer_ack_next     , -- In  :
             XFER_ACK_LAST   => xfer_ack_last     , -- In  :
             XFER_ACK_ERR    => xfer_ack_error    , -- In  :
-            XFER_RUNNING    => xfer_running        -- In  :
+        ---------------------------------------------------------------------------
+        -- Transfer Status Signals.
+        ---------------------------------------------------------------------------
+            XFER_BUSY       => xfer_sel_busy     , -- In  :
+            XFER_DONE       => xfer_sel_done     , -- In  :
+            XFER_ERROR      => xfer_sel_error      -- In  :
         );                                         -- 
     -------------------------------------------------------------------------------
     -- AXI4 Write Address Channel Signals Output.
@@ -773,24 +785,49 @@ begin
     -------------------------------------------------------------------------------
     xfer_start      <= '1' when (req_queue_ready = '1' and req_queue_valid = '1') else '0';
     -------------------------------------------------------------------------------
-    -- xfer_running   : データ転送中である事を示すフラグ.
+    -- xfer_sel_busy  : データ転送中である事を示すフラグ.
+    -- xfer_sel_done  : 次のクロックで xfer_sel_busy がネゲートされることを示すフラグ.
     -------------------------------------------------------------------------------
-    xfer_running    <= '1' when (req_queue_empty = '0') or
-                                (port_busy       = '1') or
-                                (res_queue_empty = '0') else '0';
-    -------------------------------------------------------------------------------
-    -- XFER_BUSY      : データ転送中である事を示すフラグ.
-    -- XFER_DONE      : 次のクロックで XFER_BUSY がネゲートされることを示すフラグ.
-    -------------------------------------------------------------------------------
-    XFER_GEN: for i in XFER_BUSY'range generate
-        XFER_BUSY(i) <= '1' when (req_queue_busy (i) = '1') or
-                                 (xfer_run_select(i) = '1') or
-                                 (res_queue_busy (i) = '1') else '0';
-        XFER_DONE(i) <= '1' when (req_queue_busy (i) = '0') and
-                                 (xfer_run_select(i) = '0') and
-                                 (res_queue_busy (i) = '1') and
-                                 (res_queue_done (i) = '1') else '0';
+    XFER_SEL_GEN: for i in 0 to VAL_BITS-1 generate
+        xfer_sel_busy(i) <= '1' when (req_queue_busy (i) = '1') or
+                                     (xfer_run_select(i) = '1') or
+                                     (res_queue_busy (i) = '1') else '0';
+        xfer_sel_done(i) <= '1' when (req_queue_busy (i) = '0') and
+                                     (xfer_run_select(i) = '0') and
+                                     (res_queue_busy (i) = '1') and
+                                     (res_queue_done (i) = '1') else '0';
     end generate;
+    -------------------------------------------------------------------------------
+    -- xfer_reg_error : データ転送中にエラーが発生した事を xfer_sel_busy = '1' の間
+    --                  保持しておくためのレジスタ.
+    -------------------------------------------------------------------------------
+    process (CLK, RST) begin
+        if (RST = '1') then
+                xfer_reg_error <= (others => '0');
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                xfer_reg_error <= (others => '0');
+            else
+                for i in 0 to VAL_BITS-1 loop
+                    if    (xfer_sel_busy(i) = '0' or xfer_sel_done(i) = '1') then
+                        xfer_reg_error(i) <= '0';
+                    elsif (xfer_res_error(i) = '1') then
+                        xfer_reg_error(i) <= '1';
+                    end if;
+                end loop;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- xfer_sel_error : データ転送中にエラーが発生した事を示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_sel_error <= (xfer_res_error or xfer_reg_error) and xfer_sel_busy;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    XFER_BUSY  <= xfer_sel_busy;
+    XFER_DONE  <= xfer_sel_done;
+    XFER_ERROR <= xfer_sel_error;
     -------------------------------------------------------------------------------
     -- AXI4 用データ出力ポート
     -------------------------------------------------------------------------------
@@ -1035,4 +1072,11 @@ begin
     PULL_FIN_ERROR   <= '1'              when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else '0';
     PULL_FIN_SIZE    <= (others => '0')  when (BRESP = AXI4_RESP_SLVERR or BRESP = AXI4_RESP_DECERR) else
                         std_logic_vector(RESIZE(unsigned(res_queue_size), PULL_FIN_SIZE'length));
+    -------------------------------------------------------------------------------
+    -- xfer_res_error : データ転送中にエラーが発生したことを示すフラグ.
+    -------------------------------------------------------------------------------
+    xfer_res_error   <= res_queue_select when (res_queue_valid  = '1'  ) and
+                                              (BVALID           = '1'  ) and
+                                              (BRESP = AXI4_RESP_SLVERR or
+                                               BRESP = AXI4_RESP_DECERR) else SEL_ALL0;
 end RTL;
