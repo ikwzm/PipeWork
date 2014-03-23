@@ -2,7 +2,7 @@
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
 --!     @version 1.5.5
---!     @date    2014/3/20
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -489,6 +489,7 @@ begin
     -- ack_xfer_valid  : 転送応答有効信号.
     -- ack_xfer_last   : 最後の転送要求の応答であることを示すフラグ.
     -- ack_xfer_next   : 最後の転送要求の応答であることを示すフラグ.
+    -- ack_xfer_error  : 転送時にエラーが発生したことの応答であることを示すフラグ.
     -- ack_xfer_size   : 転送応答サイズ.
     -------------------------------------------------------------------------------
     ack_xfer_valid <= '1' when (speculative = TRUE  and addr_valid = '1' and AREADY = '1') or
@@ -497,6 +498,7 @@ begin
                                (speculative = FALSE and XFER_ACK_LAST = '1') else '0';
     ack_xfer_next  <= '1' when (speculative = TRUE  and run_xfer_next = '1') or
                                (speculative = FALSE and XFER_ACK_NEXT = '1') else '0';
+    ack_xfer_error <= '1' when (speculative = FALSE and XFER_ACK_ERR  = '1') else '0';
     ack_xfer_size  <= std_logic_vector(RESIZE(unsigned(run_xfer_size),XFER_SIZE_BITS)) when (speculative) else
                       std_logic_vector(RESIZE(unsigned(XFER_ACK_SIZE),XFER_SIZE_BITS));
     -------------------------------------------------------------------------------
@@ -515,7 +517,7 @@ begin
                                     (curr_state = NONE_STATE and REQ_LAST       = '0') else '0';
     ACK_LAST  <= '1'           when (curr_state = XFER_STATE and ack_xfer_last  = '1') or
                                     (curr_state = NONE_STATE and REQ_LAST       = '1') else '0';
-    ACK_ERROR <= '1'           when (curr_state = XFER_STATE and XFER_ACK_ERR   = '1') else '0';
+    ACK_ERROR <= '1'           when (curr_state = XFER_STATE and ack_xfer_error = '1') else '0';
     ACK_STOP  <= '1'           when (curr_state = STOP_STATE and XFER_RUNNING   = '0') else '0';
     ACK_NONE  <= '1'           when (curr_state = NONE_STATE) else '0';
     ACK_SIZE  <= ack_xfer_size when (curr_state = XFER_STATE) else (others => '0');
