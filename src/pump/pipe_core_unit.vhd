@@ -2,7 +2,7 @@
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
 --!     @version 1.5.5
---!     @date    2014/3/25
+--!     @date    2014/3/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -541,8 +541,8 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.PIPE_COMPONENTS.PIPE_REQUESTER_INTERFACE;
-use     PIPEWORK.PIPE_COMPONENTS.PIPE_RESPONDER_INTERFACE;
+use     PIPEWORK.PUMP_COMPONENTS.PIPE_REQUESTER_INTERFACE;
+use     PIPEWORK.PUMP_COMPONENTS.PIPE_RESPONDER_INTERFACE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PIPE_CORE_UNIT is
     -------------------------------------------------------------------------------
