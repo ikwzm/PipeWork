@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.5                                                           --
---!     @date    2014/03/23                                                      --
+--!     @date    2014/03/26                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -288,111 +288,242 @@ end component;
 -----------------------------------------------------------------------------------
 component PUMP_FLOW_SYNCRONIZER
     generic (
-        I_CLK_RATE  : --! @brief INPUT CLOCK RATE :
-                      --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
-                      --! ク(O_CLK)との関係を指定する.
-                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
-                      integer :=  1;
-        O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
-                      --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
-                      --! ク(O_CLK)との関係を指定する.
-                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
-                      integer :=  1;
-        DELAY_CYCLE : --! @brief DELAY CYCLE :
-                      --! 入力側から出力側への転送する際の遅延サイクルを指定する.
-                      integer :=  0;
-        SIZE_BITS   : --! @brief I_SIZE/O_SIZEのビット数を指定する.
-                      integer :=  8
+        I_CLK_RATE      : --! @brief INPUT CLOCK RATE :
+                          --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
+                          --! クロック(O_CLK)との関係を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer :=  1;
+        O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
+                          --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
+                          --! クロック(O_CLK)との関係を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer :=  1;
+        OPEN_INFO_BITS  : --! @brief OPEN INFOMATION BITS :
+                          --! I_OPEN_INFO/O_OPEN_INFOのビット数を指定する.
+                          integer :=  1;
+        CLOSE_INFO_BITS : --! @brief CLOSE INFOMATION BITS :
+                          --! I_CLOSE_INFO/O_CLOSE_INFOのビット数を指定する.
+                          integer :=  1;
+        XFER_SIZE_BITS  : --! @brief SIZE BITS :
+                          --! 各種サイズ信号のビット数を指定する.
+                          integer :=  8;
+        PUSH_FIN_VALID  : --! @brief PUSH FINAL SIZE VALID :
+                          --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST 信号を有効に
+                          --! するか否かを指定する.
+                          --! * PUSH_FIN_VALID = 1 : 有効. 
+                          --! * PUSH_FIN_VALID = 0 : 無効. 回路は省略される.
+                          integer :=  1;
+        PUSH_FIN_DELAY  : --! @brief PUSH FINAL SIZE DELAY CYCLE :
+                          --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST を遅延するサ
+                          --! イクル数を指定する.
+                          integer :=  0;
+        PUSH_RSV_VALID  : --! @brief PUSH RESERVE SIZE VALID :
+                          --! PUSH_RSV_VAL/PUSH_RSV_SIZE/PUSH_RSV_LAST 信号を有効に
+                          --! するか否かを指定する.
+                          --! * PUSH_RSV_VALID = 1 : 有効. 
+                          --! * PUSH_RSV_VALID = 0 : 無効. 回路は省略される.
+                          integer :=  1;
+        PULL_FIN_VALID  : --! @brief PULL FINAL SIZE VALID :
+                          --! PULL_FIN_VAL/PULL_FIN_SIZE/PULL_FIN_LAST 信号を有効に
+                          --! するか否かを指定する.
+                          --! * PULL_FIN_VALID = 1 : 有効. 
+                          --! * PULL_FIN_VALID = 0 : 無効. 回路は省略される.
+                          integer :=  1;
+        PULL_RSV_VALID  : --! @brief PULL RESERVE SIZE VALID :
+                          --! PULL_RSV_VAL/PULL_RSV_SIZE/PULL_RSV_LAST 信号を有効に
+                          --! するか否かを指定する.
+                          --! * PULL_RSV_VALID = 1 : 有効. 
+                          --! * PULL_RSV_VALID = 0 : 無効. 回路は省略される.
+                          integer :=  1
     );
     port (
     -------------------------------------------------------------------------------
-    -- リセット信号
+    -- Asyncronous Reset Signal.
     -------------------------------------------------------------------------------
-        RST         : --! @brief RESET :
-                      --! 非同期リセット信号(ハイ・アクティブ).
-                      in  std_logic;
+        RST             : --! @brief RESET :
+                          --! 非同期リセット信号(ハイ・アクティブ).
+                          in  std_logic;
     -------------------------------------------------------------------------------
-    -- 入力側の各種信号
+    -- Input Clock and Clock Enable and Syncronous reset.
     -------------------------------------------------------------------------------
-        I_CLK       : --! @brief INPUT CLOCK :
-                      --! 入力側のクロック信号.
-                      in  std_logic;
-        I_CLR       : --! @brief INPUT CLEAR :
-                      --! 入力側の同期リセット信号(ハイ・アクティブ).
-                      in  std_logic;
-        I_CKE       : --! @brief INPUT CLOCK ENABLE :
-                      --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
-                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
-                      --!   関係を示す時に使用する.
-                      --! * I_CLKの立上り時とOCLKの立上り時が同じ時にアサートするよ
-                      --!   うに入力されなければならない.
-                      --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時のみ有
-                      --!   効. それ以外は未使用.
-                      in  std_logic;
-        I_OPEN      : --! @brief INPUT OPEN FLAG :
-                      --! 入力側のバルブが開いていることを示すフラグ.
-                      in  std_logic;
-        I_FIN_VAL   : --! @brief INPUT FINAL SIZE/LAST VALID :
-                      --! I_FIN_LAST、I_FIN_SIZEが有効であることを示す信号.
-                      --! この信号のアサートによりI_FIN_LAST、I_FIN_SIZEの内容が
-                      --! 出力側に伝達されて、O_FIN_LAST、O_FIN_SIZEから出力される.
-                      in  std_logic;
-        I_FIN_LAST  : --! @brief INPUT FINAL LAST FLAG :
-                      --! 最後の転送であることを示すフラグを入力.
-                      in  std_logic;
-        I_FIN_SIZE  : --! @brief INPUT FINAL SIZE :
-                      --! 転送バイト数を入力.
-                      in  std_logic_vector(SIZE_BITS-1 downto 0);
-        I_RSV_VAL   : --! @brief INPUT RESERVE SIZE/LAST VALID :
-                      --! I_RSV_LAST、I_RSV_SIZEが有効であることを示す信号.
-                      --! この信号のアサートによりI_RSV_LAST、I_RSV_SIZEの内容が
-                      --! 出力側に伝達されて、O_RSV_LAST、O_RSV_SIZEから出力される.
-                      in  std_logic;
-        I_RSV_LAST  : --! @brief INPUT RESERVE LAST FLAG :
-                      --! 最後の転送であることを示すフラグを入力.
-                      in  std_logic;
-        I_RSV_SIZE  : --! @brief INPUT RESERVE SIZE :
-                      --! 転送バイト数を入力.
-                      in  std_logic_vector(SIZE_BITS-1 downto 0);
+        I_CLK           : --! @brief INPUT CLOCK :
+                          --! 入力側のクロック信号.
+                          in  std_logic;
+        I_CLR           : --! @brief INPUT CLEAR :
+                          --! 入力側の同期リセット信号(ハイ・アクティブ).
+                          in  std_logic;
+        I_CKE           : --! @brief INPUT CLOCK ENABLE :
+                          --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
+                          --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の
+                          --!   位相関係を示す時に使用する.
+                          --! * I_CLKの立上り時とOCLKの立上り時が同じ時にアサートす
+                          --!   るように入力されなければならない.
+                          --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時の
+                          --!   み有効. それ以外は未使用.
+                          in  std_logic;
     -------------------------------------------------------------------------------
-    -- 出力側の各種信号
+    -- 入力側からのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
-        O_CLK       : --! @brief OUTPUT CLK :
-                      --! 出力側のクロック信号.
-                      in  std_logic;
-        O_CLR       : --! @brief OUTPUT CLEAR :
-                      --! 出力側の同期リセット信号(ハイ・アクティブ).
-                      in  std_logic;
-        O_CKE       : --! @brief OUTPUT CLOCK ENABLE :
-                      --! 出力側のクロック(O_CLK)の立上りが有効であることを示す信号.
-                      --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の位相
-                      --!   関係を示す時に使用する.
-                      --! * I_CLKの立上り時とO_CLKの立上り時が同じ時にアサートする
-                      --!   ように入力されなければならない.
-                      --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ有
-                      --!   効. それ以外は未使用.
-                      in  std_logic;
-        O_OPEN      : --! @brief OUTPUT OPEN FLAG :
-                      --! 入力側のバルブが開いていることを示すフラグ.
-                      out std_logic;
-        O_FIN_VAL   : --! @brief OUTPUT FINAL SIZE/LAST VALID :
-                      --! O_FIN_LAST、O_FIN_SIZEが有効であることを示す信号.
-                      out std_logic;
-        O_FIN_LAST  : --! @brief OUTPUT FINAL LAST FLAG :
-                      --! 最後の転送であることを示すフラグを出力.
-                      out std_logic;
-        O_FIN_SIZE  : --! @brief INPUT FINAL SIZE :
-                      --! 転送バイト数を出力.
-                      out std_logic_vector(SIZE_BITS-1 downto 0);
-        O_RSV_VAL   : --! @brief OUTPUT RESERVE SIZE/LAST VALID :
-                      --! O_FIN_LAST、O_FIN_SIZEが有効であることを示す信号.
-                      out std_logic;
-        O_RSV_LAST  : --! @brief OUTPUT RESERVE LAST FLAG :
-                      --! 最後の転送であることを示すフラグを出力.
-                      out std_logic;
-        O_RSV_SIZE  : --! @brief OUTPUT RESERVE SIZE :
-                      --! 転送バイト数を出力.
-                      out std_logic_vector(SIZE_BITS-1 downto 0)
+        I_OPEN_VAL      : --! @brief INPUT OPEN VALID :
+                          --! 入力側からのOPEN(トランザクションの開始)を指示する信号.
+                          --! * I_OPEN_INFO が有効であることを示す.
+                          in  std_logic;
+        I_OPEN_INFO     : --! @brief INPUT OPEN INFOMATION DATA :
+                          --! OPEN(トランザクションの開始)時に出力側に伝達する各種
+                          --! 情報入力.
+                          --! * I_OPEN_VALがアサートされている時のみ有効.
+                          in  std_logic_vector(OPEN_INFO_BITS -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 入力側からのCLOSE(トランザクションの終了)を指示する信号.
+    -------------------------------------------------------------------------------
+        I_CLOSE_VAL     : --! @brief INPUT CLOSE VALID :
+                          --! 入力側からのCLOSE(トランザクションの終了)を指示する信号.
+                          --! * I_CLOSE_INFO が有効であることを示す.
+                          in  std_logic;
+        I_CLOSE_INFO    : --! @brief INPUT CLOSE INFOMATION DATA :
+                          --! CLOSE(トランザクションの終了)時に出力側に伝達する各種
+                          --! 情報入力.
+                          --! * I_CLOSE_VALがアサートされている時のみ有効.
+                          in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 入力側からの、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
+    -------------------------------------------------------------------------------
+        I_PUSH_FIN_VAL  : --! @brief INPUT PUSH FINAL VALID :
+                          --! * I_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_FIN_LAST : --! @brief INPUT PUSH FINAL LAST FLAG :
+                          --! 入力側から出力側へ最後の"確定した"転送であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_FIN_SIZE : --! @brief INPUT PUSH FINAL SIZE :
+                          --! 入力側から出力側への転送が"確定した"バイト数を入力.
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- 入力側からの、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
+    -------------------------------------------------------------------------------
+        I_PUSH_RSV_VAL  : --! @brief INPUT PUSH RESERVE VALID :
+                          --! * I_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_RSV_LAST : --! @brief INPUT PUSH RESERVE LAST FLAG :
+                          --! 入力側から出力側へ最後の"予定された"転送であることを示す.
+                          in  std_logic := '0';
+        I_PUSH_RSV_SIZE : --! @brief INPUT PUSH RESERVE SIZE :
+                          --! 入力側から出力側への転送が"予定された"バイト数を入力.
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- 入力側からの、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
+    -------------------------------------------------------------------------------
+        I_PULL_FIN_VAL  : --! @brief INPUT PULL FINAL VALID :
+                          --! * I_PULL_FIN_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PULL_FIN_LAST : --! @brief INPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"確定した"転送であることを示す.
+                          in  std_logic := '0';
+        I_PULL_FIN_SIZE : --! @brief INPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送が"確定した"バイト数を入力.
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- 入力側からの、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
+    -------------------------------------------------------------------------------
+        I_PULL_RSV_VAL  : --! @brief INPUT PULL RESERVE VALID :
+                          --! * I_PULL_RSV_LAST/SIZE が有効であることを示す.
+                          in  std_logic := '0';
+        I_PULL_RSV_LAST : --! @brief INPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"予定された"転送であることを示す.
+                          in  std_logic := '0';
+        I_PULL_RSV_SIZE : --! @brief INPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送"が予定された"バイト数を入力.
+                          in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Output Clock and Clock Enable and Syncronous reset.
+    -------------------------------------------------------------------------------
+        O_CLK           : --! @brief OUTPUT CLOCK :
+                          --! 入力側のクロック信号.
+                          in  std_logic;
+        O_CLR           : --! @brief OUTPUT CLEAR :
+                          --! 入力側の同期リセット信号(ハイ・アクティブ).
+                          in  std_logic;
+        O_CKE           : --! @brief OUTPUT CLOCK ENABLE :
+                          --! 出力側のクロック(O_CLK)の立上りが有効であることを示す信号.
+                          --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の
+                          --!   位相関係を示す時に使用する.
+                          --! * I_CLKの立上り時とO_CLKの立上り時が同じ時にアサートす
+                          --!   るように入力されなければならない.
+                          --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ
+                          --!   有効. それ以外は未使用.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側へのOPEN(トランザクションの開始)を指示する信号.
+    -------------------------------------------------------------------------------
+        O_OPEN_VAL      : --! @brief OUTPUT OPEN VALID :
+                          --! 出力側へのOPEN(トランザクションの開始)を指示する信号.
+                          --! * O_OPEN_INFO が有効であることを示す.
+                          out std_logic;
+        O_OPEN_INFO     : --! @brief OUTPUT OPEN INFOMATION DATA :
+                          --! OPEN(トランザクションの開始)時に出力側に伝達する各種
+                          --! 情報出力.
+                          --! * I_OPEN_VALがアサートされている時のみ有効.
+                          out std_logic_vector(OPEN_INFO_BITS -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側へのCLOSE(トランザクションの終了)を指示する信号.
+    -------------------------------------------------------------------------------
+        O_CLOSE_VAL     : --! @brief OUTPUT CLOSE VALID :
+                          --! 出力側へCLOSE(トランザクションの終了)を指示する信号.
+                          --! * O_CLOSE_VAL/INFO は O_PUSH_FIN_XXX の出力タイミング
+                          --!   に合わせて出力される.
+                          out std_logic;
+        O_CLOSE_INFO    : --! @brief OUTPUT CLOSE INFOMATION DATA :
+                          --! CLOSE(トランザクションの終了)時に出力側に伝達する各種
+                          --! 情報出力.
+                          --! * I_CLOSE_VALがアサートされている時のみ有効.
+                          out std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側への、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
+    -------------------------------------------------------------------------------
+        O_PUSH_FIN_VAL  : --! @brief OUTPUT PUSH FINAL VALID :
+                          --! * O_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PUSH_FIN_LAST : --! @brief OUTPUT PUSH FINAL LAST FLAG :
+                          --! 入力側から出力側へ最後の"確定した"転送であることを示す.
+                          out std_logic;
+        O_PUSH_FIN_SIZE : --! @brief OUTPUT PUSH FINAL SIZE :
+                          --! 入力側から出力側への転送が"確定した"バイト数を出力.
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側への、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
+    -------------------------------------------------------------------------------
+        O_PUSH_RSV_VAL  : --! @brief OUTPUT PUSH RESERVE VALID :
+                          --! * O_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PUSH_RSV_LAST : --! @brief OUTPUT PUSH RESERVE LAST FLAG :
+                          --! 入力側から出力側へ最後の"予定された"転送であることを示す.
+                          out std_logic;
+        O_PUSH_RSV_SIZE : --! @brief OUTPUT PUSH RESERVE SIZE :
+                          --! 入力側から出力側への転送が"予定された"バイト数を出力.
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側への、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
+    -------------------------------------------------------------------------------
+        O_PULL_FIN_VAL  : --! @brief OUTPUT PULL FINAL VALID :
+                          --! * O_PULL_FIN_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PULL_FIN_LAST : --! @brief OUTPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"確定した"転送であることを示す.
+                          out std_logic;
+        O_PULL_FIN_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送が"確定した"バイト数を出力.
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側への、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
+    -------------------------------------------------------------------------------
+        O_PULL_RSV_VAL  : --! @brief OUTPUT PULL RESERVE VALID :
+                          --! * O_PULL_RSV_LAST/SIZE が有効であることを示す.
+                          out std_logic;
+        O_PULL_RSV_LAST : --! @brief OUTPUT PULL FINAL LAST FLAG :
+                          --! 出力側から入力側への最後の"予定された"転送であることを示す.
+                          out std_logic;
+        O_PULL_RSV_SIZE : --! @brief OUTPUT PULL FINAL SIZE :
+                          --! 出力側から入力側への転送"が予定された"バイト数を出力.
+                          out std_logic_vector(XFER_SIZE_BITS-1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------

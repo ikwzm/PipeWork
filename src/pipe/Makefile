@@ -1,5 +1,4 @@
-ENTITY_FILES = pipe_flow_syncronizer.vhd               \
-               pipe_requester_interface.vhd            \
+ENTITY_FILES = pipe_requester_interface.vhd            \
                pipe_responder_interface.vhd            \
                pipe_core_unit.vhd                      \
                ${ENDLIST}

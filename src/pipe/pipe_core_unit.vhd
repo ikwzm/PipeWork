@@ -2,7 +2,7 @@
 --!     @file    pipe_core_unit.vhd
 --!     @brief   PIPE CORE UNIT
 --!     @version 1.5.5
---!     @date    2014/3/23
+--!     @date    2014/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -543,7 +543,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.PIPE_COMPONENTS.PIPE_REQUESTER_INTERFACE;
 use     PIPEWORK.PIPE_COMPONENTS.PIPE_RESPONDER_INTERFACE;
-use     PIPEWORK.PIPE_COMPONENTS.PIPE_FLOW_SYNCRONIZER;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PIPE_CORE_UNIT is
     -------------------------------------------------------------------------------
     --
@@ -862,7 +862,7 @@ begin
         ---------------------------------------------------------------------------
         constant  OPEN_INFO_RANGE   : OPEN_INFO_RANGE_TYPE := SET_OPEN_INFO_RANGE;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
         ---------------------------------------------------------------------------
         type      SYNC_PARAM_TYPE   is record
                   PUSH_FIN_DELAY : integer;
@@ -872,7 +872,7 @@ begin
                   PULL_RSV_VALID : integer;
         end record;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを決める関数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを決める関数.
         ---------------------------------------------------------------------------
         function  SET_SYNC_PARAM return SYNC_PARAM_TYPE is
             variable param : SYNC_PARAM_TYPE;
@@ -904,7 +904,7 @@ begin
             return param;
         end function;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数.
         ---------------------------------------------------------------------------
         constant  SYNC_PARAM        : SYNC_PARAM_TYPE := SET_SYNC_PARAM;
         ---------------------------------------------------------------------------
@@ -947,7 +947,7 @@ begin
         ---------------------------------------------------------------------------
         -- 
         ---------------------------------------------------------------------------
-        SYNC: PIPE_FLOW_SYNCRONIZER
+        SYNC: PUMP_FLOW_SYNCRONIZER
             generic map (
                 I_CLK_RATE          => T_CLK_RATE                  , -- 
                 O_CLK_RATE          => M_CLK_RATE                  , --
@@ -1046,7 +1046,7 @@ begin
     -------------------------------------------------------------------------------
     M2T: block
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
         ---------------------------------------------------------------------------
         type      SYNC_PARAM_TYPE   is record
                   PUSH_FIN_DELAY : integer;
@@ -1056,7 +1056,7 @@ begin
                   PULL_RSV_VALID : integer;
         end record;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを決める関数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを決める関数.
         ---------------------------------------------------------------------------
         function  SET_SYNC_PARAM return SYNC_PARAM_TYPE is
             variable param : SYNC_PARAM_TYPE;
@@ -1088,7 +1088,7 @@ begin
             return param;
         end function;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数.
         ---------------------------------------------------------------------------
         constant  SYNC_PARAM        : SYNC_PARAM_TYPE := SET_SYNC_PARAM;
         signal    o_open_info       : std_logic_vector(0 downto 0);
@@ -1096,7 +1096,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        SYNC: PIPE_FLOW_SYNCRONIZER                                  -- 
+        SYNC: PUMP_FLOW_SYNCRONIZER                                  -- 
             generic map (                                            -- 
                 I_CLK_RATE          => M_CLK_RATE                  , -- 
                 O_CLK_RATE          => T_CLK_RATE                  , --
