@@ -4,7 +4,7 @@ ENTITY_FILES = pump_control_register.vhd               \
                pump_operation_processor.vhd            \
                pipe_requester_interface.vhd            \
                pipe_responder_interface.vhd            \
-               pipe_core_unit.vhd                      \
+               pipe_controller.vhd                     \
                ${ENDLIST}
 
 pump_components.vhd : ${ENTITY_FILES}

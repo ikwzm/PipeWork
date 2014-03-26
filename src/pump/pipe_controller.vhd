@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------
---!     @file    pipe_core_unit.vhd
---!     @brief   PIPE CORE UNIT
+--!     @file    pipe_controller.vhd
+--!     @brief   PIPE CONTROLLER
 --!     @version 1.5.5
 --!     @date    2014/3/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
@@ -39,7 +39,7 @@ use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
 --! @brief   PIPE CORE UNIT
 -----------------------------------------------------------------------------------
-entity  PIPE_CORE_UNIT is
+entity  PIPE_CONTROLLER is
     generic (
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
@@ -533,7 +533,7 @@ entity  PIPE_CORE_UNIT is
         M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_BUF_READY    : out std_logic
     );
-end PIPE_CORE_UNIT;
+end PIPE_CONTROLLER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -544,7 +544,7 @@ library PIPEWORK;
 use     PIPEWORK.PUMP_COMPONENTS.PIPE_REQUESTER_INTERFACE;
 use     PIPEWORK.PUMP_COMPONENTS.PIPE_RESPONDER_INTERFACE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
-architecture RTL of PIPE_CORE_UNIT is
+architecture RTL of PIPE_CONTROLLER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------

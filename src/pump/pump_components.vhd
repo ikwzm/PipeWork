@@ -1940,9 +1940,9 @@ component PIPE_RESPONDER_INTERFACE
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PIPE_CORE_UNIT                                                        --
+--! @brief PIPE_CONTROLLER                                                       --
 -----------------------------------------------------------------------------------
-component PIPE_CORE_UNIT
+component PIPE_CONTROLLER
     generic (
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
