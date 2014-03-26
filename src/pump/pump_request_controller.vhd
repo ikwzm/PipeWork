@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pipe_requester_interface.vhd
---!     @brief   PIPE REQUESTER INTERFACE
+--!     @file    pump_request_controller.vhd
+--!     @brief   PUMP REQUEST CONTROLLER
 --!     @version 1.5.5
---!     @date    2014/3/23
+--!     @date    2014/3/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PIPE REQUESTER INTERFACE
+--! @brief PUMP REQUEST CONTROLLER
 -----------------------------------------------------------------------------------
-entity  PIPE_REQUESTER_INTERFACE is
+entity  PUMP_REQUEST_CONTROLLER is
     generic (
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
@@ -478,7 +478,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --!   の場合は未使用.
                               in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
     );
-end PIPE_REQUESTER_INTERFACE;
+end PUMP_REQUEST_CONTROLLER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -491,7 +491,7 @@ use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_MANIFOLD_VALVE;
 use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
 use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-architecture RTL of PIPE_REQUESTER_INTERFACE is
+architecture RTL of PUMP_REQUEST_CONTROLLER is
     ------------------------------------------------------------------------------
     -- アドレスレジスタ関連の信号.
     ------------------------------------------------------------------------------

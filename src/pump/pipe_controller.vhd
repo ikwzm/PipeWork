@@ -541,7 +541,7 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.PUMP_COMPONENTS.PIPE_REQUESTER_INTERFACE;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_REQUEST_CONTROLLER;
 use     PIPEWORK.PUMP_COMPONENTS.PIPE_RESPONDER_INTERFACE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PIPE_CONTROLLER is
@@ -1163,7 +1163,7 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    M: PIPE_REQUESTER_INTERFACE 
+    M: PUMP_REQUEST_CONTROLLER 
         generic map (
             PUSH_VALID              => PUSH_VALID                  ,
             PULL_VALID              => PULL_VALID                  ,

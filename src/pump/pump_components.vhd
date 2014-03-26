@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.5                                                           --
---!     @date    2014/03/26                                                      --
+--!     @date    2014/03/27                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1049,9 +1049,9 @@ component PUMP_OPERATION_PROCESSOR
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PIPE_REQUESTER_INTERFACE                                              --
+--! @brief PUMP_REQUEST_CONTROLLER                                               --
 -----------------------------------------------------------------------------------
-component PIPE_REQUESTER_INTERFACE
+component PUMP_REQUEST_CONTROLLER
     generic (
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
