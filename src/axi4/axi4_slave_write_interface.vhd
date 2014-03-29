@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
---!     @version 1.5.4
---!     @date    2014/2/23
+--!     @version 1.5.5
+--!     @date    2014/3/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -246,6 +246,9 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -341,7 +344,7 @@ architecture RTL of AXI4_SLAVE_WRITE_INTERFACE is
     type     STATE_TYPE        is (IDLE_STATE, REQ_STATE, TAR_STATE, RESP_STATE);
     signal   curr_state         : STATE_TYPE;
     signal   curr_select        : std_logic_vector(VAL_BITS-1 downto 0);
-    signal   xfer_error         : std_logic;
+    signal   write_error        : std_logic;
     signal   prev_busy          : std_logic;
     signal   port_busy          : std_logic;
     signal   push_buf_ready     : std_logic;
@@ -361,13 +364,13 @@ begin
     begin
         if (RST = '1') then
                 curr_state <= IDLE_STATE;
-                xfer_error <= '0';
+                write_error<= '0';
                 BVALID     <= '0';
                 BID        <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
                 curr_state <= IDLE_STATE;
-                xfer_error <= '0';
+                write_error<= '0';
                 BVALID     <= '0';
                 BID        <= (others => '0');
             else
@@ -408,12 +411,12 @@ begin
                 end case;
                 curr_state <= next_state;
                 -------------------------------------------------------------------
-                -- xfer_error : エラーが返ってきたことを示すフラグ.
+                -- write_error : エラーが返ってきたことを示すフラグ.
                 -------------------------------------------------------------------
                 if    (curr_state = REQ_STATE and ACK_VAL = '1' and ACK_ERROR = '1') then
-                    xfer_error <= '1';
+                    write_error <= '1';
                 elsif (next_state = IDLE_STATE) then
-                    xfer_error <= '0';
+                    write_error <= '0';
                 end if;
                 -------------------------------------------------------------------
                 -- prev_busy : port_busy は最初のデータが入ってくるまでアサートされ
@@ -445,19 +448,23 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    XFER_BUSY   <= curr_select when (prev_busy = '1' or port_busy = '1') else (others => '0');
-    XFER_DONE   <= curr_select when (push_buf_done = '1') else (others => '0');
-    AWREADY     <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1') else '0';
-    BRESP       <= AXI4_RESP_SLVERR when (xfer_error = '1') else AXI4_RESP_OKAY;
+    XFER_BUSY  <= curr_select when (prev_busy = '1' or port_busy = '1') else (others => '0');
+    XFER_DONE  <= curr_select when (push_buf_done = '1') else (others => '0');
+    XFER_ERROR <= (others => '0');
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    REQ_START   <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
-    REQ_VAL     <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') or
-                            (curr_state = REQ_STATE                                     ) else '0';
-    REQ_ADDR    <= AWADDR;
-    REQ_BURST   <= AWBURST;
-    REQ_ID      <= AWID;
+    AWREADY    <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1') else '0';
+    BRESP      <= AXI4_RESP_SLVERR when (write_error = '1') else AXI4_RESP_OKAY;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    REQ_START  <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') else '0';
+    REQ_VAL    <= '1' when (curr_state = IDLE_STATE and REQ_RDY = '1' and AWVALID = '1') or
+                           (curr_state = REQ_STATE                                     ) else '0';
+    REQ_ADDR   <= AWADDR;
+    REQ_BURST  <= AWBURST;
+    REQ_ID     <= AWID;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -496,7 +503,7 @@ begin
         -------------------------------------------------------------------------------
             PORT_DATA       => WDATA           , -- In  :
             PORT_DVAL       => WSTRB           , -- In  :
-            PORT_ERROR      => xfer_error      , -- In  :
+            PORT_ERROR      => write_error     , -- In  :
             PORT_LAST       => WLAST           , -- In  :
             PORT_VAL        => WVALID          , -- In  :
             PORT_RDY        => WREADY          , -- Out :
@@ -504,7 +511,9 @@ begin
         -- Push Size Signals.
         -------------------------------------------------------------------------------
             PUSH_VAL        => o_push_valid    , -- Out :
-            PUSH_LAST       => o_push_last     , -- Out :
+            PUSH_LAST       => open            , -- Out :
+            PUSH_XFER_LAST  => open            , -- Out :
+            PUSH_XFER_DONE  => o_push_last     , -- Out :
             PUSH_ERROR      => o_push_error    , -- Out :
             PUSH_SIZE       => o_push_size     , -- Out :
         -------------------------------------------------------------------------------

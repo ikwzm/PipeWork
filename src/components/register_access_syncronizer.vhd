@@ -2,8 +2,8 @@
 --!     @file    register_access_syncronizer.vhd
 --!     @brief   REGISTER ACCESS SYNCRONIZER MODULE :
 --!              異なるクロックドメイン間でレジスタアクセスを中継するモジュール.
---!     @version 1.5.4
---!     @date    2014/2/16
+--!     @version 1.5.5
+--!     @date    2014/3/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -212,35 +212,88 @@ architecture RTL of REGISTER_ACCESS_SYNCRONIZER is
     signal    o2i_o_valid   :  std_logic_vector(1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    --
+    -- 入力側の制御回路
     -------------------------------------------------------------------------------
     I: block
-        signal req_pending  :  boolean;
+        type     STATE_TYPE  is (IDLE_STATE, REQ_STATE, RUN_STATE);
+        signal   curr_state  :  STATE_TYPE;
+        signal   next_state  :  STATE_TYPE;
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        process (curr_state, I_REQ, I_SEL, i2o_i_ready, o2i_o_valid)
+            variable request     : boolean;
+            variable acknowledge : boolean;
+        begin
+            request     := (I_REQ = '1' and I_SEL = '1');
+            acknowledge := (o2i_o_valid(0) = '1' or o2i_o_valid(1) = '1');
+            case curr_state is
+                when IDLE_STATE =>
+                    if (request = TRUE) then
+                        if    (acknowledge = TRUE) then
+                            next_state <= IDLE_STATE;
+                        elsif (i2o_i_ready = '1') then
+                            next_state <= RUN_STATE;
+                        else
+                            next_state <= REQ_STATE;
+                        end if;
+                        i2o_i_valid <= '1';
+                    else
+                        next_state  <= IDLE_STATE;
+                        i2o_i_valid <= '0';
+                    end if;
+                when REQ_STATE =>
+                        if    (acknowledge = TRUE) then
+                            next_state <= IDLE_STATE;
+                        elsif (i2o_i_ready = '1' ) then
+                            next_state <= RUN_STATE;
+                        else
+                            next_state <= REQ_STATE;
+                        end if;
+                        i2o_i_valid <= '1';
+                when RUN_STATE =>
+                        if    (acknowledge = TRUE) then
+                            next_state <= IDLE_STATE;
+                        else
+                            next_state <= RUN_STATE;
+                        end if;
+                        i2o_i_valid <= '0';
+                when others  =>
+                        next_state  <= IDLE_STATE;
+                        i2o_i_valid <= '0';
+            end case;
+        end process;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         process (I_CLK, RST) begin
             if (RST = '1') then
-                    req_pending <= FALSE;
+                    curr_state <= IDLE_STATE;
             elsif (I_CLK'event and I_CLK = '1') then
                 if (I_CLR = '1') then
-                    req_pending <= FALSE;
+                    curr_state <= IDLE_STATE;
                 else
-                    req_pending <= (req_pending = FALSE and i2o_i_ready = '0' and I_REQ = '1' and I_SEL = '1') or
-                                   (req_pending = TRUE  and i2o_i_ready = '0');
+                    curr_state <= next_state;
                 end if;
             end if;
         end process;
-        i2o_i_valid <= '1' when (req_pending = FALSE and I_REQ = '1' and I_SEL = '1') or
-                                (req_pending = TRUE                                 ) else '0';
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         i2o_i_data(I2O_WDATA_HI downto I2O_WDATA_LO) <= I_WDATA;
         i2o_i_data(I2O_BEN_HI   downto I2O_BEN_LO  ) <= I_BEN;
         i2o_i_data(I2O_ADDR_HI  downto I2O_ADDR_LO ) <= I_ADDR;
         i2o_i_data(I2O_WRITE_POS                   ) <= I_WRITE;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         I_RDATA <= o2i_o_rdata    when (I_SEL = '1') else (others => '0');
         I_ACK   <= o2i_o_valid(0) when (I_SEL = '1') else '0';
         I_ERR   <= o2i_o_valid(1) when (I_SEL = '1') else '0';
     end block;
     -------------------------------------------------------------------------------
-    --
+    -- 入力側から出力側への同期回路
     -------------------------------------------------------------------------------
     I2O: SYNCRONIZER                     -- 
         generic map (                    -- 
@@ -269,7 +322,7 @@ begin
             O_VAL(0)    => i2o_o_valid   -- Out :
         );
     -------------------------------------------------------------------------------
-    --
+    -- 出力側から入力側への同期回路
     -------------------------------------------------------------------------------
     O2I: SYNCRONIZER                     -- 
         generic map (                    -- 
@@ -298,12 +351,20 @@ begin
             O_VAL       => o2i_o_valid   -- Out :
         );
     -------------------------------------------------------------------------------
-    --
+    -- 出力側の制御回路
     -------------------------------------------------------------------------------
     O: block
         constant pause       :  std_logic := '0';
         signal   req_pending :  boolean;
+        signal   req_valid   :  boolean;
+        signal   req_ready   :  boolean;
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        req_valid <= (req_pending = FALSE and i2o_o_valid = '1') or
+                     (req_pending = TRUE                       );
+        req_ready <= (O_ACK = '1' or O_ERR = '1');
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -314,16 +375,14 @@ begin
                 if (O_CLR = '1') then
                     req_pending <= FALSE;
                 else
-                    req_pending <= (req_pending = FALSE and (O_ACK = '0' or O_ERR = '0') and i2o_o_valid = '1') or
-                                   (req_pending = TRUE  and (O_ACK = '0' or O_ERR = '0'));
+                    req_pending <= (req_valid and not req_ready);
                 end if;
             end if;
         end process;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        O_REQ   <= '1' when (req_pending = FALSE and i2o_o_valid = '1') or
-                            (req_pending = TRUE                       ) else '0';
+        O_REQ   <= '1' when (req_valid) else '0';
         O_WDATA <= i2o_o_data(I2O_WDATA_HI downto I2O_WDATA_LO);
         O_BEN   <= i2o_o_data(I2O_BEN_HI   downto I2O_BEN_LO  );
         O_ADDR  <= i2o_o_data(I2O_ADDR_HI  downto I2O_ADDR_LO );

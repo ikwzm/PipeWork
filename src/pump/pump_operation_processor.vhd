@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
---!     @version 1.5.0
---!     @date    2013/6/4
+--!     @version 1.5.5
+--!     @date    2014/3/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -139,6 +139,7 @@ entity  PUMP_OPERATION_PROCESSOR is
         M_ACK_SIZE      : in  std_logic_vector(M_BUF_SIZE           downto 0);
         M_XFER_BUSY     : in  std_logic;
         M_XFER_DONE     : in  std_logic;
+        M_XFER_ERROR    : in  std_logic := '0';
         M_BUF_WE        : in  std_logic;
         M_BUF_BEN       : in  std_logic_vector(2**(M_BUF_WIDTH-3)-1 downto 0);
         M_BUF_DATA      : in  std_logic_vector(2**(M_BUF_WIDTH  )-1 downto 0);
@@ -415,6 +416,7 @@ begin
             ACK_NONE        => M_ACK_NONE      , -- In  :
             XFER_BUSY       => M_XFER_BUSY     , -- In  :
             XFER_DONE       => M_XFER_DONE     , -- In  :
+            XFER_ERROR      => M_XFER_ERROR    , -- In  :
             VALVE_OPEN      => open            , -- Out :
             TRAN_DONE       => m_done          , -- Out :
             TRAN_ERROR      => m_error         , -- Out :

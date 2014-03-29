@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.5
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -396,7 +396,9 @@ begin
             PULL_SIZE_BITS  => REGS_DATA_SIZE+1, --
             EXIT_SIZE_BITS  => REGS_DATA_SIZE+1, --
             POOL_PTR_BITS   => REGS_ADDR_WIDTH , --
+            TRAN_MAX_SIZE   => XFER_MAX_SIZE   , --
             USE_BURST_SIZE  => 1               , --
+            CHECK_BURST_LEN => 1               , -- 
             PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 
@@ -435,6 +437,8 @@ begin
         ---------------------------------------------------------------------------
             PULL_VAL(0)     => xfer_beat_chop  , -- Out :
             PULL_LAST       => xfer_beat_last  , -- Out :
+            PULL_XFER_LAST  => open            , -- Out :
+            PULL_XFER_DONE  => open            , -- Out :
             PULL_ERROR      => xfer_beat_error , -- Out :
             PULL_SIZE       => xfer_beat_size  , -- Out :
         ---------------------------------------------------------------------------
@@ -442,6 +446,8 @@ begin
         ---------------------------------------------------------------------------
             EXIT_VAL        => open            , -- Out :
             EXIT_LAST       => open            , -- Out :
+            EXIT_XFER_LAST  => open            , -- Out :
+            EXIT_XFER_DONE  => open            , -- Out :
             EXIT_ERROR      => open            , -- Out :
             EXIT_SIZE       => open            , -- Out :
         ---------------------------------------------------------------------------

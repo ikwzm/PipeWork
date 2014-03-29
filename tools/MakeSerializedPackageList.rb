@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.1
-#       Created     :   2013/4/14
+#       Version     :   0.0.2
+#       Created     :   2014/3/13
 #       File name   :   MakeSerializedPackageList.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -52,7 +52,7 @@ class SerializedPackageList
   #-------------------------------------------------------------------------------
   def initialize
     @program_name      = "MakeSerializedPackageList"
-    @program_version   = "0.0.1"
+    @program_version   = "0.0.2"
     @program_id        = @program_name + " " + @program_version
     @path_list         = Array.new
     @file_name_list    = Array.new
@@ -63,6 +63,7 @@ class SerializedPackageList
     @format            = '#{file_name}'
     @execute           = nil
     @output_file_name  = nil
+    @archive_file_name = nil
     @opt               = OptionParser.new do |opt|
       opt.program_name = @program_name
       opt.version      = @program_version
@@ -73,6 +74,7 @@ class SerializedPackageList
       opt.on("--execute    STRING"              ){|val| @execute          = val }
       opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| @use_entity_list << val }
       opt.on("--output     FILE_NAME"           ){|val| @output_file_name = val }
+      opt.on("--archive    FILE_NAME"           ){|val| @archive_file_name= val }
     end
   end
   #-------------------------------------------------------------------------------
@@ -135,6 +137,16 @@ class SerializedPackageList
       File.open(@output_file_name, "w") do |file|
         unit_file_list.each do |unit_file|
           file.puts unit_file.to_formatted_string(@format)
+        end
+      end
+    #-----------------------------------------------------------------------------
+    # @archive_file_name が指定されている場合は 指定された順番でひとつのファイルに
+    # まとめる.
+    #-----------------------------------------------------------------------------
+    elsif @archive_file_name
+      File.open(@archive_file_name, "w") do |archive_file|
+        unit_file_list.each do |unit_file|
+          archive_file.write File.open(unit_file.file_name, "r").read
         end
       end
     #-----------------------------------------------------------------------------

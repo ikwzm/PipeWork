@@ -2,8 +2,8 @@
 --!     @file    register_access_decoder.vhd
 --!     @brief   REGISTER ACCESS DECODER MODULE :
 --!              レジスタアクセスデコーダ.
---!     @version 1.5.4
---!     @date    2014/2/16
+--!     @version 1.5.5
+--!     @date    2014/3/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -109,18 +109,58 @@ use     ieee.numeric_std.all;
 architecture RTL of REGISTER_ACCESS_DECODER is
     constant BYTE_BITS  : natural := 8;
     constant WORD_BYTES : natural := DATA_WIDTH/BYTE_BITS;
+    function min(L,R:integer) return integer is begin
+        if (L > R) then return R;
+        else            return L;
+        end if;
+    end function;
+    function max(L,R:integer) return integer is begin
+        if (L > R) then return L;
+        else            return R;
+        end if;
+    end function;
     constant W_POS_LO   : natural := (WBIT_MIN)/DATA_WIDTH;
     constant W_POS_HI   : natural := (WBIT_MAX)/DATA_WIDTH;
     constant R_POS_LO   : natural := (RBIT_MIN)/DATA_WIDTH;
     constant R_POS_HI   : natural := (RBIT_MAX)/DATA_WIDTH;
+    constant A_POS_LO   : natural := min(R_POS_LO,W_POS_LO);
+    constant A_POS_HI   : natural := max(R_POS_HI,W_POS_HI);
+    signal   addr_hit   : std_logic_vector(A_POS_HI downto A_POS_LO);
+    signal   word_wen   : std_logic_vector(DATA_WIDTH-1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- 
+    -- addr_hit   : 
     -------------------------------------------------------------------------------
-    REGS_ACK <= REGS_REQ;
-    REGS_ERR <= '0';
+    process (REGS_ADDR)
+        variable byte_addr : unsigned(ADDR_WIDTH-1 downto 0);
+    begin
+        byte_addr := to_01(unsigned(REGS_ADDR));
+        for word_pos in addr_hit'range loop
+            if (word_pos = byte_addr/WORD_BYTES) then
+                addr_hit(word_pos) <= '1';
+            else
+                addr_hit(word_pos) <= '0';
+            end if;
+        end loop;
+    end process;
     -------------------------------------------------------------------------------
-    -- 
+    -- word_wen   : 
+    -------------------------------------------------------------------------------
+    process (REGS_REQ, REGS_WRITE, REGS_BEN) begin
+        if (REGS_REQ = '1' and REGS_WRITE = '1') then
+            for i in 0 to DATA_WIDTH/8-1 loop
+                if (REGS_BEN(i) = '1') then
+                    word_wen(8*(i+1)-1 downto 8*i) <= (8*(i+1)-1 downto 8*i => '1');
+                else
+                    word_wen(8*(i+1)-1 downto 8*i) <= (8*(i+1)-1 downto 8*i => '0');
+                end if;
+            end loop;
+        else
+            word_wen <= (others => '0');
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- W_DATA     :
     -------------------------------------------------------------------------------
     process (REGS_WDATA) begin
         for i in W_POS_LO to W_POS_HI loop
@@ -132,58 +172,67 @@ begin
         end loop;
     end process;
     -------------------------------------------------------------------------------
-    -- 
+    -- W_LOAD     :
     -------------------------------------------------------------------------------
-    process (REGS_ADDR, REGS_REQ, REGS_WRITE, REGS_BEN)
-        variable addr      : unsigned        (ADDR_WIDTH-1 downto 0);
-        variable ben_bit   : std_logic_vector(DATA_WIDTH-1 downto 0);
-    begin
-        if (REGS_REQ = '1' and REGS_WRITE = '1') then
-            addr := to_01(unsigned(REGS_ADDR));
-            for i in 0 to DATA_WIDTH/8-1 loop
-                if (REGS_BEN(i) = '1') then
-                    ben_bit(8*(i+1)-1 downto 8*i) := (8*(i+1)-1 downto 8*i => '1');
-                else
-                    ben_bit(8*(i+1)-1 downto 8*i) := (8*(i+1)-1 downto 8*i => '0');
-                end if;
-            end loop;
-            for i in W_POS_LO to W_POS_HI loop
-                if (i = addr/WORD_BYTES) then
-                    for n in 0 to DATA_WIDTH-1 loop
-                        if (W_LOAD'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= W_LOAD'high) then
-                            W_LOAD(DATA_WIDTH*i+n) <= ben_bit(n);
-                        end if;
-                    end loop;
-                else
-                    for n in 0 to DATA_WIDTH-1 loop
-                        if (W_LOAD'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= W_LOAD'high) then
-                            W_LOAD(DATA_WIDTH*i+n) <= '0';
-                        end if;
-                    end loop;
-                end if;
-            end loop;
-        else
-            W_LOAD <= (others => '0');
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    process (R_DATA, REGS_ADDR)
-        variable addr      : unsigned        (ADDR_WIDTH-1 downto 0);
-        variable data      : std_logic_vector(DATA_WIDTH-1 downto 0);
-    begin
-        addr := to_01(unsigned(REGS_ADDR));
-        data := (others => '0');
-        for i in R_POS_LO to R_POS_HI loop
-            if (i = addr/WORD_BYTES) then
-                for n in data'range loop
-                    if (R_DATA'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= R_DATA'high) then
-                        data(n) := data(n) or R_DATA(DATA_WIDTH*i+n);
+    process (addr_hit, word_wen) begin
+        for i in W_POS_LO to W_POS_HI loop
+            if (addr_hit(i) = '1') then
+                for n in 0 to DATA_WIDTH-1 loop
+                    if (W_LOAD'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= W_LOAD'high) then
+                        W_LOAD(DATA_WIDTH*i+n) <= word_wen(n);
+                    end if;
+                end loop;
+            else
+                for n in 0 to DATA_WIDTH-1 loop
+                    if (W_LOAD'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= W_LOAD'high) then
+                        W_LOAD(DATA_WIDTH*i+n) <= '0';
                     end if;
                 end loop;
             end if;
         end loop;
-        REGS_RDATA <= data;
     end process;
+    -------------------------------------------------------------------------------
+    -- REGS_RDATA :
+    -------------------------------------------------------------------------------
+    process (R_DATA, addr_hit)
+        type     WORD_VEC_TYPE is array(DATA_WIDTH-1 downto 0)
+                               of std_logic_vector(R_POS_HI downto R_POS_LO);
+        variable word_vec      :  WORD_VEC_TYPE;
+        function or_reduce_tree(A:std_logic_vector) return std_logic is
+            alias V : std_logic_vector(A'length-1 downto 0) is A;
+        begin
+            if    (V'length < 1) then
+                return '0';
+            elsif (V'length = 1) then
+                return V(0);
+            elsif (V'length = 2) then
+                return V(0) or V(1);
+            elsif (V'length = 3) then
+                return V(0) or V(1) or V(2);
+            else
+                return or_reduce_tree(V(V'length/2-1 downto V'low     ))
+                    or or_reduce_tree(V(V'high       downto V'length/2));
+            end if;
+        end function;
+    begin
+        for i in R_POS_LO to R_POS_HI loop
+            for n in DATA_WIDTH-1 downto 0 loop
+                if (addr_hit(i) = '1') and 
+                   (R_DATA'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= R_DATA'high) then
+                    word_vec(n)(i) := R_DATA(DATA_WIDTH*i+n);
+                else
+                    word_vec(n)(i) := '0';
+                end if;
+            end loop;
+        end loop;
+        for n in DATA_WIDTH-1 downto 0 loop
+            REGS_RDATA(n) <= or_reduce_tree(word_vec(n));
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- REGS_ACK   :
+    -- REGS_ERR   :
+    -------------------------------------------------------------------------------
+    REGS_ACK <= REGS_REQ;
+    REGS_ERR <= '0';
 end RTL;

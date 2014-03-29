@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.4                                                           --
---!     @date    2014/02/20                                                      --
+--!     @version 1.5.5                                                           --
+--!     @date    2014/03/20                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1324,10 +1324,17 @@ component POOL_INTAKE_PORT
     -- Push Size Signals.
     -------------------------------------------------------------------------------
         PUSH_VAL        : --! @brief PUSH VALID: 
-                          --! PUSH_LAST/PUSH_ERR/PUSH_SIZEが有効であることを示す.
+                          --! PUSH_LAST/PUSH_ERROR/PUSH_SIZEが有効であることを示す信号.
                           out std_logic_vector(SEL_BITS-1 downto 0);
         PUSH_LAST       : --! @brief PUSH LAST : 
-                          --! 最後の転送"した事"を示すフラグ.
+                          --! 最後の転送"した"ワードであることを示すフラグ.
+                          out std_logic;
+        PUSH_XFER_LAST  : --! @brief PUSH TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PUSH_XFER_DONE  : --! @brief PUSH TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PUSH_ERROR      : --! @brief PUSH ERROR : 
                           --! 転送"した事"がエラーだった事を示すフラグ.
@@ -1488,6 +1495,13 @@ component POOL_OUTLET_PORT
                           out std_logic_vector(SEL_BITS-1 downto 0);
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の入力"した事"を示すフラグ.
+                          out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST :
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことをし示すフラグ.

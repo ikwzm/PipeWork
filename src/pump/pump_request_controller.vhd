@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pipe_requester_interface.vhd
---!     @brief   PIPE REQUESTER INTERFACE
---!     @version 1.5.4
---!     @date    2014/2/22
+--!     @file    pump_request_controller.vhd
+--!     @brief   PUMP REQUEST CONTROLLER
+--!     @version 1.5.5
+--!     @date    2014/3/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PIPE REQUESTER INTERFACE
+--! @brief PUMP REQUEST CONTROLLER
 -----------------------------------------------------------------------------------
-entity  PIPE_REQUESTER_INTERFACE is
+entity  PUMP_REQUEST_CONTROLLER is
     generic (
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
@@ -233,6 +233,9 @@ entity  PIPE_REQUESTER_INTERFACE is
         M_XFER_BUSY         : --! @brief Transfer Busy.
                               --! データ転送中であることを示すフラグ.
                               in  std_logic;
+        M_XFER_ERROR        : --! @brief Transfer Error.
+                              --! データの転送中にエラーが発生した事を示す.
+                              in  std_logic := '0';
         M_XFER_DONE         : --! @brief Transfer Done.
                               --! データ転送中かつ、次のクロックで M_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -316,14 +319,14 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! プールバッファに I_FLOW_READY_LEVEL 以下のデータしか無く、
                               --! データの入力が可能な事を示す.
                               out std_logic;
-        I_BUF_SIZE          : --! @brief Intake Buffer Size :
-                              --! 入力用プールの総容量を指定する.
-                              --! I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         I_FLOW_LEVEL        : --! @brief Intake Valve Flow Ready Level :
                               --! 一時停止する/しないを指示するための閾値.
                               --! フローカウンタの値がこの値以下の時に入力を開始する.
                               --! フローカウンタの値がこの値を越えた時に入力を一時停止.
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+        I_BUF_SIZE          : --! @brief Intake Buffer Size :
+                              --! 入力用プールの総容量を指定する.
+                              --! I_FLOW_SIZE を求めるのに使用する.
                               in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Request from Responder.
@@ -475,7 +478,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --!   の場合は未使用.
                               in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
     );
-end PIPE_REQUESTER_INTERFACE;
+end PUMP_REQUEST_CONTROLLER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -488,7 +491,7 @@ use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_MANIFOLD_VALVE;
 use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
 use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-architecture RTL of PIPE_REQUESTER_INTERFACE is
+architecture RTL of PUMP_REQUEST_CONTROLLER is
     ------------------------------------------------------------------------------
     -- アドレスレジスタ関連の信号.
     ------------------------------------------------------------------------------
@@ -690,6 +693,7 @@ begin
             ACK_NONE        => M_ACK_NONE          , -- In  :
             XFER_BUSY       => M_XFER_BUSY         , -- In  :
             XFER_DONE       => M_XFER_DONE         , -- In  :
+            XFER_ERROR      => M_XFER_ERROR        , -- In  :
             VALVE_OPEN      => m_valve_open        , -- Out :
             TRAN_START      => T_RES_START         , -- Out :
             TRAN_DONE       => T_RES_DONE          , -- Out :

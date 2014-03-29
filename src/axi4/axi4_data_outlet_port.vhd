@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
---!     @version 1.5.1
---!     @date    2013/8/24
+--!     @version 1.5.5
+--!     @date    2014/3/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2014 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -86,6 +86,18 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --!   サポートする. その際の１ワード毎の転送バイト数は
                           --!   BURST_SIZE で指定される.
                           integer range 0 to 1 := 1;
+        CHECK_BURST_LEN : --! @brief CHECK BURST LENGTH :
+                          --! BURST_LEN で指定されたバースト数とI_LASTによるバースト
+                          --! 転送の最後が一致するかどうかチェックするか否かを指定す
+                          --! る.
+                          --! * CHECK_BURST_LEN=0かつUSE_BURST_SIZE=0を指定した場合、
+                          --!   バースト長をチェックしない. 
+                          --! * CHECK_BURST_LEN=1またはUSE_BURST_SIZE=0を指定した場
+                          --!   合、バースト長をチェックする.
+                          integer range 0 to 1 := 1;
+        TRAN_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
+                          --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
+                          integer := 4;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
@@ -192,13 +204,21 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --!   取り出される.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Pull Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         PULL_VAL        : --! @brief PULL VALID: 
-                          --! PULL_LAST/PULL_SIZEが有効であることを示す.
+                          --! PULL_LAST/PULL_XFER_LAST/PULL_XFER_DONE/PULL_ERROR/
+                          --! PULL_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の転送"する事"を示すフラグ.
+                          out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことを示すフラグ.
@@ -207,13 +227,21 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --! 転送"する"バイト数を出力する.
                           out std_logic_vector(PULL_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Size Signals.
+    -- Outlet Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         EXIT_VAL        : --! @brief EXIT VALID: 
-                          --! EXIT_LAST/EXIT_SIZEが有効であることを示す.
+                          --! EXIT_LAST/EXIT_XFER_LAST/EXIT_XFER_DONE/EXIT_ERROR/
+                          --! EXIT_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         EXIT_LAST       : --! @brief EXIT LAST : 
                           --! 最後の出力"した事"を示すフラグ.
+                          out std_logic;
+        EXIT_XFER_LAST  : --! @brief EXIT TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        EXIT_XFER_DONE  : --! @brief EXIT TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         EXIT_ERROR      : --! @brief EXIT ERROR : 
                           --! エラーが発生したことを示すフラグ.
@@ -284,18 +312,13 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
         return value;
     end function;
     -------------------------------------------------------------------------------
-    -- AXI4 データバスのバイト数の２のべき乗値.
-    -------------------------------------------------------------------------------
-    constant PORT_DATA_SIZE : integer := CALC_DATA_SIZE(PORT_DATA_BITS);
-    -------------------------------------------------------------------------------
-    -- レジスタインターフェース側のデータバスのバイト数の２のべき乗値.
+    -- データバスのバイト数の２のべき乗値.
     -------------------------------------------------------------------------------
     constant POOL_DATA_SIZE : integer := CALC_DATA_SIZE(POOL_DATA_BITS);
     -------------------------------------------------------------------------------
-    -- 最大転送バイト数
+    -- データバスのバイト数選択定数.
     -------------------------------------------------------------------------------
-    constant XFER_MAX_SIZE  : integer := BURST_LEN_BITS + PORT_DATA_SIZE;
-    constant XFER_BEAT_SEL  : std_logic_vector(XFER_MAX_SIZE downto XFER_MAX_SIZE) := "1";
+    constant POOL_DATA_SEL  : std_logic_vector(POOL_DATA_SIZE downto POOL_DATA_SIZE) := "1";
     -------------------------------------------------------------------------------
     -- 内部サイズビット数
     -------------------------------------------------------------------------------
@@ -353,9 +376,6 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal   o_pull_valid   : std_logic_vector(TRAN_SEL_BITS -1 downto 0);
-    signal   o_pull_last    : std_logic;
-    signal   o_pull_error   : std_logic;
     signal   o_pull_size    : std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
@@ -364,7 +384,6 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     signal   q_strb         : std_logic_vector(PORT_DATA_BITS/8-1 downto 0);
     signal   q_size         : std_logic_vector(SIZE_BITS-1 downto 0);
     signal   q_user         : std_logic_vector(USER_HI downto USER_LO);
-    signal   q_done         : std_logic;
     signal   q_last         : std_logic;
     signal   q_error        : std_logic;
     signal   q_valid        : std_logic;
@@ -376,7 +395,7 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     signal   o_size         : std_logic_vector(SIZE_BITS-1 downto 0);
     signal   o_sel          : std_logic_vector(TRAN_SEL_BITS -1 downto 0);
     signal   o_user         : std_logic_vector(USER_HI downto USER_LO);
-    signal   o_done         : std_logic;
+    signal   o_xfer_last    : std_logic;
     signal   o_error        : std_logic;
     signal   o_last         : std_logic;
     signal   o_valid        : std_logic;
@@ -397,19 +416,19 @@ begin
     -- i_size : １ワード毎のリードバイト数.
     -- i_last : 最後のワードであることを示すフラグ.
     -------------------------------------------------------------------------------
-    BEN: CHOPPER
-        generic map (
-            BURST           => 1               ,
-            MIN_PIECE       => POOL_DATA_SIZE  ,
-            MAX_PIECE       => POOL_DATA_SIZE  ,
-            MAX_SIZE        => XFER_MAX_SIZE   ,
-            ADDR_BITS       => POOL_PTR_BITS   ,
-            SIZE_BITS       => TRAN_SIZE_BITS  ,
-            COUNT_BITS      => 1               ,
-            PSIZE_BITS      => SIZE_BITS       ,
-            GEN_VALID       => 1
-        )
-        port map (
+    BEN: CHOPPER                                 -- 
+        generic map (                            -- 
+            BURST           => 1               , -- 
+            MIN_PIECE       => POOL_DATA_SIZE  , -- 
+            MAX_PIECE       => POOL_DATA_SIZE  , -- 
+            MAX_SIZE        => TRAN_MAX_SIZE   , -- 
+            ADDR_BITS       => START_PTR'length, -- 
+            SIZE_BITS       => TRAN_SIZE'length, -- 
+            COUNT_BITS      => 1               , -- 
+            PSIZE_BITS      => SIZE_BITS       , -- 
+            GEN_VALID       => 1                 -- 
+        )                                        -- 
+        port map (                               -- 
         ---------------------------------------------------------------------------
         -- Clock and Reset Signals.
         ---------------------------------------------------------------------------
@@ -421,7 +440,7 @@ begin
         ---------------------------------------------------------------------------
             ADDR            => START_PTR       , -- In  :
             SIZE            => TRAN_SIZE       , -- In  :
-            SEL             => XFER_BEAT_SEL   , -- In  :
+            SEL             => POOL_DATA_SEL   , -- In  :
             LOAD            => TRAN_START      , -- In  :
         ---------------------------------------------------------------------------
         -- 制御信号
@@ -445,7 +464,7 @@ begin
         ---------------------------------------------------------------------------
             VALID           => i_ben           , -- Out :
             NEXT_VALID      => open              -- Out :
-        );
+        );                                       -- 
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -490,9 +509,11 @@ begin
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
-            PULL_VAL        => o_pull_valid    , -- Out :
-            PULL_LAST       => o_pull_last     , -- Out :
-            PULL_ERROR      => o_pull_error    , -- Out :
+            PULL_VAL        => PULL_VAL        , -- Out :
+            PULL_LAST       => PULL_LAST       , -- Out :
+            PULL_XFER_LAST  => PULL_XFER_LAST  , -- Out :
+            PULL_XFER_DONE  => PULL_XFER_DONE  , -- Out :
+            PULL_ERROR      => PULL_ERROR      , -- Out :
             PULL_SIZE       => o_pull_size     , -- Out :
         ---------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
@@ -512,7 +533,7 @@ begin
             POOL_BUSY       => POOL_BUSY       , -- Out :
             POOL_DONE       => POOL_DONE       , -- Out :
             BUSY            => q_busy            -- Out :
-        );
+        );                                       -- 
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -528,7 +549,6 @@ begin
             end if;
         end if;
     end process;
-    q_done <= q_user(USER_DONE_POS);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -540,6 +560,7 @@ begin
             USER_BITS       => USER_BITS       , --
             ALEN_BITS       => BURST_LEN_BITS  , --
             USE_ASIZE       => USE_BURST_SIZE  , --
+            CHECK_ALEN      => CHECK_BURST_LEN , -- 
             I_REGS_SIZE     => SET.O_I_SIZE    , --
             O_REGS_SIZE     => SET.O_O_SIZE      --
         )                                        -- 
@@ -591,19 +612,19 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    PULL_VAL   <= o_pull_valid;
-    PULL_ERROR <= o_pull_error;
-    PULL_LAST  <= '1' when (o_pull_last = '1' and q_done = '1') else '0';
-    PULL_SIZE  <= std_logic_vector(resize(unsigned(o_pull_size), PULL_SIZE_BITS));
+    o_sel          <= o_user(USER_SEL_HI downto USER_SEL_LO) when (TRAN_SEL_BITS > 1) else (others => '1');
+    o_xfer_last    <= o_user(USER_DONE_POS);
+    EXIT_VAL       <= o_sel when (o_valid = '1' and o_ready = '1') else (others => '0');
+    EXIT_ERROR     <= o_error;
+    EXIT_LAST      <= '1' when (o_last      = '1') else '0';
+    EXIT_XFER_LAST <= '1' when (o_xfer_last = '1') else '0';
+    EXIT_XFER_DONE <= '1' when (o_last      = '1') and
+                               (o_xfer_last = '1') else '0';
+    EXIT_SIZE      <= std_logic_vector(resize(unsigned(o_size     ), EXIT_SIZE_BITS));
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    o_sel      <= o_user(USER_SEL_HI downto USER_SEL_LO);
-    o_done     <= o_user(USER_DONE_POS);
-    EXIT_VAL   <= o_sel when (o_valid = '1' and o_ready = '1') else (others => '0');
-    EXIT_ERROR <= o_error;
-    EXIT_LAST  <= '1' when (o_last  = '1' and o_done = '1') else '0';
-    EXIT_SIZE  <= std_logic_vector(resize(unsigned(o_size     ), EXIT_SIZE_BITS));
+    PULL_SIZE      <= std_logic_vector(resize(unsigned(o_pull_size), PULL_SIZE_BITS));
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------

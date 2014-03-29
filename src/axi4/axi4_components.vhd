@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.4                                                           --
---!     @date    2014/03/01                                                      --
+--!     @version 1.5.5                                                           --
+--!     @date    2014/03/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -143,10 +143,12 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         XFER_REQ_ADDR   : out   std_logic_vector(ADDR_BITS     -1 downto 0);
         XFER_REQ_SIZE   : out   std_logic_vector(XFER_MAX_SIZE    downto 0);
         XFER_REQ_SEL    : out   std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_REQ_ALEN   : out   std_logic_vector(ALEN_BITS     -1 downto 0);
         XFER_REQ_FIRST  : out   std_logic;
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
         XFER_REQ_SAFETY : out   std_logic;
+        XFER_REQ_NOACK  : out   std_logic;
         XFER_REQ_VAL    : out   std_logic;
         XFER_REQ_RDY    : in    std_logic;
     -------------------------------------------------------------------------------
@@ -160,7 +162,81 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
     -------------------------------------------------------------------------------
     -- Transfer Status Signals.
     -------------------------------------------------------------------------------
-        XFER_RUNNING    : in    std_logic
+        XFER_BUSY       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_DONE       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_ERROR      : in    std_logic_vector(VAL_BITS      -1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief AXI4_MASTER_TRANSFER_QUEUE                                            --
+-----------------------------------------------------------------------------------
+component AXI4_MASTER_TRANSFER_QUEUE
+    -------------------------------------------------------------------------------
+    -- ジェネリック変数.
+    -------------------------------------------------------------------------------
+    generic (
+        SEL_BITS        : --! @brief SELECT BITS :
+                          --! I_SEL、O_SEL のビット数を指定する.
+                          integer := 1;
+        SIZE_BITS       : --! @brief SIZE BITS:
+                          --! I_SIZE、O_SIZE信号のビット数を指定する.
+                          integer := 32;
+        ADDR_BITS       : --! @brief ADDR BITS:
+                          --! I_ADDR、O_ADDR信号のビット数を指定する.
+                          integer := 32;
+        ALEN_BITS       : --! @brief ALEN BITS:
+                          --! I_ALEN、O_ALEN信号のビット数を指定する.
+                          integer := 32;
+        PTR_BITS        : --! @brief PTR BITS:
+                          --! I_PTR、O_PTR信号のビット数を指定する.
+                          integer := 32;
+        QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
+                          --! キューの大きさを指定する.
+                          integer := 1
+    );
+    port(
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
+        CLK             : in    std_logic;
+        RST             : in    std_logic;
+        CLR             : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
+        I_VALID         : in    std_logic;
+        I_SEL           : in    std_logic_vector( SEL_BITS-1 downto 0);
+        I_SIZE          : in    std_logic_vector(SIZE_BITS-1 downto 0);
+        I_ADDR          : in    std_logic_vector(ADDR_BITS-1 downto 0);
+        I_ALEN          : in    std_logic_vector(ALEN_BITS-1 downto 0);
+        I_PTR           : in    std_logic_vector( PTR_BITS-1 downto 0);
+        I_NEXT          : in    std_logic;
+        I_LAST          : in    std_logic;
+        I_FIRST         : in    std_logic;
+        I_SAFETY        : in    std_logic;
+        I_NOACK         : in    std_logic;
+        I_READY         : out   std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
+        O_VALID         : out   std_logic;
+        O_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
+        O_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        O_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
+        O_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
+        O_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
+        O_NEXT          : out   std_logic;
+        O_LAST          : out   std_logic;
+        O_FIRST         : out   std_logic;
+        O_SAFETY        : out   std_logic;
+        O_NOACK         : out   std_logic;
+        O_READY         : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
+        BUSY            : out   std_logic_vector( SEL_BITS-1 downto 0);
+        DONE            : out   std_logic_vector( SEL_BITS-1 downto 0);
+        EMPTY           : out   std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -438,6 +514,9 @@ component AXI4_MASTER_READ_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
@@ -857,6 +936,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -1168,6 +1250,9 @@ component AXI4_SLAVE_READ_INTERFACE
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -1449,6 +1534,9 @@ component AXI4_SLAVE_WRITE_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
@@ -1987,9 +2075,18 @@ component AXI4_DATA_PORT
                           --! 指定する.
                           --! * USE_ASIZE=0を指定した場合、Narrow transfers をサポ
                           --!   ートしない.
+                          --!   この場合、ASIZE信号は未使用.
                           --! * USE_ASIZE=1を指定した場合、Narrow transfers をサポ
                           --!   ートする. その際の１ワード毎の転送バイト数は
                           --!   ASIZE で指定される.
+                          integer range 0 to 1 := 1;
+        CHECK_ALEN      : --! @brief CHECK BURST LENGTH :
+                          --! ALEN で指定されたバースト数とI_LASTによるバースト転送
+                          --! の最後が一致するかどうかチェックするか否かを指定する.
+                          --! * CHECK_ALEN=0かつUSE_ASIZE=0を指定した場合、バースト
+                          --!   長をチェックしない. 
+                          --! * CHECK_ALEN=1またはUSE_ASIZEを指定した場合、バースト
+                          --!   長をチェックする.
                           integer range 0 to 1 := 1;
         I_REGS_SIZE     : --! @brief PORT INTAKE REGS SIZE :
                           --! 入力側に挿入するパイプラインレジスタの段数を指定する.
@@ -2037,8 +2134,10 @@ component AXI4_DATA_PORT
                           --! * 最初にデータ入力と同時にアサートしても構わない.
                           in  std_logic;
         ASIZE           : --! @brief AXI4 BURST SIZE :
+                          --! AXI4 によるバーストサイズを指定する.
                           in  AXI4_ASIZE_TYPE;
         ALEN            : --! @brief AXI4 BURST LENGTH :
+                          --! AXI4 によるバースト数を指定する.
                           in  std_logic_vector(ALEN_BITS-1 downto 0);
         ADDR            : --! @brief START TRANSFER ADDRESS :
                           --! 出力側のアドレス.
@@ -2173,6 +2272,18 @@ component AXI4_DATA_OUTLET_PORT
                           --!   サポートする. その際の１ワード毎の転送バイト数は
                           --!   BURST_SIZE で指定される.
                           integer range 0 to 1 := 1;
+        CHECK_BURST_LEN : --! @brief CHECK BURST LENGTH :
+                          --! BURST_LEN で指定されたバースト数とI_LASTによるバースト
+                          --! 転送の最後が一致するかどうかチェックするか否かを指定す
+                          --! る.
+                          --! * CHECK_BURST_LEN=0かつUSE_BURST_SIZE=0を指定した場合、
+                          --!   バースト長をチェックしない. 
+                          --! * CHECK_BURST_LEN=1またはUSE_BURST_SIZE=0を指定した場
+                          --!   合、バースト長をチェックする.
+                          integer range 0 to 1 := 1;
+        TRAN_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
+                          --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
+                          integer := 4;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
@@ -2279,13 +2390,21 @@ component AXI4_DATA_OUTLET_PORT
                           --!   取り出される.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- Pull Size Signals.
+    -- Pull Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         PULL_VAL        : --! @brief PULL VALID: 
-                          --! PULL_LAST/PULL_SIZEが有効であることを示す.
+                          --! PULL_LAST/PULL_XFER_LAST/PULL_XFER_DONE/PULL_ERROR/
+                          --! PULL_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         PULL_LAST       : --! @brief PULL LAST : 
                           --! 最後の転送"する事"を示すフラグ.
+                          out std_logic;
+        PULL_XFER_LAST  : --! @brief PULL TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        PULL_XFER_DONE  : --! @brief PULL TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         PULL_ERROR      : --! @brief PULL ERROR : 
                           --! エラーが発生したことを示すフラグ.
@@ -2294,13 +2413,21 @@ component AXI4_DATA_OUTLET_PORT
                           --! 転送"する"バイト数を出力する.
                           out std_logic_vector(PULL_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Outlet Size Signals.
+    -- Outlet Size/Last/Error Signals.
     -------------------------------------------------------------------------------
         EXIT_VAL        : --! @brief EXIT VALID: 
-                          --! EXIT_LAST/EXIT_SIZEが有効であることを示す.
+                          --! EXIT_LAST/EXIT_XFER_LAST/EXIT_XFER_DONE/EXIT_ERROR/
+                          --! EXIT_SIZEが有効であることを示す.
                           out std_logic_vector(TRAN_SEL_BITS-1 downto 0);
         EXIT_LAST       : --! @brief EXIT LAST : 
                           --! 最後の出力"した事"を示すフラグ.
+                          out std_logic;
+        EXIT_XFER_LAST  : --! @brief EXIT TRANSFER LAST : 
+                          --! 最後のトランザクションであることを示すフラグ.
+                          out std_logic;
+        EXIT_XFER_DONE  : --! @brief EXIT TRANSFER DONE :
+                          --! 最後のトランザクションの最後の転送"した"ワードである
+                          --! ことを示すフラグ.
                           out std_logic;
         EXIT_ERROR      : --! @brief EXIT ERROR : 
                           --! エラーが発生したことを示すフラグ.
