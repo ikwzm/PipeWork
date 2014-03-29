@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pipe_core_unit.vhd
---!     @brief   PIPE CORE UNIT
+--!     @file    pipe_requester_interface.vhd
+--!     @brief   PIPE REQUESTER INTERFACE
 --!     @version 1.5.5
---!     @date    2014/3/23
+--!     @date    2014/3/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PIPE CORE UNIT
+--! @brief   PIPE REQUESTER INTERFACE
 -----------------------------------------------------------------------------------
-entity  PIPE_CORE_UNIT is
+entity  PIPE_REQUESTER_INTERFACE is
     generic (
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
@@ -121,60 +121,36 @@ entity  PIPE_CORE_UNIT is
                               --! フローカウンタによるフロー制御を行わず、常に栓が
                               --! 閉じた状態にするか否かを指定する.
                               integer range 0 to 1 := 0;
-        T_O_FIXED_FLOW_OPEN : --! @brief OUTLET VALVE FLOW FIXED OPEN :
-                              --! フローカウンタによるフロー制御を行わず、常にフロ
-                              --! ー栓が開いた状態にするか否かを指定する.
-                              integer range 0 to 1 := 0;
-        T_O_FIXED_POOL_OPEN : --! @brief OUTLET FIXED VALVE POOL OPEN :
-                              --! プールカウンタによるフロー制御を行わず、常にプー
-                              --! ル栓ルブが開いた状態にするか否かを指定する.
-                              integer range 0 to 1 := 0;
         T_I_FIXED_CLOSE     : --! @brief INTAKE VALVE FIXED CLOSE :
                               --! フローカウンタによるフロー制御を行わず、常に栓が
                               --! 閉じた状態にするか否かを指定する.
                               integer range 0 to 1 := 0;
-        T_I_FIXED_FLOW_OPEN : --! @brief INTAKE VALVE FLOW FIXED OPEN :
-                              --! フローカウンタによるフロー制御を行わず、常にフロ
-                              --! ー栓が開いた状態にするか否かを指定する.
-                              integer range 0 to 1 := 0;
-        T_I_FIXED_POOL_OPEN : --! @brief INTAKE FIXED VALVE POOL OPEN :
-                              --! プールカウンタによるフロー制御を行わず、常にプー
-                              --! ル栓ルブが開いた状態にするか否かを指定する.
-                              integer range 0 to 1 := 0;
-        M2T_PUSH_RSV_VALID  : --! @brief USE PUSH RESERVE SIGNALS :
+        USE_M_PUSH_RSV      : --! @brief USE PUSH RESERVE SIGNALS :
                               --! フローカウンタの加算に M_PUSH_RSV_SIZE を使うか 
-                              --! M_PUSH_FIX_SIZE を使うかを指定する.
+                              --! M_PUSH_FIN_SIZE を使うかを指定する.
                               integer range 0 to 1 := 0;
-        M2T_PULL_RSV_VALID  : --! @brief USE PULL RESERVE SIGNALS :
+        USE_M_PULL_RSV      : --! @brief USE PULL RESERVE SIGNALS :
                               --! フローカウンタの減算に M_PULL_RSV_SIZE を使うか 
-                              --! M_PULL_FIX_SIZE を使うかを指定する.
+                              --! M_PULL_FIN_SIZE を使うかを指定する.
                               integer range 0 to 1 := 0;
-        M2T_PUSH_BUF_VALID  : --! @brief USE PUSH BUFFER  SIGNALS :
+        USE_M_PUSH_BUF      : --! @brief USE PUSH BUFFER  SIGNALS :
                               --! プールカウンタの加算に M_PUSH_BUF_SIZE を使うか 
                               --! M_ACK_SIZE を使うかを指定する.
                               integer range 0 to 1 := 1;
-        M2T_PULL_BUF_VALID  : --! @brief USE PULL BUFFER  SIGNALS :
+        USE_M_PULL_BUF      : --! @brief USE PULL BUFFER  SIGNALS :
                               --! プールカウンタの減算に M_PULL_BUF_SIZE を使うか 
                               --! M_ACK_SIZE を使うかを指定する.
                               integer range 0 to 1 := 1;
+        USE_T2M_PUSH_RSV    : --! @brief USE PUSH RESERVE SIGNALS :
+                              --! フローカウンタの加算に T2M_PUSH_RSV_SIZE を使うか 
+                              --! T2M_PUSH_FIN_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
+        USE_T2M_PULL_RSV    : --! @brief USE PULL RESERVE SIGNALS :
+                              --! フローカウンタの減算に T2M_PULL_RSV_SIZE を使うか 
+                              --! T2M_PULL_FIN_SIZE を使うかを指定する.
+                              integer range 0 to 1 := 0;
         M2T_PUSH_FIN_DELAY  : --! @brief Requester to Responder Pull Final Size Delay Cycle :
                               integer :=  0;
-        T2M_PUSH_RSV_VALID  : --! @brief USE PUSH RESERVE SIGNALS :
-                              --! フローカウンタの加算に T_PUSH_RSV_SIZE を使うか 
-                              --! T_PUSH_FIX_SIZE を使うかを指定する.
-                              integer range 0 to 1 := 0;
-        T2M_PULL_RSV_VALID  : --! @brief USE PULL RESERVE SIGNALS :
-                              --! フローカウンタの減算に T_PULL_RSV_SIZE を使うか 
-                              --! T_PULL_FIX_SIZE を使うかを指定する.
-                              integer range 0 to 1 := 0;
-        T2M_PUSH_BUF_VALID  : --! @brief USE PUSH BUFFER  SIGNALS :
-                              --! プールカウンタの加算に T_PUSH_BUF_SIZE を使うか 
-                              --! T_ACK_SIZE を使うかを指定する.
-                              integer range 0 to 1 := 1;
-        T2M_PULL_BUF_VALID  : --! @brief USE PULL BUFFER  SIGNALS :
-                              --! プールカウンタの減算に T_PULL_BUF_SIZE を使うか 
-                              --! T_ACK_SIZE を使うかを指定する.
-                              integer range 0 to 1 := 1;
         T2M_PUSH_FIN_DELAY  : --! @brief Responder to Requester Pull Final Size Delay Cycle :
                               integer :=  0;
         T_XFER_MAX_SIZE     : --! @brief Responder Transfer Max Size :
@@ -240,215 +216,147 @@ entity  PIPE_CORE_UNIT is
                               --!   すべてのトランザクションが終了していると、
                               --!   ACK_NEXT 信号をアサートする.
                               in  std_logic;
-        T_REQ_VALID         : --! @brief Request Valid signal from responder  :
-                              --! 上記の各種リクエスト信号が有効であることを示す.
-                              --! * この信号のアサートでもってトランザクションを開始する.
-                              --! * 一度この信号をアサートすると Acknowledge を返す
-                              --!   まで、この信号はアサートされなくてはならない.
+        T_REQ_START         : --! @brief Request Start signal from responder  :
+                              --! トランザクション開始を指定する信号.
                               in  std_logic;
-        T_REQ_READY         : --! @brief Request Ready signal from requester :
-                              --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
-                              out std_logic;
+        T_REQ_STOP          : --! @brief Request Stop signal from requester :
+                              --! トランザクションの中止を指定する信号.
+                              in  std_logic := '0';
+        T_REQ_DONE          : --! @brief Request Done signal from requester :
+                              --! トランザクションの終了を指定する信号.
+                              in  std_logic;
     -------------------------------------------------------------------------------
-    -- Acknowledge to Responder Signals.
+    -- Response to Responder Signals.
     -------------------------------------------------------------------------------
-        T_ACK_VALID         : --! @brief Acknowledge Valid signal to responder :
-                              --! 上記の Command Request の応答信号.
-                              --! 下記の 各種 Acknowledge 信号が有効である事を示す.
+        T_RES_START         : --! @brief Response to responder :
+                              --! トランザクション開始を指定する信号.
                               out std_logic;
-        T_ACK_NEXT          : --! @brief Acknowledge with need Next transaction to responder :
-                              --! すべてのトランザクションが終了かつ REQ_LAST=0 の
+        T_RES_DONE          : --! @brief Response to responder :
+                              --! トランザクションの終了を指定する信号.
                               --! 場合、この信号がアサートされる.
                               out std_logic;
-        T_ACK_LAST          : --! @brief Acknowledge with Last transaction to responder :
-                              --! すべてのトランザクションが終了かつ REQ_LAST=1 の
-                              --! 場合、この信号がアサートされる.
-                              out std_logic;
-        T_ACK_ERROR         : --! @brief Acknowledge with Error to responder :
+        T_RES_ERROR         : --! @brief Acknowledge with Error to responder :
                               --! トランザクション中になんらかのエラーが発生した場
                               --! 合、この信号がアサートされる.
                               out std_logic;
-        T_ACK_STOP          : --! @brief Acknowledge with Stop operation to responder :
-                              --! トランザクションが中止された場合、この信号がアサ
-                              --! ートされる.
-                              out std_logic;
-        T_ACK_SIZE          : --! @brief Acknowledge transfer Size to responder :
-                              --! 転送したバイト数を示す.
-                              out std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- Control from Responder Signals.
+    -- Push from Responder Signals.
     -------------------------------------------------------------------------------
-        T_REQ_STOP          : --! @brief Transfer Stop Request.
-                              --! レスポンダ側から強制的にデータ転送を中止すること
-                              --! を要求する信号.
-                              in  std_logic := '0';
-        T_REQ_PAUSE         : --! @brief Transfer Pause Request.
-                              --! レスポンダ側から強制的にデータ転送を一時的に中断
-                              --! することを要求する信号.
-                              in  std_logic := '0';
-    -------------------------------------------------------------------------------
-    -- Status from Responder Signals.
-    -------------------------------------------------------------------------------
-        T_XFER_BUSY         : --! @brief Transfer Busy.
-                              --! データ転送中であることを示すフラグ.
-                              in  std_logic;
-        T_XFER_ERROR        : --! @brief Transfer Error.
-                              --! データの転送中にエラーが発生した事を示す.
-                              in  std_logic := '0';
-        T_XFER_DONE         : --! @brief Transfer Done.
-                              --! データ転送中かつ、次のクロックで T_XFER_BUSY が
-                              --! ネゲートされる事を示すフラグ.
-                              --! * ただし、T_XFER_BUSY のネゲート前に 必ずしもこの
-                              --!   信号がアサートされるわけでは無い.
-                              in  std_logic;
-    -------------------------------------------------------------------------------
-    -- Intake Valve Signals from/to Responder.
-    -------------------------------------------------------------------------------
-        T_I_FLOW_LEVEL      : --! @brief Intake Valve Flow Ready Level :
-                              --! 一時停止する/しないを指示するための閾値.
-                              --! フローカウンタの値がこの値以下の時に入力を開始する.
-                              --! フローカウンタの値がこの値を越えた時に入力を一時停止.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_I_BUF_SIZE        : --! @brief Intake Pool Size :
-                              --! 入力用プールの総容量を指定する.
-                              --! T_I_FLOW_SIZE を求めるのに使用する.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_I_FLOW_READY      : --! @brief Intake Valve Flow Ready to responder :
-                              --! プールバッファに T_I_FLOW_LEVEL 以下のデータ
-                              --! しか無く、データの入力が可能な事を示す.
-                              out std_logic;
-        T_I_FLOW_PAUSE      : --! @brief Intake Valve Flow Pause to responder :
-                              --! 入力を一時的に止めたり、再開することを指示する信号.
-                              --! プールバッファに I_FLOW_READY_LEVEL を越えるデータ
-                              --! が溜っていて、これ以上データが入らないことを示す.
-                              out std_logic;
-        T_I_FLOW_STOP       : --! @brief Intake Valve Flow Stop to responder :
-                              --! 入力の中止を指示する信号.
-                              out std_logic;
-        T_I_FLOW_LAST       : --! @brief Intake Valve Flow Last to responder :
-                              --! リクエスタ側から最後の入力を示すフラグがあったこと
-                              --! を示す.
-                              out std_logic;
-        T_I_FLOW_SIZE       : --! @brief Intake Valve Flow Enable Size to responder :
-                              --! 入力可能なバイト数
-                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
-                              --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
+        T2M_PUSH_FIN_VALID  : --! @brief Push Final Valid from responder :
+                              --! T2M_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
-        T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
+                              in  std_logic := '0';
+        T2M_PUSH_FIN_LAST   : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
-        T_PUSH_FIN_ERROR    : --! @brief Push Final Error flags :
+                              in  std_logic := '0';
+        T2M_PUSH_FIN_ERROR  : --! @brief Push Final Error flags :
                               --! レスポンダ側からのデータ入力時にエラーが発生した
                               --! ことを示すフラグ.
                               --! * 現在この信号は未使用.
-                              in  std_logic;
-        T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
+                              in  std_logic := '0';
+        T2M_PUSH_FIN_SIZE   : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
-                              --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
-        T_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
-                              in  std_logic;
-        T_PUSH_RSV_ERROR    : --! @brief Push Reserve Error flags :
-                              in  std_logic;
-        T_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
-                              in  std_logic;
-        T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
-                              in  std_logic;
-        T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
-                              in  std_logic;
-        T_PUSH_BUF_ERROR    : --! @brief Push Buffer Error from responder :
-                              in  std_logic;
-        T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
-                              --! プールバッファに T_PUSH_BUF_LEVEL 以下のデータし
-                              --! かないことを示すフラグ.
-                              out std_logic;
-        T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
-                              --! T_PUSH_BUF_READY 信号をアサートするかしないかを
-                              --! 指示するための閾値.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
+        T2M_PUSH_RSV_VALID  : --! @brief Push Reserve Valid from responder :
+                              --! T2M_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                              in  std_logic := '0';
+        T2M_PUSH_RSV_LAST   : --! @brief Push Reserve Last flags :
+                              in  std_logic := '0';
+        T2M_PUSH_RSV_ERROR  : --! @brief Push Reserve Error flags :
+                              in  std_logic := '0';
+        T2M_PUSH_RSV_SIZE   : --! @brief Push Reserve Size :
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- Outlet Valve Signals from/to Responder.
+    -- Pull from Responder Signals.
     -------------------------------------------------------------------------------
-        T_O_FLOW_LEVEL      : --! @brief Outlet Valve Flow Ready Level :
-                              --! 一時停止する/しないを指示するための閾値.
-                              --! フローカウンタの値がこの値以上の時に転送を開始する.
-                              --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_O_FLOW_READY      : --! @brief Outlet Valve Flow Ready to responder :
-                              --! プールバッファに O_FLOW_LEVEL 以上のデータがある
-                              --! ことを示す.
-                              out std_logic;
-        T_O_FLOW_PAUSE      : --! @brief Outlet Valve Flow Pause to responder :
-                              --! 出力を一時的に止めたり、再開することを指示する信号.
-                              --! プールバッファに O_FLOW_LEVEL 未満のデータしか無い
-                              --! ことを示す.
-                              out std_logic;
-        T_O_FLOW_STOP       : --! @brief Outlet Valve Flow Stop to responder :
-                              --! 出力の中止を指示する信号.
-                              out std_logic;
-        T_O_FLOW_LAST       : --! @brief Outlet Valve Flow Last :
-                              --! リクエスト側から最後の入力を示すフラグがあった
-                              --! ことを示す.
-                              out std_logic;
-        T_O_FLOW_SIZE       : --! @brief Outlet Valve Flow Enable Size to responder :
-                              --! 出力可能なバイト数を出力.
-                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
-                              --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
-                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
-        T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
+        T2M_PULL_FIN_VALID  : --! @brief Pull Final Valid from responder :
+                              --! T2M_PULL_FIN_LAST/SIZE が有効であることを示す.
+                              in  std_logic := '0';
+        T2M_PULL_FIN_LAST   : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
-        T_PULL_FIN_ERROR    : --! @brief Pull Final Error flags :
+                              in  std_logic := '0';
+        T2M_PULL_FIN_ERROR  : --! @brief Pull Final Error flags :
                               --! レスポンダ側からのデータ出力時にエラーが発生した
                               --! ことを示すフラグ.
                               --! * 現在この信号は未使用.
-                              in  std_logic;
-        T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
+                              in  std_logic := '0';
+        T2M_PULL_FIN_SIZE   : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
-                              --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
-        T_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
-                              in  std_logic;
-        T_PULL_RSV_ERROR    : --! @brief Pull Reserve Error flags :
-                              in  std_logic;
-        T_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
-                              in  std_logic;
-        T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
-                              in  std_logic;
-        T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
-                              in  std_logic;
-        T_PULL_BUF_ERROR    : --! @brief Pull Buffer Error from responder :
-                              in  std_logic;
-        T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
-                              --! プールバッファに T_PULL_BUF_LEVEL 以上のデータが
-                              --! あることを示すフラグ.
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
+        T2M_PULL_RSV_VALID  : --! @brief Pull Reserve Valid from responder :
+                              --! T2M_PULL_RSV_LAST/SIZE が有効であることを示す.
+                              in  std_logic := '0';
+        T2M_PULL_RSV_LAST   : --! @brief Pull Reserve Last flags :
+                              in  std_logic := '0';
+        T2M_PULL_RSV_ERROR  : --! @brief Pull Reserve Error flags :
+                              in  std_logic := '0';
+        T2M_PULL_RSV_SIZE   : --! @brief Pull Reserve Size :
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Push to Responder Signals.
+    -------------------------------------------------------------------------------
+        M2T_PUSH_FIN_VALID  : --! @brief Push Final Valid from responder :
+                              --! M2T_PUSH_FIN_LAST/SIZE が有効であることを示す.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               out std_logic;
-        T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
-                              --! T_PULL_BUF_READY 信号をアサートするかしないかを
-                              --! 指示するための閾値.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M2T_PUSH_FIN_LAST   : --! @brief Push Final Last flags :
+                              --! レスポンダ側からの最後の"確定した"データ入力であ
+                              --! ることを示す.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
+                              out std_logic;
+        M2T_PUSH_FIN_ERROR  : --! @brief Push Final Error flags :
+                              --! レスポンダ側からのデータ入力時にエラーが発生した
+                              --! ことを示すフラグ.
+                              --! * 現在この信号は未使用.
+                              out std_logic;
+        M2T_PUSH_FIN_SIZE   : --! @brief Push Final Size :
+                              --! レスポンダ側からの"確定した"入力バイト数.
+                              --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M2T_PUSH_RSV_VALID  : --! @brief Push Reserve Valid from responder :
+                              --! M2T_PUSH_RSV_LAST/SIZE が有効であることを示す.
+                              out std_logic;
+        M2T_PUSH_RSV_LAST   : --! @brief Push Reserve Last flags :
+                              out std_logic;
+        M2T_PUSH_RSV_ERROR  : --! @brief Push Reserve Error flags :
+                              out std_logic;
+        M2T_PUSH_RSV_SIZE   : --! @brief Push Reserve Size :
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- Pull to Responder Signals.
+    -------------------------------------------------------------------------------
+        M2T_PULL_FIN_VALID  : --! @brief Pull Final Valid from responder :
+                              --! M2T_PULL_FIN_LAST/SIZE が有効であることを示す.
+                              out std_logic;
+        M2T_PULL_FIN_LAST   : --! @brief Pull Final Last flags :
+                              --! レスポンダ側からの最後の"確定した"データ出力で
+                              --! あることを示す.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              out std_logic;
+        M2T_PULL_FIN_ERROR  : --! @brief Pull Final Error flags :
+                              --! レスポンダ側からのデータ出力時にエラーが発生した
+                              --! ことを示すフラグ.
+                              --! * 現在この信号は未使用.
+                              out std_logic;
+        M2T_PULL_FIN_SIZE   : --! @brief Pull Final Size :
+                              --! レスポンダ側からの"確定した"出力バイト数.
+                              --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
+                              out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M2T_PULL_RSV_VALID  : --! @brief Pull Reserve Valid from responder :
+                              --! M2T_PULL_RSV_LAST/SIZE が有効であることを示す.
+                              out std_logic;
+        M2T_PULL_RSV_LAST   : --! @brief Pull Reserve Last flags :
+                              out std_logic;
+        M2T_PULL_RSV_ERROR  : --! @brief Pull Reserve Error flags :
+                              out std_logic;
+        M2T_PULL_RSV_SIZE   : --! @brief Pull Reserve Size :
+                              out std_logic_vector(XFER_COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- リクエスト側クロック.
     -------------------------------------------------------------------------------
@@ -533,7 +441,7 @@ entity  PIPE_CORE_UNIT is
         M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_PULL_BUF_READY    : out std_logic
     );
-end PIPE_CORE_UNIT;
+end PIPE_REQUESTER_INTERFACE;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -541,53 +449,9 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.PIPE_COMPONENTS.PIPE_REQUESTER_INTERFACE;
-use     PIPEWORK.PIPE_COMPONENTS.PIPE_RESPONDER_INTERFACE;
-use     PIPEWORK.PIPE_COMPONENTS.PIPE_FLOW_SYNCRONIZER;
-architecture RTL of PIPE_CORE_UNIT is
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal    s_req_start       : std_logic;
-    signal    s_req_valid       : std_logic;
-    signal    s_req_dir         : std_logic;
-    signal    s_req_first       : std_logic;
-    signal    s_req_last        : std_logic;
-    signal    s_req_addr        : std_logic_vector(ADDR_BITS-1 downto 0);
-    signal    s_req_size        : std_logic_vector(SIZE_BITS-1 downto 0);
-    signal    s_req_mode        : std_logic_vector(MODE_BITS-1 downto 0);
-    signal    s_req_buf_ptr     : std_logic_vector(BUF_DEPTH-1 downto 0);
-    constant  s_req_ready       : std_logic := '1';
-    signal    s_req_done        : std_logic;
-    signal    s_req_stop        : std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal    s_res_start       : std_logic;
-    signal    s_res_done        : std_logic;
-    signal    s_res_error       : std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal    s_push_fin_valid  : std_logic;
-    signal    s_push_fin_last   : std_logic;
-    constant  s_push_fin_error  : std_logic := '0';
-    signal    s_push_fin_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
-    signal    s_push_rsv_valid  : std_logic;
-    signal    s_push_rsv_last   : std_logic;
-    constant  s_push_rsv_error  : std_logic := '0';
-    signal    s_push_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal    s_pull_fin_valid  : std_logic;
-    signal    s_pull_fin_last   : std_logic;
-    constant  s_pull_fin_error  : std_logic := '0';
-    signal    s_pull_fin_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
-    signal    s_pull_rsv_valid  : std_logic;
-    signal    s_pull_rsv_last   : std_logic;
-    constant  s_pull_rsv_error  : std_logic := '0';
-    signal    s_pull_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_REQUEST_CONTROLLER;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
+architecture RTL of PIPE_REQUESTER_INTERFACE is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -630,154 +494,6 @@ architecture RTL of PIPE_CORE_UNIT is
     constant  q_pull_rsv_error  : std_logic := '0';
     signal    q_pull_rsv_size   : std_logic_vector(XFER_SIZE_BITS-1 downto 0);
 begin
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    T: PIPE_RESPONDER_INTERFACE 
-        generic map (
-            PUSH_VALID              => PUSH_VALID                  ,
-            PULL_VALID              => PULL_VALID                  ,
-            ADDR_BITS               => ADDR_BITS                   ,
-            ADDR_VALID              => ADDR_VALID                  ,
-            SIZE_BITS               => SIZE_BITS                   ,
-            SIZE_VALID              => SIZE_VALID                  ,
-            MODE_BITS               => MODE_BITS                   ,
-            XFER_COUNT_BITS         => XFER_COUNT_BITS             ,
-            XFER_SIZE_BITS          => XFER_SIZE_BITS              ,
-            BUF_DEPTH               => BUF_DEPTH                   ,
-            O_FIXED_CLOSE           => T_O_FIXED_CLOSE             ,
-            O_FIXED_FLOW_OPEN       => T_O_FIXED_FLOW_OPEN         ,
-            O_FIXED_POOL_OPEN       => T_O_FIXED_POOL_OPEN         ,
-            I_FIXED_CLOSE           => T_I_FIXED_CLOSE             ,
-            I_FIXED_FLOW_OPEN       => T_I_FIXED_FLOW_OPEN         ,
-            I_FIXED_POOL_OPEN       => T_I_FIXED_POOL_OPEN         ,
-            USE_M_PUSH_RSV          => M2T_PUSH_RSV_VALID          ,
-            USE_T_PULL_BUF          => T2M_PULL_BUF_VALID          ,
-            USE_M_PULL_RSV          => M2T_PULL_RSV_VALID          ,
-            USE_T_PUSH_BUF          => T2M_PUSH_BUF_VALID              
-        )
-        port map (
-        ---------------------------------------------------------------------------
-        -- Clock and Reset Signals.
-        ---------------------------------------------------------------------------
-            CLK                     => T_CLK                       , -- In  :
-            RST                     => RST                         , -- In  :
-            CLR                     => T_CLR                       , -- In  :
-        ---------------------------------------------------------------------------
-        -- Request from Responder Signals.
-        ---------------------------------------------------------------------------
-            T_REQ_ADDR              => T_REQ_ADDR                  , -- In  :
-            T_REQ_SIZE              => T_REQ_SIZE                  , -- In  :
-            T_REQ_BUF_PTR           => T_REQ_BUF_PTR               , -- In  :
-            T_REQ_MODE              => T_REQ_MODE                  , -- In  :
-            T_REQ_DIR               => T_REQ_DIR                   , -- In  :
-            T_REQ_FIRST             => T_REQ_FIRST                 , -- In  :
-            T_REQ_LAST              => T_REQ_LAST                  , -- In  :
-            T_REQ_VALID             => T_REQ_VALID                 , -- In  :
-            T_REQ_READY             => T_REQ_READY                 , -- Out :
-        ---------------------------------------------------------------------------
-        -- Acknowledge to Responder Signals.
-        ---------------------------------------------------------------------------
-            T_ACK_VALID             => T_ACK_VALID                 , -- Out :
-            T_ACK_NEXT              => T_ACK_NEXT                  , -- Out :
-            T_ACK_LAST              => T_ACK_LAST                  , -- Out :
-            T_ACK_ERROR             => T_ACK_ERROR                 , -- Out :
-            T_ACK_STOP              => T_ACK_STOP                  , -- Out :
-            T_ACK_SIZE              => T_ACK_SIZE                  , -- Out :
-        ---------------------------------------------------------------------------
-        -- Control from Responder Signals.
-        ---------------------------------------------------------------------------
-            T_REQ_STOP              => T_REQ_STOP                  , -- In  :
-            T_REQ_PAUSE             => T_REQ_PAUSE                 , -- In  :
-        ---------------------------------------------------------------------------
-        -- Status from Responder Signals.
-        ---------------------------------------------------------------------------
-            T_XFER_BUSY             => T_XFER_BUSY                 , -- In  :
-            T_XFER_ERROR            => T_XFER_ERROR                , -- In  :
-            T_XFER_DONE             => T_XFER_DONE                 , -- In  :
-        ---------------------------------------------------------------------------
-        -- Intake Valve Signals from Responder.
-        ---------------------------------------------------------------------------
-            T_PUSH_FIN_VALID        => T_PUSH_FIN_VALID            , -- In  :
-            T_PUSH_FIN_LAST         => T_PUSH_FIN_LAST             , -- In  :
-            T_PUSH_FIN_SIZE         => T_PUSH_FIN_SIZE             , -- In  :
-            T_PUSH_BUF_LEVEL        => T_PUSH_BUF_LEVEL            , -- In  :
-            T_PUSH_BUF_RESET        => T_PUSH_BUF_RESET            , -- In  :
-            T_PUSH_BUF_VALID        => T_PUSH_BUF_VALID            , -- In  :
-            T_PUSH_BUF_LAST         => T_PUSH_BUF_LAST             , -- In  :
-            T_PUSH_BUF_SIZE         => T_PUSH_BUF_SIZE             , -- In  :
-            T_PUSH_BUF_READY        => T_PUSH_BUF_READY            , -- Out :
-        ---------------------------------------------------------------------------
-        -- Outlet Valve Signals from Responder.
-        ---------------------------------------------------------------------------
-            T_PULL_FIN_VALID        => T_PULL_FIN_VALID            , -- In  :
-            T_PULL_FIN_LAST         => T_PULL_FIN_LAST             , -- In  :
-            T_PULL_FIN_SIZE         => T_PULL_FIN_SIZE             , -- In  :
-            T_PULL_BUF_LEVEL        => T_PULL_BUF_LEVEL            , -- In  :
-            T_PULL_BUF_RESET        => T_PULL_BUF_RESET            , -- In  :
-            T_PULL_BUF_VALID        => T_PULL_BUF_VALID            , -- In  :
-            T_PULL_BUF_LAST         => T_PULL_BUF_LAST             , -- In  :
-            T_PULL_BUF_SIZE         => T_PULL_BUF_SIZE             , -- In  :
-            T_PULL_BUF_READY        => T_PULL_BUF_READY            , -- Out :
-        ---------------------------------------------------------------------------
-        -- Requester Outlet Flow Signals.
-        ---------------------------------------------------------------------------
-            O_FLOW_PAUSE            => T_O_FLOW_PAUSE              , -- Out :
-            O_FLOW_STOP             => T_O_FLOW_STOP               , -- Out :
-            O_FLOW_LAST             => T_O_FLOW_LAST               , -- Out :
-            O_FLOW_SIZE             => T_O_FLOW_SIZE               , -- Out :
-            O_FLOW_READY            => T_O_FLOW_READY              , -- Out :
-            O_FLOW_LEVEL            => T_O_FLOW_LEVEL              , -- In  :
-        ---------------------------------------------------------------------------
-        -- Requester Intake Flow Signals.
-        ---------------------------------------------------------------------------
-            I_FLOW_PAUSE            => T_I_FLOW_PAUSE              , -- Out :
-            I_FLOW_STOP             => T_I_FLOW_STOP               , -- Out :
-            I_FLOW_LAST             => T_I_FLOW_LAST               , -- Out :
-            I_FLOW_SIZE             => T_I_FLOW_SIZE               , -- Out :
-            I_FLOW_READY            => T_I_FLOW_READY              , -- Out :
-            I_FLOW_LEVEL            => T_I_FLOW_LEVEL              , -- In  :
-            I_BUF_SIZE              => T_I_BUF_SIZE                , -- In  :
-        ---------------------------------------------------------------------------
-        -- Request to Requester Signals.
-        ---------------------------------------------------------------------------
-            M_REQ_START             => s_req_start                 , -- Out :
-            M_REQ_ADDR              => s_req_addr                  , -- Out :
-            M_REQ_SIZE              => s_req_size                  , -- Out :
-            M_REQ_BUF_PTR           => s_req_buf_ptr               , -- Out :
-            M_REQ_MODE              => s_req_mode                  , -- Out :
-            M_REQ_DIR               => s_req_dir                   , -- Out :
-            M_REQ_FIRST             => s_req_first                 , -- Out :
-            M_REQ_LAST              => s_req_last                  , -- Out :
-            M_REQ_VALID             => s_req_valid                 , -- Out :
-            M_REQ_READY             => s_req_ready                 , -- In  :
-            M_REQ_DONE              => s_req_done                  , -- Out :
-            M_REQ_STOP              => s_req_stop                  , -- Out :
-        ---------------------------------------------------------------------------
-        -- Response from Requester Signals.
-        ---------------------------------------------------------------------------
-            M_RES_START             => s_res_start                 , -- In  :
-            M_RES_DONE              => s_res_done                  , -- In  :
-            M_RES_ERROR             => s_res_error                 , -- In  :
-        ---------------------------------------------------------------------------
-        -- Outlet Valve Signals from Requester.
-        ---------------------------------------------------------------------------
-            M_PUSH_FIN_VALID        => s_push_fin_valid            , -- In  :
-            M_PUSH_FIN_LAST         => s_push_fin_last             , -- In  :
-            M_PUSH_FIN_SIZE         => s_push_fin_size             , -- In  :
-            M_PUSH_RSV_VALID        => s_push_rsv_valid            , -- In  :
-            M_PUSH_RSV_LAST         => s_push_rsv_last             , -- In  :
-            M_PUSH_RSV_SIZE         => s_push_rsv_size             , -- In  :
-        ---------------------------------------------------------------------------
-        --
-        ---------------------------------------------------------------------------
-            M_PULL_FIN_VALID        => s_pull_fin_valid            , -- In  :
-            M_PULL_FIN_LAST         => s_pull_fin_last             , -- In  :
-            M_PULL_FIN_SIZE         => s_pull_fin_size             , -- In  :
-            M_PULL_RSV_VALID        => s_pull_rsv_valid            , -- In  :
-            M_PULL_RSV_LAST         => s_pull_rsv_last             , -- In  :
-            M_PULL_RSV_SIZE         => s_pull_rsv_size               -- In  :
-       );
     -------------------------------------------------------------------------------
     -- レスポンダ側からリクエスタ側へのリクエスト情報などを転送する.
     -------------------------------------------------------------------------------
@@ -862,7 +578,7 @@ begin
         ---------------------------------------------------------------------------
         constant  OPEN_INFO_RANGE   : OPEN_INFO_RANGE_TYPE := SET_OPEN_INFO_RANGE;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
         ---------------------------------------------------------------------------
         type      SYNC_PARAM_TYPE   is record
                   PUSH_FIN_DELAY : integer;
@@ -872,7 +588,7 @@ begin
                   PULL_RSV_VALID : integer;
         end record;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを決める関数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを決める関数.
         ---------------------------------------------------------------------------
         function  SET_SYNC_PARAM return SYNC_PARAM_TYPE is
             variable param : SYNC_PARAM_TYPE;
@@ -880,7 +596,7 @@ begin
             if (M_O_FIXED_CLOSE = 0) then
                 param.PUSH_FIN_DELAY := T2M_PUSH_FIN_DELAY;
                 param.PUSH_FIN_VALID := 1;
-                if (T2M_PUSH_RSV_VALID /= 0) then
+                if (USE_T2M_PUSH_RSV /= 0) then
                     param.PUSH_RSV_VALID := 1;
                 else
                     param.PUSH_RSV_VALID := 0;
@@ -892,7 +608,7 @@ begin
             end if;
             if (M_I_FIXED_CLOSE = 0) then
                 param.PULL_FIN_VALID := 1;
-                if (T2M_PULL_RSV_VALID /= 0) then
+                if (USE_T2M_PULL_RSV /= 0) then
                     param.PULL_RSV_VALID := 1;
                 else
                     param.PULL_RSV_VALID := 0;
@@ -904,7 +620,7 @@ begin
             return param;
         end function;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数.
         ---------------------------------------------------------------------------
         constant  SYNC_PARAM        : SYNC_PARAM_TYPE := SET_SYNC_PARAM;
         ---------------------------------------------------------------------------
@@ -927,27 +643,27 @@ begin
         --
         ---------------------------------------------------------------------------
         I_ADDR_VALID_T: if (ADDR_VALID /= 0) generate
-            i_open_info(OPEN_INFO_RANGE.ADDR_HI downto OPEN_INFO_RANGE.ADDR_LO) <= s_req_addr;
+            i_open_info(OPEN_INFO_RANGE.ADDR_HI downto OPEN_INFO_RANGE.ADDR_LO) <= T_REQ_ADDR;
         end generate;
         I_SIZE_VALID_T: if (SIZE_VALID /= 0) generate
-            i_open_info(OPEN_INFO_RANGE.SIZE_HI downto OPEN_INFO_RANGE.SIZE_LO) <= s_req_size;
+            i_open_info(OPEN_INFO_RANGE.SIZE_HI downto OPEN_INFO_RANGE.SIZE_LO) <= T_REQ_SIZE;
         end generate;
         I_DIR_VALID_T : if (PUSH_VALID /= 0 and PULL_VALID /= 0) generate
-            i_open_info(OPEN_INFO_RANGE.DIR_POS) <= s_req_dir;
+            i_open_info(OPEN_INFO_RANGE.DIR_POS) <= T_REQ_DIR;
         end generate;
         I_REQ_VALID_T : block begin
-            i_open_valid  <= s_req_start;
-            i_open_info(OPEN_INFO_RANGE.FIRST_POS) <= s_req_first;
-            i_open_info(OPEN_INFO_RANGE.LAST_POS ) <= s_req_last;
-            i_open_info(OPEN_INFO_RANGE.MODE_HI downto OPEN_INFO_RANGE.MODE_LO) <= s_req_mode;
-            i_open_info(OPEN_INFO_RANGE.PTR_HI  downto OPEN_INFO_RANGE.PTR_LO ) <= s_req_buf_ptr;
-            i_close_valid   <= '1' when (s_req_done = '1' or s_req_stop = '1') else '0';
-            i_close_info(0) <= s_req_stop;
+            i_open_valid  <= T_REQ_START;
+            i_open_info(OPEN_INFO_RANGE.FIRST_POS) <= T_REQ_FIRST;
+            i_open_info(OPEN_INFO_RANGE.LAST_POS ) <= T_REQ_LAST;
+            i_open_info(OPEN_INFO_RANGE.MODE_HI downto OPEN_INFO_RANGE.MODE_LO) <= T_REQ_MODE;
+            i_open_info(OPEN_INFO_RANGE.PTR_HI  downto OPEN_INFO_RANGE.PTR_LO ) <= T_REQ_BUF_PTR;
+            i_close_valid   <= '1' when (T_REQ_DONE = '1' or T_REQ_STOP = '1') else '0';
+            i_close_info(0) <= T_REQ_STOP;
         end block;
         ---------------------------------------------------------------------------
         -- 
         ---------------------------------------------------------------------------
-        SYNC: PIPE_FLOW_SYNCRONIZER
+        SYNC: PUMP_FLOW_SYNCRONIZER
             generic map (
                 I_CLK_RATE          => T_CLK_RATE                  , -- 
                 O_CLK_RATE          => M_CLK_RATE                  , --
@@ -975,18 +691,18 @@ begin
                 I_OPEN_INFO         => i_open_info                 , -- In  :
                 I_CLOSE_VAL         => i_close_valid               , -- In  :
                 I_CLOSE_INFO        => i_close_info                , -- In  :
-                I_PUSH_FIN_VAL      => T_PUSH_FIN_VALID            , -- In  :
-                I_PUSH_FIN_LAST     => T_PUSH_FIN_LAST             , -- In  :
-                I_PUSH_FIN_SIZE     => T_PUSH_FIN_SIZE             , -- In  :
-                I_PUSH_RSV_VAL      => T_PUSH_RSV_VALID            , -- In  :
-                I_PUSH_RSV_LAST     => T_PUSH_RSV_LAST             , -- In  :
-                I_PUSH_RSV_SIZE     => T_PUSH_RSV_SIZE             , -- In  :
-                I_PULL_FIN_VAL      => T_PULL_FIN_VALID            , -- In  :
-                I_PULL_FIN_LAST     => T_PULL_FIN_LAST             , -- In  :
-                I_PULL_FIN_SIZE     => T_PULL_FIN_SIZE             , -- In  :
-                I_PULL_RSV_VAL      => T_PULL_RSV_VALID            , -- In  :
-                I_PULL_RSV_LAST     => T_PULL_RSV_LAST             , -- In  :
-                I_PULL_RSV_SIZE     => T_PULL_RSV_SIZE             , -- In  :
+                I_PUSH_FIN_VAL      => T2M_PUSH_FIN_VALID          , -- In  :
+                I_PUSH_FIN_LAST     => T2M_PUSH_FIN_LAST           , -- In  :
+                I_PUSH_FIN_SIZE     => T2M_PUSH_FIN_SIZE           , -- In  :
+                I_PUSH_RSV_VAL      => T2M_PUSH_RSV_VALID          , -- In  :
+                I_PUSH_RSV_LAST     => T2M_PUSH_RSV_LAST           , -- In  :
+                I_PUSH_RSV_SIZE     => T2M_PUSH_RSV_SIZE           , -- In  :
+                I_PULL_FIN_VAL      => T2M_PULL_FIN_VALID          , -- In  :
+                I_PULL_FIN_LAST     => T2M_PULL_FIN_LAST           , -- In  :
+                I_PULL_FIN_SIZE     => T2M_PULL_FIN_SIZE           , -- In  :
+                I_PULL_RSV_VAL      => T2M_PULL_RSV_VALID          , -- In  :
+                I_PULL_RSV_LAST     => T2M_PULL_RSV_LAST           , -- In  :
+                I_PULL_RSV_SIZE     => T2M_PULL_RSV_SIZE           , -- In  :
             ---------------------------------------------------------------------------
             -- Output Clock and Clock Enable and Syncronous reset.
             ---------------------------------------------------------------------------
@@ -1046,7 +762,7 @@ begin
     -------------------------------------------------------------------------------
     M2T: block
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数の型.
         ---------------------------------------------------------------------------
         type      SYNC_PARAM_TYPE   is record
                   PUSH_FIN_DELAY : integer;
@@ -1056,7 +772,7 @@ begin
                   PULL_RSV_VALID : integer;
         end record;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを決める関数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを決める関数.
         ---------------------------------------------------------------------------
         function  SET_SYNC_PARAM return SYNC_PARAM_TYPE is
             variable param : SYNC_PARAM_TYPE;
@@ -1064,7 +780,7 @@ begin
             if (T_O_FIXED_CLOSE = 0) then
                 param.PUSH_FIN_DELAY := M2T_PUSH_FIN_DELAY;
                 param.PUSH_FIN_VALID := 1;
-                if (M2T_PUSH_RSV_VALID /= 0) then
+                if (USE_M_PUSH_RSV /= 0) then
                     param.PUSH_RSV_VALID := 1;
                 else
                     param.PUSH_RSV_VALID := 0;
@@ -1076,7 +792,7 @@ begin
             end if;
             if (T_I_FIXED_CLOSE = 0) then
                 param.PULL_FIN_VALID := 1;
-                if (M2T_PULL_RSV_VALID /= 0) then
+                if (USE_M_PULL_RSV /= 0) then
                     param.PULL_RSV_VALID := 1;
                 else
                     param.PULL_RSV_VALID := 0;
@@ -1088,7 +804,7 @@ begin
             return param;
         end function;
         ---------------------------------------------------------------------------
-        --! @brief PIPE_FLOW_SYNCRONIZER のパラメータを保持する定数.
+        --! @brief PUMP_FLOW_SYNCRONIZER のパラメータを保持する定数.
         ---------------------------------------------------------------------------
         constant  SYNC_PARAM        : SYNC_PARAM_TYPE := SET_SYNC_PARAM;
         signal    o_open_info       : std_logic_vector(0 downto 0);
@@ -1096,7 +812,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        SYNC: PIPE_FLOW_SYNCRONIZER                                  -- 
+        SYNC: PUMP_FLOW_SYNCRONIZER                                  -- 
             generic map (                                            -- 
                 I_CLK_RATE          => M_CLK_RATE                  , -- 
                 O_CLK_RATE          => T_CLK_RATE                  , --
@@ -1142,28 +858,32 @@ begin
                 O_CLK               => T_CLK                       , -- In  :
                 O_CLR               => T_CLR                       , -- In  :
                 O_CKE               => T_CKE                       , -- In  :
-                O_OPEN_VAL          => s_res_start                 , -- Out :
+                O_OPEN_VAL          => T_RES_START                 , -- Out :
                 O_OPEN_INFO         => o_open_info                 , -- Out :
-                O_CLOSE_VAL         => s_res_done                  , -- Out :
-                O_CLOSE_INFO(0)     => s_res_error                 , -- Out :
-                O_PUSH_FIN_VAL      => s_push_fin_valid            , -- Out :
-                O_PUSH_FIN_LAST     => s_push_fin_last             , -- Out :
-                O_PUSH_FIN_SIZE     => s_push_fin_size             , -- Out :
-                O_PUSH_RSV_VAL      => s_push_rsv_valid            , -- Out :
-                O_PUSH_RSV_LAST     => s_push_rsv_last             , -- Out :
-                O_PUSH_RSV_SIZE     => s_push_rsv_size             , -- Out :
-                O_PULL_FIN_VAL      => s_pull_fin_valid            , -- Out :
-                O_PULL_FIN_LAST     => s_pull_fin_last             , -- Out :
-                O_PULL_FIN_SIZE     => s_pull_fin_size             , -- Out :
-                O_PULL_RSV_VAL      => s_pull_rsv_valid            , -- Out :
-                O_PULL_RSV_LAST     => s_pull_rsv_last             , -- Out :
-                O_PULL_RSV_SIZE     => s_pull_rsv_size               -- Out :
+                O_CLOSE_VAL         => T_RES_DONE                  , -- Out :
+                O_CLOSE_INFO(0)     => T_RES_ERROR                 , -- Out :
+                O_PUSH_FIN_VAL      => M2T_PUSH_FIN_VALID          , -- Out :
+                O_PUSH_FIN_LAST     => M2T_PUSH_FIN_LAST           , -- Out :
+                O_PUSH_FIN_SIZE     => M2T_PUSH_FIN_SIZE           , -- Out :
+                O_PUSH_RSV_VAL      => M2T_PUSH_RSV_VALID          , -- Out :
+                O_PUSH_RSV_LAST     => M2T_PUSH_RSV_LAST           , -- Out :
+                O_PUSH_RSV_SIZE     => M2T_PUSH_RSV_SIZE           , -- Out :
+                O_PULL_FIN_VAL      => M2T_PULL_FIN_VALID          , -- Out :
+                O_PULL_FIN_LAST     => M2T_PULL_FIN_LAST           , -- Out :
+                O_PULL_FIN_SIZE     => M2T_PULL_FIN_SIZE           , -- Out :
+                O_PULL_RSV_VAL      => M2T_PULL_RSV_VALID          , -- Out :
+                O_PULL_RSV_LAST     => M2T_PULL_RSV_LAST           , -- Out :
+                O_PULL_RSV_SIZE     => M2T_PULL_RSV_SIZE             -- Out :
             );
+        M2T_PUSH_FIN_ERROR <= '0';
+        M2T_PUSH_RSV_ERROR <= '0';
+        M2T_PULL_FIN_ERROR <= '0';
+        M2T_PULL_RSV_ERROR <= '0';
     end block;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    M: PIPE_REQUESTER_INTERFACE 
+    M: PUMP_REQUEST_CONTROLLER 
         generic map (
             PUSH_VALID              => PUSH_VALID                  ,
             PULL_VALID              => PULL_VALID                  ,
@@ -1182,10 +902,10 @@ begin
             I_FIXED_CLOSE           => M_I_FIXED_CLOSE             ,
             I_FIXED_FLOW_OPEN       => M_I_FIXED_FLOW_OPEN         ,
             I_FIXED_POOL_OPEN       => M_I_FIXED_POOL_OPEN         ,
-            USE_T_PUSH_RSV          => T2M_PUSH_RSV_VALID          ,
-            USE_M_PULL_BUF          => M2T_PULL_BUF_VALID          ,
-            USE_T_PULL_RSV          => T2M_PULL_RSV_VALID          ,
-            USE_M_PUSH_BUF          => M2T_PUSH_BUF_VALID             
+            USE_T_PULL_RSV          => USE_T2M_PULL_RSV            ,
+            USE_T_PUSH_RSV          => USE_T2M_PUSH_RSV            ,
+            USE_M_PULL_BUF          => USE_M_PULL_BUF              ,
+            USE_M_PUSH_BUF          => USE_M_PUSH_BUF              
         )
         port map (
         ---------------------------------------------------------------------------

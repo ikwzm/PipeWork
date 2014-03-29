@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.5.5
---!     @date    2014/3/23
+--!     @date    2014/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -470,7 +470,7 @@ architecture RTL of PUMP_CONTROLLER is
     signal   o2i_pull_rsv_size  : std_logic_vector(SIZE_BITS      -1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- 
+    -- 入力側のアドレスレジスタ
     -------------------------------------------------------------------------------
     I_ADDR_REGS: COUNT_UP_REGISTER                   -- 
         generic map (                                -- 
@@ -493,7 +493,7 @@ begin
         );                                           -- 
     i_addr_up_ben <= (others => '0') when (I_ADDR_FIX = '1') else (others => '1');
     -------------------------------------------------------------------------------
-    -- 
+    -- 入力側のサイズカウンタ
     -------------------------------------------------------------------------------
     I_SIZE_REGS: COUNT_DOWN_REGISTER                 -- 
         generic map (                                -- 
@@ -516,7 +516,7 @@ begin
             NEG             => open                  -- Out :
        );                                            -- 
     -------------------------------------------------------------------------------
-    -- 
+    -- 入力側のバッファポインタ
     -------------------------------------------------------------------------------
     I_BUF_PTR: COUNT_UP_REGISTER                     -- 
         generic map (                                -- 
@@ -539,7 +539,7 @@ begin
        );                                            -- 
     i_buf_ptr_init <= (others => '1') when (i_valve_open = '0') else (others => '0');
     -------------------------------------------------------------------------------
-    -- 
+    -- 入力側の制御レジスタ
     -------------------------------------------------------------------------------
     I_CTRL_REGS: PUMP_CONTROL_REGISTER               -- 
         generic map (                                -- 
@@ -608,7 +608,7 @@ begin
     I_OPEN    <= i_valve_open;
     I_RUNNING <= i_tran_running;
     -------------------------------------------------------------------------------
-    -- 
+    -- 入力側のバルブ
     -------------------------------------------------------------------------------
     I_VALVE: FLOAT_INTAKE_MANIFOLD_VALVE             -- 
         generic map (                                --
@@ -659,7 +659,7 @@ begin
             PAUSED          => open                  -- Out :
         );                                           -- 
     -------------------------------------------------------------------------------
-    -- 
+    -- 出力側のアドレスレジスタ
     -------------------------------------------------------------------------------
     O_ADDR_REGS: COUNT_UP_REGISTER                   -- 
         generic map (                                -- 
@@ -682,7 +682,7 @@ begin
         );                                           -- 
     o_addr_up_ben <= (others => '0') when (O_ADDR_FIX = '1') else (others => '1');
     -------------------------------------------------------------------------------
-    -- 
+    -- 出力側のサイズカウンタ
     -------------------------------------------------------------------------------
     O_SIZE_REGS: COUNT_DOWN_REGISTER                 -- 
         generic map (                                -- 
@@ -705,7 +705,7 @@ begin
             NEG             => open                  -- Out :
        );                                            -- 
     -------------------------------------------------------------------------------
-    -- 
+    -- 出力側のバッファポインタ
     -------------------------------------------------------------------------------
     O_BUF_PTR: COUNT_UP_REGISTER                     -- 
         generic map (                                -- 
@@ -728,7 +728,7 @@ begin
        );                                            -- 
     o_buf_ptr_init <= (others => '1') when (o_valve_open = '0') else (others => '0');
     -------------------------------------------------------------------------------
-    -- 
+    -- 出力側の制御レジスタ
     -------------------------------------------------------------------------------
     O_CTRL_REGS: PUMP_CONTROL_REGISTER               --
         generic map (                                --
@@ -797,7 +797,7 @@ begin
     O_OPEN    <= o_valve_open;
     O_RUNNING <= o_tran_running;
     -------------------------------------------------------------------------------
-    -- 
+    -- 出力側のバルブ
     -------------------------------------------------------------------------------
     O_VALVE: FLOAT_OUTLET_MANIFOLD_VALVE             -- 
         generic map (                                -- 
@@ -847,69 +847,233 @@ begin
             PAUSED          => open                  -- Out :
         );                                           -- 
     -------------------------------------------------------------------------------
-    -- 
+    -- 入力側から出力側への各種情報転送
     -------------------------------------------------------------------------------
-    I2O_SYNC : PUMP_FLOW_SYNCRONIZER                 --
-        generic map (                                --
-            I_CLK_RATE     => I_CLK_RATE           , -- 
-            O_CLK_RATE     => O_CLK_RATE           , --
-            DELAY_CYCLE    => I2O_DELAY_CYCLE      , -- 
-            SIZE_BITS      => SIZE_BITS              -- 
-        )                                            -- 
-        port map (                                   -- 
-            RST            => RST                  , -- In  :
-            I_CLK          => I_CLK                , -- In  :
-            I_CLR          => I_CLR                , -- In  :
-            I_CKE          => I_CKE                , -- In  :
-            I_OPEN         => i_valve_open         , -- In  :
-            I_FIN_VAL      => I_PUSH_FIN_VALID     , -- In  :
-            I_FIN_LAST     => I_PUSH_FIN_LAST      , -- In  :
-            I_FIN_SIZE     => I_PUSH_FIN_SIZE      , -- In  :
-            I_RSV_VAL      => I_PUSH_RSV_VALID     , -- In  :
-            I_RSV_LAST     => I_PUSH_RSV_LAST      , -- In  :
-            I_RSV_SIZE     => I_PUSH_RSV_SIZE      , -- In  :
-            O_CLK          => O_CLK                , -- In  :
-            O_CLR          => O_CLR                , -- In  :
-            O_CKE          => O_CKE                , -- In  :
-            O_OPEN         => i2o_valve_open       , -- Out :
-            O_FIN_VAL      => i2o_push_fin_valid   , -- Out :
-            O_FIN_LAST     => i2o_push_fin_last    , -- Out :
-            O_FIN_SIZE     => i2o_push_fin_size    , -- Out :
-            O_RSV_VAL      => i2o_push_rsv_valid   , -- Out :
-            O_RSV_LAST     => i2o_push_rsv_last    , -- Out :
-            O_RSV_SIZE     => i2o_push_rsv_size      -- Out :
-        );                                           -- 
+    I2O: block
+        constant  i_open_info   :  std_logic_vector(0 downto 0) := (others => '0');
+        constant  i_close_info  :  std_logic_vector(0 downto 0) := (others => '0');
+        signal    i_open_valid  :  std_logic;
+        signal    i_close_valid :  std_logic;
+        signal    o_open_valid  :  std_logic;
+        signal    o_close_valid :  std_logic;
+        signal    ii_valve_open :  std_logic;
+        signal    oo_valve_open :  std_logic;
+        constant  null_valid    :  std_logic := '0';
+        constant  null_last     :  std_logic := '0';
+        constant  null_size     :  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    begin
+        ---------------------------------------------------------------------------
+        -- 入力側のバルブの開閉情報
+        ---------------------------------------------------------------------------
+        process (I_CLK, RST) begin
+            if (RST = '1') then
+                    ii_valve_open <= '0';
+            elsif (I_CLK'event and I_CLK = '1') then
+                if (I_CLR = '1') then
+                    ii_valve_open <= '0';
+                else
+                    ii_valve_open <= i_valve_open;
+                end if;
+            end if;
+        end process;
+        i_open_valid  <= '1' when (i_valve_open = '1' and ii_valve_open = '0') else '0';
+        i_close_valid <= '1' when (i_valve_open = '0' and ii_valve_open = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- クロック同期回路
+        ---------------------------------------------------------------------------
+        SYNC: PUMP_FLOW_SYNCRONIZER                      -- 
+            generic map (                                --
+                I_CLK_RATE      => I_CLK_RATE          , -- 
+                O_CLK_RATE      => O_CLK_RATE          , --
+                OPEN_INFO_BITS  => i_open_info'length  , --
+                CLOSE_INFO_BITS => i_close_info'length , --
+                XFER_SIZE_BITS  => SIZE_BITS           , --
+                PUSH_FIN_DELAY  => I2O_DELAY_CYCLE     , --
+                PUSH_FIN_VALID  => 1                   , --
+                PUSH_RSV_VALID  => 1                   , --
+                PULL_FIN_VALID  => 0                   , --
+                PULL_RSV_VALID  => 0                     --
+            )                                            -- 
+            port map (                                   -- 
+            ---------------------------------------------------------------------------
+            -- Asyncronous Reset Signal.
+            ---------------------------------------------------------------------------
+                RST             => RST                 , -- In  :
+            ---------------------------------------------------------------------------
+            -- Input
+            ---------------------------------------------------------------------------
+                I_CLK           => I_CLK               , -- In  :
+                I_CLR           => I_CLR               , -- In  :
+                I_CKE           => I_CKE               , -- In  :
+                I_OPEN_VAL      => i_open_valid        , -- In  :
+                I_OPEN_INFO     => i_open_info         , -- In  :
+                I_CLOSE_VAL     => i_close_valid       , -- In  :
+                I_CLOSE_INFO    => i_close_info        , -- In  :
+                I_PUSH_FIN_VAL  => I_PUSH_FIN_VALID    , -- In  :
+                I_PUSH_FIN_LAST => I_PUSH_FIN_LAST     , -- In  :
+                I_PUSH_FIN_SIZE => I_PUSH_FIN_SIZE     , -- In  :
+                I_PUSH_RSV_VAL  => I_PUSH_RSV_VALID    , -- In  :
+                I_PUSH_RSV_LAST => I_PUSH_RSV_LAST     , -- In  :
+                I_PUSH_RSV_SIZE => I_PUSH_RSV_SIZE     , -- In  :
+                I_PULL_FIN_VAL  => null_valid          , -- In  :
+                I_PULL_FIN_LAST => null_last           , -- In  :
+                I_PULL_FIN_SIZE => null_size           , -- In  :
+                I_PULL_RSV_VAL  => null_valid          , -- In  :
+                I_PULL_RSV_LAST => null_last           , -- In  :
+                I_PULL_RSV_SIZE => null_size           , -- In  :
+            ---------------------------------------------------------------------------
+            -- Output 
+            ---------------------------------------------------------------------------
+                O_CLK           => O_CLK               , -- In  :
+                O_CLR           => O_CLR               , -- In  :
+                O_CKE           => O_CKE               , -- In  :
+                O_OPEN_VAL      => o_open_valid        , -- Out :
+                O_OPEN_INFO     => open                , -- Out :
+                O_CLOSE_VAL     => o_close_valid       , -- Out :
+                O_CLOSE_INFO    => open                , -- Out :
+                O_PUSH_FIN_VAL  => i2o_push_fin_valid  , -- Out :
+                O_PUSH_FIN_LAST => i2o_push_fin_last   , -- Out :
+                O_PUSH_FIN_SIZE => i2o_push_fin_size   , -- Out :
+                O_PUSH_RSV_VAL  => i2o_push_rsv_valid  , -- Out :
+                O_PUSH_RSV_LAST => i2o_push_rsv_last   , -- Out :
+                O_PUSH_RSV_SIZE => i2o_push_rsv_size   , -- Out :
+                O_PULL_FIN_VAL  => open                , -- Out :
+                O_PULL_FIN_LAST => open                , -- Out :
+                O_PULL_FIN_SIZE => open                , -- Out :
+                O_PULL_RSV_VAL  => open                , -- Out :
+                O_PULL_RSV_LAST => open                , -- Out :
+                O_PULL_RSV_SIZE => open                  -- Out :
+            );                                           -- 
+        ---------------------------------------------------------------------------
+        -- 入力側のバルブの状態を出力側のクロックに同期
+        ---------------------------------------------------------------------------
+        process (O_CLK, RST) begin
+            if (RST = '1') then
+                    oo_valve_open <= '0';
+            elsif (O_CLK'event and O_CLK = '1') then
+                if (O_CLR = '1' or o_close_valid = '1') then
+                    oo_valve_open <= '0';
+                elsif (o_open_valid  = '1') then
+                    oo_valve_open <= '1';
+                end if;
+            end if;
+        end process;
+        i2o_valve_open <= '1' when (oo_valve_open = '1' and o_close_valid = '0') or
+                                   (o_open_valid  = '1') else '0';
+    end block;        
     -------------------------------------------------------------------------------
-    -- 
+    -- 出力側から入力側への各種情報転送
     -------------------------------------------------------------------------------
-    O2I_SYNC : PUMP_FLOW_SYNCRONIZER                 -- 
-        generic map (                                -- 
-            I_CLK_RATE     => O_CLK_RATE           , -- 
-            O_CLK_RATE     => I_CLK_RATE           , -- 
-            DELAY_CYCLE    => 0                    , -- 
-            SIZE_BITS      => SIZE_BITS              -- 
-        )                                            -- 
-        port map (                                   -- 
-            RST            => RST                  , -- In  :
-            I_CLK          => O_CLK                , -- In  :
-            I_CLR          => O_CLR                , -- In  :
-            I_CKE          => O_CKE                , -- In  :
-            I_OPEN         => o_valve_open         , -- In  :
-            I_FIN_VAL      => O_PULL_FIN_VALID     , -- In  :
-            I_FIN_LAST     => O_PULL_FIN_LAST      , -- In  :
-            I_FIN_SIZE     => O_PULL_FIN_SIZE      , -- In  :
-            I_RSV_VAL      => O_PULL_RSV_VALID     , -- In  :
-            I_RSV_LAST     => O_PULL_RSV_LAST      , -- In  :
-            I_RSV_SIZE     => O_PULL_RSV_SIZE      , -- In  :
-            O_CLK          => I_CLK                , -- In  :
-            O_CLR          => I_CLR                , -- In  :
-            O_CKE          => I_CKE                , -- In  :
-            O_OPEN         => o2i_valve_open       , -- Out :
-            O_FIN_VAL      => o2i_pull_fin_valid   , -- Out :
-            O_FIN_LAST     => o2i_pull_fin_last    , -- Out :
-            O_FIN_SIZE     => o2i_pull_fin_size    , -- Out :
-            O_RSV_VAL      => o2i_pull_rsv_valid   , -- Out :
-            O_RSV_LAST     => o2i_pull_rsv_last    , -- Out :
-            O_RSV_SIZE     => o2i_pull_rsv_size      -- Out :
-        );                                           -- 
+    O2I: block
+        constant  o_open_info   :  std_logic_vector(0 downto 0) := (others => '0');
+        constant  o_close_info  :  std_logic_vector(0 downto 0) := (others => '0');
+        signal    o_open_valid  :  std_logic;
+        signal    o_close_valid :  std_logic;
+        signal    i_open_valid  :  std_logic;
+        signal    i_close_valid :  std_logic;
+        signal    oo_valve_open :  std_logic;
+        signal    ii_valve_open :  std_logic;
+        constant  null_valid    :  std_logic := '0';
+        constant  null_last     :  std_logic := '0';
+        constant  null_size     :  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
+    begin
+        ---------------------------------------------------------------------------
+        -- 出力側のバルブの開閉情報
+        ---------------------------------------------------------------------------
+        process (O_CLK, RST) begin
+            if (RST = '1') then
+                    oo_valve_open <= '0';
+            elsif (O_CLK'event and O_CLK = '1') then
+                if (O_CLR = '1') then
+                    oo_valve_open <= '0';
+                else
+                    oo_valve_open <= o_valve_open;
+                end if;
+            end if;
+        end process;
+        o_open_valid  <= '1' when (o_valve_open = '1' and oo_valve_open = '0') else '0';
+        o_close_valid <= '1' when (o_valve_open = '0' and oo_valve_open = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- クロック同期回路
+        ---------------------------------------------------------------------------
+        SYNC: PUMP_FLOW_SYNCRONIZER                      -- 
+            generic map (                                --
+                I_CLK_RATE      => O_CLK_RATE          , -- 
+                O_CLK_RATE      => I_CLK_RATE          , --
+                OPEN_INFO_BITS  => o_open_info'length  , --
+                CLOSE_INFO_BITS => o_close_info'length , --
+                XFER_SIZE_BITS  => SIZE_BITS           , --
+                PUSH_FIN_DELAY  => 0                   , --
+                PUSH_FIN_VALID  => 0                   , --
+                PUSH_RSV_VALID  => 0                   , --
+                PULL_FIN_VALID  => 1                   , --
+                PULL_RSV_VALID  => 1                     --
+            )                                            -- 
+            port map (                                   -- 
+            ---------------------------------------------------------------------------
+            -- Asyncronous Reset Signal.
+            ---------------------------------------------------------------------------
+                RST             => RST                 , -- In  :
+            ---------------------------------------------------------------------------
+            -- Input
+            ---------------------------------------------------------------------------
+                I_CLK           => O_CLK               , -- In  :
+                I_CLR           => O_CLR               , -- In  :
+                I_CKE           => O_CKE               , -- In  :
+                I_OPEN_VAL      => o_open_valid        , -- In  :
+                I_OPEN_INFO     => o_open_info         , -- In  :
+                I_CLOSE_VAL     => o_close_valid       , -- In  :
+                I_CLOSE_INFO    => o_close_info        , -- In  :
+                I_PUSH_FIN_VAL  => null_valid          , -- In  :
+                I_PUSH_FIN_LAST => null_last           , -- In  :
+                I_PUSH_FIN_SIZE => null_size           , -- In  :
+                I_PUSH_RSV_VAL  => null_valid          , -- In  :
+                I_PUSH_RSV_LAST => null_last           , -- In  :
+                I_PUSH_RSV_SIZE => null_size           , -- In  :
+                I_PULL_FIN_VAL  => O_PULL_FIN_VALID    , -- In  :
+                I_PULL_FIN_LAST => O_PULL_FIN_LAST     , -- In  :
+                I_PULL_FIN_SIZE => O_PULL_FIN_SIZE     , -- In  :
+                I_PULL_RSV_VAL  => O_PULL_RSV_VALID    , -- In  :
+                I_PULL_RSV_LAST => O_PULL_RSV_LAST     , -- In  :
+                I_PULL_RSV_SIZE => O_PULL_RSV_SIZE     , -- In  :
+            ---------------------------------------------------------------------------
+            -- Output 
+            ---------------------------------------------------------------------------
+                O_CLK           => I_CLK               , -- In  :
+                O_CLR           => I_CLR               , -- In  :
+                O_CKE           => I_CKE               , -- In  :
+                O_OPEN_VAL      => i_open_valid        , -- Out :
+                O_OPEN_INFO     => open                , -- Out :
+                O_CLOSE_VAL     => i_close_valid       , -- Out :
+                O_CLOSE_INFO    => open                , -- Out :
+                O_PUSH_FIN_VAL  => open                , -- Out :
+                O_PUSH_FIN_LAST => open                , -- Out :
+                O_PUSH_FIN_SIZE => open                , -- Out :
+                O_PUSH_RSV_VAL  => open                , -- Out :
+                O_PUSH_RSV_LAST => open                , -- Out :
+                O_PUSH_RSV_SIZE => open                , -- Out :
+                O_PULL_FIN_VAL  => o2i_pull_fin_valid  , -- Out :
+                O_PULL_FIN_LAST => o2i_pull_fin_last   , -- Out :
+                O_PULL_FIN_SIZE => o2i_pull_fin_size   , -- Out :
+                O_PULL_RSV_VAL  => o2i_pull_rsv_valid  , -- Out :
+                O_PULL_RSV_LAST => o2i_pull_rsv_last   , -- Out :
+                O_PULL_RSV_SIZE => o2i_pull_rsv_size     -- Out :
+            );                                           -- 
+        ---------------------------------------------------------------------------
+        -- 出力側のバルブの状態を入力側のクロックに同期
+        ---------------------------------------------------------------------------
+        process (I_CLK, RST) begin
+            if (RST = '1') then
+                    ii_valve_open <= '0';
+            elsif (I_CLK'event and I_CLK = '1') then
+                if (I_CLR = '1' or i_close_valid = '1') then
+                    ii_valve_open <= '0';
+                elsif (i_open_valid  = '1') then
+                    ii_valve_open <= '1';
+                end if;
+            end if;
+        end process;
+        o2i_valve_open <= '1' when (ii_valve_open = '1' and i_close_valid = '0') or
+                                   (i_open_valid  = '1') else '0';
+    end block;        
 end RTL;
