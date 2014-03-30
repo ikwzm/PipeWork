@@ -2,7 +2,7 @@
 --!     @file    axi4_master_transfer_queue.vhd
 --!     @brief   AXI4 Master Transfer Queue
 --!     @version 1.5.5
---!     @date    2014/3/20
+--!     @date    2014/3/30
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -131,9 +131,15 @@ begin
         O_NOACK  <= I_NOACK;
         O_VALID  <= I_VALID;
         I_READY  <= O_READY;
-        BUSY     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
-        DONE     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
-        EMPTY    <= '1'   when (O_READY = '1') else '0';
+     ------------------------------------------------------------------------------
+     -- 各種フラグを次の様にするとコンビネーションループが生じてしまう.
+     ------------------------------------------------------------------------------
+     -- BUSY     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
+     -- DONE     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
+     -- EMPTY    <= '1'   when (O_READY = '1') else '0';
+        BUSY     <= (others => '0');
+        DONE     <= (others => '0');
+        EMPTY    <= '1';
     end generate;
     -------------------------------------------------------------------------------
     -- QUEUE_SIZE>0の場合
