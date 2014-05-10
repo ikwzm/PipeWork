@@ -54,9 +54,10 @@ class SerializedPackageList
     @program_name      = "MakeSerializedPackageList"
     @program_version   = "0.0.2"
     @program_id        = @program_name + " " + @program_version
-    @path_list         = Array.new
+    @path_list         = Hash.new
     @file_name_list    = Array.new
     @use_entity_list   = Array.new
+    @top_entity_list   = Array.new
     @library_name      = "WORK"
     @verbose           = false
     @debug             = false
@@ -73,6 +74,8 @@ class SerializedPackageList
       opt.on("--format     STRING"              ){|val| @format           = val }
       opt.on("--execute    STRING"              ){|val| @execute          = val }
       opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| @use_entity_list << val }
+      opt.on("--use        ENTITY(ARCHITECHURE)"){|val| @use_entity_list << val }
+      opt.on("--top        ENTITY(ARCHITECHURE)"){|val| @top_entity_list << val }
       opt.on("--output     FILE_NAME"           ){|val| @output_file_name = val }
       opt.on("--archive    FILE_NAME"           ){|val| @archive_file_name= val }
     end
@@ -81,7 +84,12 @@ class SerializedPackageList
   # parse_options
   #-------------------------------------------------------------------------------
   def parse_options(argv)
-    @path_list = @opt.parse(argv)
+    @opt.order(argv){ |path|
+      if @path_list.key?(@library_name) == false
+        @path_list[@library_name] = Array.new
+      end
+      @path_list[@library_name] << path
+    }
   end
   #-------------------------------------------------------------------------------
   # generate   : 
@@ -91,8 +99,10 @@ class SerializedPackageList
     # @path_list で指定されたパスに対して走査して unit_list を生成する.
     #-----------------------------------------------------------------------------
     unit_list = Array.new
-    @path_list.each do |path_name|
-      unit_list.concat(PipeWork::VHDL_Reader.analyze_path(path_name, @library_name))
+    @path_list.each do |library_name, path_list|
+      path_list.each do |path_name|
+        unit_list.concat(PipeWork::VHDL_Reader.analyze_path(path_name, library_name))
+      end
     end
     # unit_list.each { |unit| unit.debug_print }
     #-----------------------------------------------------------------------------
@@ -119,7 +129,7 @@ class SerializedPackageList
     # 出来上がった unit_list を元にファイル間の依存関係順に整列した unit_file_list
     # を生成する.
     #-----------------------------------------------------------------------------
-    unit_file_list = PipeWork::VHDL_Reader.generate_unit_file_list(unit_list, @library_name, use_entity_dict)
+    unit_file_list = PipeWork::VHDL_Reader.generate_unit_file_list(unit_list, use_entity_dict)
     # unit_file_list.each { |unit_file| unit_file.debug_print }
     #-----------------------------------------------------------------------------
     # @execute が指定されている場合は シェルを通じて実行する.
