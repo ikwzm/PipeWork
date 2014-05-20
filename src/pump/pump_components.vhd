@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.5.5                                                           --
---!     @date    2014/03/29                                                      --
+--!     @version 1.5.6                                                           --
+--!     @date    2014/05/21                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -915,6 +915,14 @@ component PUMP_OPERATION_PROCESSOR
                           --! 転送オペレーションコードの最上位ビットの位置を指定す
                           --! る.
                           integer := 121;
+        OP_CPRO_LO      : --! @brief Co-Processor Operation Code Low :
+                          --! コプロセッサオペレーションコードの最下位ビットの位置を
+                          --! 指定する.
+                          integer :=  0;
+        OP_CPRO_HI      : --! @brief Co-Processor Operation Code High :
+                          --! コプロセッサオペレーションコードの最上位ビットの位置を
+                          --! 指定する.
+                          integer := 121;
         OP_ADDR_LO      : --! @brief Link Operation Code Jump Address Low :
                           --! リンクオペレーション時の次のフェッチアドレスの最下位
                           --! ビットの位置を指定する.
@@ -958,11 +966,16 @@ component PUMP_OPERATION_PROCESSOR
         OP_NONE_CODE    : --! @brief None Operation Type :
                           --! ノーオペレーションタイプのコードを指定する.
                           integer := 0;
+        OP_CPRO_CODE    : --! @brief Co-Pocesser Set Operation Type :
+                          --! コプロセッサオペレーションタイプのコードを指定する.
+                          --! ただし OP_CPRO_CODE<0を指定した場合はこの機能は無効.
+                          integer := 11;
         OP_XFER_CODE    : --! @brief Transfer Operation Type :
                           --! 転送オペレーションタイプのコードを指定する.
                           integer := 12;
         OP_LINK_CODE    : --! @brief Transfer Operation Type :
                           --! リンクオペレーションタイプのコードを指定する.
+                          --! ただし OP_LINE_CODE<0を指定した場合はこの機能は無効.
                           integer := 13
     );
     port (
@@ -1025,6 +1038,13 @@ component PUMP_OPERATION_PROCESSOR
         T_ERROR         : out std_logic_vector(2 downto 0);
         T_FETCH         : out std_logic;
         T_END           : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Co-Processer Interface Signals.
+    -------------------------------------------------------------------------------
+        C_OPERAND_L     : out std_logic_vector(OP_CPRO_HI downto OP_CPRO_LO);
+        C_OPERAND_D     : out std_logic_vector(OP_CPRO_HI downto OP_CPRO_LO);
+        C_REQ           : out std_logic;
+        C_ACK           : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Transfer Control Register Interface Signals.
     -------------------------------------------------------------------------------
