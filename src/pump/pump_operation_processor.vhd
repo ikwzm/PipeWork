@@ -2,7 +2,7 @@
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
 --!     @version 1.5.6
---!     @date    2014/5/20
+--!     @date    2014/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -183,9 +183,10 @@ entity  PUMP_OPERATION_PROCESSOR is
         T_PAUSE_L       : in  std_logic;
         T_PAUSE_D       : in  std_logic;
         T_PAUSE_Q       : out std_logic;
+        T_BUSY          : out std_logic;
         T_ERROR         : out std_logic_vector(2 downto 0);
         T_FETCH         : out std_logic;
-        T_END           : out std_logic;
+        T_DONE          : out std_logic;
     -------------------------------------------------------------------------------
     -- Co-Processer Interface Signals.
     -------------------------------------------------------------------------------
@@ -715,8 +716,9 @@ begin
     T_STOP_Q     <= stop_bit;
     T_PAUSE_Q    <= pause_bit;
     T_FETCH      <= fetch_bit;
-    T_END        <= '1'        when (curr_state = DONE_STATE) else '0';
-    T_ERROR      <= error_bits when (curr_state = DONE_STATE) else (others => '0');
+    T_BUSY       <= '1'        when (curr_state /= IDLE_STATE) else '0';
+    T_DONE       <= '1'        when (curr_state  = DONE_STATE) else '0';
+    T_ERROR      <= error_bits when (curr_state  = DONE_STATE) else (others => '0');
     -------------------------------------------------------------------------------
     -- op_code  : キューの先頭にあるオペコード.
     -- op_valid : 有効なオペコードがキューに入っていることを示すフラグ.

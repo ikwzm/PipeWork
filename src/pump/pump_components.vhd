@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.5.6                                                           --
---!     @date    2014/05/21                                                      --
+--!     @date    2014/05/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1035,9 +1035,10 @@ component PUMP_OPERATION_PROCESSOR
         T_PAUSE_L       : in  std_logic;
         T_PAUSE_D       : in  std_logic;
         T_PAUSE_Q       : out std_logic;
+        T_BUSY          : out std_logic;
         T_ERROR         : out std_logic_vector(2 downto 0);
         T_FETCH         : out std_logic;
-        T_END           : out std_logic;
+        T_DONE          : out std_logic;
     -------------------------------------------------------------------------------
     -- Co-Processer Interface Signals.
     -------------------------------------------------------------------------------
