@@ -40,6 +40,7 @@
 #       OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 #---------------------------------------------------------------------------------
+require 'forwardable'
 module PipeWork
   module VHDL_Reader
     #-----------------------------------------------------------------------------
@@ -356,193 +357,202 @@ module PipeWork
       end
     end
     #-----------------------------------------------------------------------------
-    # analyze_path : 与えられたパス名を解析し、ディレクトリならば再帰的に探索し、
-    #                ファイルならば read_file を呼び出して LibraryUnit の配列を
-    #                生成する.
-    #                "."で始まるディレクトリは探索しない.
-    #                "~"で終わるファイルは読まない.
+    # LibraryUnitList  : LibraryUnitの配列クラス
     #-----------------------------------------------------------------------------
-    def analyze_path(path_name, library_name)
-      unit_list = Array.new
-      if File::ftype(path_name) == "directory"
-        Dir::foreach(path_name) do |name|
-          next if name =~ /^\./
-          if path_name =~ /\/$/
-            unit_list.concat(analyze_path(path_name + name      , library_name))
-          else
-            unit_list.concat(analyze_path(path_name + "/" + name, library_name))
+    class LibraryUnitList < Array
+      #---------------------------------------------------------------------------
+      # analyze_path : 与えられたパス名を解析し、ディレクトリならば再帰的に探索し、
+      #                ファイルならば read_file を呼び出して、自分自身に LibraryUnit 
+      #                を追加する.
+      #                "."で始まるディレクトリは探索しない.
+      #                "~"で終わるファイルは読まない.
+      #---------------------------------------------------------------------------
+      def analyze_path(path_name, library_name)
+        if File::ftype(path_name) == "directory"
+          Dir::foreach(path_name) do |name|
+            next if name =~ /^\./
+            if path_name =~ /\/$/
+              analyze_path(path_name + name      , library_name)
+            else
+              analyze_path(path_name + "/" + name, library_name)
+            end
           end
+        elsif path_name =~ /~$/
+        else 
+          read_file(path_name, library_name)
         end
-      elsif path_name =~ /~$/
-      else 
-        unit_list.concat(read_file(path_name, library_name))
+        return self
       end
-      return unit_list
-    end
-    #-----------------------------------------------------------------------------
-    # read_file  : VHDLソースファイルを読んで LibraryUnit の配列を生成する.
-    #-----------------------------------------------------------------------------
-    def read_file(file_name, library_name)
-      if @verbose 
-        warn "analyze file : " + file_name
-      end
-      unit_list = Array.new
-      File.open(file_name) do |file|
-        unit_list.concat(analyze_file(file, file_name, library_name))
-      end
-      return unit_list
-    end
-    #-----------------------------------------------------------------------------
-    # analyze_file : VHDLソースコードを解析して LibraryUnit の配列を生成する.
-    #-----------------------------------------------------------------------------
-    def analyze_file(file, file_name, library_name)
-      unit_list    = Array.new
-      unit_name    = nil
-      unit_info    = nil
-      library_list = Array.new
-      use_list     = Array.new
-      line_number  = 0
       #---------------------------------------------------------------------------
-      # ファイルから一行ずつ読み込む。
+      # read_file  : VHDLソースファイルを読んで自分自身に LibraryUnit を追加する.
       #---------------------------------------------------------------------------
-      file.each_line do |line|
-        text_line = line.encode("UTF-8", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?')
+      def read_file(file_name, library_name)
+        if @verbose 
+          warn "analyze file : " + file_name
+        end
+        File.open(file_name) do |file|
+          analyze_file(file, file_name, library_name)
+        end
+        return self
+      end
+      #---------------------------------------------------------------------------
+      # analyze_file : VHDLソースコードを解析して LibraryUnit を生成し、自分自身に
+      #                生成した LibraryUnit を追加する.
+      #---------------------------------------------------------------------------
+      def analyze_file(file, file_name, library_name)
+        unit_name    = nil
+        unit_info    = nil
+        library_list = Array.new
+        use_list     = Array.new
+        line_number  = 0
         #-------------------------------------------------------------------------
-        # 行番号の更新
+        # ファイルから一行ずつ読み込む。
         #-------------------------------------------------------------------------
-        line_number += 1
-        #-------------------------------------------------------------------------
-        # 
-        #-------------------------------------------------------------------------
-        if (unit_info == nil) 
+        file.each_line do |line|
+          text_line = line.encode("UTF-8", "UTF-8", :invalid => :replace, :undef => :replace, :replace => '?')
+          #-----------------------------------------------------------------------
+          # 行番号の更新
+          #-----------------------------------------------------------------------
+          line_number += 1
           #-----------------------------------------------------------------------
           # 
           #-----------------------------------------------------------------------
-          tokens = Lexer.scan_text(text_line, line_number)
-          s = tokens.map{|token| token.sym}
-          #-----------------------------------------------------------------------
-          # library ライブラリ名; の解釈
-          #-----------------------------------------------------------------------
-          if s[0] == :LIBRARY
-            tokens.drop(1).each {|token|
-              break if token.sym == :";"
-              next  if token.sym == :","
-              library_list << token.text
-            }
-            ## p library_list
-            next
+          if (unit_info == nil) 
+            #---------------------------------------------------------------------
+            # 
+            #---------------------------------------------------------------------
+            tokens = Lexer.scan_text(text_line, line_number)
+            s = tokens.map{|token| token.sym}
+            #---------------------------------------------------------------------
+            # library ライブラリ名; の解釈
+            #---------------------------------------------------------------------
+            if s[0] == :LIBRARY
+              tokens.drop(1).each {|token|
+                break if token.sym == :";"
+                next  if token.sym == :","
+                library_list << token.text
+              }
+              ## p library_list
+              next
+            end
+            #---------------------------------------------------------------------
+            # use ライブラリ名.パッケージ名.アイテム名; の解釈
+            #---------------------------------------------------------------------
+            if (s[0] == :USE      ) and 
+               (s[1] == :IDENTFIER) and
+               (s[2] == :"."      ) and 
+               (s[3] == :IDENTFIER) and
+               (s[4] == :"."      ) and 
+               (s[5] == :IDENTFIER) and
+               (s[6] == :";"      )
+              use_list << {:LibraryName => tokens[1].text, 
+                           :PackageName => tokens[3].text, 
+                           :ItemName    => tokens[5].text
+                          }
+              ## p use_list
+              next
+            end
+            #---------------------------------------------------------------------
+            # use ライブラリ名.パッケージ名.all; の解釈
+            #---------------------------------------------------------------------
+            if (s[0] == :USE      ) and 
+               (s[1] == :IDENTFIER) and
+               (s[2] == :"."      ) and 
+               (s[3] == :IDENTFIER) and
+               (s[4] == :"."      ) and 
+               (s[5] == :ALL      ) and
+               (s[6] == :";"      )
+              use_list << {:LibraryName => tokens[1].text, 
+                           :PackageName => tokens[3].text, 
+                           :ItemName    => tokens[5].text
+                          }
+              ## p use_list
+              next
+            end
+            #---------------------------------------------------------------------
+            # use ライブラリ名.パッケージ名; の解釈
+            #---------------------------------------------------------------------
+            if (s[0] == :USE      ) and 
+               (s[1] == :IDENTFIER) and
+               (s[2] == :"."      ) and 
+               (s[3] == :IDENTFIER) and
+               (s[4] == :";"      )
+              use_list << {:LibraryName => tokens[1].text, 
+                           :PackageName => tokens[3].text, 
+                          }
+              ## p use_list
+              next
+            end
+            #---------------------------------------------------------------------
+            # entity 宣言の開始
+            #---------------------------------------------------------------------
+            if (s[0] == :ENTITY      ) and
+               (s[1] == :IDENTFIER   ) and
+               (s[2] == :IS          )
+              unit_name = tokens[1].text
+              unit_info = Entity.new(unit_name, library_name, file_name, use_list)
+            end
+            #---------------------------------------------------------------------
+            # architecture 宣言の開始
+            #---------------------------------------------------------------------
+            if (s[0] == :ARCHITECTURE) and 
+               (s[1] == :IDENTFIER   ) and
+               (s[2] == :OF          ) and
+               (s[3] == :IDENTFIER   ) and
+               (s[4] == :IS          )
+              unit_name   = tokens[1].text
+              entity_name = tokens[3].text
+              use_list << {:LibraryName => library_name, :EntityName => entity_name}
+              unit_info = Architecture.new(entity_name, unit_name, library_name, file_name, use_list)
+            end
+            #---------------------------------------------------------------------
+            # package 宣言の開始
+            #---------------------------------------------------------------------
+            if (s[0] == :PACKAGE     ) and 
+               (s[1] == :IDENTFIER   ) and
+               (s[2] == :IS          )
+              unit_name = tokens[1].text
+              unit_info = Package.new(unit_name, library_name, file_name, use_list)
+            end
+            #---------------------------------------------------------------------
+            # package body 宣言の開始
+            #---------------------------------------------------------------------
+            if (s[0] == :PACKAGE     ) and 
+               (s[1] == :BODY        ) and
+               (s[2] == :IDENTFIER   ) and
+               (s[3] == :IS          )
+              unit_name = tokens[2].text
+              use_list << {:LibraryName => library_name, :PackageName => unit_name}
+              unit_info = PackageBody.new(unit_name, library_name, file_name, use_list)
+            end
           end
           #-----------------------------------------------------------------------
-          # use ライブラリ名.パッケージ名.アイテム名; の解釈
+          # entity, architecture, package, package body のパース
           #-----------------------------------------------------------------------
-          if (s[0] == :USE      ) and 
-             (s[1] == :IDENTFIER) and
-             (s[2] == :"."      ) and 
-             (s[3] == :IDENTFIER) and
-             (s[4] == :"."      ) and 
-             (s[5] == :IDENTFIER) and
-             (s[6] == :";"      )
-            use_list << {:LibraryName => tokens[1].text, 
-                         :PackageName => tokens[3].text, 
-                         :ItemName    => tokens[5].text
-                        }
-            ## p use_list
-            next
-          end
-          #-----------------------------------------------------------------------
-          # use ライブラリ名.パッケージ名.all; の解釈
-          #-----------------------------------------------------------------------
-          if (s[0] == :USE      ) and 
-             (s[1] == :IDENTFIER) and
-             (s[2] == :"."      ) and 
-             (s[3] == :IDENTFIER) and
-             (s[4] == :"."      ) and 
-             (s[5] == :ALL      ) and
-             (s[6] == :";"      )
-            use_list << {:LibraryName => tokens[1].text, 
-                         :PackageName => tokens[3].text, 
-                         :ItemName    => tokens[5].text
-                        }
-            ## p use_list
-            next
-          end
-          #-----------------------------------------------------------------------
-          # use ライブラリ名.パッケージ名; の解釈
-          #-----------------------------------------------------------------------
-          if (s[0] == :USE      ) and 
-             (s[1] == :IDENTFIER) and
-             (s[2] == :"."      ) and 
-             (s[3] == :IDENTFIER) and
-             (s[4] == :";"      )
-            use_list << {:LibraryName => tokens[1].text, 
-                         :PackageName => tokens[3].text, 
-                        }
-            ## p use_list
-            next
-          end
-          #-----------------------------------------------------------------------
-          # entity 宣言の開始
-          #-----------------------------------------------------------------------
-          if (s[0] == :ENTITY      ) and
-             (s[1] == :IDENTFIER   ) and
-             (s[2] == :IS          )
-            unit_name = tokens[1].text
-            unit_info = Entity.new(unit_name, library_name, file_name, use_list)
-          end
-          #-----------------------------------------------------------------------
-          # architecture 宣言の開始
-          #-----------------------------------------------------------------------
-          if (s[0] == :ARCHITECTURE) and 
-             (s[1] == :IDENTFIER   ) and
-             (s[2] == :OF          ) and
-             (s[3] == :IDENTFIER   ) and
-             (s[4] == :IS          )
-            unit_name   = tokens[1].text
-            entity_name = tokens[3].text
-            use_list << {:LibraryName => library_name, :EntityName => entity_name}
-            unit_info = Architecture.new(entity_name, unit_name, library_name, file_name, use_list)
-          end
-          #-----------------------------------------------------------------------
-          # package 宣言の開始
-          #-----------------------------------------------------------------------
-          if (s[0] == :PACKAGE     ) and 
-             (s[1] == :IDENTFIER   ) and
-             (s[2] == :IS          )
-            unit_name = tokens[1].text
-            unit_info = Package.new(unit_name, library_name, file_name, use_list)
-          end
-          #-----------------------------------------------------------------------
-          # package body 宣言の開始
-          #-----------------------------------------------------------------------
-          if (s[0] == :PACKAGE     ) and 
-             (s[1] == :BODY        ) and
-             (s[2] == :IDENTFIER   ) and
-             (s[3] == :IS          )
-            unit_name = tokens[2].text
-            use_list << {:LibraryName => library_name, :PackageName => unit_name}
-            unit_info = PackageBody.new(unit_name, library_name, file_name, use_list)
+          if unit_info != nil
+            case unit_info.parse(text_line, line_number)
+              when :END
+                # unit_info.debug_print
+                self << unit_info
+                unit_name    = ""
+                unit_info    = nil
+                library_list = Array.new
+                use_list     = Array.new
+            end
           end
         end
         #-------------------------------------------------------------------------
-        # entity, architecture, package, package body のパース
+        # 自分自身を返す.
         #-------------------------------------------------------------------------
-        if unit_info != nil
-          case unit_info.parse(text_line, line_number)
-            when :END
-              unit_info.debug_print
-              unit_list << unit_info
-              unit_name    = ""
-              unit_info    = nil
-              library_list = Array.new
-              use_list     = Array.new
-          end
-        end
+        return self
       end
       #---------------------------------------------------------------------------
-      # 生成した LibraryUnit の配列を返す
+      # デバッグ用
       #---------------------------------------------------------------------------
-      return unit_list
-    end 
+      def debug_print
+        self.each { |unit| unit.debug_print }
+      end
+    end
     #-----------------------------------------------------------------------------
     # UnitFile      : ソースコードを読んだ時のファイル毎の依存関係を保持するクラス
     #-----------------------------------------------------------------------------
@@ -590,7 +600,7 @@ module PipeWork
           end
         end
       end
-      def <=> (target)
+      def compare_level (target)
         if    @level > target.level then return -1
         elsif @level < target.level then return  1
         else return @file_name <=> target.file_name
@@ -603,25 +613,29 @@ module PipeWork
       end
     end
     #-----------------------------------------------------------------------------
-    # generate_unit_file_list : unit_list を元に unit_file_list を生成する.
+    # UnitFileList  : UnitFileの配列クラス
     #-----------------------------------------------------------------------------
-    def generate_unit_file_list(unit_list)
-      unit_file_list    = Array.new
-      defined_unit_file = Hash.new
+    class UnitFileList
+      extend Forwardable
+      def initialize
+        @list    = Array.new
+        @defined = Hash.new
+      end
+      def_delegators(:@list, :[], :each, :assoc, :size, :length)
       #---------------------------------------------------------------------------
-      # unit_list から unit_file_list の雛型を作る.
+      # add_unit : LibraryUnitオブジェクトをUnitFileに変換して@list に追加する.
       #---------------------------------------------------------------------------
-      unit_list.each do |unit|
+      def add_unit(unit)
         #-------------------------------------------------------------------------
-        # UnitFile を生成して、unit_file_list に登録する.
+        # UnitFile を生成して、@list に登録する.
         # ただし、一度生成した UnitFile は新たに生成せずに、すでにあるものを使う.
         #-------------------------------------------------------------------------
-        if defined_unit_file.key?(unit.file_name)
-          unit_file = defined_unit_file[unit.file_name]
+        if @defined.key?(unit.file_name)
+          unit_file = @defined[unit.file_name]
         else
           unit_file = UnitFile.new(unit.file_name, unit.library_name)
-          defined_unit_file[unit.file_name] = unit_file
-          unit_file_list << unit_file
+          @defined[unit.file_name] = unit_file
+          @list << unit_file
         end
         #-------------------------------------------------------------------------
         # UnitFile に、そのファイルで定義しているエンティティの名前または
@@ -635,57 +649,65 @@ module PipeWork
         end
         unit_file.add_use_name_list(unit.use_unit_name_list)
       end
-      # unit_file_list.each { |unit_file| unit_file.debug_print }
-      return unit_file_list
-    end
-    #-----------------------------------------------------------------------------
-    # sort_unit_file_list : unit_list_list をファイル間の依存関係順に整列する.
-    #-----------------------------------------------------------------------------
-    def sort_unit_file_list(unit_file_list)
-      defined_unit_file = Hash.new
       #---------------------------------------------------------------------------
-      # unit_file_list を走査してファイルに定義されている unit_name を取り出して、
-      # defined_unit_file を生成する.
+      # add_unit_list : LibraryUnitの配列をUnitFileに変換して@listに追加する.
       #---------------------------------------------------------------------------
-      unit_file_list.each do |unit_file|
-        unit_file.unit_name_list.each do |unit_name|
-          defined_unit_file[unit_name] = unit_file
+      def add_unit_list(unit_list)
+        unit_list.each do |unit|
+          add_unit(unit)
         end
       end
       #---------------------------------------------------------------------------
-      # unit_file_list を走査して依存関係を構築し、各 unit_file の use_list および
-      # be_used_list を作成する.
+      # set_order     : @listを走査してファイル間の依存関係の順にlevelをセットする.
       #---------------------------------------------------------------------------
-      unit_file_list.each do |unit_file|
-        unit_file.use_name_list.each do |use_name|
-          if defined_unit_file.key?(use_name)
-            if (unit_file.equal?(defined_unit_file[use_name]) == false)
-              unit_file.use_list << defined_unit_file[use_name]
-              defined_unit_file[use_name].be_used_list << unit_file
+      def set_order_level
+        defined_unit_file = Hash.new
+        #-------------------------------------------------------------------------
+        # @list を走査してファイルに定義されている unit_name を取り出して、
+        # defined_unit_file を生成する.
+        #-------------------------------------------------------------------------
+        @list.each do |unit_file|
+          unit_file.unit_name_list.each do |unit_name|
+            defined_unit_file[unit_name] = unit_file
+          end
+        end
+        #-------------------------------------------------------------------------
+        # @list を走査して依存関係を構築し、各 unit_file の use_list および
+        # be_used_list を作成する.
+        #-------------------------------------------------------------------------
+        @list.each do |unit_file|
+          unit_file.use_name_list.each do |use_name|
+            if defined_unit_file.key?(use_name)
+              if (unit_file.equal?(defined_unit_file[use_name]) == false)
+                unit_file.use_list << defined_unit_file[use_name]
+                defined_unit_file[use_name].be_used_list << unit_file
+              end
+            else
+              $stderr.printf "%s : %s を定義しているファイルがみつかりません.\n", unit_file.file_name, use_name
             end
-          else
-            $stderr.printf "%s : %s を定義しているファイルがみつかりません.\n", unit_file.file_name, use_name
+          end
+        end
+        #-------------------------------------------------------------------------
+        # @list を走査して、参照されている順に高い値をlevelにセットする.
+        #-------------------------------------------------------------------------
+        @list.each do |unit_file|
+          if unit_file.use_list.empty? == false
+            unit_file.set_level(1, Set.new)
           end
         end
       end
       #---------------------------------------------------------------------------
-      # unit_file_list を走査して、参照されている順に高い値をlevelにセットする.
+      # @list を level の高い順番にソートする.
       #---------------------------------------------------------------------------
-      unit_file_list.each do |unit_file|
-        if unit_file.use_list.empty? == false
-          unit_file.set_level(1, Set.new)
-        end
+      def sort_by_level
+        @list.sort! { |a,b| a.compare_level(b) }
       end
       #---------------------------------------------------------------------------
-      # unit_file_list を level の高い順番にソートして返す.
+      # デバッグ用
       #---------------------------------------------------------------------------
-      return unit_file_list.sort
+      def debug_print
+        @list.each { |unit_file| unit_file.debug_print }
+      end
     end
-    #-----------------------------------------------------------------------------
-    # 
-    #-----------------------------------------------------------------------------
-    module_function :analyze_path, :analyze_file, :read_file
-    module_function :generate_unit_file_list
-    module_function :sort_unit_file_list
   end
 end

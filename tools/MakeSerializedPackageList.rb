@@ -98,13 +98,13 @@ class SerializedPackageList
     #-----------------------------------------------------------------------------
     # @path_list で指定されたパスに対して走査して unit_list を生成する.
     #-----------------------------------------------------------------------------
-    unit_list = Array.new
+    unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
     @path_list.each do |library_name, path_list|
       path_list.each do |path_name|
-        unit_list.concat(PipeWork::VHDL_Reader.analyze_path(path_name, library_name))
+        unit_list.analyze_path(path_name, library_name)
       end
     end
-    # unit_list.each { |unit| unit.debug_print }
+    unit_list.debug_print
     #-----------------------------------------------------------------------------
     # use_entity_dict を生成しておく.
     # use_entity_dict は一つの entity に対して複数の architecture が定義されていた
@@ -139,12 +139,14 @@ class SerializedPackageList
     #-----------------------------------------------------------------------------
     # 出来上がった unit_list を元に unit_file_list を生成する.
     #-----------------------------------------------------------------------------
-    unit_file_list = PipeWork::VHDL_Reader.generate_unit_file_list(unit_list)
+    unit_file_list = PipeWork::VHDL_Reader::UnitFileList.new
+    unit_file_list.add_unit_list(unit_list)
     # unit_file_list.each { |unit_file| unit_file.debug_print }
     #-----------------------------------------------------------------------------
     # 出来上がった unit_file_list をファイル間の依存関係順に整列する.
     #-----------------------------------------------------------------------------
-    unit_file_list = PipeWork::VHDL_Reader.sort_unit_file_list(unit_file_list)
+    unit_file_list.set_order_level
+    unit_file_list.sort_by_level
     #-----------------------------------------------------------------------------
     # @execute が指定されている場合は シェルを通じて実行する.
     #-----------------------------------------------------------------------------
