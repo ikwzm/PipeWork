@@ -603,13 +603,11 @@ module PipeWork
       end
     end
     #-----------------------------------------------------------------------------
-    # generate_unit_file_list : unit_list を元にファイル間の依存関係順に整列した 
-    #                           unit_file_listを生成する.
+    # generate_unit_file_list : unit_list を元に unit_file_list を生成する.
     #-----------------------------------------------------------------------------
     def generate_unit_file_list(unit_list)
       unit_file_list    = Array.new
       defined_unit_file = Hash.new
-      defined_unit_name = Hash.new
       #---------------------------------------------------------------------------
       # unit_list から unit_file_list の雛型を作る.
       #---------------------------------------------------------------------------
@@ -632,23 +630,38 @@ module PipeWork
         case unit.type
           when :Entity 
             unit_file.unit_name_list << unit.name
-            defined_unit_name[unit.name] = unit_file
           when :Package 
             unit_file.unit_name_list << unit.name
-            defined_unit_name[unit.name] = unit_file
         end
         unit_file.add_use_name_list(unit.use_unit_name_list)
       end
       # unit_file_list.each { |unit_file| unit_file.debug_print }
+      return unit_file_list
+    end
+    #-----------------------------------------------------------------------------
+    # sort_unit_file_list : unit_list_list をファイル間の依存関係順に整列する.
+    #-----------------------------------------------------------------------------
+    def sort_unit_file_list(unit_file_list)
+      defined_unit_file = Hash.new
       #---------------------------------------------------------------------------
-      # unit_file_list を走査して依存関係を構築する.
+      # unit_file_list を走査してファイルに定義されている unit_name を取り出して、
+      # defined_unit_file を生成する.
+      #---------------------------------------------------------------------------
+      unit_file_list.each do |unit_file|
+        unit_file.unit_name_list.each do |unit_name|
+          defined_unit_file[unit_name] = unit_file
+        end
+      end
+      #---------------------------------------------------------------------------
+      # unit_file_list を走査して依存関係を構築し、各 unit_file の use_list および
+      # be_used_list を作成する.
       #---------------------------------------------------------------------------
       unit_file_list.each do |unit_file|
         unit_file.use_name_list.each do |use_name|
-          if defined_unit_name.key?(use_name)
-            if (unit_file.equal?(defined_unit_name[use_name]) == false)
-              unit_file.use_list << defined_unit_name[use_name]
-              defined_unit_name[use_name].be_used_list << unit_file
+          if defined_unit_file.key?(use_name)
+            if (unit_file.equal?(defined_unit_file[use_name]) == false)
+              unit_file.use_list << defined_unit_file[use_name]
+              defined_unit_file[use_name].be_used_list << unit_file
             end
           else
             $stderr.printf "%s : %s を定義しているファイルがみつかりません.\n", unit_file.file_name, use_name
@@ -671,6 +684,8 @@ module PipeWork
     #-----------------------------------------------------------------------------
     # 
     #-----------------------------------------------------------------------------
-    module_function :analyze_path, :analyze_file, :read_file, :generate_unit_file_list
+    module_function :analyze_path, :analyze_file, :read_file
+    module_function :generate_unit_file_list
+    module_function :sort_unit_file_list
   end
 end
