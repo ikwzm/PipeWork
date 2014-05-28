@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.2
-#       Created     :   2014/3/13
+#       Created     :   2014/5/28
 #       File name   :   MakeSerializedPackageList.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012,2013 Ichiro Kawazome
+#       Copyright (C) 2012-2014 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -106,7 +106,7 @@ class SerializedPackageList
     end
     # unit_list.each { |unit| unit.debug_print }
     #-----------------------------------------------------------------------------
-    # generate_unit_file_list に先立ち、use_entity_dict を生成しておく.
+    # use_entity_dict を生成しておく.
     # use_entity_dict は一つの entity に対して複数の architecture が定義されていた
     # 場合に、どの achitetcure を選択するかを指定するための辞書である.
     #-----------------------------------------------------------------------------
@@ -126,10 +126,21 @@ class SerializedPackageList
       end 
     end
     #-----------------------------------------------------------------------------
+    # entity 対して architecture を指定されている場合は、指定された architecture
+    # 以外 を unit_list から取り除く.
+    # 上で作っておいた use_entity_dict を使う.
+    #-----------------------------------------------------------------------------
+    unit_list.reject! do |unit|
+        (unit.type == :Architecture) and
+        (use_entity_dict.key?(unit.name) == true) and
+        (use_entity_dict[unit.name] != unit.arch_name)
+    end
+    # unit_list.each { |unit| unit.debug_print }
+    #-----------------------------------------------------------------------------
     # 出来上がった unit_list を元にファイル間の依存関係順に整列した unit_file_list
     # を生成する.
     #-----------------------------------------------------------------------------
-    unit_file_list = PipeWork::VHDL_Reader.generate_unit_file_list(unit_list, use_entity_dict)
+    unit_file_list = PipeWork::VHDL_Reader.generate_unit_file_list(unit_list)
     # unit_file_list.each { |unit_file| unit_file.debug_print }
     #-----------------------------------------------------------------------------
     # @execute が指定されている場合は シェルを通じて実行する.

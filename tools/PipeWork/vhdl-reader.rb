@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.2
-#       Created     :   2014/5/10
+#       Created     :   2014/5/28
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -606,7 +606,7 @@ module PipeWork
     # generate_unit_file_list : unit_list を元にファイル間の依存関係順に整列した 
     #                           unit_file_listを生成する.
     #-----------------------------------------------------------------------------
-    def generate_unit_file_list(unit_list, use_entity_dict)
+    def generate_unit_file_list(unit_list)
       unit_file_list    = Array.new
       defined_unit_file = Hash.new
       defined_unit_name = Hash.new
@@ -614,13 +614,6 @@ module PipeWork
       # unit_list から unit_file_list の雛型を作る.
       #---------------------------------------------------------------------------
       unit_list.each do |unit|
-        #-------------------------------------------------------------------------
-        # エンティティに対してアーキテクチャを指定されている場合は、指定された
-        # アーキテクチャ以外を無視する.
-        #-------------------------------------------------------------------------
-        next if (unit.type == :Architecture) and
-                (use_entity_dict.key?(unit.name) == true) and
-                (use_entity_dict[unit.name] != unit.arch_name)
         #-------------------------------------------------------------------------
         # UnitFile を生成して、unit_file_list に登録する.
         # ただし、一度生成した UnitFile は新たに生成せずに、すでにあるものを使う.
