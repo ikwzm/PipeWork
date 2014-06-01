@@ -104,7 +104,7 @@ class SerializedPackageList
         unit_list.analyze_path(path_name, library_name)
       end
     end
-    unit_list.debug_print
+    # unit_list.debug_print
     #-----------------------------------------------------------------------------
     # use_entity_dict を生成しておく.
     # use_entity_dict は一つの entity に対して複数の architecture が定義されていた
@@ -135,13 +135,13 @@ class SerializedPackageList
         (use_entity_dict.key?(unit.name) == true) and
         (use_entity_dict[unit.name] != unit.arch_name)
     end
-    # unit_list.each { |unit| unit.debug_print }
+    unit_list.debug_print
     #-----------------------------------------------------------------------------
     # 出来上がった unit_list を元に unit_file_list を生成する.
     #-----------------------------------------------------------------------------
     unit_file_list = PipeWork::VHDL_Reader::UnitFileList.new
     unit_file_list.add_unit_list(unit_list)
-    # unit_file_list.each { |unit_file| unit_file.debug_print }
+    # unit_file_list.debug_print
     #-----------------------------------------------------------------------------
     # 出来上がった unit_file_list をファイル間の依存関係順に整列する.
     #-----------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.1
-#       Created     :   2014/5/27
+#       Created     :   2014/6/1
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -65,13 +65,18 @@ class VhdlArchiver
       opt.version      = @program_version
       opt.on("--verbose"                        ){|val| @verbose = true                  }
       opt.on("--debug"                          ){|val| @debug   = true                  }
-      opt.on("--library    LIBRARY_NAME"        ){|val| new_lib(val)                     }
-      opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val) }
-      opt.on("--use        ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val) }
-      opt.on("--top        ENTITY(ARCHITECHURE)"){|val| add_val(:top_entity       , val) }
-      opt.on("--output     FILE_NAME"           ){|val| add_val(:output_file_name , val) }
-      opt.on("--archive    FILE_NAME"           ){|val| add_val(:archive_file_name, val) }
+      opt.on("--all"                            ){|val| @library_name = :global          }
+      opt.on("--library    LIBRARY_NAME"        ){|val| new_lib(val.upcase)              }
+      opt.on("--print"                          ){|val| add_val(:print            , true)}
+      opt.on("--execute    STRING"              ){|val| add_val(:execute          , val )}
+      opt.on("--format     STRING"              ){|val| add_val(:format           , val )}
+      opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val )}
+      opt.on("--use        ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val )}
+      opt.on("--top        ENTITY(ARCHITECHURE)"){|val| add_val(:top_entity       , val )}
+      opt.on("--output     FILE_NAME"           ){|val| add_val(:output_file_name , val )}
+      opt.on("--archive    FILE_NAME"           ){|val| add_val(:archive_file_name, val )}
     end
+    new_lib(:global)
     new_lib("WORK")
   end
   #-------------------------------------------------------------------------------
@@ -88,6 +93,9 @@ class VhdlArchiver
       @library_info[@library_name][:top_entity       ] = Hash.new
       @library_info[@library_name][:output_file_name ] = nil
       @library_info[@library_name][:archive_file_name] = nil
+      @library_info[@library_name][:execute          ] = nil
+      @library_info[@library_name][:print            ] = nil
+      @library_info[@library_name][:format           ] = '#{file_name}'
     end
   end
   #-------------------------------------------------------------------------------
@@ -98,6 +106,12 @@ class VhdlArchiver
       case key
       when :name              then
         @library_info[@library_name][:name             ] =  item
+      when :print             then
+        @library_info[@library_name][:print            ] =  item
+      when :format             then
+        @library_info[@library_name][:format           ] =  item
+      when :execute             then
+        @library_info[@library_name][:execute          ] =  item
       when :replace_name      then
         @library_info[@library_name][:replace_name     ] =  item
       when :output_file_name  then
@@ -206,13 +220,112 @@ class VhdlArchiver
     #-----------------------------------------------------------------------------
     # @library_infoに格納された各ライブラリのパスに対して走査して unit_list を生成する.
     #-----------------------------------------------------------------------------
+    unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
     @library_info.each_key do |library_name|
-      unit_list = Array.new
       @library_info[library_name][:path_list].each do |path_name|
-        unit_list.concat(PipeWork::VHDL_Reader.analyze_path(path_name, library_name))
+        unit_list.analyze_path(path_name, library_name)
       end
-      @library_info[library_name][:unit_list] = unit_list
-      unit_list.each { |unit| unit.debug_print }
+    end
+    # unit_list.debug_print
+    #-----------------------------------------------------------------------------
+    # entity 対して architecture を指定されている場合は、指定された architecture
+    # 以外 を unit_list から取り除く.
+    #-----------------------------------------------------------------------------
+    @library_info.each_key do |library_name|
+      use_entity = @library_info[library_name][:use_entity]
+      unit_list.reject! do |unit|
+        (unit.type == :Architecture) and
+        (unit.library_name == library_name) and
+        (use_entity.key?(unit.name) == true) and
+        (use_entity[unit.name].to_a.index(unit.arch_name) != nil)
+      end
+    end
+    ## unit_list.debug_print
+    #-----------------------------------------------------------------------------
+    #
+    #-----------------------------------------------------------------------------
+    top_list = Array.new
+    @library_info.each_key do |library_name|
+      @library_info[library_name][:top_entity].each_key do |entity_name|
+        if (@library_info[library_name][:top_entity][entity_name].size == 0)
+            top_list << {
+                    :library_name => library_name,
+                    :entity_name  => entity_name,
+            }
+        else
+          @library_info[library_name][:top_entity][entity_name].each do |architecture|
+            top_list << {
+                    :library_name => library_name,
+                    :entity_name  => entity_name,
+                    :architecture => architecture
+            }
+          end
+        end
+      end
+    end
+    if top_list.size > 0 
+      unit_list = unit_list.select_bound_unit(top_list)
+    end
+    unit_list.debug_print
+    #-----------------------------------------------------------------------------
+    # 出来上がった unit_list を元に unit_file_list を生成する.
+    #-----------------------------------------------------------------------------
+    unit_file_list = PipeWork::VHDL_Reader::UnitFileList.new
+    unit_file_list.add_unit_list(unit_list)
+    # unit_file_list.debug_print
+    #-----------------------------------------------------------------------------
+    # 出来上がった unit_file_list をファイル間の依存関係順に整列する.
+    #-----------------------------------------------------------------------------
+    unit_file_list.set_order_level
+    unit_file_list.sort_by_level
+    #-----------------------------------------------------------------------------
+    # 
+    #-----------------------------------------------------------------------------
+    @library_info.each_key do |library_name|
+      if library_name == :global
+        lib_unit_file_list = unit_file_list.list
+      else
+        lib_unit_file_list = unit_file_list.list.select{|u| u.library_name == library_name}
+      end
+      #---------------------------------------------------------------------------
+      # :execute が指定されている場合は シェルを通じて実行する.
+      #---------------------------------------------------------------------------
+      if @library_info[library_name][:execute]
+        lib_unit_file_list.each do |unit_file|
+          command = unit_file.to_formatted_string(@library_info[library_name][:execute])
+          puts command
+          system(command)
+        end
+      end
+      #---------------------------------------------------------------------------
+      # :print が指定されている場合は :format に従ってSTDOUTに出力.
+      #---------------------------------------------------------------------------
+      if @library_info[library_name][:print]
+        lib_unit_file_list.each do |unit_file|
+          puts unit_file.to_formatted_string(@library_info[library_name][:format])
+        end
+      end
+      #---------------------------------------------------------------------------
+      # :output_file_name が指定されている場合は :format に従ってファイルに出力.
+      #---------------------------------------------------------------------------
+      if @library_info[library_name][:output_file_name]
+        File.open(@library_info[library_name][:output_file_name], "w") do |file|
+          lib_unit_file_list.each do |unit_file|
+            file.puts unit_file.to_formatted_string(@library_info[library_name][:format])
+          end
+        end
+      end
+      #---------------------------------------------------------------------------
+      # :archive_file_name が指定されている場合は 指定された順番でひとつのファイル
+      # にまとめる.
+      #---------------------------------------------------------------------------
+      if @library_info[library_name][:archive_file_name]
+        File.open(@library_info[library_name][:archive_file_name], "w") do |file|
+          lib_unit_file_list.each do |unit_file|
+            file.write File.open(unit_file.file_name, "r").read
+          end
+        end
+      end
     end
   end
 end
