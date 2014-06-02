@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.2
-#       Created     :   2014/6/1
+#       Created     :   2014/6/2
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -604,7 +604,6 @@ module PipeWork
         # ライブラリ名が指定されている場合はそのライブラリから探す
         #-------------------------------------------------------------------------
         else
-          external_name = entity_label + ":" + library_name + "." + entity_name
           found_list.concat(
             self.select{ |u|
               (u.name         == entity_name  ) and
