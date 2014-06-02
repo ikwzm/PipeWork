@@ -181,21 +181,22 @@ module PipeWork
     #                 package body のこと.
     #-----------------------------------------------------------------------------
     class LibraryUnit
-      attr_reader :type, :name, :library_name, :use_unit_name_list
+      attr_reader :type, :name, :library_name, :use_library_list, :use_unit_list
       attr_reader :file_name  , :begin_line_number, :end_line_number
       attr_reader :text_lines , :tokens
       attr_reader :attributes
-      def initialize(unit_type, unit_name, libary_name, file_name, line_number, use_clause_list)
-        @type               = unit_type
-        @name               = unit_name.upcase
-        @file_name          = file_name
-        @begin_line_number  = line_number
-        @library_name       = libary_name.upcase
-        @tokens             = Array.new
-        @text_lines         = Hash.new
-        @use_unit_name_list = Hash.new
-        @attributes         = Hash.new
-        use_clause_list.each do |use_clause|
+      def initialize(unit_type, unit_name, libary_name, file_name, line_number, library_list, use_list)
+        @type              = unit_type
+        @name              = unit_name.upcase
+        @file_name         = file_name
+        @begin_line_number = line_number
+        @library_name      = libary_name.upcase
+        @tokens            = [Token.new(nil,"",line_number)]
+        @text_lines        = Hash.new
+        @use_library_list  = library_list.uniq
+        @use_unit_list     = Hash.new
+        @attributes        = Hash.new
+        use_list.each do |use_clause|
           library_name = use_clause[:LibraryName].upcase
           if use_clause.key?(:PackageName) 
             add_use_unit(library_name, use_clause[:PackageName].upcase)
@@ -206,10 +207,10 @@ module PipeWork
         end
       end
       def add_use_unit(library_name, unit_name)
-        if @use_unit_name_list[library_name] == nil
-          @use_unit_name_list[library_name] = Set.new
+        if @use_unit_list[library_name] == nil
+          @use_unit_list[library_name] = Set.new
         end
-        @use_unit_name_list[library_name] << unit_name
+        @use_unit_list[library_name] << unit_name
       end
       def scan_text(text_line, line_number)
         @text_lines[line_number] = text_line
@@ -225,10 +226,13 @@ module PipeWork
         warn "  file      : " + @file_name.to_s + "[" + @begin_line_number.to_s + ":" + @end_line_number.to_s + "]"
         warn "  attributes: " + @attributes.to_s
         warn "  use       : "
-        @use_unit_name_list.each do |library_name, package_set|
-          package_set.each do |package_name|
+        @use_library_list.each do |library_name|
             warn "    - library : " + library_name.to_s
-            warn "      package : " + package_name.to_s
+        end
+        @use_unit_list.each do |library_name, identifier_set|
+          identifier_set.each do |identifier|
+            warn "    - library : " + library_name.to_s
+            warn "      name    : " + identifier.to_s
           end
         end
       end
@@ -237,18 +241,15 @@ module PipeWork
     # Entity        : ソースコードを読んだ時の Entity 記述を保持するクラス
     #-----------------------------------------------------------------------------
     class Entity < LibraryUnit
-      def initialize(  entity_name, library_name, file_name, line_number, use_clause_list)
-        super(:Entity, entity_name, library_name, file_name, line_number, use_clause_list)
+      def initialize(  entity_name, library_name, file_name, line_number, library_list, use_list)
+        super(:Entity, entity_name, library_name, file_name, line_number, library_list, use_list)
       end
       def parse(text_line, line_number)
         scan_text(text_line, line_number)
-        if ((@tokens[-3].sym == :END      ) and
-            (@tokens[-2].sym == :ENTITY   ) and 
-            (@tokens[-1].sym == :";"      )) or
-           ((@tokens[-3].sym == :END      ) and
-            (@tokens[-2].sym == :IDENTFIER) and 
-            (@tokens[-2].text.upcase == @name) and 
-            (@tokens[-1].sym == :";"      ))
+        sym = @tokens[-4..-1].map{|token| token.sym}
+        if (sym[-3..-1] == [:END, :ENTITY            , :";"]) or
+           (sym[-3..-1] == [:END,          :IDENTFIER, :";"] and @tokens[-2].text.upcase == @name) or
+           (sym[-4..-1] == [:END, :ENTITY, :IDENTFIER, :";"] and @tokens[-2].text.upcase == @name)
           @end_line_number = line_number
           return :END
         else
@@ -260,64 +261,112 @@ module PipeWork
     # Architecture  : ソースコードを読んだ時の Architecture 記述を保持するクラス
     #-----------------------------------------------------------------------------
     class Architecture < LibraryUnit
-      attr_reader :arch_name, :external_list
-      def initialize(entity_name, arch_name, library_name, file_name, line_number, use_clause_list)
-        super(:Architecture, entity_name   , library_name, file_name, line_number, use_clause_list)
+      attr_reader :arch_name, :instance_list
+      def initialize(entity_name, arch_name, library_name, file_name, line_number, library_list, use_list)
+        super(:Architecture, entity_name   , library_name, file_name, line_number, library_list, use_list)
         @arch_name     = arch_name.upcase
-        @external_list = Array.new
+        @instance_list = Array.new
       end
       def parse(text_line, line_number)
         scan_text(text_line, line_number)
-        if ((@tokens[-3].sym == :END) and
-            (@tokens[-2].sym == :ARCHITECTURE) and
-            (@tokens[-1].sym == :";")) or
-           ((@tokens[-3].sym == :END) and
-            (@tokens[-2].sym == :IDENTFIER) and
-            (@tokens[-2].text.upcase == @arch_name) and 
-            (@tokens[-1].sym == :";")) 
-          make_external_list
+        sym = @tokens[-4..-1].map{|token| token.sym}
+        if (sym[-3..-1] == [:END, :ARCHITECTURE            , :";"]) or
+           (sym[-3..-1] == [:END,                :IDENTFIER, :";"] and @tokens[-2].text.upcase == @arch_name) or
+           (sym[-4..-1] == [:END, :ARCHITECTURE, :IDENTFIER, :";"] and @tokens[-2].text.upcase == @arch_name)
+          make_instance_list
           @end_line_number = line_number
           return :END
         else
           return :BEGIN
         end
       end
-      def make_external_list
+      def make_instance_list
         @tokens.each_index{ |i|
-          if @tokens[i].sym == :MAP
-            if (@tokens[i-2].sym == :IDENTFIER) and
-               (@tokens[i-1].sym == :PORT or @tokens[i-1].sym == :GENERIC) and
-               (@tokens[i+1].sym == :"(")
-              name = @tokens[i-2].text.upcase
-              if (@tokens[i-3].sym == :".") and 
-                 (@tokens[i-4].sym == :IDENTFIER) 
-                lib = @tokens[i-4].text.upcase
-                n   = i-5
-              else
-                lib = nil
-                n   = i-3
-              end
-              if (@tokens[n  ].sym == :ENTITY)
-                n   = n-1
-              end
-              if (@tokens[n  ].sym == :":") and
-                 (@tokens[n-1].sym == :IDENTFIER) 
-                label = @tokens[n-1].text.upcase
-              else
-                label = nil
-              end
-              @external_list << {:Name => name, :Library => lib, :Label => label}
+          if (@tokens[i  ].sym == :MAP) and 
+             (@tokens[i+1].sym == :"(") and
+             (@tokens[i-1].sym == :PORT or @tokens[i-1].sym == :GENERIC)
+            tok  = @tokens[i-9..i-2]
+            sym  = tok.map{|token| token.sym}
+            if    (sym[-9..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER, :".", :IDENTFIER, :"(", :IDENTFIER, :")"])
+              instance = {:Label        => tok[-9].text.upcase,
+                          :Library      => tok[-6].text.upcase,
+                          :Entity       => tok[-4].text.upcase,
+                          :Architecture => tok[-2].text.upcase
+              }
+            elsif (sym[-7..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER, :"(", :IDENTFIER, :")"])
+              instance = {:Label        => tok[-7].text.upcase,
+                          :Library      => nil                 ,
+                          :Entity       => tok[-4].text.upcase,
+                          :Architecture => tok[-2].text.upcase,
+              }
+            elsif (sym[-6..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER, :".", :IDENTFIER])
+              instance = {:Label        => tok[-6].text.upcase,
+                          :Library      => tok[-3].text.upcase,
+                          :Entity       => tok[-1].text.upcase,
+                          :Architecture => nil
+              }
+            elsif (sym[-4..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER])
+              instance = {:Label        => tok[-4].text.upcase,
+                          :Library      => nil                 ,
+                          :Entity       => tok[-1].text.upcase,
+                          :Architecture => nil
+              }
+            elsif (sym[-8..-1] == [:IDENTFIER, :":", :COMPONENT, :IDENTFIER, :".", :IDENTFIER, :".", :IDENTFIER])
+              instance = {:Label        => tok[-8].text.upcase,
+                          :Library      => tok[-5].text.upcase,
+                          :Component    => tok[-1].text.upcase
+              }
+            elsif (sym[-6..-1] == [:IDENTFIER, :":", :COMPONENT, :IDENTFIER, :".", :IDENTFIER])
+              instance = {:Label        => tok[-6].text.upcase,
+                          :Library      => tok[-3].text.upcase,
+                          :Component    => tok[-1].text.upcase
+              }
+            elsif (sym[-4..-1] == [:IDENTFIER, :":", :COMPONENT, :IDENTFIER])
+              instance = {:Label        => tok[-4].text.upcase,
+                          :Library      => nil                 ,
+                          :Component    => tok[-1].text.upcase
+              }
+            elsif (sym[-7..-1] == [:IDENTFIER, :":", :IDENTFIER, :".", :IDENTFIER, :".", :IDENTFIER])
+              instance = {:Label        => tok[-7].text.upcase,
+                          :Library      => tok[-5].text.upcase,
+                          :Component    => tok[-1].text.upcase
+              }
+            elsif (sym[-5..-1] == [:IDENTFIER, :":", :IDENTFIER, :".", :IDENTFIER])
+              instance = {:Label        => tok[-5].text.upcase,
+                          :Library      => tok[-3].text.upcase,
+                          :Component    => tok[-1].text.upcase
+              }
+            elsif (sym[-3..-1] == [:IDENTFIER, :":", :IDENTFIER])
+              instance = {:Label        => tok[-3].text.upcase,
+                          :Library      => nil                 ,
+                          :Component    => tok[-1].text.upcase
+              }
+            else
+              instance = nil
+            end
+            if instance != nil
+               @instance_list << instance
             end
           end
         }
       end
       def debug_print
         super
-        @external_list.each do |item|
-            warn "    - external: " + name
-            warn "      name    : " + item[:Name].to_s
-            warn "      library : " + item[:Library].to_s
-            warn "      label   : " + item[:Label].to_s
+        @instance_list.each do |instance|
+          name  = instance[:Label] + ":"
+          if instance[:Library] != nil
+            name += instance[:Library] + "."
+          end
+          if instance[:Component] != nil
+            name += instance[:Component]
+          end
+          if instance[:Entity] != nil
+            name += instance[:Entity]
+          end
+          if instance[:Architecture] != nil
+            name += "(" + instance[:Architecture] + ")"
+          end
+          warn "    - external: " + name
         end
       end
     end
@@ -325,18 +374,15 @@ module PipeWork
     # Package       : ソースコードを読んだ時の Package 記述を保持するクラス
     #-----------------------------------------------------------------------------
     class Package < LibraryUnit
-      def initialize(   package_name, library_name, file_name, line_number, use_clause_list)
-        super(:Package, package_name, library_name, file_name, line_number, use_clause_list)
+      def initialize(   package_name, library_name, file_name, line_number, library_list, use_list)
+        super(:Package, package_name, library_name, file_name, line_number, library_list, use_list)
       end
       def parse(text_line, line_number)
         scan_text(text_line, line_number)
-        if ((@tokens[-3].sym == :END) and
-            (@tokens[-2].sym == :PACKAGE) and
-            (@tokens[-1].sym == :";")) or
-           ((@tokens[-3].sym == :END) and
-            (@tokens[-2].sym == :IDENTFIER) and
-            (@tokens[-2].text.upcase == @name) and 
-            (@tokens[-1].sym == :";")) 
+        sym = @tokens[-3..-1].map{|token| token.sym}
+        if (sym[-3..-1] == [:END, :PACKAGE            , :";"]) or
+           (sym[-3..-1] == [:END,           :IDENTFIER, :";"] and @tokens[-2].text.upcase == @name) or
+           (sym[-4..-1] == [:END, :PACKAGE, :IDENTFIER, :";"] and @tokens[-2].text.upcase == @name)
           @end_line_number = line_number
           return :END
         else
@@ -348,19 +394,15 @@ module PipeWork
     # PackageBody   : ソースコードを読んだ時の Package body 記述を保持するクラス
     #-----------------------------------------------------------------------------
     class PackageBody < LibraryUnit
-      def initialize(       package_name, library_name, file_name, line_number, use_clause_list)
-        super(:PackageBody, package_name, library_name, file_name, line_number, use_clause_list)
+      def initialize(       package_name, library_name, file_name, line_number, library_list, use_list)
+        super(:PackageBody, package_name, library_name, file_name, line_number, library_list, use_list)
       end
       def parse(text_line, line_number)
         scan_text(text_line, line_number)
-        if ((@tokens[-4].sym == :END) and
-            (@tokens[-3].sym == :PACKAGE) and
-            (@tokens[-2].sym == :BODY) and
-            (@tokens[-1].sym == :";")) or
-           ((@tokens[-3].sym == :END) and
-            (@tokens[-2].sym == :IDENTFIER) and
-            (@tokens[-2].text.upcase == @name) and 
-            (@tokens[-1].sym == :";")) 
+        sym = @tokens[-5..-1].map{|token| token.sym}
+        if (sym[-4..-1] == [:END, :PACKAGE, :BODY            , :";"]) or
+           (sym[-3..-1] == [:END,                  :IDENTFIER, :";"] and @tokens[-2].text.upcase == @name) or
+           (sym[-5..-1] == [:END, :PACKAGE, :BODY, :IDENTFIER, :";"] and @tokens[-2].text.upcase == @name)
           @end_line_number = line_number
           return :END
         else
@@ -435,15 +477,15 @@ module PipeWork
             # 
             #---------------------------------------------------------------------
             tokens = Lexer.scan_text(text_line, line_number)
-            s = tokens.map{|token| token.sym}
+            sym = tokens.map{|token| token.sym}
             #---------------------------------------------------------------------
             # library ライブラリ名; の解釈
             #---------------------------------------------------------------------
-            if s[0] == :LIBRARY
+            if sym[0] == :LIBRARY
               tokens.drop(1).each {|token|
                 break if token.sym == :";"
                 next  if token.sym == :","
-                library_list << token.text
+                library_list << token.text.upcase
               }
               ## p library_list
               next
@@ -451,13 +493,7 @@ module PipeWork
             #---------------------------------------------------------------------
             # use ライブラリ名.パッケージ名.アイテム名; の解釈
             #---------------------------------------------------------------------
-            if (s[0] == :USE      ) and 
-               (s[1] == :IDENTFIER) and
-               (s[2] == :"."      ) and 
-               (s[3] == :IDENTFIER) and
-               (s[4] == :"."      ) and 
-               (s[5] == :IDENTFIER) and
-               (s[6] == :";"      )
+            if (sym[0..6] == [:USE, :IDENTFIER, :".", :IDENTFIER, :".", :IDENTFIER, :";"])
               use_list << {:LibraryName => tokens[1].text, 
                            :PackageName => tokens[3].text, 
                            :ItemName    => tokens[5].text
@@ -468,13 +504,7 @@ module PipeWork
             #---------------------------------------------------------------------
             # use ライブラリ名.パッケージ名.all; の解釈
             #---------------------------------------------------------------------
-            if (s[0] == :USE      ) and 
-               (s[1] == :IDENTFIER) and
-               (s[2] == :"."      ) and 
-               (s[3] == :IDENTFIER) and
-               (s[4] == :"."      ) and 
-               (s[5] == :ALL      ) and
-               (s[6] == :";"      )
+            if (sym[0..6] == [:USE, :IDENTFIER, :".", :IDENTFIER, :".", :ALL, :";"])
               use_list << {:LibraryName => tokens[1].text, 
                            :PackageName => tokens[3].text, 
                            :ItemName    => tokens[5].text
@@ -485,11 +515,7 @@ module PipeWork
             #---------------------------------------------------------------------
             # use ライブラリ名.パッケージ名; の解釈
             #---------------------------------------------------------------------
-            if (s[0] == :USE      ) and 
-               (s[1] == :IDENTFIER) and
-               (s[2] == :"."      ) and 
-               (s[3] == :IDENTFIER) and
-               (s[4] == :";"      )
+            if (sym[0..4] == [:USE, :IDENTFIER, :".", :IDENTFIER, ";"])
               use_list << {:LibraryName => tokens[1].text, 
                            :PackageName => tokens[3].text, 
                           }
@@ -499,44 +525,33 @@ module PipeWork
             #---------------------------------------------------------------------
             # entity 宣言の開始
             #---------------------------------------------------------------------
-            if (s[0] == :ENTITY      ) and
-               (s[1] == :IDENTFIER   ) and
-               (s[2] == :IS          )
+            if (sym[0..2] == [:ENTITY, :IDENTFIER, :IS])
               unit_name = tokens[1].text
-              unit_info = Entity.new(unit_name, library_name, file_name, begin_line_number, use_list)
+              unit_info = Entity.new(unit_name, library_name, file_name, begin_line_number, library_list, use_list)
             end
             #---------------------------------------------------------------------
             # architecture 宣言の開始
             #---------------------------------------------------------------------
-            if (s[0] == :ARCHITECTURE) and 
-               (s[1] == :IDENTFIER   ) and
-               (s[2] == :OF          ) and
-               (s[3] == :IDENTFIER   ) and
-               (s[4] == :IS          )
+            if (sym[0..4] == [:ARCHITECTURE, :IDENTFIER, :OF, :IDENTFIER, :IS])
               unit_name   = tokens[1].text
               entity_name = tokens[3].text
               use_list << {:LibraryName => library_name, :EntityName => entity_name}
-              unit_info = Architecture.new(entity_name, unit_name, library_name, file_name, begin_line_number, use_list)
+              unit_info = Architecture.new(entity_name, unit_name, library_name, file_name, begin_line_number, library_list, use_list)
             end
             #---------------------------------------------------------------------
             # package 宣言の開始
             #---------------------------------------------------------------------
-            if (s[0] == :PACKAGE     ) and 
-               (s[1] == :IDENTFIER   ) and
-               (s[2] == :IS          )
+            if (sym[0..2] == [:PACKAGE, :IDENTFIER, :IS])
               unit_name = tokens[1].text
-              unit_info = Package.new(unit_name, library_name, file_name, begin_line_number, use_list)
+              unit_info = Package.new(unit_name, library_name, file_name, begin_line_number, library_list, use_list)
             end
             #---------------------------------------------------------------------
             # package body 宣言の開始
             #---------------------------------------------------------------------
-            if (s[0] == :PACKAGE     ) and 
-               (s[1] == :BODY        ) and
-               (s[2] == :IDENTFIER   ) and
-               (s[3] == :IS          )
+            if (sym[0..3] == [:PACKAGE, :BODY, :IDENTFIER, :IS])
               unit_name = tokens[2].text
               use_list << {:LibraryName => library_name, :PackageName => unit_name}
-              unit_info = PackageBody.new(unit_name, library_name, file_name, begin_line_number, use_list)
+              unit_info = PackageBody.new(unit_name, library_name, file_name, begin_line_number, library_list, use_list)
             end
           end
           #-----------------------------------------------------------------------
@@ -564,8 +579,8 @@ module PipeWork
       # 指定した Architecture から参照しているユニットを探し出して見つかった Unit 
       # をリストとして返すメソッド
       #---------------------------------------------------------------------------
-      def select_found_unit(unit, library_name, entity_name)
-        found_list = LibraryUnitList.new
+      def select_found_instance(unit, instance)
+        found_list  = LibraryUnitList.new
         #-------------------------------------------------------------------------
         # 指定された Unit が Architecture じゃ無い場合は空のリストを返す.
         #-------------------------------------------------------------------------
@@ -573,9 +588,20 @@ module PipeWork
           return found_list
         end
         #-------------------------------------------------------------------------
+        # instance から entity_name と archtecture を得る.
+        #-------------------------------------------------------------------------
+        if (instance[:Entity] != nil)
+          entity_name = instance[:Entity]
+          archtecture = instance[:Architecture]
+        end
+        if (instance[:Component] != nil)
+          entity_name = instance[:Component]
+          archtecture = nil
+        end
+        #-------------------------------------------------------------------------
         # ライブラリ名が指定されてない場合
         #-------------------------------------------------------------------------
-        if (library_name == nil)
+        if (instance[:Library] == nil)
           #-----------------------------------------------------------------------
           # まず、Unit が所属しているライブラリから探す.
           #-----------------------------------------------------------------------
@@ -583,19 +609,21 @@ module PipeWork
             self.select{ |u|
               (u.name         == entity_name       ) and
               (u.library_name == unit.library_name ) and
-              (u.type         == :Architecture     )
+              (u.type         == :Architecture     ) and
+              (u.arch_name    == archtecture or archtecture == nil)
             }
           )
           #-----------------------------------------------------------------------
           # 見つからなかった場合は、Unit が使っているライブラリから探す
           #-----------------------------------------------------------------------
           if (found_list.size < 1)
-            unit.use_unit_name_list.keys.uniq.each do |library_name|
+            unit.use_library_list.each do |library_name|
               found_list.concat(
                 self.select{ |u|
                   (u.name         == entity_name  ) and
                   (u.library_name == library_name ) and
-                  (u.type         == :Architecture)
+                  (u.type         == :Architecture) and
+                  (u.arch_name    == archtecture or archtecture == nil)
                 }
               )
             end
@@ -608,7 +636,8 @@ module PipeWork
             self.select{ |u|
               (u.name         == entity_name  ) and
               (u.library_name == library_name ) and
-              (u.type         == :Architecture)
+              (u.type         == :Architecture) and
+              (u.arch_name    == archtecture or archtecture == nil)
             }
           )
         end
@@ -618,7 +647,7 @@ module PipeWork
         return found_list
       end
       #---------------------------------------------------------------------------
-      # Architecture の external_list の参照先を解決して use_unit_name_list に追加
+      # Architecture の instance_list の参照先を解決して use_unit_list に追加
       # するメソッド
       #---------------------------------------------------------------------------
       def resolve_external_name
@@ -724,11 +753,11 @@ module PipeWork
             #---------------------------------------------------------------------
             found_arch_list.each do |arch|
               #-------------------------------------------------------------------
-              # use_unit_name_list を検索して、見つかった Unit の名前とライブラリ
+              # use_unit_list を検索して、見つかった Unit の名前とライブラリ
               # を bind_name_list に登録する.
               #-------------------------------------------------------------------
-              arch.use_unit_name_list.each_key do |use_library_name|
-                arch.use_unit_name_list[use_library_name].each do |use_unit_name|
+              arch.use_unit_list.each_key do |use_library_name|
+                arch.use_unit_list[use_library_name].each do |use_unit_name|
                   if (bind_name_list.key?(use_library_name) == true) and
                      (bind_name_list[use_library_name].key?(use_unit_name) == true)
                     bind_name_list[use_library_name][use_unit_name] = 1
@@ -738,29 +767,34 @@ module PipeWork
                 end
               end
               #-------------------------------------------------------------------
-              # external_list を検索して、見つかった Unit の名前とライブラリ
+              # instance_list を検索して、見つかった Unit の名前とライブラリ
               # を bind_name_list に登録する.
               #-------------------------------------------------------------------
-              arch.external_list.each do |external_unit|
-                library_name  = external_unit[:Library]
-                entity_name   = external_unit[:Name]
-                entity_label  = external_unit[:Label]
-                if library_name == nil
-                  external_name = entity_label + ":" + entity_name
-                else
-                  external_name = entity_label + ":" + library_name + "." + entity_name
-                end
+              arch.instance_list.each do |instance|
                 #-----------------------------------------------------------------
                 # ライブラリ名とエンティティ名から一致するユニットのリストを得る.
                 #-----------------------------------------------------------------
-                found_list = self.select_found_unit(arch, library_name, entity_name)
+                found_list = self.select_found_instance(arch, instance)
                 #-----------------------------------------------------------------
                 # 見つかったユニット数をチェック
                 #-----------------------------------------------------------------
+                instance_name = instance[:Label]
+                if instance[:Library] != nil
+                  instance_name += instance[:Library] + "."
+                end
+                if instance[:Component] != nil
+                  instance_name += instance[:Component]
+                end
+                if instance[:Entity] != nil
+                  instance_name += instance[:Entity]
+                end
+                if instance[:Architecture] != nil
+                  instance_name += "(" + instance[:Architecture] + ")"
+                end
                 if    (found_list.size < 1) 
-                  warn "Not Found External Unit: " + top_name + " => " + external_name
+                  warn "Not Found External Unit: " + top_name + " => " + instance_name
                 elsif (found_list.size > 1) 
-                  warn "Conflict External Unit: "  + top_name + " => " + external_name
+                  warn "Conflict External Unit: "  + top_name + " => " + instance_name
                 end
                 #-----------------------------------------------------------------
                 # 見つかったユニットの名前とライブラリを bind_name_list と突合せて
@@ -894,7 +928,7 @@ module PipeWork
           when :Package 
             unit_file.unit_name_list << unit.name
         end
-        unit_file.add_use_name_list(unit.use_unit_name_list)
+        unit_file.add_use_name_list(unit.use_unit_list)
       end
       #---------------------------------------------------------------------------
       # add_unit_list : LibraryUnitの配列をUnitFileに変換して@listに追加する.
