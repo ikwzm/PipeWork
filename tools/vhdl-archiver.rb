@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.1
-#       Created     :   2014/6/1
+#       Created     :   2014/6/12
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -90,7 +90,7 @@ class VhdlArchiver
       @library_info[@library_name][:replace_name     ] = nil
       @library_info[@library_name][:path_list        ] = Array.new
       @library_info[@library_name][:use_entity       ] = Hash.new
-      @library_info[@library_name][:top_entity       ] = Hash.new
+      @library_info[@library_name][:top_entity       ] = Array.new
       @library_info[@library_name][:output_file_name ] = nil
       @library_info[@library_name][:archive_file_name] = nil
       @library_info[@library_name][:execute          ] = nil
@@ -136,68 +136,35 @@ class VhdlArchiver
   # add_use_entity :
   #-------------------------------------------------------------------------------
   def add_use_entity(default_library_name, item)
-    if    (item =~ /^([\w]+)\.([\w]+)\(([\w]+)\)$/)
-      library_name = $1.upcase
-      entity_name  = $2.upcase
-      architecture = $3.upcase
-      if (@library_info.key?(library_name) == false)
-        return false
-      end
-      if (@library_info[library_name][:use_entity].key?(entity_name) == false)
-        @library_info[library_name][:use_entity][entity_name] = Set.new
-      end
-      @library_info[library_name][:use_entity][entity_name] << architecture
-      return true
-    elsif (item =~ /^([\w]+)\(([\w]+)\)$/)
-      library_name = default_library_name
-      entity_name  = $1.upcase
-      architecture = $2.upcase
-      if (@library_info[library_name][:use_entity].key?(entity_name) == false)
-        @library_info[library_name][:use_entity][entity_name] = Set.new
-      end
-      @library_info[library_name][:use_entity][entity_name] << architecture
-      return true
-    else
-      return false
-    end 
+    entity_full_name = PipeWork::VHDL_Reader.parse_entity_name(item,0)
+    return false if (entity_full_name == nil)
+    if entity_full_name.library_name == nil
+      entity_full_name.library_name = default_library_name
+    end
+    entity_name  = entity_full_name.name
+    library_name = entity_full_name.library_name
+    architecture = entity_full_name.arch_name
+    return false if (architecture == nil)
+    return false if (@library_info.key?(library_name) == false)
+    if (@library_info[library_name][:use_entity].key?(entity_name) == false)
+      @library_info[library_name][:use_entity][entity_name] = Set.new
+    end
+    @library_info[library_name][:use_entity][entity_name] << architecture
+    return true
   end
   #-------------------------------------------------------------------------------
   # add_top_entity :
   #-------------------------------------------------------------------------------
-  def add_top_entity(lib_name, item)
-    if    (item =~ /^([\w]+)\.([\w]+)\(([\w]+)\)$/)
-      library_name = $1.upcase
-      entity_name  = $2.upcase
-      architecture = $3.upcase
-      if (@library_info.key?(library_name) == false)
-        return false
-      end
-      if (@library_info[library_name][:top_entity].key?(entity_name) == false)
-        @library_info[library_name][:top_entity][entity_name] = Set.new
-      end
-      @library_info[library_name][:top_entity][entity_name] << architecture
-      return true
-    elsif (item =~ /^([\w]+)\(([\w]+)\)$/)
-      library_name = lib_name
-      entity_name  = $1.upcase
-      architecture = $2.upcase
-      if (@library_info[library_name][:top_entity].key?(entity_name) == false)
-        @library_info[library_name][:top_entity][entity_name] = Set.new
-      end
-      @library_info[library_name][:top_entity][entity_name] << architecture
-      return true
-    elsif (item =~ /^([\w]+)$/)
-      library_name = lib_name
-      entity_name  = $1.upcase
-      architecture = :any
-      if (@library_info[library_name][:top_entity].key?(entity_name) == false)
-        @library_info[library_name][:top_entity][entity_name] = Set.new
-      end
-      @library_info[library_name][:top_entity][entity_name] << architecture
-      return true
-    else
-      return false
-    end 
+  def add_top_entity(default_library_name, item)
+    entity_full_name = PipeWork::VHDL_Reader.parse_entity_name(item,0)
+    return false if entity_full_name == nil
+    if entity_full_name.library_name == nil
+      entity_full_name.library_name = default_library_name
+    end
+    library_name = entity_full_name.library_name
+    return false if (@library_info.key?(library_name) == false)
+    @library_info[library_name][:top_entity] << entity_full_name
+    return true
   end
   #-------------------------------------------------------------------------------
   # parse_options
@@ -221,6 +188,7 @@ class VhdlArchiver
     # @library_infoに格納された各ライブラリのパスに対して走査して unit_list を生成する.
     #-----------------------------------------------------------------------------
     unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
+    unit_list.verbose = @verbose
     @library_info.each_key do |library_name|
       @library_info[library_name][:path_list].each do |path_name|
         unit_list.analyze_path(path_name, library_name)
@@ -246,27 +214,12 @@ class VhdlArchiver
     #-----------------------------------------------------------------------------
     top_list = Array.new
     @library_info.each_key do |library_name|
-      @library_info[library_name][:top_entity].each_key do |entity_name|
-        if (@library_info[library_name][:top_entity][entity_name].size == 0)
-            top_list << {
-                    :library_name => library_name,
-                    :entity_name  => entity_name,
-            }
-        else
-          @library_info[library_name][:top_entity][entity_name].each do |architecture|
-            top_list << {
-                    :library_name => library_name,
-                    :entity_name  => entity_name,
-                    :architecture => architecture
-            }
-          end
-        end
-      end
+      top_list.concat @library_info[library_name][:top_entity]
     end
     if top_list.size > 0 
       unit_list = unit_list.select_bound_unit(top_list)
     end
-    unit_list.debug_print
+    # unit_list.debug_print
     #-----------------------------------------------------------------------------
     # 出来上がった unit_list を元に unit_file_list を生成する.
     #-----------------------------------------------------------------------------

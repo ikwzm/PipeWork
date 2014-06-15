@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.2
-#       Created     :   2014/6/2
+#       Created     :   2014/6/12
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -176,6 +176,65 @@ module PipeWork
       module_function :scan_text
     end
     #-----------------------------------------------------------------------------
+    # EntityName    : entity の名前を管理するクラス.
+    #-----------------------------------------------------------------------------
+    class EntityName
+      attr_accessor :name, :library_name, :arch_name
+      def initialize(name, library_name, arch_name)
+        @name         = name
+        @library_name = library_name
+        @arch_name    = arch_name
+      end
+      def to_s
+        str = @name
+        if @library_name != nil
+          str = @library_name + "." + str
+        end
+        if @arch_name != nil
+          str = str + "(" + @arch_name + ")"
+        end
+        return str
+      end
+    end
+    #-----------------------------------------------------------------------------
+    # parse_entity_name : 文字列から EntityName を生成するモジュール関数.
+    #-----------------------------------------------------------------------------
+    def parse_entity_name(text_line, line_number)
+      tokens = Lexer.scan_text(text_line, line_number)
+      sym = tokens.map{|token| token.sym}
+      if    sym.size == 6
+        if  sym[0..5] == [:IDENTFIER, :".", :IDENTFIER, :"(", :IDENTFIER, :")"]
+          library_name = tokens[0].text.upcase
+          entity_name  = tokens[2].text.upcase
+          architecture = tokens[4].text.upcase
+          return EntityName.new(entity_name, library_name, architecture)
+        end
+      elsif sym.size == 4
+        if  sym[0..3] == [:IDENTFIER, :"(", :IDENTFIER, :")"]
+          library_name = nil
+          entity_name  = tokens[0].text.upcase
+          architecture = tokens[2].text.upcase
+          return EntityName.new(entity_name, library_name, architecture)
+        end
+      elsif sym.size == 3
+        if  sym[0..2] == [:IDENTFIER, :".", :IDENTFIER]
+          library_name = tokens[0].text.upcase
+          entity_name  = tokens[2].text.upcase
+          architecture = nil
+          return EntityName.new(entity_name, library_name, architecture)
+        end
+      elsif sym.size == 1
+        if  sym[0..0] == [:IDENTFIER]
+          library_name = nil
+          entity_name  = tokens[0].text.upcase
+          architecture = nil
+          return EntityName.new(entity_name, library_name, architecture)
+        end
+      end
+      return nil
+    end
+    module_function :parse_entity_name
+    #-----------------------------------------------------------------------------
     # LibraryUnit   : ソースコードを読んだ時のユニット毎の依存関係を保持するクラス.
     #                 ここで言うユニットとは entity, architecture, package, 
     #                 package body のこと.
@@ -288,59 +347,35 @@ module PipeWork
             tok  = @tokens[i-9..i-2]
             sym  = tok.map{|token| token.sym}
             if    (sym[-9..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER, :".", :IDENTFIER, :"(", :IDENTFIER, :")"])
-              instance = {:Label        => tok[-9].text.upcase,
-                          :Library      => tok[-6].text.upcase,
-                          :Entity       => tok[-4].text.upcase,
-                          :Architecture => tok[-2].text.upcase
-              }
+              id = tok[-9..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Entity    => EntityName.new(id[5], id[3], id[7])}
             elsif (sym[-7..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER, :"(", :IDENTFIER, :")"])
-              instance = {:Label        => tok[-7].text.upcase,
-                          :Library      => nil                 ,
-                          :Entity       => tok[-4].text.upcase,
-                          :Architecture => tok[-2].text.upcase,
-              }
+              id = tok[-7..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Entity    => EntityName.new(id[3], nil  , id[5])}
             elsif (sym[-6..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER, :".", :IDENTFIER])
-              instance = {:Label        => tok[-6].text.upcase,
-                          :Library      => tok[-3].text.upcase,
-                          :Entity       => tok[-1].text.upcase,
-                          :Architecture => nil
-              }
+              id = tok[-6..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Entity    => EntityName.new(id[5], id[3], nil  )}
             elsif (sym[-4..-1] == [:IDENTFIER, :":", :ENTITY   , :IDENTFIER])
-              instance = {:Label        => tok[-4].text.upcase,
-                          :Library      => nil                 ,
-                          :Entity       => tok[-1].text.upcase,
-                          :Architecture => nil
-              }
+              id = tok[-4..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Entity    => EntityName.new(id[3], nil  , nil  )}
             elsif (sym[-8..-1] == [:IDENTFIER, :":", :COMPONENT, :IDENTFIER, :".", :IDENTFIER, :".", :IDENTFIER])
-              instance = {:Label        => tok[-8].text.upcase,
-                          :Library      => tok[-5].text.upcase,
-                          :Component    => tok[-1].text.upcase
-              }
+              id = tok[-8..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Component => EntityName.new(id[7], id[3], nil  )}
             elsif (sym[-6..-1] == [:IDENTFIER, :":", :COMPONENT, :IDENTFIER, :".", :IDENTFIER])
-              instance = {:Label        => tok[-6].text.upcase,
-                          :Library      => tok[-3].text.upcase,
-                          :Component    => tok[-1].text.upcase
-              }
+              id = tok[-6..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Component => EntityName.new(id[5], id[3], nil  )}
             elsif (sym[-4..-1] == [:IDENTFIER, :":", :COMPONENT, :IDENTFIER])
-              instance = {:Label        => tok[-4].text.upcase,
-                          :Library      => nil                 ,
-                          :Component    => tok[-1].text.upcase
-              }
+              id = tok[-4..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Component => EntityName.new(id[3], nil,   nil  )}
             elsif (sym[-7..-1] == [:IDENTFIER, :":", :IDENTFIER, :".", :IDENTFIER, :".", :IDENTFIER])
-              instance = {:Label        => tok[-7].text.upcase,
-                          :Library      => tok[-5].text.upcase,
-                          :Component    => tok[-1].text.upcase
-              }
+              id = tok[-7..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Component => EntityName.new(id[6], id[2], nil  )}
             elsif (sym[-5..-1] == [:IDENTFIER, :":", :IDENTFIER, :".", :IDENTFIER])
-              instance = {:Label        => tok[-5].text.upcase,
-                          :Library      => tok[-3].text.upcase,
-                          :Component    => tok[-1].text.upcase
-              }
+              id = tok[-5..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Component => EntityName.new(id[4], id[2], nil  )}
             elsif (sym[-3..-1] == [:IDENTFIER, :":", :IDENTFIER])
-              instance = {:Label        => tok[-3].text.upcase,
-                          :Library      => nil                 ,
-                          :Component    => tok[-1].text.upcase
-              }
+              id = tok[-3..-1].map{|token| token.text.upcase}
+              instance = {:Label => id[0], :Component => EntityName.new(id[2], nil  , nil  )}
             else
               instance = nil
             end
@@ -353,20 +388,14 @@ module PipeWork
       def debug_print
         super
         @instance_list.each do |instance|
-          name  = instance[:Label] + ":"
-          if instance[:Library] != nil
-            name += instance[:Library] + "."
-          end
+          str  = instance[:Label] + ":"
           if instance[:Component] != nil
-            name += instance[:Component]
+            str += instance[:Component].to_s
           end
           if instance[:Entity] != nil
-            name += instance[:Entity]
+            str += instance[:Entity].to_s
           end
-          if instance[:Architecture] != nil
-            name += "(" + instance[:Architecture] + ")"
-          end
-          warn "    - external: " + name
+          warn "    - external: " + str
         end
       end
     end
@@ -415,6 +444,22 @@ module PipeWork
     #-----------------------------------------------------------------------------
     class LibraryUnitList < Array
       #---------------------------------------------------------------------------
+      # バインド処理から除外するライブラリ名
+      #---------------------------------------------------------------------------
+      attr_accessor :exclusion_library_list
+      #---------------------------------------------------------------------------
+      # 
+      #---------------------------------------------------------------------------
+      attr_accessor :verbose
+      #---------------------------------------------------------------------------
+      # 
+      #---------------------------------------------------------------------------
+      def initialize
+        super
+        @verbose                = nil
+        @exclusion_library_list = ["IEEE"]
+      end
+      #---------------------------------------------------------------------------
       # analyze_path : 与えられたパス名を解析し、ディレクトリならば再帰的に探索し、
       #                ファイルならば read_file を呼び出して、自分自身に LibraryUnit 
       #                を追加する.
@@ -425,11 +470,7 @@ module PipeWork
         if File::ftype(path_name) == "directory"
           Dir::foreach(path_name) do |name|
             next if name =~ /^\./
-            if path_name =~ /\/$/
-              analyze_path(path_name + name      , library_name)
-            else
-              analyze_path(path_name + "/" + name, library_name)
-            end
+            analyze_path(File::join([path_name, name]), library_name)
           end
         elsif path_name =~ /~$/
         else 
@@ -442,7 +483,7 @@ module PipeWork
       #---------------------------------------------------------------------------
       def read_file(file_name, library_name)
         if @verbose 
-          warn "analyze file : " + file_name
+          warn "Analyze File : " + file_name
         end
         File.open(file_name) do |file|
           analyze_file(file, file_name, library_name)
@@ -579,7 +620,7 @@ module PipeWork
       # 指定した Architecture から参照しているユニットを探し出して見つかった Unit 
       # をリストとして返すメソッド
       #---------------------------------------------------------------------------
-      def select_found_instance(unit, instance)
+      def select_found_instance(unit, entity)
         found_list  = LibraryUnitList.new
         #-------------------------------------------------------------------------
         # 指定された Unit が Architecture じゃ無い場合は空のリストを返す.
@@ -588,77 +629,29 @@ module PipeWork
           return found_list
         end
         #-------------------------------------------------------------------------
-        # instance から entity_name と archtecture を得る.
-        #-------------------------------------------------------------------------
-        if (instance[:Entity] != nil)
-          entity_name = instance[:Entity]
-          archtecture = instance[:Architecture]
-        end
-        if (instance[:Component] != nil)
-          entity_name = instance[:Component]
-          archtecture = nil
-        end
-        #-------------------------------------------------------------------------
-        # ライブラリ名が指定されてない場合
-        #-------------------------------------------------------------------------
-        if (instance[:Library] == nil)
-          #-----------------------------------------------------------------------
-          # まず、Unit が所属しているライブラリから探す.
-          #-----------------------------------------------------------------------
-          found_list.concat(
-            self.select{ |u|
-              (u.name         == entity_name       ) and
-              (u.library_name == unit.library_name ) and
-              (u.type         == :Architecture     ) and
-              (u.arch_name    == archtecture or archtecture == nil)
-            }
-          )
-          #-----------------------------------------------------------------------
-          # 見つからなかった場合は、Unit が使っているライブラリから探す
-          #-----------------------------------------------------------------------
-          if (found_list.size < 1)
-            unit.use_library_list.each do |library_name|
-              found_list.concat(
-                self.select{ |u|
-                  (u.name         == entity_name  ) and
-                  (u.library_name == library_name ) and
-                  (u.type         == :Architecture) and
-                  (u.arch_name    == archtecture or archtecture == nil)
-                }
-              )
-            end
-          end
-        #-------------------------------------------------------------------------
         # ライブラリ名が指定されている場合はそのライブラリから探す
         #-------------------------------------------------------------------------
-        else
-          found_list.concat(
-            self.select{ |u|
-              (u.name         == entity_name  ) and
-              (u.library_name == library_name ) and
-              (u.type         == :Architecture) and
-              (u.arch_name    == archtecture or archtecture == nil)
-            }
-          )
+        if (entity.library_name != nil)
+          found_list.concat(  self.select_architecture(entity.library_name, entity.name, entity.arch_name))
+          return found_list
+        end
+        #-------------------------------------------------------------------------
+        # ライブラリ名が指定されてない場合...
+        # まず、Unit が所属しているライブラリから探す.
+        #-------------------------------------------------------------------------
+        found_list.concat(    self.select_architecture(  unit.library_name, entity.name, entity.arch_name))
+        #-------------------------------------------------------------------------
+        # 見つからなかった場合は、Unit が使っているライブラリから探す
+        #-------------------------------------------------------------------------
+        if (found_list.size < 1)
+          unit.use_library_list.each do |use_library_name|
+            found_list.concat(self.select_architecture(   use_library_name, entity.name, entity.arch_name))
+          end
         end
         #-------------------------------------------------------------------------
         # 見つかったリストを返す.
         #-------------------------------------------------------------------------
         return found_list
-      end
-      #---------------------------------------------------------------------------
-      # Architecture の instance_list の参照先を解決して use_unit_list に追加
-      # するメソッド
-      #---------------------------------------------------------------------------
-      def resolve_external_name
-        self.each do |unit|
-          next if (unit.type != :Architecture)
-          found_list = select_external_unit(unit)
-          found_list.each do |use_unit|
-            unit.add_use_unit(use_unit.library_name, use_unit.name)
-          end
-        end
-        return self
       end
       #---------------------------------------------------------------------------
       # 指定された名前の Package と PackageBody のリストを返す.
@@ -679,8 +672,7 @@ module PipeWork
           (unit.library_name == library_name) and
           ((unit.type == :Entity                                         ) or
            (unit.type == :Architecture and architecture == unit.arch_name) or
-           (unit.type == :Architecture and architecture == nil           ) or
-           (unit.type == :Architecture and architecture == :any          ))
+           (unit.type == :Architecture and architecture == nil           ))
         end
       end
       #---------------------------------------------------------------------------
@@ -691,8 +683,7 @@ module PipeWork
           (unit.name == entity_name) and
           (unit.library_name == library_name) and
           ((unit.type == :Architecture and architecture == unit.arch_name) or
-           (unit.type == :Architecture and architecture == nil           ) or
-           (unit.type == :Architecture and architecture == :any          ))
+           (unit.type == :Architecture and architecture == nil           ))
         end
       end
       #---------------------------------------------------------------------------
@@ -716,31 +707,25 @@ module PipeWork
         #   end
         # end
         #-------------------------------------------------------------------------
-        # 解決すべきユニットの名前リストが空になるまで bind_unit_list を繰り返す.
+        # 解決すべきユニットの名前リストが空になるまで処理を繰り返す.
         #-------------------------------------------------------------------------
         unsolved_list = top_list
         while unsolved_list.size > 0 do
           top_unit_list = unsolved_list
           unsolved_list = Array.new
           top_unit_list.each do |top_unit|
-            library_name = top_unit[:library_name];
-            entity_name  = top_unit[:entity_name ];
-            architecture = top_unit[:architecture];
-            top_name     = library_name + "." + entity_name
-            if architecture != nil 
-              top_name  += "(" + architecture.to_s + ")"
+            top_name = top_unit.to_s
+            if @verbose
+              warn "Bind Enity : " + top_name
             end
             #---------------------------------------------------------------------
             # 解決すべきユニットを探し出してリストにする.
             #---------------------------------------------------------------------
-            found_arch_list = self.select{ |unit|
-              (unit.name == entity_name) and
-              (unit.library_name == library_name) and
-              (unit.type == :Architecture) and 
-              ((architecture == unit.arch_name) or
-               (architecture == :any          ) or
-               (architecture == nil           ))
-            }
+            found_arch_list = self.select_architecture(
+              top_unit.library_name,
+              top_unit.name,
+              top_unit.arch_name
+            );
             #---------------------------------------------------------------------
             # ユニットが見つからなかった場合は警告を出して終わり.
             #---------------------------------------------------------------------
@@ -757,12 +742,16 @@ module PipeWork
               # を bind_name_list に登録する.
               #-------------------------------------------------------------------
               arch.use_unit_list.each_key do |use_library_name|
+                next if @exclusion_library_list.index(use_library_name) != nil
                 arch.use_unit_list[use_library_name].each do |use_unit_name|
                   if (bind_name_list.key?(use_library_name) == true) and
                      (bind_name_list[use_library_name].key?(use_unit_name) == true)
                     bind_name_list[use_library_name][use_unit_name] = 1
+                    if @verbose
+                      warn "    Found External Unit: " + top_name + " => " + use_library_name + "." + use_unit_name
+                    end
                   else
-                    warn "Not Found External Unit: " + top_name + " => " + use_library_name + "." + use_unit_name
+                      warn "Not Found External Unit: " + top_name + " => " + use_library_name + "." + use_unit_name
                   end
                 end
               end
@@ -772,29 +761,27 @@ module PipeWork
               #-------------------------------------------------------------------
               arch.instance_list.each do |instance|
                 #-----------------------------------------------------------------
+                # instance から entity を得る.
+                #-----------------------------------------------------------------
+                if (instance[:Entity] != nil)
+                  entity = instance[:Entity]
+                end
+                if (instance[:Component] != nil)
+                  entity = instance[:Component]
+                end
+                #-----------------------------------------------------------------
                 # ライブラリ名とエンティティ名から一致するユニットのリストを得る.
                 #-----------------------------------------------------------------
-                found_list = self.select_found_instance(arch, instance)
+                found_list = self.select_found_instance(arch, entity)
                 #-----------------------------------------------------------------
                 # 見つかったユニット数をチェック
                 #-----------------------------------------------------------------
-                instance_name = instance[:Label]
-                if instance[:Library] != nil
-                  instance_name += instance[:Library] + "."
-                end
-                if instance[:Component] != nil
-                  instance_name += instance[:Component]
-                end
-                if instance[:Entity] != nil
-                  instance_name += instance[:Entity]
-                end
-                if instance[:Architecture] != nil
-                  instance_name += "(" + instance[:Architecture] + ")"
-                end
                 if    (found_list.size < 1) 
-                  warn "Not Found External Unit: " + top_name + " => " + instance_name
+                  warn "Not Found External Unit: " + top_name + " => " + instance[:Label] + ":" + entity.to_s
                 elsif (found_list.size > 1) 
-                  warn "Conflict External Unit: "  + top_name + " => " + instance_name
+                  warn "Conflict External Unit: "  + top_name + " => " + instance[:Label] + ":" + entity.to_s
+                elsif @verbose 
+                  warn "    Found External Unit: " + top_name + " => " + instance[:Label] + ":" + entity.to_s
                 end
                 #-----------------------------------------------------------------
                 # 見つかったユニットの名前とライブラリを bind_name_list と突合せて
@@ -808,14 +795,16 @@ module PipeWork
                   if (bind_name_list.key?(use_library_name) == true) and
                      (bind_name_list[use_library_name].key?(use_unit_name) == true)
                     if (bind_name_list[use_library_name][use_unit_name] == 0)
-                      unsolved_list << {
-                        :library_name => use_library_name,
-                        :entity_name  => use_unit_name,
-                        :architecture => use_arch_name
-                      }
+                      unsolved_list << EntityName.new(use_unit_name,use_library_name,use_arch_name)
                     end
                     bind_name_list[use_library_name][use_unit_name] = 1
                   end
+                end
+                #-----------------------------------------------------------------
+                # 見つかったユニットの名前とライブラリを arch.use_unit に追加する.
+                #-----------------------------------------------------------------
+                found_list.each do |u|
+                  arch.add_use_unit(u.library_name, u.name)
                 end
               end
             end

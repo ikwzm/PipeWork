@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.2
-#       Created     :   2014/5/28
+#       Created     :   2014/6/12
 #       File name   :   MakeSerializedPackageList.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -96,6 +96,27 @@ class SerializedPackageList
   #-------------------------------------------------------------------------------
   def generate
     #-----------------------------------------------------------------------------
+    # use_entity_architecture を生成しておく.
+    # use_entity_architecture は一つの entity に対して複数の architecture が定義
+    # されていた場合に、どの achitetcure を選択するかを指定するための辞書である.
+    # 引数チェックのため、VHDLをパースする前に(unit_listを生成する前に)生成する.
+    #-----------------------------------------------------------------------------
+    use_entity_architecture = Hash.new
+    @use_entity_list.each do |use_entity|
+      entity_full_name = PipeWork::VHDL_Reader.parse_entity_name(use_entity,0)
+      if entity_full_name != nil
+        entity_name  = entity_full_name.name
+        library_name = entity_full_name.library_name
+        architecture = entity_full_name.arch_name
+        if (architecture != nil) and
+           (library_name == nil or library_name == @library_name.upcase)
+          use_entity_architecture[entity_name] = architecture
+          next
+        end
+      end
+      abort "Invalid option use entity: " + use_entity
+    end
+    #-----------------------------------------------------------------------------
     # @path_list で指定されたパスに対して走査して unit_list を生成する.
     #-----------------------------------------------------------------------------
     unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
@@ -106,36 +127,16 @@ class SerializedPackageList
     end
     # unit_list.debug_print
     #-----------------------------------------------------------------------------
-    # use_entity_dict を生成しておく.
-    # use_entity_dict は一つの entity に対して複数の architecture が定義されていた
-    # 場合に、どの achitetcure を選択するかを指定するための辞書である.
-    #-----------------------------------------------------------------------------
-    use_entity_dict = Hash.new
-    @use_entity_list.each do |use_entity|
-      if (use_entity =~ /^([\w]+)\.([\w]+)\(([\w]+)\)$/)
-        library_name = $1.upcase
-        entity_name  = $2.upcase
-        architecture = $3.upcase
-        if (library_name == @library_name.upcase)
-          use_entity_dict[entity_name] = architecture
-        end
-      elsif (use_entity =~ /^([\w]+)\(([\w]+)\)$/)
-        entity_name  = $1.upcase
-        architecture = $2.upcase
-        use_entity_dict[entity_name] = architecture
-      end 
-    end
-    #-----------------------------------------------------------------------------
     # entity 対して architecture を指定されている場合は、指定された architecture
     # 以外 を unit_list から取り除く.
-    # 上で作っておいた use_entity_dict を使う.
+    # 上で作っておいた use_entity_architecture を使う.
     #-----------------------------------------------------------------------------
     unit_list.reject! do |unit|
         (unit.type == :Architecture) and
-        (use_entity_dict.key?(unit.name) == true) and
-        (use_entity_dict[unit.name] != unit.arch_name)
+        (use_entity_architecture.key?(unit.name) == true) and
+        (use_entity_architecture[unit.name] != unit.arch_name)
     end
-    unit_list.debug_print
+    # unit_list.debug_print
     #-----------------------------------------------------------------------------
     # 出来上がった unit_list を元に unit_file_list を生成する.
     #-----------------------------------------------------------------------------
