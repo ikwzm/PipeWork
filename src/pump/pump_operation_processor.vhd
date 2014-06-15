@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
---!     @version 1.5.5
---!     @date    2014/3/23
+--!     @version 1.5.6
+--!     @date    2014/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -63,6 +63,14 @@ entity  PUMP_OPERATION_PROCESSOR is
                           --! 転送オペレーションコードの最上位ビットの位置を指定す
                           --! る.
                           integer := 121;
+        OP_CPRO_LO      : --! @brief Co-Processor Operation Code Low :
+                          --! コプロセッサオペレーションコードの最下位ビットの位置を
+                          --! 指定する.
+                          integer :=  0;
+        OP_CPRO_HI      : --! @brief Co-Processor Operation Code High :
+                          --! コプロセッサオペレーションコードの最上位ビットの位置を
+                          --! 指定する.
+                          integer := 121;
         OP_ADDR_LO      : --! @brief Link Operation Code Jump Address Low :
                           --! リンクオペレーション時の次のフェッチアドレスの最下位
                           --! ビットの位置を指定する.
@@ -106,11 +114,16 @@ entity  PUMP_OPERATION_PROCESSOR is
         OP_NONE_CODE    : --! @brief None Operation Type :
                           --! ノーオペレーションタイプのコードを指定する.
                           integer := 0;
+        OP_CPRO_CODE    : --! @brief Co-Pocesser Set Operation Type :
+                          --! コプロセッサオペレーションタイプのコードを指定する.
+                          --! ただし OP_CPRO_CODE<0を指定した場合はこの機能は無効.
+                          integer := 11;
         OP_XFER_CODE    : --! @brief Transfer Operation Type :
                           --! 転送オペレーションタイプのコードを指定する.
                           integer := 12;
         OP_LINK_CODE    : --! @brief Transfer Operation Type :
                           --! リンクオペレーションタイプのコードを指定する.
+                          --! ただし OP_LINE_CODE<0を指定した場合はこの機能は無効.
                           integer := 13
     );
     port (
@@ -170,9 +183,17 @@ entity  PUMP_OPERATION_PROCESSOR is
         T_PAUSE_L       : in  std_logic;
         T_PAUSE_D       : in  std_logic;
         T_PAUSE_Q       : out std_logic;
+        T_BUSY          : out std_logic;
         T_ERROR         : out std_logic_vector(2 downto 0);
         T_FETCH         : out std_logic;
-        T_END           : out std_logic;
+        T_DONE          : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Co-Processer Interface Signals.
+    -------------------------------------------------------------------------------
+        C_OPERAND_L     : out std_logic_vector(OP_CPRO_HI downto OP_CPRO_LO);
+        C_OPERAND_D     : out std_logic_vector(OP_CPRO_HI downto OP_CPRO_LO);
+        C_REQ           : out std_logic;
+        C_ACK           : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Transfer Control Register Interface Signals.
     -------------------------------------------------------------------------------
@@ -262,6 +283,7 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
                                   X_START_STATE,
                                   X_DONE_STATE ,
                                   DECODE_STATE ,
+                                  CO_PRO_STATE ,
                                   STOP_STATE   ,
                                   DONE_STATE   );
     signal   curr_state         : STATE_TYPE;
@@ -272,19 +294,23 @@ architecture RTL of PUMP_OPERATION_PROCESSOR is
     signal   op_valid           : std_logic;
     signal   op_shift           : std_logic;
     signal   op_type            : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO);
-    constant OP_NONE_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
-                                  std_logic_vector(to_unsigned(OP_NONE_CODE, op_type'length));
-    constant OP_XFER_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
-                                  std_logic_vector(to_unsigned(OP_XFER_CODE, op_type'length));
-    constant OP_LINK_TYPE       : std_logic_vector(OP_TYPE_HI downto OP_TYPE_LO) :=
-                                  std_logic_vector(to_unsigned(OP_LINK_CODE, op_type'length));
+    function OP_EQ(OP_TYPE: std_logic_vector;OP_CODE:integer) return boolean is
+    begin
+        if (OP_CODE >= 0) then
+            return (to_01(unsigned(OP_TYPE),'0') = OP_CODE);
+        else
+            return FALSE;
+        end if;
+    end function;
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
-    signal   op_decode          : boolean;
     signal   stop_request       : boolean;
+    signal   op_decode          : boolean;
+    signal   op_start           : boolean;
     signal   link_start         : boolean;
     signal   xfer_start         : boolean;
+    signal   cpro_request       : boolean;
     signal   xfer_last          : std_logic;
 begin
     -------------------------------------------------------------------------------
@@ -508,23 +534,45 @@ begin
                     ---------------------------------------------------------------
                     when DECODE_STATE =>
                         if    (stop_request) then
-                            next_state := STOP_STATE;
+                                next_state := STOP_STATE;
                         elsif (op_valid = '0') then
-                            next_state := DECODE_STATE;
-                        elsif (op_type = OP_XFER_TYPE and X_RUN = '1') then
-                            next_state := DECODE_STATE;
-                        elsif (op_type = OP_XFER_TYPE and X_RUN = '0') then
-                            next_state := X_START_STATE;
-                        elsif (op_type = OP_LINK_TYPE and op_code(OP_END_POS) = '1') then
-                            next_state := X_DONE_STATE;
-                        elsif (op_type = OP_LINK_TYPE and op_code(OP_END_POS) = '0') then
-                            next_state := M_START_STATE;
-                        elsif (op_type = OP_NONE_TYPE and op_code(OP_END_POS) = '1') then
-                            next_state := X_DONE_STATE;
-                        elsif (op_type = OP_NONE_TYPE and op_code(OP_END_POS) = '0') then
-                            next_state := M_START_STATE;
+                                next_state := DECODE_STATE;
+                        elsif (OP_EQ(op_type, OP_XFER_CODE) = TRUE) then
+                            if (X_RUN = '1') then
+                                next_state := DECODE_STATE;
+                            else
+                                next_state := X_START_STATE;
+                            end if;
+                        elsif (OP_EQ(op_type, OP_CPRO_CODE) = TRUE) then
+                            if (X_RUN = '1') then
+                                next_state := DECODE_STATE;
+                            else
+                                next_state := CO_PRO_STATE;
+                            end if;
+                        elsif (OP_EQ(op_type, OP_NONE_CODE) = TRUE) or
+                              (OP_EQ(op_type, OP_LINK_CODE) = TRUE) then
+                            if (op_code(OP_END_POS) = '1') then
+                                next_state := X_DONE_STATE;
+                            else
+                                next_state := M_START_STATE;
+                            end if;
                         else
-                            next_state := X_DONE_STATE;
+                                next_state := X_DONE_STATE;
+                        end if;
+                    ---------------------------------------------------------------
+                    -- コプロッセッサーオペレーション実行中
+                    ---------------------------------------------------------------
+                    when CO_PRO_STATE =>
+                        if    (OP_CPRO_CODE < 0) then
+                                next_state := IDLE_STATE;
+                        elsif (C_ACK = '1') then
+                            if (op_code(OP_END_POS) = '1') then
+                                next_state := X_DONE_STATE;
+                            else
+                                next_state := M_START_STATE;
+                            end if;
+                        else
+                                next_state := CO_PRO_STATE;
                         end if;
                     ---------------------------------------------------------------
                     -- 転送オペレーション実行中
@@ -590,7 +638,7 @@ begin
                 -------------------------------------------------------------------
                 -- xfer_last : 最後のトランザクションであることを示す.
                 -------------------------------------------------------------------
-                if   (op_decode and op_type = OP_XFER_TYPE) then
+                if   (op_decode and OP_EQ(op_type, OP_XFER_CODE)) then
                     xfer_last <= op_code(OP_END_POS);
                 elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
                     xfer_last <= '0';
@@ -598,7 +646,8 @@ begin
                 -------------------------------------------------------------------
                 -- op_shift  : キューからデコード済みのコードを破棄する.
                 -------------------------------------------------------------------
-                if   (curr_state = DECODE_STATE and next_state /= DECODE_STATE) then
+                if   (curr_state = DECODE_STATE and next_state /= DECODE_STATE and next_state /= CO_PRO_STATE) or
+                     (curr_state = CO_PRO_STATE and next_state /= CO_PRO_STATE) then
                     op_shift  <= '1';
                 else
                     op_shift  <= '0';
@@ -614,10 +663,11 @@ begin
                 -------------------------------------------------------------------
                 -- ERROR(0)  :
                 -------------------------------------------------------------------
-                if (op_decode and
-                    op_type   /= OP_NONE_TYPE and
-                    op_type   /= OP_XFER_TYPE and
-                    op_type   /= OP_LINK_TYPE) then
+                if (op_decode = TRUE) and
+                   (OP_EQ(op_type, OP_NONE_CODE) = FALSE) and 
+                   (OP_EQ(op_type, OP_CPRO_CODE) = FALSE) and 
+                   (OP_EQ(op_type, OP_XFER_CODE) = FALSE) and 
+                   (OP_EQ(op_type, OP_LINK_CODE) = FALSE) then
                     error_bits(0) <= '1';
                 elsif(curr_state = IDLE_STATE or curr_state = DONE_STATE) then
                     error_bits(0) <= '0';
@@ -656,8 +706,8 @@ begin
     -- link_start   : リンクオペレーションの開始を指示する信号
     -- xfer_start   : 転送オペレーションの開始を指示する信号
     -------------------------------------------------------------------------------
-    link_start   <= (op_decode and op_type = OP_LINK_TYPE and stop_request = FALSE);
-    xfer_start   <= (op_decode and op_type = OP_XFER_TYPE and stop_request = FALSE and X_RUN = '0');
+    link_start   <= (op_start and OP_EQ(op_type, OP_LINK_CODE));
+    xfer_start   <= (op_start and OP_EQ(op_type, OP_XFER_CODE) and X_RUN = '0');
     -------------------------------------------------------------------------------
     -- Control Status Register Output Signals.
     -------------------------------------------------------------------------------
@@ -666,8 +716,9 @@ begin
     T_STOP_Q     <= stop_bit;
     T_PAUSE_Q    <= pause_bit;
     T_FETCH      <= fetch_bit;
-    T_END        <= '1'        when (curr_state = DONE_STATE) else '0';
-    T_ERROR      <= error_bits when (curr_state = DONE_STATE) else (others => '0');
+    T_BUSY       <= '1'        when (curr_state /= IDLE_STATE) else '0';
+    T_DONE       <= '1'        when (curr_state  = DONE_STATE) else '0';
+    T_ERROR      <= error_bits when (curr_state  = DONE_STATE) else (others => '0');
     -------------------------------------------------------------------------------
     -- op_code  : キューの先頭にあるオペコード.
     -- op_valid : 有効なオペコードがキューに入っていることを示すフラグ.
@@ -726,23 +777,31 @@ begin
     -- op_decode : キューに有効なコードがあり、デコード中である事を示すフラグ
     -- op_type   : キューの先頭にあるコードの、オペレーションのタイプを示す.
     -------------------------------------------------------------------------------
-    op_decode   <= (curr_state = DECODE_STATE and op_valid = '1');
-    op_type     <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
+    op_decode    <= (curr_state = DECODE_STATE and op_valid = '1');
+    op_start     <= (op_decode and stop_request = FALSE);
+    op_type      <= op_code(OP_TYPE_HI downto OP_TYPE_LO);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    M_BUF_RDY   <= '1';
+    M_BUF_RDY    <= '1';
     -------------------------------------------------------------------------------
     -- 転送オペレーション要求信号出力
     -------------------------------------------------------------------------------
-    X_OPERAND_L <= (others => '1') when (xfer_start) else (others => '0');
-    X_OPERAND_D <= op_code(OP_XFER_HI downto OP_XFER_LO);
-    X_START_L   <= '1' when (xfer_start) else '0';
-    X_START_D   <= '1' when (xfer_start) else '0';
-    X_STOP_L    <= T_STOP_L;
-    X_STOP_D    <= T_STOP_D;
-    X_RESET_L   <= T_RESET_L;
-    X_RESET_D   <= T_RESET_D;
-    X_PAUSE_L   <= T_PAUSE_L;
-    X_PAUSE_D   <= T_PAUSE_D;
+    X_OPERAND_L  <= (others => '1') when (xfer_start) else (others => '0');
+    X_OPERAND_D  <= op_code(OP_XFER_HI downto OP_XFER_LO);
+    X_START_L    <= '1' when (xfer_start) else '0';
+    X_START_D    <= '1' when (xfer_start) else '0';
+    X_STOP_L     <= T_STOP_L;
+    X_STOP_D     <= T_STOP_D;
+    X_RESET_L    <= T_RESET_L;
+    X_RESET_D    <= T_RESET_D;
+    X_PAUSE_L    <= T_PAUSE_L;
+    X_PAUSE_D    <= T_PAUSE_D;
+    -------------------------------------------------------------------------------
+    -- コプロセッサオペレーション要求信号出力
+    -------------------------------------------------------------------------------
+    cpro_request <= (curr_state = CO_PRO_STATE and OP_CPRO_CODE >= 0);
+    C_REQ        <= '1'             when (cpro_request) else '0';
+    C_OPERAND_L  <= (others => '1') when (cpro_request) else (others => '0');
+    C_OPERAND_D  <= op_code(OP_CPRO_HI downto OP_CPRO_LO);
 end RTL;
