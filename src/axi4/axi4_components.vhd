@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.5                                                           --
---!     @date    2014/03/30                                                      --
+--!     @version 1.5.6                                                           --
+--!     @date    2014/09/27                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -219,18 +219,22 @@ component AXI4_MASTER_TRANSFER_QUEUE
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
+        Q_VALID         : out   std_logic;
+        Q_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
+        Q_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        Q_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
+        Q_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
+        Q_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
+        Q_NEXT          : out   std_logic;
+        Q_LAST          : out   std_logic;
+        Q_FIRST         : out   std_logic;
+        Q_SAFETY        : out   std_logic;
+        Q_NOACK         : out   std_logic;
+        Q_READY         : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
         O_VALID         : out   std_logic;
-        O_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
-        O_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
-        O_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
-        O_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
-        O_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
-        O_NEXT          : out   std_logic;
-        O_LAST          : out   std_logic;
-        O_FIRST         : out   std_logic;
-        O_SAFETY        : out   std_logic;
-        O_NOACK         : out   std_logic;
-        O_READY         : in    std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
@@ -689,8 +693,11 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
-                          --! キューの大きさを指定する.
-                          integer := 1
+                          --! レスンポンスのキューの大きさを指定する.
+                          integer := 1;
+        RESP_REGS       : --! @brief RESPONSE REGISTER USE :
+                          --! レスポンスの入力側にレジスタを挿入する.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------

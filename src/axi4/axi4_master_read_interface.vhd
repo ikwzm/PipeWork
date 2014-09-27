@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.5.5
---!     @date    2014/3/23
+--!     @version 1.5.6
+--!     @date    2014/9/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -441,7 +441,6 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.CHOPPER;
-use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
 use     PIPEWORK.COMPONENTS.POOL_INTAKE_PORT;
 use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.AXI4_COMPONENTS.AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;
@@ -695,18 +694,18 @@ begin
             I_SAFETY        => xfer_req_safety       , -- In  :
             I_NOACK         => xfer_req_noack        , -- In  :
             I_READY         => xfer_req_ready        , -- Out :
-            O_VALID         => req_queue_valid       , -- Out :
-            O_SEL           => req_queue_select      , -- Out :
-            O_SIZE          => req_queue_size        , -- Out :
-            O_ADDR          => req_queue_addr        , -- Out :
-            O_ALEN          => req_queue_alen        , -- Out :
-            O_PTR           => req_queue_ptr         , -- Out :
-            O_NEXT          => req_queue_next        , -- Out :
-            O_LAST          => req_queue_last        , -- Out :
-            O_FIRST         => req_queue_first       , -- Out :
-            O_SAFETY        => req_queue_safety      , -- Out :
-            O_NOACK         => req_queue_noack       , -- Out :
-            O_READY         => req_queue_ready       , -- In  :
+            Q_VALID         => req_queue_valid       , -- Out :
+            Q_SEL           => req_queue_select      , -- Out :
+            Q_SIZE          => req_queue_size        , -- Out :
+            Q_ADDR          => req_queue_addr        , -- Out :
+            Q_ALEN          => req_queue_alen        , -- Out :
+            Q_PTR           => req_queue_ptr         , -- Out :
+            Q_NEXT          => req_queue_next        , -- Out :
+            Q_LAST          => req_queue_last        , -- Out :
+            Q_FIRST         => req_queue_first       , -- Out :
+            Q_SAFETY        => req_queue_safety      , -- Out :
+            Q_NOACK         => req_queue_noack       , -- Out :
+            Q_READY         => req_queue_ready       , -- In  :
             BUSY            => req_queue_busy        , -- Out :
             DONE            => req_queue_done        , -- Out :
             EMPTY           => req_queue_empty         -- Out :
