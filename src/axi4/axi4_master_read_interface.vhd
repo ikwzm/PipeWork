@@ -2,7 +2,7 @@
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
 --!     @version 1.5.6
---!     @date    2014/9/27
+--!     @date    2014/9/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -92,9 +92,19 @@ entity  AXI4_MASTER_READ_INTERFACE is
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
-        QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
+        QUEUE_SIZE      : --! @brief TRANSACTION QUEUE SIZE :
                           --! キューの大きさを指定する.
-                          integer := 1
+                          integer := 1;
+        RDATA_REGS      : --! @brief RDATA REGISTER TYPE :
+                          --! RDATA/RRESP/RLAST/RVALID の入力をどうするか指定する.
+                          --! * RDATA_REGS=0 スルー入力(レジスタは通さない).
+                          --! * RDATA_REGS=1 １段だけレジスタを通す. 
+                          --!   ただしバースト転送時には１サイクル毎にウェイトが入る.
+                          --! * RDATA_REGS=2 ２段のレジスタを通す.
+                          --! * RDATA_REGS=3 ３段のレジスタを通す.
+                          --!   このモードの場合、必ずRDATA/RRESPは一つのレジスタ
+                          --!   で受けるので外部インターフェース向き.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -441,6 +451,8 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.CHOPPER;
+use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
+use     PIPEWORK.COMPONENTS.QUEUE_RECEIVER;
 use     PIPEWORK.COMPONENTS.POOL_INTAKE_PORT;
 use     PIPEWORK.AXI4_TYPES.all;
 use     PIPEWORK.AXI4_COMPONENTS.AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER;
@@ -527,11 +539,13 @@ architecture RTL of AXI4_MASTER_READ_INTERFACE is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal   recv_enable        : std_logic;
-    signal   recv_data_valid    : std_logic;
-    signal   recv_data_ready    : std_logic;
-    signal   recv_data_ben      : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
-    signal   recv_data_error    : std_logic;
+    signal   read_data          : std_logic_vector(AXI4_DATA_WIDTH  -1 downto 0);
+    signal   read_data_ben      : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
+    signal   read_data_resp     : std_logic_vector(AXI4_RESP_WIDTH  -1 downto 0);
+    signal   read_data_last     : std_logic;
+    signal   read_data_valid    : std_logic;
+    signal   read_data_ready    : std_logic;
+    signal   read_data_error    : std_logic;
     signal   response_error     : std_logic;
     -------------------------------------------------------------------------------
     -- 
@@ -711,7 +725,7 @@ begin
             EMPTY           => req_queue_empty         -- Out :
         );                                             -- 
     -------------------------------------------------------------------------------
-    -- recv_data_ben : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
+    -- read_data_ben : AXI4 Read Data Channel はバイトイネーブル信号が無いので、
     --                 ここで作っておく.
     -------------------------------------------------------------------------------
     BEN: CHOPPER                                       -- 
@@ -760,7 +774,7 @@ begin
         ---------------------------------------------------------------------------
         -- バイトイネーブル信号
         ---------------------------------------------------------------------------
-            VALID           => recv_data_ben         , -- Out :
+            VALID           => read_data_ben         , -- Out :
             NEXT_VALID      => open                    -- Out :
         );                                             -- 
     -------------------------------------------------------------------------------
@@ -818,9 +832,9 @@ begin
                     -- AXI4 Read Data Channel から最初の RVALID が来るのを待つ.
                     ---------------------------------------------------------------
                     when WAIT_RFIRST =>
-                        if    (RVALID = '1' and recv_data_ready = '1' and RLAST = '1') then
+                        if    (read_data_valid = '1' and read_data_ready = '1' and read_data_last = '1') then
                             curr_state <= TURN_AR;
-                        elsif (RVALID = '1' and recv_data_ready = '1' and RLAST = '0') then
+                        elsif (read_data_valid = '1' and read_data_ready = '1' and read_data_last = '0') then
                             curr_state <= WAIT_RLAST;
                         else
                             curr_state <= WAIT_RFIRST;
@@ -829,7 +843,7 @@ begin
                     -- AXI4 Read Data Channel から最後の RVALID が来るのを待つ.
                     ---------------------------------------------------------------
                     when WAIT_RLAST  =>
-                        if    (RVALID = '1' and recv_data_ready = '1' and RLAST = '1') then
+                        if    (read_data_valid = '1' and read_data_ready = '1' and read_data_last = '1') then
                             curr_state <= TURN_AR;
                         else
                             curr_state <= WAIT_RLAST;
@@ -933,32 +947,20 @@ begin
     -------------------------------------------------------------------------------
     -- xfer_beat_chop  : バイトイネーブル信号生成用のトリガー信号.
     -------------------------------------------------------------------------------
-    xfer_beat_chop  <= '1' when (recv_data_valid = '1' and recv_data_ready = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- recv_enable     : レシーブバッファを有効にするための信号.
-    -------------------------------------------------------------------------------
-    recv_enable     <= '1' when (curr_state = WAIT_RFIRST or curr_state = WAIT_RLAST) else '0';
-    -------------------------------------------------------------------------------
-    -- recv_data_valid : レシーブバッファにRDATAを書き込むための信号.
-    -------------------------------------------------------------------------------
-    recv_data_valid <= '1' when (recv_enable = '1' and RVALID = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- recv_data_error : エラーレスンポンス
-    -------------------------------------------------------------------------------
-    recv_data_error <= '1' when (RRESP = AXI4_RESP_SLVERR or RRESP = AXI4_RESP_DECERR) else '0';
+    xfer_beat_chop  <= '1' when (read_data_valid = '1' and read_data_ready = '1') else '0';
     -------------------------------------------------------------------------------
     -- xfer_ack_valid  : 
     -------------------------------------------------------------------------------
     xfer_ack_valid  <= '1' when (xfer_noack = '0') and 
                                 ((xfer_safety = '0' and curr_state = WAIT_RFIRST                ) or
-                                 (xfer_safety = '1' and curr_state = WAIT_RFIRST and RLAST = '1') or
-                                 (xfer_safety = '1' and curr_state = WAIT_RLAST  and RLAST = '1')) and
-                                (RVALID = '1' and recv_data_ready = '1') else '0';
+                                 (xfer_safety = '1' and curr_state = WAIT_RFIRST and read_data_last = '1') or
+                                 (xfer_safety = '1' and curr_state = WAIT_RLAST  and read_data_last = '1')) and
+                                (read_data_valid = '1' and read_data_ready = '1') else '0';
     -------------------------------------------------------------------------------
     -- xfer_ack_error  : 
     -------------------------------------------------------------------------------
     xfer_ack_error  <= '1' when (xfer_noack = '0') and 
-                                (recv_data_error = '1' or response_error = '1') else '0';
+                                (read_data_error = '1' or response_error = '1') else '0';
     -------------------------------------------------------------------------------
     -- response_error  : 
     -------------------------------------------------------------------------------
@@ -968,7 +970,7 @@ begin
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1' or xfer_start = '1') then 
                 response_error <= '0';
-            elsif (recv_data_error = '1') then
+            elsif (read_data_error = '1') then
                 response_error <= '1';
             end if;
         end if;
@@ -976,13 +978,134 @@ begin
     -------------------------------------------------------------------------------
     -- xfer_res_error : データ転送中にエラーが発生したことを示すフラグ.
     -------------------------------------------------------------------------------
-    xfer_res_error <= xfer_sel_valid when (recv_data_ready  = '1') and
-                                          (RVALID           = '1') and
-                                          (recv_data_error  = '1') else SEL_ALL0;
+    xfer_res_error <= xfer_sel_valid when (read_data_ready = '1') and
+                                          (read_data_valid = '1') and
+                                          (read_data_error = '1') else SEL_ALL0;
     -------------------------------------------------------------------------------
-    -- RREADY : AXI4 Read Data Channel の レディ信号出力.
+    -- AXI4 Read Data Channel を一度バッファで受ける
     -------------------------------------------------------------------------------
-    RREADY <= '1' when (recv_enable = '1' and recv_data_ready = '1') else '0';
+    -- read_data       : RDATA  を一度バッファで受けた信号
+    -- read_data_valid : RVALID を一度バッファで受けた信号
+    -- read_data_last  : RLAST  を一度バッファで受けた信号
+    -- read_data_resp  : RRESP  を一度バッファで受けた信号
+    -- read_data_error : RRESP をデコードしてエラーを示していたことを示す信号
+    -- RREADY          : AXI4 Read Data Channel の レディ信号出力
+    -------------------------------------------------------------------------------
+    RDATA_BUF: block
+        constant DATA_LO     :  integer := 0;
+        constant DATA_HI     :  integer := DATA_LO + AXI4_DATA_WIDTH-1;
+        constant RESP_LO     :  integer := DATA_HI + 1;
+        constant RESP_HI     :  integer := RESP_LO + AXI4_RESP_WIDTH-1;
+        constant LAST_POS    :  integer := RESP_HI + 1;
+        constant WORD_LO     :  integer := 0;
+        constant WORD_HI     :  integer := LAST_POS;
+        signal   i_word      :  std_logic_vector(WORD_HI downto WORD_LO);
+        signal   q_word      :  std_logic_vector(WORD_HI downto WORD_LO);
+        signal   enable      :  std_logic;
+        signal   i_valid     :  std_logic;
+        signal   i_ready     :  std_logic;
+        signal   next_enable :  std_logic;
+        signal   curr_enable :  std_logic;
+    begin
+        ---------------------------------------------------------------------------
+        -- 
+        ---------------------------------------------------------------------------
+        next_enable <= '1' when (curr_enable = '0' and xfer_start = '1') or
+                                (curr_enable = '1' and not (RVALID = '1' and RLAST = '1' and i_ready = '1')) else '0';
+        process (CLK, RST) begin
+            if     (RST = '1') then curr_enable <= '0';
+            elsif  (CLK'event and CLK = '1') then
+                if (CLR = '1') then curr_enable <= '0';
+                else                curr_enable <= next_enable;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        -- RXXXX を i_word にセット
+        ---------------------------------------------------------------------------
+        i_word(DATA_HI downto DATA_LO) <= RDATA;
+        i_word(RESP_HI downto RESP_LO) <= RRESP;
+        i_word(LAST_POS)               <= RLAST;
+        ---------------------------------------------------------------------------
+        -- 入力レジスタ(QUEUE_REGISTERを使う場合)
+        ---------------------------------------------------------------------------
+        USE_REGS: if (RDATA_REGS < 3) generate
+            signal  q_valid     :  std_logic_vector(RDATA_REGS downto 0);
+        begin 
+            Q: QUEUE_REGISTER                        -- 
+                generic map (                        -- 
+                    QUEUE_SIZE  => RDATA_REGS      , -- 
+                    DATA_BITS   => i_word'length   , -- 
+                    LOWPOWER    => 0                 -- 
+                )                                    -- 
+                port map (                           -- 
+                -----------------------------------------------------------------------
+                -- クロック&リセット信号
+                -----------------------------------------------------------------------
+                    CLK         => CLK             , -- In  :
+                    RST         => RST             , -- In  :
+                    CLR         => CLR             , -- In  :
+                -----------------------------------------------------------------------
+                -- 入力側
+                -----------------------------------------------------------------------
+                    I_DATA      => i_word          , -- In  :
+                    I_VAL       => i_valid         , -- In  :
+                    I_RDY       => i_ready         , -- Out :
+                -----------------------------------------------------------------------
+                -- 出力側
+                -----------------------------------------------------------------------
+                    O_DATA      => open            , -- Out :
+                    O_VAL       => open            , -- Out :
+                    Q_DATA      => q_word          , -- Out :
+                    Q_VAL       => q_valid         , -- Out :
+                    Q_RDY       => read_data_ready   -- In  :
+                );                                   --
+            i_valid <= '1' when (curr_enable = '1' and RVALID  = '1') else '0';
+            RREADY  <= '1' when (curr_enable = '1' and i_ready = '1') else '0';
+            read_data_valid <= q_valid(0);
+        end generate;
+        ---------------------------------------------------------------------------
+        -- 入力レジスタ(QUEUE_RECEIVERを使う場合)
+        ---------------------------------------------------------------------------
+        USE_RECV: if (RDATA_REGS >= 3) generate      -- 
+            Q: QUEUE_RECEIVER                        -- 
+                generic map (                        -- 
+                    QUEUE_SIZE  => RDATA_REGS-1    , -- 
+                    DATA_BITS   => i_word'length     -- 
+                )                                    -- 
+                port map (                           -- 
+                -----------------------------------------------------------------------
+                -- クロック&リセット信号
+                -----------------------------------------------------------------------
+                    CLK         => CLK             , -- In  :
+                    RST         => RST             , -- In  :
+                    CLR         => CLR             , -- In  :
+                -----------------------------------------------------------------------
+                -- 入力側
+                -----------------------------------------------------------------------
+                    I_ENABLE    => next_enable     , -- In  :
+                    I_DATA      => i_word          , -- In  :
+                    I_VAL       => i_valid         , -- In  :
+                    I_RDY       => i_ready         , -- Out :
+                -----------------------------------------------------------------------
+                -- 出力側
+                -----------------------------------------------------------------------
+                    O_DATA      => q_word          , -- Out :
+                    O_VAL       => read_data_valid , -- Out :
+                    O_RDY       => read_data_ready   -- In  :
+                );                                   --
+            i_valid <= RVALID;                       -- 
+            RREADY  <= i_ready;                      -- 
+        end generate;                                -- 
+        ---------------------------------------------------------------------------
+        -- q_word を read_data_xxxx にセット
+        ---------------------------------------------------------------------------
+        read_data       <= q_word(DATA_HI downto DATA_LO);
+        read_data_resp  <= q_word(RESP_HI downto RESP_LO);
+        read_data_last  <= q_word(LAST_POS);
+        read_data_error <= '1' when (read_data_resp = AXI4_RESP_SLVERR) or
+                                    (read_data_resp = AXI4_RESP_DECERR) else '0';
+    end block;
     -------------------------------------------------------------------------------
     -- 入力ポート : 外部のリードバッファに書き込む前に、一旦このモジュールで受けて、
     --              バス幅の変換やバイトレーンの調整を行う.
@@ -1016,12 +1139,12 @@ begin
         -- 入力側 I/F
         ---------------------------------------------------------------------------
             PORT_ENABLE     => port_enable         , -- In :
-            PORT_DATA       => RDATA               , -- In :
-            PORT_LAST       => RLAST               , -- In :
-            PORT_DVAL       => recv_data_ben       , -- In :
-            PORT_ERROR      => recv_data_error     , -- In :
-            PORT_VAL        => recv_data_valid     , -- In :
-            PORT_RDY        => recv_data_ready     , -- Out:
+            PORT_DATA       => read_data           , -- In :
+            PORT_LAST       => read_data_last      , -- In :
+            PORT_DVAL       => read_data_ben       , -- In :
+            PORT_ERROR      => read_data_error     , -- In :
+            PORT_VAL        => read_data_valid     , -- In :
+            PORT_RDY        => read_data_ready     , -- Out:
         ---------------------------------------------------------------------------
         -- Push Size Signals.
         ---------------------------------------------------------------------------
@@ -1070,9 +1193,9 @@ begin
         signal valid  : boolean;
     begin
         enable <= (curr_state = WAIT_RFIRST);
-        error  <= (enable and recv_data_error = '1');
+        error  <= (enable and read_data_error = '1');
         last   <= (enable and xfer_ack_last   = '1');
-        valid  <= (enable and recv_data_valid = '1' and recv_data_ready = '1');
+        valid  <= (enable and read_data_valid = '1' and read_data_ready = '1');
         PUSH_RSV_VAL   <= xfer_sel_valid  when (valid) else (others => '0');
         PUSH_RSV_LAST  <= '1'             when (last ) else '0';
         PUSH_RSV_ERROR <= '1'             when (error) else '0';

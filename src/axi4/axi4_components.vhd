@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 1.5.6                                                           --
---!     @date    2014/09/27                                                      --
+--!     @date    2014/09/28                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -297,9 +297,19 @@ component AXI4_MASTER_READ_INTERFACE
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
-        QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
+        QUEUE_SIZE      : --! @brief TRANSACTION QUEUE SIZE :
                           --! キューの大きさを指定する.
-                          integer := 1
+                          integer := 1;
+        RDATA_REGS      : --! @brief RDATA REGISTER TYPE :
+                          --! RDATA/RRESP/RLAST/RVALID の入力をどうするか指定する.
+                          --! * RDATA_REGS=0 スルー入力(レジスタは通さない).
+                          --! * RDATA_REGS=1 １段だけレジスタを通す. 
+                          --!   ただしバースト転送時には１サイクル毎にウェイトが入る.
+                          --! * RDATA_REGS=2 ２段のレジスタを通す.
+                          --! * RDATA_REGS=3 ３段のレジスタを通す.
+                          --!   このモードの場合、必ずRDATA/RRESPは一つのレジスタ
+                          --!   で受けるので外部インターフェース向き.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
