@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.2
-#       Created     :   2014/6/12
+#       Version     :   0.0.3
+#       Created     :   2014/9/30
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -556,7 +556,7 @@ module PipeWork
             #---------------------------------------------------------------------
             # use ライブラリ名.パッケージ名; の解釈
             #---------------------------------------------------------------------
-            if (sym[0..4] == [:USE, :IDENTFIER, :".", :IDENTFIER, ";"])
+            if (sym[0..4] == [:USE, :IDENTFIER, :".", :IDENTFIER, :";"])
               use_list << {:LibraryName => tokens[1].text, 
                            :PackageName => tokens[3].text, 
                           }
