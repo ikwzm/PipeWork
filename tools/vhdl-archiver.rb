@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.1
-#       Created     :   2014/6/12
+#       Created     :   2014/10/9
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -205,7 +205,7 @@ class VhdlArchiver
         (unit.type == :Architecture) and
         (unit.library_name == library_name) and
         (use_entity.key?(unit.name) == true) and
-        (use_entity[unit.name].to_a.index(unit.arch_name) != nil)
+        (use_entity[unit.name].to_a.index(unit.arch_name) == nil)
       end
     end
     ## unit_list.debug_print
