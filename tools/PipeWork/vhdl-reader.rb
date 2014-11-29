@@ -210,9 +210,9 @@ module PipeWork
       end
     end
     #-----------------------------------------------------------------------------
-    # parse_entity_name : 文字列から EntityName を生成するモジュール関数.
+    # parse_unit_name : 文字列から UnitName/EntityName を生成するモジュール関数.
     #-----------------------------------------------------------------------------
-    def parse_entity_name(text_line, line_number)
+    def parse_unit_name(text_line, line_number)
       tokens = Lexer.scan_text(text_line, line_number)
       sym = tokens.map{|token| token.sym}
       if    sym.size == 6
@@ -233,20 +233,18 @@ module PipeWork
         if  sym[0..2] == [:IDENTFIER, :".", :IDENTFIER]
           library_name = tokens[0].text.upcase
           entity_name  = tokens[2].text.upcase
-          architecture = nil
-          return EntityName.new(entity_name, library_name, architecture)
+          return UnitName.new(entity_name, library_name)
         end
       elsif sym.size == 1
         if  sym[0..0] == [:IDENTFIER]
           library_name = nil
           entity_name  = tokens[0].text.upcase
-          architecture = nil
-          return EntityName.new(entity_name, library_name, architecture)
+          return UnitName.new(entity_name, library_name)
         end
       end
       return nil
     end
-    module_function :parse_entity_name
+    module_function :parse_unit_name
     #-----------------------------------------------------------------------------
     # LibraryUnit   : ソースコードを読んだ時のユニット毎の依存関係を保持するクラス.
     #                 ここで言うユニットとは entity, architecture, package, 
@@ -780,8 +778,9 @@ module PipeWork
               # い場合は何もしない.
               #-------------------------------------------------------------------
               next if (unit.type != :Architecture)
-              next if (unit_name.instance_of?(EntityName) == false)
-              next if (unit_name.arch_name != nil and unit_name.arch_name != unit.arch_name)
+              if (unit_name.instance_of?(EntityName)) 
+                next if (unit_name.arch_name != nil and unit_name.arch_name != unit.arch_name)
+              end
               #-------------------------------------------------------------------
               # instance_list を検索して、見つかった Unit の名前とライブラリ
               # を bind_name_list に登録する.

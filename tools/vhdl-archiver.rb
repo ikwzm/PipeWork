@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.1
-#       Created     :   2014/10/9
+#       Version     :   0.0.4
+#       Created     :   2014/11/29
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -72,7 +72,7 @@ class VhdlArchiver
       opt.on("--format     STRING"              ){|val| add_val(:format           , val )}
       opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val )}
       opt.on("--use        ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val )}
-      opt.on("--top        ENTITY(ARCHITECHURE)"){|val| add_val(:top_entity       , val )}
+      opt.on("--top        ENTITY(ARCHITECHURE)"){|val| add_val(:top_unit         , val )}
       opt.on("--output     FILE_NAME"           ){|val| add_val(:output_file_name , val )}
       opt.on("--archive    FILE_NAME"           ){|val| add_val(:archive_file_name, val )}
     end
@@ -90,7 +90,7 @@ class VhdlArchiver
       @library_info[@library_name][:replace_name     ] = nil
       @library_info[@library_name][:path_list        ] = Array.new
       @library_info[@library_name][:use_entity       ] = Hash.new
-      @library_info[@library_name][:top_entity       ] = Array.new
+      @library_info[@library_name][:top_unit         ] = Array.new
       @library_info[@library_name][:output_file_name ] = nil
       @library_info[@library_name][:archive_file_name] = nil
       @library_info[@library_name][:execute          ] = nil
@@ -124,8 +124,8 @@ class VhdlArchiver
         if (add_use_entity(@library_name, item) == false)
           @use_entity_list << item
         end
-      when :top_entity        then
-        if (add_top_entity(@library_name, item) == false)
+      when :top_unit        then
+        if (add_top_unit(@library_name, item) == false)
           @top_entity_list << item
         end
       else
@@ -136,15 +136,15 @@ class VhdlArchiver
   # add_use_entity :
   #-------------------------------------------------------------------------------
   def add_use_entity(default_library_name, item)
-    entity_full_name = PipeWork::VHDL_Reader.parse_entity_name(item,0)
-    return false if (entity_full_name == nil)
-    if entity_full_name.library_name == nil
-      entity_full_name.library_name = default_library_name
+    unit_name = PipeWork::VHDL_Reader.parse_unit_name(item,0)
+    return false if (unit_name == nil)
+    return false if (unit_name.instance_of?(PipeWork::VHDL_Reader::EntityName) == false)
+    if unit_name.library_name == nil
+      unit_name.library_name = default_library_name
     end
-    entity_name  = entity_full_name.name
-    library_name = entity_full_name.library_name
-    architecture = entity_full_name.arch_name
-    return false if (architecture == nil)
+    entity_name  = unit_name.name
+    library_name = unit_name.library_name
+    architecture = unit_name.arch_name
     return false if (@library_info.key?(library_name) == false)
     if (@library_info[library_name][:use_entity].key?(entity_name) == false)
       @library_info[library_name][:use_entity][entity_name] = Set.new
@@ -153,17 +153,17 @@ class VhdlArchiver
     return true
   end
   #-------------------------------------------------------------------------------
-  # add_top_entity :
+  # add_top_unit :
   #-------------------------------------------------------------------------------
-  def add_top_entity(default_library_name, item)
-    entity_full_name = PipeWork::VHDL_Reader.parse_entity_name(item,0)
-    return false if entity_full_name == nil
-    if entity_full_name.library_name == nil
-      entity_full_name.library_name = default_library_name
+  def add_top_unit(default_library_name, item)
+    unit_name = PipeWork::VHDL_Reader.parse_unit_name(item,0)
+    return false if unit_name == nil
+    if unit_name.library_name == nil
+      unit_name.library_name = default_library_name
     end
-    library_name = entity_full_name.library_name
+    library_name = unit_name.library_name
     return false if (@library_info.key?(library_name) == false)
-    @library_info[library_name][:top_entity] << entity_full_name
+    @library_info[library_name][:top_unit] << unit_name
     return true
   end
   #-------------------------------------------------------------------------------
@@ -177,7 +177,7 @@ class VhdlArchiver
       add_use_entity("WORK", item)
     end
     @top_entity_list.each do |item|
-      add_top_entity("WORK", item)
+      add_top_unit("WORK", item)
     end
   end
   #-------------------------------------------------------------------------------
@@ -214,7 +214,7 @@ class VhdlArchiver
     #-----------------------------------------------------------------------------
     top_list = Array.new
     @library_info.each_key do |library_name|
-      top_list.concat @library_info[library_name][:top_entity]
+      top_list.concat @library_info[library_name][:top_unit]
     end
     if top_list.size > 0 
       unit_list = unit_list.select_bound_unit(top_list)
