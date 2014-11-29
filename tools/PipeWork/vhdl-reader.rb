@@ -474,18 +474,28 @@ module PipeWork
       # analyze_path : 与えられたパス名を解析し、ディレクトリならば再帰的に探索し、
       #                ファイルならば read_file を呼び出して、自分自身に LibraryUnit 
       #                を追加する.
+      #                exclude_path_list に含まれるファイル/ディレクトリは探索しない.
       #                "."で始まるディレクトリは探索しない.
       #                "~"で終わるファイルは読まない.
       #---------------------------------------------------------------------------
-      def analyze_path(path_name, library_name)
-        if File::ftype(path_name) == "directory"
-          Dir::foreach(path_name) do |name|
-            next if name =~ /^\./
-            analyze_path(File::join([path_name, name]), library_name)
+      def analyze_path(path_name, library_name, exclude_path_list)
+        if File::ftype(path_name) == "directory" then
+          if exclude_path_list.index(path_name) != nil then
+            warn "Exclude Path : " + path_name if @verbose 
+          else
+            Dir::foreach(path_name) do |name|
+              next if name =~ /^\./
+              analyze_path(File::join([path_name, name]), library_name, exclude_path_list)
+            end
           end
-        elsif path_name =~ /~$/
+        elsif path_name =~ /~$/ then
         else 
-          read_file(path_name, library_name)
+          if exclude_path_list.index(path_name) != nil then
+            warn "Exclude File : " + path_name if @verbose 
+          else
+            warn "Analyze File : " + path_name if @verbose 
+            read_file(path_name, library_name)
+          end
         end
         return self
       end
@@ -493,9 +503,6 @@ module PipeWork
       # read_file  : VHDLソースファイルを読んで自分自身に LibraryUnit を追加する.
       #---------------------------------------------------------------------------
       def read_file(file_name, library_name)
-        if @verbose 
-          warn "Analyze File : " + file_name
-        end
         File.open(file_name) do |file|
           analyze_file(file, file_name, library_name)
         end

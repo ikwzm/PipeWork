@@ -126,7 +126,7 @@ class SerializedPackageList
     unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
     @path_list.each do |library_name, path_list|
       path_list.each do |path_name|
-        unit_list.analyze_path(path_name, library_name)
+        unit_list.analyze_path(path_name, library_name, [])
       end
     end
     # unit_list.debug_print

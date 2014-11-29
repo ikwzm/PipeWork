@@ -67,12 +67,13 @@ class VhdlArchiver
       opt.on("--debug"                          ){|val| @debug   = true                  }
       opt.on("--all"                            ){|val| @library_name = :global          }
       opt.on("--library    LIBRARY_NAME"        ){|val| new_lib(val.upcase)              }
-      opt.on("--print"                          ){|val| add_val(:print            , true)}
-      opt.on("--execute    STRING"              ){|val| add_val(:execute          , val )}
-      opt.on("--format     STRING"              ){|val| add_val(:format           , val )}
       opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val )}
       opt.on("--use        ENTITY(ARCHITECHURE)"){|val| add_val(:use_entity       , val )}
       opt.on("--top        ENTITY(ARCHITECHURE)"){|val| add_val(:top_unit         , val )}
+      opt.on("--exclude    FILE_NAME"           ){|val| add_val(:exclude          , val )}
+      opt.on("--print"                          ){|val| add_val(:print            , true)}
+      opt.on("--execute    STRING"              ){|val| add_val(:execute          , val )}
+      opt.on("--format     STRING"              ){|val| add_val(:format           , val )}
       opt.on("--output     FILE_NAME"           ){|val| add_val(:output_file_name , val )}
       opt.on("--archive    FILE_NAME"           ){|val| add_val(:archive_file_name, val )}
     end
@@ -91,6 +92,7 @@ class VhdlArchiver
       @library_info[@library_name][:path_list        ] = Array.new
       @library_info[@library_name][:use_entity       ] = Hash.new
       @library_info[@library_name][:top_unit         ] = Array.new
+      @library_info[@library_name][:exclude_path_list] = Array.new
       @library_info[@library_name][:output_file_name ] = nil
       @library_info[@library_name][:archive_file_name] = nil
       @library_info[@library_name][:execute          ] = nil
@@ -118,6 +120,8 @@ class VhdlArchiver
         @library_info[@library_name][:output_file_name ] =  item
       when :archive_file_name then
         @library_info[@library_name][:archive_file_name] =  item
+      when :exclude           then
+        @library_info[@library_name][:exclude_path_list] << item
       when :path_list         then
         @library_info[@library_name][:path_list        ] << item
       when :use_entity        then
@@ -190,8 +194,9 @@ class VhdlArchiver
     unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
     unit_list.verbose = @verbose
     @library_info.each_key do |library_name|
+      exclude_path_list = @library_info[library_name][:exclude_path_list]
       @library_info[library_name][:path_list].each do |path_name|
-        unit_list.analyze_path(path_name, library_name)
+        unit_list.analyze_path(path_name, library_name, exclude_path_list)
       end
     end
     # unit_list.debug_print
