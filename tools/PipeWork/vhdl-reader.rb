@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.3
-#       Created     :   2014/9/30
+#       Version     :   0.0.4
+#       Created     :   2014/11/29
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -176,20 +176,33 @@ module PipeWork
       module_function :scan_text
     end
     #-----------------------------------------------------------------------------
-    # EntityName    : entity の名前を管理するクラス.
+    # UnitName      : unit の名前を管理するクラス.
     #-----------------------------------------------------------------------------
-    class EntityName
-      attr_accessor :name, :library_name, :arch_name
-      def initialize(name, library_name, arch_name)
+    class UnitName
+      attr_accessor :name, :library_name
+      def initialize(name, library_name)
         @name         = name
         @library_name = library_name
-        @arch_name    = arch_name
       end
       def to_s
         str = @name
         if @library_name != nil
           str = @library_name + "." + str
         end
+        return str
+      end
+    end
+    #-----------------------------------------------------------------------------
+    # EntityName    : entity の名前を管理するクラス.
+    #-----------------------------------------------------------------------------
+    class EntityName < UnitName
+      attr_accessor :arch_name
+      def initialize(name, library_name, arch_name)
+        super(name, library_name)
+        @arch_name    = arch_name
+      end
+      def to_s
+        str = super
         if @arch_name != nil
           str = str + "(" + @arch_name + ")"
         end
@@ -692,6 +705,7 @@ module PipeWork
       def select_bound_unit(top_list)
         #-------------------------------------------------------------------------
         # bind_name_list を初期化する.
+        # 自分が管理しているライブラリ名とユニット名はあらかじめ0をセットしておく.
         #-------------------------------------------------------------------------
         bind_name_list = Hash.new
         self.each do |unit|
@@ -706,60 +720,73 @@ module PipeWork
         #     warn "==" + library_name + "." + unit_name + ": " + mark.to_s
         #   end
         # end
+        #
         #-------------------------------------------------------------------------
-        # 解決すべきユニットの名前リストが空になるまで処理を繰り返す.
+        # 解決すべきユニットの名前リスト(unsolved_unit_name_list)が空になるまで
+        # 処理を繰り返す.
         #-------------------------------------------------------------------------
-        unsolved_list = top_list
-        while unsolved_list.size > 0 do
-          top_unit_list = unsolved_list
-          unsolved_list = Array.new
-          top_unit_list.each do |top_unit|
-            top_name = top_unit.to_s
+        unsolved_unit_name_list = top_list
+        while unsolved_unit_name_list.size > 0 do
+          unit_name_list          = unsolved_unit_name_list
+          unsolved_unit_name_list = Array.new
+          unit_name_list.each do |unit_name|
             if @verbose
-              warn "Bind Enity : " + top_name
+              warn "Bind Unit : " + unit_name.to_s
             end
             #---------------------------------------------------------------------
             # 解決すべきユニットを探し出してリストにする.
             #---------------------------------------------------------------------
-            found_arch_list = self.select_architecture(
-              top_unit.library_name,
-              top_unit.name,
-              top_unit.arch_name
-            );
+            found_unit_list = self.select do |unit|
+              (unit_name.library_name == unit.library_name) and
+              (unit_name.name         == unit.name        )
+            end
             #---------------------------------------------------------------------
             # ユニットが見つからなかった場合は警告を出して終わり.
             #---------------------------------------------------------------------
-            if (found_arch_list.size == 0) 
-              warn "Not Found Top Unit: " + top_name
+            if (found_unit_list.size == 0) 
+              warn "Not Found Top Unit: " + unit_name.to_s
               next
             end
             #---------------------------------------------------------------------
             # ユニットが見つかった場合は
             #---------------------------------------------------------------------
-            found_arch_list.each do |arch|
+            found_unit_list.each do |unit|
               #-------------------------------------------------------------------
               # use_unit_list を検索して、見つかった Unit の名前とライブラリ
-              # を bind_name_list に登録する.
+              # を bind_name_list に登録する. もし bind_name_list にまだ登録されて
+              # なかったら unsolved_unit_name_list に追加する.
               #-------------------------------------------------------------------
-              arch.use_unit_list.each_key do |use_library_name|
+              unit.use_unit_list.each_key do |use_library_name|
                 next if @exclusion_library_list.index(use_library_name) != nil
-                arch.use_unit_list[use_library_name].each do |use_unit_name|
+                unit.use_unit_list[use_library_name].each do |use_unit_name|
                   if (bind_name_list.key?(use_library_name) == true) and
                      (bind_name_list[use_library_name].key?(use_unit_name) == true)
+                    if (bind_name_list[use_library_name][use_unit_name] == 0)
+                      unsolved_unit_name_list << UnitName.new(use_unit_name,use_library_name)
+                    end
                     bind_name_list[use_library_name][use_unit_name] = 1
                     if @verbose
-                      warn "    Found External Unit: " + top_name + " => " + use_library_name + "." + use_unit_name
+                      warn "    Found External Unit: " + unit_name.to_s + " => " + use_library_name + "." + use_unit_name
                     end
                   else
-                      warn "Not Found External Unit: " + top_name + " => " + use_library_name + "." + use_unit_name
+                      warn "Not Found External Unit: " + unit_name.to_s + " => " + use_library_name + "." + use_unit_name
                   end
                 end
               end
               #-------------------------------------------------------------------
+              # 対象のユニット(unit) が architecture でない場合や、
+              # unit_name が EntityName じゃない場合や、
+              # 対象のユニット(unit)のアーキテクチャ名 と unit.arch_nameが一致しな
+              # い場合は何もしない.
+              #-------------------------------------------------------------------
+              next if (unit.type != :Architecture)
+              next if (unit_name.instance_of?(EntityName) == false)
+              next if (unit_name.arch_name != nil and unit_name.arch_name != unit.arch_name)
+              #-------------------------------------------------------------------
               # instance_list を検索して、見つかった Unit の名前とライブラリ
               # を bind_name_list に登録する.
               #-------------------------------------------------------------------
-              arch.instance_list.each do |instance|
+              unit.instance_list.each do |instance|
                 #-----------------------------------------------------------------
                 # instance から entity を得る.
                 #-----------------------------------------------------------------
@@ -772,21 +799,21 @@ module PipeWork
                 #-----------------------------------------------------------------
                 # ライブラリ名とエンティティ名から一致するユニットのリストを得る.
                 #-----------------------------------------------------------------
-                found_list = self.select_found_instance(arch, entity)
+                found_list = self.select_found_instance(unit, entity)
                 #-----------------------------------------------------------------
                 # 見つかったユニット数をチェック
                 #-----------------------------------------------------------------
                 if    (found_list.size < 1) 
-                  warn "Not Found External Unit: " + top_name + " => " + instance[:Label] + ":" + entity.to_s
+                  warn "Not Found External Unit: " + unit_name.to_s + " => " + instance[:Label] + ":" + entity.to_s
                 elsif (found_list.size > 1) 
-                  warn "Conflict External Unit: "  + top_name + " => " + instance[:Label] + ":" + entity.to_s
+                  warn "Conflict  External Unit: " + unit_name.to_s + " => " + instance[:Label] + ":" + entity.to_s
                 elsif @verbose 
-                  warn "    Found External Unit: " + top_name + " => " + instance[:Label] + ":" + entity.to_s
+                  warn "    Found External Unit: " + unit_name.to_s + " => " + instance[:Label] + ":" + entity.to_s
                 end
                 #-----------------------------------------------------------------
                 # 見つかったユニットの名前とライブラリを bind_name_list と突合せて
-                # もし bind_name_list にまだ登録されてなかったら unsolved_list に
-                # 追加する.
+                # もし bind_name_list にまだ登録されてなかったら 
+                # unsolved_unit_name_list に追加する.
                 #-----------------------------------------------------------------
                 found_list.each do |u|
                   use_library_name = u.library_name
@@ -795,16 +822,16 @@ module PipeWork
                   if (bind_name_list.key?(use_library_name) == true) and
                      (bind_name_list[use_library_name].key?(use_unit_name) == true)
                     if (bind_name_list[use_library_name][use_unit_name] == 0)
-                      unsolved_list << EntityName.new(use_unit_name,use_library_name,use_arch_name)
+                      unsolved_unit_name_list << EntityName.new(use_unit_name,use_library_name,use_arch_name)
                     end
                     bind_name_list[use_library_name][use_unit_name] = 1
                   end
                 end
                 #-----------------------------------------------------------------
-                # 見つかったユニットの名前とライブラリを arch.use_unit に追加する.
+                # 見つかったユニットの名前とライブラリを unit.use_unit に追加する.
                 #-----------------------------------------------------------------
                 found_list.each do |u|
-                  arch.add_use_unit(u.library_name, u.name)
+                  unit.add_use_unit(u.library_name, u.name)
                 end
               end
             end
