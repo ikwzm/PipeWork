@@ -3,12 +3,12 @@
 --!     @brief   DELAY ADJUSTER :
 --!              入力データを DELAY REGISTER の出力に合わせてタイミング調整して
 --!              出力する.
---!     @version 0.1.1
---!     @date    2012/8/26
+--!     @version 1.5.7
+--!     @date    2015/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -183,7 +183,7 @@ begin
     NOT_SEL: if (DELAY_MAX = DELAY_MIN) generate
          O_VAL  <= '1' when (stage_save(DELAY_MAX) = '1') or 
                             (stage_load(DELAY_MAX) = '1') else '0';
-         O_DATA <= stage_data(DELAY_MAX);
+         O_DATA <= stage_data(DELAY_MAX) when (stage_save(DELAY_MAX) = '1') else stage_data(0);
     end generate;
     -------------------------------------------------------------------------------
     -- 出力信号の生成(DELAY_MAX > DELAY_MIN の場合)

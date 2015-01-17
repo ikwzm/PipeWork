@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.5                                                           --
---!     @date    2014/03/20                                                      --
+--!     @version 1.5.7                                                           --
+--!     @date    2015/01/17                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2014 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2015 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --

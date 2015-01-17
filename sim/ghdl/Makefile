@@ -9,7 +9,7 @@ pipework-obj93.cf : pipework.vhd
 	$(GHDL) -a $(GHDLFLAGS) --work=$(WORK) pipework.vhd
 
 pipework.vhd : 
-	../../tools/MakeSerializedPackageList.rb \
+	../../tools/vhdl-archiver.rb \
             --library $(WORK) \
             --use_entity 'QUEUE_ARBITER(INTEGER_ARCH)' \
             --use_entity 'SDPRAM(MODEL)' \
@@ -17,7 +17,7 @@ pipework.vhd :
             $(SRC_PATH)
 
 analyze:
-	../../tools/MakeSerializedPackageList.rb \
+	../../tools/vhdl-archiver.rb \
             --library $(WORK) \
             --use_entity 'QUEUE_ARBITER(INTEGER_ARCH)' \
             --use_entity 'SDPRAM(MODEL)' \
