@@ -5,6 +5,7 @@ ENTITY_FILES = chopper.vhd                             \
                delay_adjuster.vhd                      \
                queue_register.vhd                      \
                queue_receiver.vhd                      \
+               least_recently_used_selector.vhd        \
                syncronizer.vhd                         \
                syncronizer_input_pending_register.vhd  \
                sdpram.vhd                              \
@@ -24,7 +25,7 @@ ENTITY_FILES = chopper.vhd                             \
 components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK COMPONENT LIBRARY DESCRIPTION' \
-            --version 1.5.7 \
+            --version 1.5.8 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package COMPONENTS \
