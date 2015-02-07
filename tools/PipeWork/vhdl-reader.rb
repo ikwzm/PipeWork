@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.4
-#       Created     :   2014/11/29
+#       Version     :   0.0.5
+#       Created     :   2015/2/7
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -12,7 +12,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012-2014 Ichiro Kawazome
+#       Copyright (C) 2012-2015 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -623,8 +623,6 @@ module PipeWork
                 self << unit_info
                 unit_name         = ""
                 unit_info         = nil
-                library_list      = Array.new
-                use_list          = Array.new
                 begin_line_number = line_number + 1
             end
           end
