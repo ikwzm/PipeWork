@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.5
-#       Created     :   2015/2/7
+#       Version     :   0.0.6
+#       Created     :   2015/4/26
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -52,7 +52,7 @@ class VhdlArchiver
   #-------------------------------------------------------------------------------
   def initialize
     @program_name      = "vhdl-archiver"
-    @program_version   = "0.0.5"
+    @program_version   = "0.0.6"
     @program_id        = @program_name + " " + @program_version
     @library_name      = ""
     @verbose           = false
