@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.6
---!     @date    2014/9/27
+--!     @version 1.5.8
+--!     @date    2015/5/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -94,6 +94,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           integer := 4;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
                           --! レスンポンスのキューの大きさを指定する.
+                          --! レスンポンスのキューの大きさは１以上. 
+                          --! QUEUE_SIZE=0を指定した場合は、強制的にキューの大きさ
+                          --! は１に設定される.
                           integer := 1;
         RESP_REGS       : --! @brief RESPONSE REGISTER USE :
                           --! レスポンスの入力側にレジスタを挿入する.
@@ -494,6 +497,14 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     function MIN(A,B:integer) return integer is begin
         if (A<B) then return A;
+        else          return B;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    function MAX(A,B:integer) return integer is begin
+        if (A>B) then return A;
         else          return B;
         end if;
     end function;
@@ -1015,7 +1026,7 @@ begin
             ADDR_BITS       => xfer_run_addr'length  , --
             ALEN_BITS       => xfer_run_alen'length  , --
             PTR_BITS        => xfer_run_ptr 'length  , --
-            QUEUE_SIZE      => MIN(QUEUE_SIZE,1)       --
+            QUEUE_SIZE      => MAX(QUEUE_SIZE,1)       --
         )                                              --
         port map (                                     --
             CLK             => CLK                   , -- In  :
