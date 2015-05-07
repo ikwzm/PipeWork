@@ -103,11 +103,15 @@ class SerializedPackageList
     #-----------------------------------------------------------------------------
     use_entity_architecture = Hash.new
     @use_entity_list.each do |use_entity|
-      entity_full_name = PipeWork::VHDL_Reader.parse_entity_name(use_entity,0)
-      if entity_full_name != nil
-        entity_name  = entity_full_name.name
-        library_name = entity_full_name.library_name
-        architecture = entity_full_name.arch_name
+      unit_name = PipeWork::VHDL_Reader.parse_unit_name(use_entity,0)
+      if unit_name != nil
+        entity_name  = unit_name.name
+        library_name = unit_name.library_name
+        if unit_name.instance_of?(PipeWork::VHDL_Reader::EntityName)
+          architecture = unit_name.arch_name
+        else
+          architecture = nil
+        end
         if (architecture != nil) and
            (library_name == nil or library_name == @library_name.upcase)
           use_entity_architecture[entity_name] = architecture
@@ -122,7 +126,7 @@ class SerializedPackageList
     unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
     @path_list.each do |library_name, path_list|
       path_list.each do |path_name|
-        unit_list.analyze_path(path_name, library_name)
+        unit_list.analyze_path(path_name, library_name, [])
       end
     end
     # unit_list.debug_print
