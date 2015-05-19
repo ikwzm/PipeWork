@@ -4,12 +4,12 @@
 --!              先頭アドレス(ADDR信号)と容量(SIZE信号)で表されたブロックを、
 --!              指定された単位(SEL信号およびMIN_PIECE変数、MAX_PIECE変数)のピース
 --!              に分割するモジュール.
---!     @version 1.5.0
---!     @date    2013/4/2
+--!     @version 1.5.8
+--!     @date    2015/5/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012,2013 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -181,16 +181,16 @@ entity  CHOPPER is
     -- ピースカウンタ/フラグ出力
     -------------------------------------------------------------------------------
         COUNT       : --! @brief PIECE COUNT :
-                      --! 残りのピースの数.
+                      --! 残りのピースの数-1を示す.
                       --! * CHOP信号のアサートによりカウントダウンする.
                       out std_logic_vector(COUNT_BITS-1 downto 0);
         NONE        : --! @brief NONE PIECE FLAG :
                       --! 残りのピースの数が０になったことを示すフラグ.
-                      --! * COUNT=0 で'1'が出力される.
+                      --! * COUNT = (others => '1') で'1'が出力される.
                       out std_logic;
         LAST        : --! @brief LAST PIECE FLAG :
                       --! 残りのピースの数が１になったことを示すフラグ.
-                      --! * COUNT=1 で'1'が出力される.
+                      --! * COUNT = (others => '0') で'1'が出力される.
                       --! * 最後のピースであることを示す.
                       out std_logic;
         NEXT_NONE   : --! @brief NONE PIECE FLAG(NEXT CYCLE) :
@@ -338,8 +338,8 @@ begin
     -- init_piece_count : piece_count の初期値.
     --                    block_addr_last を sel_piece 分だけ右にシフトすることに
     --                    よって計算される.
-    -- init_piece_last  : init_piece_count = 1 であることを示すフラグ.
-    -- init_piece_none  : init_piece_count = 0 であることを示すフラグ.
+    -- init_piece_last  : init_piece_count = 0 であることを示すフラグ.
+    -- init_piece_none  : block_size       = 0 であることを示すフラグ.
     -------------------------------------------------------------------------------
     process (block_addr_last, SEL)
         type     COUNT_VECTOR is array (INTEGER range <>) 
