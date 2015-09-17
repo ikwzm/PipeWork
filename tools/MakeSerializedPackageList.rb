@@ -3,7 +3,7 @@
 #---------------------------------------------------------------------------------
 #
 #       Version     :   0.0.2
-#       Created     :   2014/3/13
+#       Created     :   2014/6/12
 #       File name   :   MakeSerializedPackageList.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012,2013 Ichiro Kawazome
+#       Copyright (C) 2012-2014 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -54,9 +54,10 @@ class SerializedPackageList
     @program_name      = "MakeSerializedPackageList"
     @program_version   = "0.0.2"
     @program_id        = @program_name + " " + @program_version
-    @path_list         = Array.new
+    @path_list         = Hash.new
     @file_name_list    = Array.new
     @use_entity_list   = Array.new
+    @top_entity_list   = Array.new
     @library_name      = "WORK"
     @verbose           = false
     @debug             = false
@@ -73,6 +74,8 @@ class SerializedPackageList
       opt.on("--format     STRING"              ){|val| @format           = val }
       opt.on("--execute    STRING"              ){|val| @execute          = val }
       opt.on("--use_entity ENTITY(ARCHITECHURE)"){|val| @use_entity_list << val }
+      opt.on("--use        ENTITY(ARCHITECHURE)"){|val| @use_entity_list << val }
+      opt.on("--top        ENTITY(ARCHITECHURE)"){|val| @top_entity_list << val }
       opt.on("--output     FILE_NAME"           ){|val| @output_file_name = val }
       opt.on("--archive    FILE_NAME"           ){|val| @archive_file_name= val }
     end
@@ -81,46 +84,74 @@ class SerializedPackageList
   # parse_options
   #-------------------------------------------------------------------------------
   def parse_options(argv)
-    @path_list = @opt.parse(argv)
+    @opt.order(argv){ |path|
+      if @path_list.key?(@library_name) == false
+        @path_list[@library_name] = Array.new
+      end
+      @path_list[@library_name] << path
+    }
   end
   #-------------------------------------------------------------------------------
   # generate   : 
   #-------------------------------------------------------------------------------
   def generate
     #-----------------------------------------------------------------------------
+    # use_entity_architecture を生成しておく.
+    # use_entity_architecture は一つの entity に対して複数の architecture が定義
+    # されていた場合に、どの achitetcure を選択するかを指定するための辞書である.
+    # 引数チェックのため、VHDLをパースする前に(unit_listを生成する前に)生成する.
+    #-----------------------------------------------------------------------------
+    use_entity_architecture = Hash.new
+    @use_entity_list.each do |use_entity|
+      unit_name = PipeWork::VHDL_Reader.parse_unit_name(use_entity,0)
+      if unit_name != nil
+        entity_name  = unit_name.name
+        library_name = unit_name.library_name
+        if unit_name.instance_of?(PipeWork::VHDL_Reader::EntityName)
+          architecture = unit_name.arch_name
+        else
+          architecture = nil
+        end
+        if (architecture != nil) and
+           (library_name == nil or library_name == @library_name.upcase)
+          use_entity_architecture[entity_name] = architecture
+          next
+        end
+      end
+      abort "Invalid option use entity: " + use_entity
+    end
+    #-----------------------------------------------------------------------------
     # @path_list で指定されたパスに対して走査して unit_list を生成する.
     #-----------------------------------------------------------------------------
-    unit_list = Array.new
-    @path_list.each do |path_name|
-      unit_list.concat(PipeWork::VHDL_Reader.analyze_path(path_name, @library_name))
+    unit_list = PipeWork::VHDL_Reader::LibraryUnitList.new
+    @path_list.each do |library_name, path_list|
+      path_list.each do |path_name|
+        unit_list.analyze_path(path_name, library_name, [])
+      end
     end
-    # unit_list.each { |unit| unit.debug_print }
+    # unit_list.debug_print
     #-----------------------------------------------------------------------------
-    # generate_unit_file_list に先立ち、use_entity_dict を生成しておく.
-    # use_entity_dict は一つの entity に対して複数の architecture が定義されていた
-    # 場合に、どの achitetcure を選択するかを指定するための辞書である.
+    # entity 対して architecture を指定されている場合は、指定された architecture
+    # 以外 を unit_list から取り除く.
+    # 上で作っておいた use_entity_architecture を使う.
     #-----------------------------------------------------------------------------
-    use_entity_dict = Hash.new
-    @use_entity_list.each do |use_entity|
-      if (use_entity =~ /^([\w]+)\.([\w]+)\(([\w]+)\)$/)
-        library_name = $1.upcase
-        entity_name  = $2.upcase
-        architecture = $3.upcase
-        if (library_name == @library_name.upcase)
-          use_entity_dict[entity_name] = architecture
-        end
-      elsif (use_entity =~ /^([\w]+)\(([\w]+)\)$/)
-        entity_name  = $1.upcase
-        architecture = $2.upcase
-        use_entity_dict[entity_name] = architecture
-      end 
+    unit_list.reject! do |unit|
+        (unit.type == :Architecture) and
+        (use_entity_architecture.key?(unit.name) == true) and
+        (use_entity_architecture[unit.name] != unit.arch_name)
     end
+    # unit_list.debug_print
     #-----------------------------------------------------------------------------
-    # 出来上がった unit_list を元にファイル間の依存関係順に整列した unit_file_list
-    # を生成する.
+    # 出来上がった unit_list を元に unit_file_list を生成する.
     #-----------------------------------------------------------------------------
-    unit_file_list = PipeWork::VHDL_Reader.generate_unit_file_list(unit_list, @library_name, use_entity_dict)
-    # unit_file_list.each { |unit_file| unit_file.debug_print }
+    unit_file_list = PipeWork::VHDL_Reader::UnitFileList.new
+    unit_file_list.add_unit_list(unit_list)
+    # unit_file_list.debug_print
+    #-----------------------------------------------------------------------------
+    # 出来上がった unit_file_list をファイル間の依存関係順に整列する.
+    #-----------------------------------------------------------------------------
+    unit_file_list.set_order_level
+    unit_file_list.sort_by_level
     #-----------------------------------------------------------------------------
     # @execute が指定されている場合は シェルを通じて実行する.
     #-----------------------------------------------------------------------------

@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.5                                                           --
---!     @date    2014/03/09                                                      --
+--!     @version 1.5.8                                                           --
+--!     @date    2015/05/06                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2014 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2015 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -88,7 +88,13 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
                           integer := 4;
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
-                          integer := 4
+                          integer := 4;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -148,6 +154,7 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         XFER_REQ_LAST   : out   std_logic;
         XFER_REQ_NEXT   : out   std_logic;
         XFER_REQ_SAFETY : out   std_logic;
+        XFER_REQ_NOACK  : out   std_logic;
         XFER_REQ_VAL    : out   std_logic;
         XFER_REQ_RDY    : in    std_logic;
     -------------------------------------------------------------------------------
@@ -161,7 +168,9 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
     -------------------------------------------------------------------------------
     -- Transfer Status Signals.
     -------------------------------------------------------------------------------
-        XFER_RUNNING    : in    std_logic
+        XFER_BUSY       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_DONE       : in    std_logic_vector(VAL_BITS      -1 downto 0);
+        XFER_ERROR      : in    std_logic_vector(VAL_BITS      -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -211,21 +220,27 @@ component AXI4_MASTER_TRANSFER_QUEUE
         I_LAST          : in    std_logic;
         I_FIRST         : in    std_logic;
         I_SAFETY        : in    std_logic;
+        I_NOACK         : in    std_logic;
         I_READY         : out   std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
+        Q_VALID         : out   std_logic;
+        Q_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
+        Q_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        Q_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
+        Q_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
+        Q_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
+        Q_NEXT          : out   std_logic;
+        Q_LAST          : out   std_logic;
+        Q_FIRST         : out   std_logic;
+        Q_SAFETY        : out   std_logic;
+        Q_NOACK         : out   std_logic;
+        Q_READY         : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
         O_VALID         : out   std_logic;
-        O_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
-        O_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
-        O_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
-        O_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
-        O_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
-        O_NEXT          : out   std_logic;
-        O_LAST          : out   std_logic;
-        O_FIRST         : out   std_logic;
-        O_SAFETY        : out   std_logic;
-        O_READY         : in    std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
@@ -288,9 +303,25 @@ component AXI4_MASTER_READ_INTERFACE
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
-        QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
+        QUEUE_SIZE      : --! @brief TRANSACTION QUEUE SIZE :
                           --! キューの大きさを指定する.
-                          integer := 1
+                          integer := 1;
+        RDATA_REGS      : --! @brief RDATA REGISTER TYPE :
+                          --! RDATA/RRESP/RLAST/RVALID の入力をどうするか指定する.
+                          --! * RDATA_REGS=0 スルー入力(レジスタは通さない).
+                          --! * RDATA_REGS=1 １段だけレジスタを通す. 
+                          --!   ただしバースト転送時には１サイクル毎にウェイトが入る.
+                          --! * RDATA_REGS=2 ２段のレジスタを通す.
+                          --! * RDATA_REGS=3 ３段のレジスタを通す.
+                          --!   このモードの場合、必ずRDATA/RRESPは一つのレジスタ
+                          --!   で受けるので外部インターフェース向き.
+                          integer := 0;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -510,6 +541,9 @@ component AXI4_MASTER_READ_INTERFACE
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -681,8 +715,28 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
-                          --! キューの大きさを指定する.
-                          integer := 1
+                          --! レスンポンスのキューの大きさを指定する.
+                          --! レスンポンスのキューの大きさは１以上. 
+                          --! QUEUE_SIZE=0を指定した場合は、強制的にキューの大きさ
+                          --! は１に設定される.
+                          integer := 1;
+        REQ_REGS        : --! @brief REQUEST REGISTER USE :
+                          --! ライトトランザクションの最初のデータ出力のタイミング
+                          --! を指定する.
+                          --! * REQ_REGS=0でアドレスの出力と同時にデータを出力する.
+                          --! * REQ_REGS=1でアドレスを出力してから１クロック後に
+                          --!   データを出力する.
+                          --! * REQ_REGS=1にすると動作周波数が向上する可能性がある.
+                          integer range 0 to 1 := 0;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0;
+        RESP_REGS       : --! @brief RESPONSE REGISTER USE :
+                          --! レスポンスの入力側にレジスタを挿入する.
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -927,6 +981,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
@@ -1239,6 +1296,9 @@ component AXI4_SLAVE_READ_INTERFACE
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック
                           --! で XFER_BUSY がネゲートされる事を示す.
@@ -1520,6 +1580,9 @@ component AXI4_SLAVE_WRITE_INTERFACE
                           --! * QUEUE_SIZEの設定によっては、XFER_BUSY がアサートさ
                           --!   れていても、次のリクエストを受け付け可能な場合があ
                           --!   る.
+                          out   std_logic_vector(VAL_BITS         -1 downto 0);
+        XFER_ERROR      : --! @brief Transfer Error.
+                          --! データの転送中にエラーが発生した事を示す.
                           out   std_logic_vector(VAL_BITS         -1 downto 0);
         XFER_DONE       : --! @brief Transfer Done.
                           --! このモジュールが未だデータの転送中かつ、次のクロック

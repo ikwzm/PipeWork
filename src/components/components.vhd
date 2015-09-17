@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.5                                                           --
---!     @date    2014/03/13                                                      --
+--!     @version 1.5.8                                                           --
+--!     @date    2015/05/19                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2014 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2015 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -170,16 +170,16 @@ component CHOPPER
     -- ピースカウンタ/フラグ出力
     -------------------------------------------------------------------------------
         COUNT       : --! @brief PIECE COUNT :
-                      --! 残りのピースの数.
+                      --! 残りのピースの数-1を示す.
                       --! * CHOP信号のアサートによりカウントダウンする.
                       out std_logic_vector(COUNT_BITS-1 downto 0);
         NONE        : --! @brief NONE PIECE FLAG :
                       --! 残りのピースの数が０になったことを示すフラグ.
-                      --! * COUNT=0 で'1'が出力される.
+                      --! * COUNT = (others => '1') で'1'が出力される.
                       out std_logic;
         LAST        : --! @brief LAST PIECE FLAG :
                       --! 残りのピースの数が１になったことを示すフラグ.
-                      --! * COUNT=1 で'1'が出力される.
+                      --! * COUNT = (others => '0') で'1'が出力される.
                       --! * 最後のピースであることを示す.
                       out std_logic;
         NEXT_NONE   : --! @brief NONE PIECE FLAG(NEXT CYCLE) :
@@ -760,6 +760,50 @@ component QUEUE_RECEIVER
         O_RDY       : --! @brief OUTPUT READY :
                       --! 出力可能信号.
                       in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief LEAST_RECENTLY_USED_SELECTOR                                          --
+-----------------------------------------------------------------------------------
+component LEAST_RECENTLY_USED_SELECTOR
+    generic (
+        ENTRY_SIZE  : --! @brief ENTRY SIZE :
+                      --! エントリの数を指定する.
+                      integer := 4
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- エントリ指定信号
+    -------------------------------------------------------------------------------
+        I_SEL       : --! @brief INPUT SELECTED ENTRY :
+                      --! 選択したエントリを One-Hot で指定する.
+                      --! * 選択したエントリに対応したビット位置に'1'に設定する.
+                      --! * 同時に複数のエントリを指定することは出来ない.
+                      in  std_logic_vector(ENTRY_SIZE-1 downto 0);
+    -------------------------------------------------------------------------------
+    -- エントリ出力信号
+    -------------------------------------------------------------------------------
+        O_SEL       : --! @brief OUTPUT LEAST RECENTLY USED ENTRY :
+                      --! 最も過去に選択したエントリを出力.
+                      --! * 最も過去に選択したエントリのビット位置に'1'が出力される.
+                      --! * 同時に複数のエントリが選択されることはない.
+                      out std_logic_vector(ENTRY_SIZE-1 downto 0);
+        Q_SEL       : --! @brief REGISTERD OUTPUT LEAST RECENTLY USED ENTRY :
+                      --! 最も過去に選択したエントリを出力.
+                      --! * O_SEL信号を一度レジスタで叩いた結果を出力する.
+                      out std_logic_vector(ENTRY_SIZE-1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------

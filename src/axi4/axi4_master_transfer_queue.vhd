@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_transfer_queue.vhd
 --!     @brief   AXI4 Master Transfer Queue
---!     @version 1.5.5
---!     @date    2014/3/9
+--!     @version 1.5.6
+--!     @date    2014/9/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -83,21 +83,27 @@ entity  AXI4_MASTER_TRANSFER_QUEUE is
         I_LAST          : in    std_logic;
         I_FIRST         : in    std_logic;
         I_SAFETY        : in    std_logic;
+        I_NOACK         : in    std_logic;
         I_READY         : out   std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
+        Q_VALID         : out   std_logic;
+        Q_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
+        Q_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
+        Q_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
+        Q_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
+        Q_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
+        Q_NEXT          : out   std_logic;
+        Q_LAST          : out   std_logic;
+        Q_FIRST         : out   std_logic;
+        Q_SAFETY        : out   std_logic;
+        Q_NOACK         : out   std_logic;
+        Q_READY         : in    std_logic;
+    ------------------------------------------------------------------------------
+    -- 
+    ------------------------------------------------------------------------------
         O_VALID         : out   std_logic;
-        O_SEL           : out   std_logic_vector( SEL_BITS-1 downto 0);
-        O_SIZE          : out   std_logic_vector(SIZE_BITS-1 downto 0);
-        O_ADDR          : out   std_logic_vector(ADDR_BITS-1 downto 0);
-        O_ALEN          : out   std_logic_vector(ALEN_BITS-1 downto 0);
-        O_PTR           : out   std_logic_vector( PTR_BITS-1 downto 0);
-        O_NEXT          : out   std_logic;
-        O_LAST          : out   std_logic;
-        O_FIRST         : out   std_logic;
-        O_SAFETY        : out   std_logic;
-        O_READY         : in    std_logic;
     ------------------------------------------------------------------------------
     -- 
     ------------------------------------------------------------------------------
@@ -117,20 +123,28 @@ begin
     --  QUEUE_SIZE=0の場合はなにもしない
     -------------------------------------------------------------------------------
     QUEUE_SIZE_EQ_0: if (QUEUE_SIZE = 0) generate
-        O_SEL    <= I_SEL;
-        O_SIZE   <= I_SIZE;
-        O_ADDR   <= I_ADDR;
-        O_ALEN   <= I_ALEN;
-        O_PTR    <= I_PTR;
-        O_NEXT   <= I_NEXT;
-        O_LAST   <= I_LAST;
-        O_FIRST  <= I_FIRST;
-        O_SAFETY <= I_SAFETY;
+        Q_SEL    <= I_SEL;
+        Q_SIZE   <= I_SIZE;
+        Q_ADDR   <= I_ADDR;
+        Q_ALEN   <= I_ALEN;
+        Q_PTR    <= I_PTR;
+        Q_NEXT   <= I_NEXT;
+        Q_LAST   <= I_LAST;
+        Q_FIRST  <= I_FIRST;
+        Q_SAFETY <= I_SAFETY;
+        Q_NOACK  <= I_NOACK;
+        Q_VALID  <= I_VALID;
         O_VALID  <= I_VALID;
-        I_READY  <= O_READY;
-        BUSY     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
-        DONE     <= I_SEL when (I_VALID = '1' and O_READY = '1') else (others => '0');
-        EMPTY    <= '1'   when (O_READY = '1') else '0';
+        I_READY  <= Q_READY;
+     ------------------------------------------------------------------------------
+     -- 各種フラグを次の様にするとコンビネーションループが生じてしまう.
+     ------------------------------------------------------------------------------
+     -- BUSY     <= I_SEL when (I_VALID = '1' and Q_READY = '1') else (others => '0');
+     -- DONE     <= I_SEL when (I_VALID = '1' and Q_READY = '1') else (others => '0');
+     -- EMPTY    <= '1'   when (Q_READY = '1') else '0';
+        BUSY     <= (others => '0');
+        DONE     <= (others => '0');
+        EMPTY    <= '1';
     end generate;
     -------------------------------------------------------------------------------
     -- QUEUE_SIZE>0の場合
@@ -142,7 +156,7 @@ begin
                      ADDR           :  std_logic_vector(ADDR_BITS-1 downto 0);
                      ALEN           :  std_logic_vector(ALEN_BITS-1 downto 0);
                      PTR            :  std_logic_vector( PTR_BITS-1 downto 0);
-                     INFO           :  std_logic_vector(          3 downto 0);
+                     INFO           :  std_logic_vector(          4 downto 0);
         end record;
         constant QUEUE_DATA_NULL    :  QUEUE_DATA_TYPE := (
                      SEL            => (others => '0'),
@@ -167,7 +181,7 @@ begin
         -- queue_data_load  : 次のクロックでcurr_queue_dataにnext_queue_dataの値を
         --                    ロードすることを示すフラグ.
         ---------------------------------------------------------------------------
-        process (I_VALID, O_READY, curr_queue_valid) begin
+        process (I_VALID, Q_READY, curr_queue_valid) begin
             for i in FIRST_OF_QUEUE to LAST_OF_QUEUE loop
                 -------------------------------------------------------------------
                 -- 自分のキューにデータが格納されている場合...
@@ -176,10 +190,10 @@ begin
                     ---------------------------------------------------------------
                     -- もし自分のキューにデータが格納されていて、
                     -- かつ自分がキューの最後ならば、
-                    -- O_READY='1'で自分のキューをクリアする.
+                    -- Q_READY='1'で自分のキューをクリアする.
                     ---------------------------------------------------------------
                     if (i = LAST_OF_QUEUE) then
-                        if (O_READY = '1') then
+                        if (Q_READY = '1') then
                             next_queue_valid(i) <= '0';
                         else
                             next_queue_valid(i) <= '1';
@@ -189,11 +203,11 @@ begin
                     -- もし自分のキューにデータが格納されていて、
                     -- かつ自分がキューの最後でなくて、
                     -- かつ後ろのキューにデータが入っているならば、
-                    -- O_READY='1'で後ろのキューのデータを自分のキューに格納する.
+                    -- Q_READY='1'で後ろのキューのデータを自分のキューに格納する.
                     ---------------------------------------------------------------
                     elsif (curr_queue_valid(i+1) = '1') then
                         next_queue_valid(i) <= '1';
-                        if (O_READY = '1') then
+                        if (Q_READY = '1') then
                             queue_data_load(i) <= '1';
                         else
                             queue_data_load(i) <= '0';
@@ -202,16 +216,16 @@ begin
                     -- もし自分のキューにデータが格納されていて、
                     -- かつ自分がキューの最後でなくて、
                     -- かつ後ろのキューにデータが入っていないならば、
-                    -- I_VALID='0' かつ O_READY='1'ならば自分のキューをクリアする. 
-                    -- I_VALID='1' かつ O_READY='1'ならばI_DATAを自分のキューに格納する.
+                    -- I_VALID='0' かつ Q_READY='1'ならば自分のキューをクリアする. 
+                    -- I_VALID='1' かつ Q_READY='1'ならばI_DATAを自分のキューに格納する.
                     ---------------------------------------------------------------
                     else
-                        if (I_VALID = '0' and O_READY = '1') then
+                        if (I_VALID = '0' and Q_READY = '1') then
                             next_queue_valid(i) <= '0';
                         else
                             next_queue_valid(i) <= '1';
                         end if;
-                        if (I_VALID = '1' and O_READY = '1') then
+                        if (I_VALID = '1' and Q_READY = '1') then
                             queue_data_load(i)  <= '1';
                         else
                             queue_data_load(i)  <= '0';
@@ -238,15 +252,15 @@ begin
                     -- もし自分のキューにデータが格納されてなくて、
                     -- かつ自分がキューの先頭なくて、
                     -- かつ前のキューにデータが格納されているならば、
-                    -- I_VALID='1'かつO_READY='0'で自分のキューにデータを格納する.
+                    -- I_VALID='1'かつQ_READY='0'で自分のキューにデータを格納する.
                     ---------------------------------------------------------------
                     elsif (curr_queue_valid(i-1) = '1') then
-                        if (I_VALID = '1' and O_READY = '0') then
+                        if (I_VALID = '1' and Q_READY = '0') then
                             next_queue_valid(i) <= '1';
                         else
                             next_queue_valid(i) <= '0';
                         end if;
-                        if (I_VALID = '1' and O_READY = '0') then
+                        if (I_VALID = '1' and Q_READY = '0') then
                             queue_data_load(i)  <= '1';
                         else
                             queue_data_load(i)  <= '0';
@@ -267,7 +281,8 @@ begin
         ---------------------------------------------------------------------------
         -- next_queue_data  : 次のクロックでキューに格納されるデータ.
         ---------------------------------------------------------------------------
-        process (I_SEL, I_SIZE, I_ADDR, I_ALEN, I_PTR, I_NEXT, I_LAST, I_FIRST, I_SAFETY,
+        process (I_SEL , I_SIZE, I_ADDR , I_ALEN  , I_PTR  ,
+                 I_NEXT, I_LAST, I_FIRST, I_SAFETY, I_NOACK, 
                  queue_data_load, curr_queue_data, curr_queue_valid)
             variable i_data : QUEUE_DATA_TYPE;
         begin
@@ -280,6 +295,7 @@ begin
             i_data.INFO(1) := I_LAST;
             i_data.INFO(2) := I_FIRST;
             i_data.INFO(3) := I_SAFETY;
+            i_data.INFO(4) := I_NOACK;
             for i in FIRST_OF_QUEUE to LAST_OF_QUEUE loop
                 if (queue_data_load(i) = '1') then
                     if    (i = LAST_OF_QUEUE) then
@@ -351,16 +367,18 @@ begin
         ---------------------------------------------------------------------------
         -- 各種出力信号
         ---------------------------------------------------------------------------
-        O_SEL    <= curr_queue_data (FIRST_OF_QUEUE).SEL  when (SEL_BITS > 1) else (others => '1');
-        O_SIZE   <= curr_queue_data (FIRST_OF_QUEUE).SIZE;
-        O_ADDR   <= curr_queue_data (FIRST_OF_QUEUE).ADDR;
-        O_ALEN   <= curr_queue_data (FIRST_OF_QUEUE).ALEN;
-        O_PTR    <= curr_queue_data (FIRST_OF_QUEUE).PTR;
-        O_NEXT   <= curr_queue_data (FIRST_OF_QUEUE).INFO(0);
-        O_LAST   <= curr_queue_data (FIRST_OF_QUEUE).INFO(1);
-        O_FIRST  <= curr_queue_data (FIRST_OF_QUEUE).INFO(2);
-        O_SAFETY <= curr_queue_data (FIRST_OF_QUEUE).INFO(3);
-        O_VALID  <= curr_queue_valid(FIRST_OF_QUEUE);
+        Q_SEL    <= curr_queue_data (FIRST_OF_QUEUE).SEL  when (SEL_BITS > 1) else (others => '1');
+        Q_SIZE   <= curr_queue_data (FIRST_OF_QUEUE).SIZE;
+        Q_ADDR   <= curr_queue_data (FIRST_OF_QUEUE).ADDR;
+        Q_ALEN   <= curr_queue_data (FIRST_OF_QUEUE).ALEN;
+        Q_PTR    <= curr_queue_data (FIRST_OF_QUEUE).PTR;
+        Q_NEXT   <= curr_queue_data (FIRST_OF_QUEUE).INFO(0);
+        Q_LAST   <= curr_queue_data (FIRST_OF_QUEUE).INFO(1);
+        Q_FIRST  <= curr_queue_data (FIRST_OF_QUEUE).INFO(2);
+        Q_SAFETY <= curr_queue_data (FIRST_OF_QUEUE).INFO(3);
+        Q_NOACK  <= curr_queue_data (FIRST_OF_QUEUE).INFO(4);
+        Q_VALID  <= curr_queue_valid(FIRST_OF_QUEUE);
+        O_VALID  <= next_queue_valid(FIRST_OF_QUEUE);
         EMPTY    <= '1' when (curr_queue_valid = VALID_ALL_0) else '0';
     end generate;
 end RTL;
