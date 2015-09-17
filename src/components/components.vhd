@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.8                                                           --
---!     @date    2015/02/07                                                      --
+--!     @date    2015/05/19                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -170,16 +170,16 @@ component CHOPPER
     -- ピースカウンタ/フラグ出力
     -------------------------------------------------------------------------------
         COUNT       : --! @brief PIECE COUNT :
-                      --! 残りのピースの数.
+                      --! 残りのピースの数-1を示す.
                       --! * CHOP信号のアサートによりカウントダウンする.
                       out std_logic_vector(COUNT_BITS-1 downto 0);
         NONE        : --! @brief NONE PIECE FLAG :
                       --! 残りのピースの数が０になったことを示すフラグ.
-                      --! * COUNT=0 で'1'が出力される.
+                      --! * COUNT = (others => '1') で'1'が出力される.
                       out std_logic;
         LAST        : --! @brief LAST PIECE FLAG :
                       --! 残りのピースの数が１になったことを示すフラグ.
-                      --! * COUNT=1 で'1'が出力される.
+                      --! * COUNT = (others => '0') で'1'が出力される.
                       --! * 最後のピースであることを示す.
                       out std_logic;
         NEXT_NONE   : --! @brief NONE PIECE FLAG(NEXT CYCLE) :

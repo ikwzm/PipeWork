@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.6
---!     @date    2014/9/27
+--!     @version 1.5.8
+--!     @date    2015/5/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -94,10 +94,27 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           integer := 4;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
                           --! レスンポンスのキューの大きさを指定する.
+                          --! レスンポンスのキューの大きさは１以上. 
+                          --! QUEUE_SIZE=0を指定した場合は、強制的にキューの大きさ
+                          --! は１に設定される.
                           integer := 1;
+        REQ_REGS        : --! @brief REQUEST REGISTER USE :
+                          --! ライトトランザクションの最初のデータ出力のタイミング
+                          --! を指定する.
+                          --! * REQ_REGS=0でアドレスの出力と同時にデータを出力する.
+                          --! * REQ_REGS=1でアドレスを出力してから１クロック後に
+                          --!   データを出力する.
+                          --! * REQ_REGS=1にすると動作周波数が向上する可能性がある.
+                          integer range 0 to 1 := 0;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0;
         RESP_REGS       : --! @brief RESPONSE REGISTER USE :
                           --! レスポンスの入力側にレジスタを挿入する.
-                          integer := 0
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -498,6 +515,14 @@ architecture RTL of AXI4_MASTER_WRITE_INTERFACE is
         end if;
     end function;
     -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    function MAX(A,B:integer) return integer is begin
+        if (A>B) then return A;
+        else          return B;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     function CALC_AXI4_BURST_SIZE(SIZE:integer) return AXI4_ASIZE_TYPE is
@@ -647,7 +672,8 @@ begin
             FLOW_VALID      => FLOW_VALID        , --
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
-            XFER_MAX_SIZE   => XFER_MAX_SIZE       --
+            XFER_MAX_SIZE   => XFER_MAX_SIZE     , --
+            ACK_REGS        => ACK_REGS            -- 
         )                                          -- 
         port map (                                 -- 
         --------------------------------------------------------------------------
@@ -758,7 +784,7 @@ begin
             ADDR_BITS       => req_queue_addr'length , --
             ALEN_BITS       => req_queue_alen'length , --
             PTR_BITS        => req_queue_ptr 'length , --
-            QUEUE_SIZE      => 0                       --
+            QUEUE_SIZE      => MIN(REQ_REGS,1)         --
         )                                              --
         port map (                                     --
             CLK             => CLK                   , -- In  :
@@ -1015,7 +1041,7 @@ begin
             ADDR_BITS       => xfer_run_addr'length  , --
             ALEN_BITS       => xfer_run_alen'length  , --
             PTR_BITS        => xfer_run_ptr 'length  , --
-            QUEUE_SIZE      => MIN(QUEUE_SIZE,1)       --
+            QUEUE_SIZE      => MAX(QUEUE_SIZE,1)       --
         )                                              --
         port map (                                     --
             CLK             => CLK                   , -- In  :
