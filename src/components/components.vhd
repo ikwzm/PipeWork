@@ -2,7 +2,7 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.5.8                                                           --
---!     @date    2015/05/19                                                      --
+--!     @date    2015/09/20                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -242,6 +242,14 @@ component REDUCER
                       integer := 0;
         VALID_MAX   : --! @brief BUFFER VALID MAXIMUM NUMBER :
                       --! VALID信号の配列の最大値を指定する.
+                      integer := 0;
+        O_VAL_SIZE  : --! @brief OUTPUT WORD VALID SIZE :
+                      --! O_VAL 信号アサート時のキューに入っているワード数.
+                      --! * キューに O_VAL_SIZE 以上のワード数が入っていると O_VAL 
+                      --!   信号をアサートする.
+                      --! * 互換性維持のため O_VAL_SIZE=0を指定した場合は、キューに
+                      --!   O_WIDTH 以上のワード数が入っていると O_VAL 信号をアサー
+                      --!   トする.
                       integer := 0;
         O_SHIFT_MIN : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
                       --! O_SHIFT信号の配列の最小値を指定する.
