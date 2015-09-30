@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.4
-#       Created     :   2013/3/5
+#       Version     :   0.0.5
+#       Created     :   2015/10/1
 #       File name   :   MakeComponentPackage.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードから entity 宣言している部分を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012,2013 Ichiro Kawazome
+#       Copyright (C) 2012-2015 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@ require 'optparse'
 class ComponentPackage
   def initialize
     @program_name      = "MakeComponentPackage"
-    @program_version   = "0.0.4"
+    @program_version   = "0.0.5"
     @program_id        = @program_name + " " + @program_version
     @line_width        = 83
     @components        = Hash.new
@@ -343,6 +343,9 @@ class ComponentPackage
             (package_name == @name.upcase))
           next
         end
+        if (package_items[""] != nil)
+          out.print(statement(0, package_items[""]))
+        end
         if (package_items["ALL"] != nil)
           out.print(statement(0, package_items["ALL"]))
           next
@@ -354,6 +357,9 @@ class ComponentPackage
         component_line.gsub!(/--.*\n/, ' ')
         component_line.gsub!(/\W+/   , ' ')
         package_items.each_key do |item_name|
+          if (item_name == "") 
+            next
+          end
           if (component_line =~ /#{item_name}/i)
             out.print(statement(0, package_items[item_name]))
           end
