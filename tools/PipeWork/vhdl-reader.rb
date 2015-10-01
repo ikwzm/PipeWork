@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.6
-#       Created     :   2015/4/26
+#       Version     :   0.0.7
+#       Created     :   2015/10/1
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -468,7 +468,7 @@ module PipeWork
       def initialize
         super
         @verbose                = nil
-        @exclusion_library_list = ["IEEE"]
+        @exclusion_library_list = ["IEEE", "STD"]
       end
       #---------------------------------------------------------------------------
       # analyze_path : 与えられたパス名を解析し、ディレクトリならば再帰的に探索し、
