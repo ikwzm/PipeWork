@@ -711,7 +711,7 @@ module PipeWork
         # 自分が管理しているライブラリ名とユニット名はあらかじめ0をセットしておく.
         #-------------------------------------------------------------------------
         bind_name_list = Hash.new
-        top__name_lis  = Hash.new
+        top__name_list = Hash.new
         self.each do |unit|
           if (bind_name_list.key?(unit.library_name) == false)
             bind_name_list[unit.library_name] = Hash.new
