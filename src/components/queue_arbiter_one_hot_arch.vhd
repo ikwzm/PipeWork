@@ -41,22 +41,22 @@ use     ieee.std_logic_1164.all;
 --
 -----------------------------------------------------------------------------------
 architecture ONE_HOT_ARCH of QUEUE_ARBITER is
-    subtype  REQUEST_TYPE    is std_logic_vector(MIN_NUM to MAX_NUM);
-    constant REQUEST_NULL   : std_logic_vector(MIN_NUM to MAX_NUM) := (others => '0');
-    type     REQUEST_VECTOR  is array(integer range <>) of REQUEST_TYPE;
-    constant QUEUE_TOP      : integer := MIN_NUM;
-    constant QUEUE_END      : integer := MAX_NUM;
-    signal   curr_queue     : REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
-    signal   next_queue     : REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
+    subtype  REQUEST_TYPE   is std_logic_vector(MIN_NUM to MAX_NUM);
+    constant REQUEST_NULL   :  std_logic_vector(MIN_NUM to MAX_NUM) := (others => '0');
+    type     REQUEST_VECTOR is array(integer range <>) of REQUEST_TYPE;
+    constant QUEUE_TOP      :  integer := MIN_NUM;
+    constant QUEUE_END      :  integer := MAX_NUM;
+    signal   curr_queue     :  REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
+    signal   next_queue     :  REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
 begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     process (ENABLE, REQUEST, curr_queue)
-        variable req_enable : REQUEST_TYPE;
-        variable req_select : REQUEST_TYPE;
-        variable temp_queue : REQUEST_VECTOR(QUEUE_TOP to QUEUE_END);
-        variable temp_num   : integer range MIN_NUM to MAX_NUM ;
+        variable req_enable :  REQUEST_TYPE;
+        variable req_select :  REQUEST_TYPE;
+        variable temp_queue :  REQUEST_VECTOR(QUEUE_TOP to QUEUE_END);
+        variable temp_num   :  integer range MIN_NUM to MAX_NUM ;
     begin
         --------------------------------------------------------------------------
         -- ENABLE信号がネゲートされている場合.

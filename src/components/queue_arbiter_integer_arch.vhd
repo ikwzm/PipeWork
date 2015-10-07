@@ -41,24 +41,24 @@ use     ieee.std_logic_1164.all;
 --
 -----------------------------------------------------------------------------------
 architecture INTEGER_ARCH of QUEUE_ARBITER is
-    type     REQUEST_VECTOR  is array(integer range <>) of integer range MIN_NUM to MAX_NUM;
-    constant QUEUE_TOP      : integer := MIN_NUM;
-    constant QUEUE_END      : integer := MAX_NUM;
-    signal   curr_queue     : REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
-    signal   next_queue     : REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
-    signal   curr_valid     : std_logic_vector(QUEUE_TOP to QUEUE_END);
-    signal   next_valid     : std_logic_vector(QUEUE_TOP to QUEUE_END);
+    type     REQUEST_VECTOR is array(integer range <>) of integer range MIN_NUM to MAX_NUM;
+    constant QUEUE_TOP      :  integer := MIN_NUM;
+    constant QUEUE_END      :  integer := MAX_NUM;
+    signal   curr_queue     :  REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
+    signal   next_queue     :  REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
+    signal   curr_valid     :  std_logic_vector(QUEUE_TOP to QUEUE_END);
+    signal   next_valid     :  std_logic_vector(QUEUE_TOP to QUEUE_END);
 begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     process (ENABLE, REQUEST, curr_queue, curr_valid)
-        variable req_enable : std_logic_vector(MIN_NUM to MAX_NUM);
-        variable req_num    : integer   range  MIN_NUM to MAX_NUM ;
-        variable req_new    : boolean;
-        variable temp_queue : REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
-        variable temp_valid : std_logic_vector(QUEUE_TOP to QUEUE_END);
-        variable temp_num   : integer   range  MIN_NUM to MAX_NUM ;
+        variable req_enable :  std_logic_vector(MIN_NUM to MAX_NUM);
+        variable req_num    :  integer   range  MIN_NUM to MAX_NUM ;
+        variable req_new    :  boolean;
+        variable temp_queue :  REQUEST_VECTOR  (QUEUE_TOP to QUEUE_END);
+        variable temp_valid :  std_logic_vector(QUEUE_TOP to QUEUE_END);
+        variable temp_num   :  integer   range  MIN_NUM to MAX_NUM ;
     begin
         --------------------------------------------------------------------------
         -- ENABLE信号がネゲートされている場合.
