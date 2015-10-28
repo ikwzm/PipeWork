@@ -3,7 +3,7 @@
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
 --!     @version 1.5.8
---!     @date    2015/5/19
+--!     @date    2015/9/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -80,6 +80,14 @@ entity  REDUCER is
                       integer := 0;
         VALID_MAX   : --! @brief BUFFER VALID MAXIMUM NUMBER :
                       --! VALID信号の配列の最大値を指定する.
+                      integer := 0;
+        O_VAL_SIZE  : --! @brief OUTPUT WORD VALID SIZE :
+                      --! O_VAL 信号アサート時のキューに入っているワード数.
+                      --! * キューに O_VAL_SIZE 以上のワード数が入っていると O_VAL 
+                      --!   信号をアサートする.
+                      --! * 互換性維持のため O_VAL_SIZE=0を指定した場合は、キューに
+                      --!   O_WIDTH 以上のワード数が入っていると O_VAL 信号をアサー
+                      --!   トする.
                       integer := 0;
         O_SHIFT_MIN : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
                       --! O_SHIFT信号の配列の最小値を指定する.
@@ -648,6 +656,7 @@ begin
     process (CLK, RST) 
         variable    in_words          : WORD_VECTOR(0 to I_WIDTH-1);
         variable    next_queue        : WORD_VECTOR(curr_queue'range);
+        variable    next_valid_output : boolean;
         variable    next_flush_output : std_logic;
         variable    next_flush_pending: std_logic;
         variable    next_flush_fall   : std_logic;
@@ -821,10 +830,15 @@ begin
                 -------------------------------------------------------------------
                 -- 出力有効信号の生成.
                 -------------------------------------------------------------------
+                if (O_VAL_SIZE = 0) then
+                    next_valid_output := next_queue(O_WIDTH   -1).VAL;
+                else
+                    next_valid_output := next_queue(O_VAL_SIZE-1).VAL;
+                end if;
                 if (O_ENABLE = '1') and
                    ((next_done_output  = '1') or
                     (next_flush_output = '1') or
-                    (next_queue(O_WIDTH-1).VAL = TRUE)) then
+                    (next_valid_output = TRUE)) then
                     o_valid <= '1';
                 else
                     o_valid <= '0';
