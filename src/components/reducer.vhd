@@ -2,12 +2,12 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.5.4
---!     @date    2014/2/9
+--!     @version 1.5.8
+--!     @date    2015/9/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -80,6 +80,14 @@ entity  REDUCER is
                       integer := 0;
         VALID_MAX   : --! @brief BUFFER VALID MAXIMUM NUMBER :
                       --! VALID信号の配列の最大値を指定する.
+                      integer := 0;
+        O_VAL_SIZE  : --! @brief OUTPUT WORD VALID SIZE :
+                      --! O_VAL 信号アサート時のキューに入っているワード数.
+                      --! * キューに O_VAL_SIZE 以上のワード数が入っていると O_VAL 
+                      --!   信号をアサートする.
+                      --! * 互換性維持のため O_VAL_SIZE=0を指定した場合は、キューに
+                      --!   O_WIDTH 以上のワード数が入っていると O_VAL 信号をアサー
+                      --!   トする.
                       integer := 0;
         O_SHIFT_MIN : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
                       --! O_SHIFT信号の配列の最小値を指定する.
@@ -313,9 +321,16 @@ architecture RTL of REDUCER is
         return result;
     end function;
     -------------------------------------------------------------------------------
-    --! @brief プライオリティエンコーダ.
+    --! @brief 入力信号のうち最も低い位置の'1'だけを取り出す関数.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- 例) Data(0 to 3) = "1110" => SEL(0 to 3) = "1000"
+    --     Data(0 to 3) = "0111" => SEL(0 to 3) = "0100"
+    --     Data(0 to 3) = "0011" => SEL(0 to 3) = "0010"
+    --     Data(0 to 3) = "0001" => SEL(0 to 3) = "0001"
+    --     Data(0 to 3) = "0000" => SEL(0 to 3) = "0000"
+    --     Data(0 to 3) = "0101" => SEL(0 to 3) = "0101" <- このような入力は禁止
     -------------------------------------------------------------------------------
-    function  priority_encoder(
+    function  priority_selector(
                  Data    : std_logic_vector
     )            return    std_logic_vector
     is
@@ -325,7 +340,7 @@ architecture RTL of REDUCER is
             if (i = Data'low) then
                 result(i) := Data(i);
             else
-                result(i) := Data(i) and (not or_reduce(Data(Data'low to i-1)));
+                result(i) := Data(i) and (not Data(i-1));
             end if;
         end loop;
         return result;
@@ -408,7 +423,7 @@ architecture RTL of REDUCER is
                             i_val(i) := '1';
                     end if;
                 end loop;
-                i_sel := priority_encoder(i_val);
+                i_sel := priority_selector(i_val);
                 result(q) := select_word(WORDS=>i_vec, SEL=>i_sel);
             else
                 result(q) := QUEUE(q);
@@ -425,7 +440,7 @@ architecture RTL of REDUCER is
     --     SHIFT(3 downto 0)="0111" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'0',3=>'1',4=>'0')
     --     SHIFT(3 downto 0)="1111" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'0',3=>'0',4=>'1')
     -------------------------------------------------------------------------------
-    function  shift_to_select(
+    function  shift_to_selector(
                  SHIFT   :  std_logic_vector;
                  MIN     :  integer;
                  MAX     :  integer
@@ -480,7 +495,7 @@ architecture RTL of REDUCER is
                 i_val(i) := '0';
             end if;
         end loop;
-        s_sel := priority_encoder(i_val);
+        s_sel := priority_selector(i_val);
         for i in result'range loop
             result(i) := select_word(
                 WORDS => i_vec(i to WORDS'length-1  ),
@@ -501,7 +516,7 @@ architecture RTL of REDUCER is
         variable i_sel   :  std_logic_vector(0 to SHIFT'high  +1);
         variable result  :  WORD_VECTOR     (0 to WORDS'length-1);
     begin
-        i_sel := shift_to_select(SHIFT, i_sel'low, i_sel'high);
+        i_sel := shift_to_selector(SHIFT, i_sel'low, i_sel'high);
         for i in result'range loop
             result(i) := select_word(
                 WORDS => i_vec(i to minimum(i+i_sel'high,i_vec'high)),
@@ -571,7 +586,7 @@ architecture RTL of REDUCER is
         variable i_sel   :  std_logic_vector(0 to SHIFT'high  +1);
         variable result  :  boolean;
     begin
-        i_sel  := shift_to_select(SHIFT, i_sel'low, i_sel'high);
+        i_sel  := shift_to_selector(SHIFT, i_sel'low, i_sel'high);
         result := FALSE;
         for i in i_vec'range loop
             if (i_sel'low <= i and i <= i_sel'high) then
@@ -641,6 +656,7 @@ begin
     process (CLK, RST) 
         variable    in_words          : WORD_VECTOR(0 to I_WIDTH-1);
         variable    next_queue        : WORD_VECTOR(curr_queue'range);
+        variable    next_valid_output : boolean;
         variable    next_flush_output : std_logic;
         variable    next_flush_pending: std_logic;
         variable    next_flush_fall   : std_logic;
@@ -814,10 +830,15 @@ begin
                 -------------------------------------------------------------------
                 -- 出力有効信号の生成.
                 -------------------------------------------------------------------
+                if (O_VAL_SIZE = 0) then
+                    next_valid_output := next_queue(O_WIDTH   -1).VAL;
+                else
+                    next_valid_output := next_queue(O_VAL_SIZE-1).VAL;
+                end if;
                 if (O_ENABLE = '1') and
                    ((next_done_output  = '1') or
                     (next_flush_output = '1') or
-                    (next_queue(O_WIDTH-1).VAL = TRUE)) then
+                    (next_valid_output = TRUE)) then
                     o_valid <= '1';
                 else
                     o_valid <= '0';

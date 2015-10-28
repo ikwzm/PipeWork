@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
---!     @version 1.5.5
---!     @date    2014/3/8
+--!     @version 1.5.8
+--!     @date    2015/9/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -489,6 +489,7 @@ begin
                 QUEUE_SIZE      => Q_SIZE         , -- 
                 VALID_MIN       => 0              , -- 
                 VALID_MAX       => 0              , -- 
+                O_VAL_SIZE      => O_WORDS        , -- 
                 O_SHIFT_MIN     => o_shift'low    , --
                 O_SHIFT_MAX     => o_shift'high   , --
                 I_JUSTIFIED     => 0              , -- 

@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.6                                                           --
---!     @date    2014/11/03                                                      --
+--!     @version 1.5.8                                                           --
+--!     @date    2015/09/20                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2014 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2015 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -88,7 +88,13 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
                           integer := 4;
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
-                          integer := 4
+                          integer := 4;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -309,7 +315,13 @@ component AXI4_MASTER_READ_INTERFACE
                           --! * RDATA_REGS=3 ３段のレジスタを通す.
                           --!   このモードの場合、必ずRDATA/RRESPは一つのレジスタ
                           --!   で受けるので外部インターフェース向き.
-                          integer := 0
+                          integer := 0;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -704,10 +716,27 @@ component AXI4_MASTER_WRITE_INTERFACE
                           integer := 4;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
                           --! レスンポンスのキューの大きさを指定する.
+                          --! レスンポンスのキューの大きさは１以上. 
+                          --! QUEUE_SIZE=0を指定した場合は、強制的にキューの大きさ
+                          --! は１に設定される.
                           integer := 1;
+        REQ_REGS        : --! @brief REQUEST REGISTER USE :
+                          --! ライトトランザクションの最初のデータ出力のタイミング
+                          --! を指定する.
+                          --! * REQ_REGS=0でアドレスの出力と同時にデータを出力する.
+                          --! * REQ_REGS=1でアドレスを出力してから１クロック後に
+                          --!   データを出力する.
+                          --! * REQ_REGS=1にすると動作周波数が向上する可能性がある.
+                          integer range 0 to 1 := 0;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0;
         RESP_REGS       : --! @brief RESPONSE REGISTER USE :
                           --! レスポンスの入力側にレジスタを挿入する.
-                          integer := 0
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------

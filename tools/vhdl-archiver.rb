@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.4
-#       Created     :   2014/11/29
+#       Version     :   0.0.7
+#       Created     :   2015/8/26
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2014 Ichiro Kawazome
+#       Copyright (C) 2014-2015 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,7 @@
 require 'optparse'
 require 'find'
 require 'set'
+require 'yaml'
 require_relative 'PipeWork/vhdl-reader'
 class VhdlArchiver
   #-------------------------------------------------------------------------------
@@ -52,7 +53,7 @@ class VhdlArchiver
   #-------------------------------------------------------------------------------
   def initialize
     @program_name      = "vhdl-archiver"
-    @program_version   = "0.0.1"
+    @program_version   = "0.0.7"
     @program_id        = @program_name + " " + @program_version
     @library_name      = ""
     @verbose           = false
@@ -76,6 +77,7 @@ class VhdlArchiver
       opt.on("--format     STRING"              ){|val| add_val(:format           , val )}
       opt.on("--output     FILE_NAME"           ){|val| add_val(:output_file_name , val )}
       opt.on("--archive    FILE_NAME"           ){|val| add_val(:archive_file_name, val )}
+      opt.on("--config     FILE_NAME"           ){|val| read_config_file(val)            }
     end
     new_lib(:global)
     new_lib("WORK")
@@ -182,6 +184,66 @@ class VhdlArchiver
     end
     @top_entity_list.each do |item|
       add_top_unit("WORK", item)
+    end
+  end
+  #-------------------------------------------------------------------------------
+  # read_config_file   : 
+  #-------------------------------------------------------------------------------
+  def read_config_file(file_name)
+    config_list   = YAML.load_file(file_name)
+    global_config = Hash.new
+    config_list.select{|config| config.key?("Global" )}.map do |config|
+      global_config.merge!(config["Global"])
+    end
+    config_list.select{|config| config.key?("Library")}.map do |config|
+      library_config = config["Library"]
+      if library_config.key?("Name")
+        name = library_config["Name"]
+        new_lib(name.upcase)
+        add_val(:name, name)
+        add_config(global_config)
+        add_config(library_config)
+      end
+    end
+  end
+  #-------------------------------------------------------------------------------
+  # add_library_config : 
+  #-------------------------------------------------------------------------------
+  def add_config(config)
+    if config.key?("Use") 
+      config["Use"].each do |entity|
+        add_val(:use_entity, entity)
+      end
+    end
+    if config.key?("Top") 
+      config["Top"].each do |entity|
+        add_val(:top_unit  , entity)
+      end
+    end
+    if config.key?("PathList") 
+      config["PathList"].each do |entity|
+        add_val(:path_list , entity)
+      end
+    end
+    if config.key?("Exclude") 
+      config["Exclude"].each do |entity|
+        add_val(:exclude   , entity)
+      end
+    end
+    if config.key?("Format") 
+      add_val(:format, config["Format"])
+    end
+    if config.key?("Execute") 
+      add_val(:execute, config["Execute"])
+    end
+    if config.key?("Output") 
+      add_val(:output_file_name, config["Output"])
+    end
+    if config.key?("Archive") 
+      add_val(:archive_file_name, config["Archive"])
+    end
+    if config.key?("Print") 
+      add_val(:print, config["Print"])
     end
   end
   #-------------------------------------------------------------------------------

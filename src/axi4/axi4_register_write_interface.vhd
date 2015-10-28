@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 1.5.5
---!     @date    2014/3/2
+--!     @version 1.5.8
+--!     @date    2015/9/20
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -388,57 +388,58 @@ begin
     -------------------------------------------------------------------------------
     -- ライトデータバッファ
     -------------------------------------------------------------------------------
-    WBUF: REDUCER
-        generic map (
-            WORD_BITS       => 8                 ,
-            STRB_BITS       => 1                 ,
-            I_WIDTH         => AXI4_DATA_WIDTH/8 ,
-            O_WIDTH         => REGS_DATA_WIDTH/8 ,
-            QUEUE_SIZE      => 0                 ,
-            VALID_MIN       => 0                 ,
-            VALID_MAX       => 0                 ,
-            O_SHIFT_MIN     => wbuf_shift'low    ,
-            O_SHIFT_MAX     => wbuf_shift'high   ,
-            I_JUSTIFIED     => 0                 ,
-            FLUSH_ENABLE    => 0                     
-        )
-        port map (
+    WBUF: REDUCER                                  -- 
+        generic map (                              -- 
+            WORD_BITS       => 8                 , -- 
+            STRB_BITS       => 1                 , -- 
+            I_WIDTH         => AXI4_DATA_WIDTH/8 , -- 
+            O_WIDTH         => REGS_DATA_WIDTH/8 , -- 
+            QUEUE_SIZE      => 0                 , -- 
+            VALID_MIN       => 0                 , -- 
+            VALID_MAX       => 0                 , -- 
+            O_VAL_SIZE      => REGS_DATA_WIDTH/8 , -- 
+            O_SHIFT_MIN     => wbuf_shift'low    , -- 
+            O_SHIFT_MAX     => wbuf_shift'high   , -- 
+            I_JUSTIFIED     => 0                 , -- 
+            FLUSH_ENABLE    => 0                   -- 
+        )                                          -- 
+        port map (                                 -- 
         ---------------------------------------------------------------------------
         -- クロック&リセット信号
         ---------------------------------------------------------------------------
-            CLK             => CLK            , -- In  :
-            RST             => RST            , -- In  :
-            CLR             => CLR            , -- In  :
+            CLK             => CLK               , -- In  :
+            RST             => RST               , -- In  :
+            CLR             => CLR               , -- In  :
         ---------------------------------------------------------------------------
         -- 各種制御信号
         ---------------------------------------------------------------------------
-            START           => wbuf_start     , -- In  :
-            OFFSET          => wbuf_offset    , -- In  :
-            DONE            => wbuf_done      , -- In  :
-            FLUSH           => wbuf_flush     , -- In  :
-            BUSY            => wbuf_busy      , -- Out :
-            VALID           => open           , -- Out :
+            START           => wbuf_start        , -- In  :
+            OFFSET          => wbuf_offset       , -- In  :
+            DONE            => wbuf_done         , -- In  :
+            FLUSH           => wbuf_flush        , -- In  :
+            BUSY            => wbuf_busy         , -- Out :
+            VALID           => open              , -- Out :
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_ENABLE        => wbuf_enable    , -- In  :
-            I_DATA          => WDATA          , -- In  :
-            I_STRB          => WSTRB          , -- In  :
-            I_DONE          => WLAST          , -- In  :
-            I_FLUSH         => wbuf_flush     , -- In  :
-            I_VAL           => WVALID         , -- In  :
-            I_RDY           => wbuf_ready     , -- Out :
+            I_ENABLE        => wbuf_enable       , -- In  :
+            I_DATA          => WDATA             , -- In  :
+            I_STRB          => WSTRB             , -- In  :
+            I_DONE          => WLAST             , -- In  :
+            I_FLUSH         => wbuf_flush        , -- In  :
+            I_VAL           => WVALID            , -- In  :
+            I_RDY           => wbuf_ready        , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_ENABLE        => regs_enable    , -- In  :
-            O_DATA          => REGS_DATA      , -- Out :
-            O_STRB          => REGS_BEN       , -- Out :
-            O_DONE          => regs_last      , -- Out :
-            O_FLUSH         => open           , -- Out :
-            O_VAL           => regs_valid     , -- Out :
-            O_RDY           => regs_ready     , -- In  :
-            O_SHIFT         => wbuf_shift       -- In  :
+            O_ENABLE        => regs_enable       , -- In  :
+            O_DATA          => REGS_DATA         , -- Out :
+            O_STRB          => REGS_BEN          , -- Out :
+            O_DONE          => regs_last         , -- Out :
+            O_FLUSH         => open              , -- Out :
+            O_VAL           => regs_valid        , -- Out :
+            O_RDY           => regs_ready        , -- In  :
+            O_SHIFT         => wbuf_shift          -- In  :
     );
     WREADY <= wbuf_ready;
 end RTL;

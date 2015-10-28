@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.5.6
---!     @date    2014/9/28
+--!     @version 1.5.8
+--!     @date    2015/5/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -104,7 +104,13 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! * RDATA_REGS=3 ３段のレジスタを通す.
                           --!   このモードの場合、必ずRDATA/RRESPは一つのレジスタ
                           --!   で受けるので外部インターフェース向き.
-                          integer := 0
+                          integer := 0;
+        ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
+                          --! Command Acknowledge Signals の出力をレジスタ出力に
+                          --! するか否かを指定する.
+                          --! * ACK_REGS=0で組み合わせ出力.
+                          --! * ACK_REGS=1でレジスタ出力.
+                          integer range 0 to 1 := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -580,7 +586,8 @@ begin
             FLOW_VALID      => FLOW_VALID        , --
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
-            XFER_MAX_SIZE   => XFER_MAX_SIZE       --
+            XFER_MAX_SIZE   => XFER_MAX_SIZE     , --
+            ACK_REGS        => ACK_REGS            -- 
         )                                          -- 
         port map (                                 -- 
         --------------------------------------------------------------------------
