@@ -72,7 +72,7 @@ class ComponentPackage
       opt.on("--brief   STRING"      ){|val| @brief        = val }
       opt.on("--version VERSION"     ){|val| @version      = val }
       opt.on("--author  AUTHOR_NAME" ){|val| @author       = val }
-      opt.on("--licnese LICENSE"     ){|val| @license      = val }
+      opt.on("--license LICENSE"     ){|val| @license      = val }
     end
   end
   def name=(val)
@@ -329,7 +329,9 @@ class ComponentPackage
 !     @author  #{@author}
     END_OF_HEAD
     ))
-    out.print(comment(0, @license))
+    if ((@license != nil) and (@license != '')) 
+      out.print(comment(0, @license))
+    end
     #-----------------------------------------------------------------------------
     # ライブラリ宣言
     #-----------------------------------------------------------------------------
