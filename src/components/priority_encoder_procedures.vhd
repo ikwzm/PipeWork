@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    priority_encoder_procesures
 --!     @brief   Package for Generic Priority Encoder
---!     @version 1.5.1
---!     @date    2013/8/9
+--!     @version 1.5.9
+--!     @date    2016/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2013 Ichiro Kawazome
+--      Copyright (C) 2013-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -314,8 +314,8 @@ package body PRIORITY_ENCODER_PROCEDURES is
     procedure Priority_Encode_To_OneHot_Simply(
                  High_to_Low : in  boolean;
                  Data        : in  std_logic_vector;
-                 Output      : out std_logic_vector;
-                 Valid       : out std_logic
+        variable Output      : out std_logic_vector;
+        variable Valid       : out std_logic
     ) is
         variable result      :     std_logic_vector(Data'range);
     begin
