@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    priority_encoder_procesures
 --!     @brief   Package for Generic Priority Encoder
---!     @version 1.5.9
---!     @date    2016/1/7
+--!     @version 1.6.0
+--!     @date    2016/3/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2013-2015 Ichiro Kawazome
+--      Copyright (C) 2013-2016 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -222,7 +222,7 @@ package body PRIORITY_ENCODER_PROCEDURES is
     -------------------------------------------------------------------------------
     --! @brief ビットの並びを逆順にして返す関数.
     -------------------------------------------------------------------------------
-    function  reverse_vecter(
+    function  reverse_vector(
                  Data   : std_logic_vector
     )            return   std_logic_vector
     is
@@ -396,11 +396,11 @@ package body PRIORITY_ENCODER_PROCEDURES is
         variable o_data      :     std_logic_vector(Data'range);
     begin
         if High_to_Low = TRUE then
-            i_data := reverse_vecter(Data);
+            i_data := reverse_vector(Data);
             t_data := "0" & i_data;
             d_data := std_logic_vector(unsigned(t_data) - 1);
             r_data := i_data and not d_data(i_data'range);
-            o_data := reverse_vecter(r_data);
+            o_data := reverse_vector(r_data);
         else
             i_data := Data;
             t_data := "0" & i_data;
