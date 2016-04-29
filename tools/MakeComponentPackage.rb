@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.4
-#       Created     :   2013/3/5
+#       Version     :   0.0.6
+#       Created     :   2016/1/5
 #       File name   :   MakeComponentPackage.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードから entity 宣言している部分を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012,2013 Ichiro Kawazome
+#       Copyright (C) 2012-2016 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@ require 'optparse'
 class ComponentPackage
   def initialize
     @program_name      = "MakeComponentPackage"
-    @program_version   = "0.0.4"
+    @program_version   = "0.0.6"
     @program_id        = @program_name + " " + @program_version
     @line_width        = 83
     @components        = Hash.new
@@ -72,7 +72,7 @@ class ComponentPackage
       opt.on("--brief   STRING"      ){|val| @brief        = val }
       opt.on("--version VERSION"     ){|val| @version      = val }
       opt.on("--author  AUTHOR_NAME" ){|val| @author       = val }
-      opt.on("--licnese LICENSE"     ){|val| @license      = val }
+      opt.on("--license LICENSE"     ){|val| @license      = val }
     end
   end
   def name=(val)
@@ -231,8 +231,13 @@ class ComponentPackage
       #---------------------------------------------------------------------------
       # entity宣言処理中の end 処理
       #---------------------------------------------------------------------------
-      if (parse_line =~ /^end[\s]+([\w]+)[\s]*;/i)
-        if ($1 == component_name)
+      if (parse_line =~ /^end[\s]*(.*)[\s]*;/i)
+        labels = $1.downcase.split(/\s+/);
+        if (labels.length == 0                                         ) or   # end;
+           (labels.length == 1 and labels[0] == "entity"               ) or   # end entity;
+           (labels.length == 1 and labels[0] == component_name.downcase) or   # end component_name;
+           (labels.length == 2 and labels[0] == "entity" and
+                                   labels[1] == component_name.downcase) then # end entity component_name;
           #-----------------------------------------------------------------------
           # コンポーネント宣言として登録
           #-----------------------------------------------------------------------
@@ -329,7 +334,9 @@ class ComponentPackage
 !     @author  #{@author}
     END_OF_HEAD
     ))
-    out.print(comment(0, @license))
+    if ((@license != nil) and (@license != '')) 
+      out.print(comment(0, @license))
+    end
     #-----------------------------------------------------------------------------
     # ライブラリ宣言
     #-----------------------------------------------------------------------------
@@ -343,6 +350,9 @@ class ComponentPackage
             (package_name == @name.upcase))
           next
         end
+        if (package_items[""] != nil)
+          out.print(statement(0, package_items[""]))
+        end
         if (package_items["ALL"] != nil)
           out.print(statement(0, package_items["ALL"]))
           next
@@ -354,6 +364,9 @@ class ComponentPackage
         component_line.gsub!(/--.*\n/, ' ')
         component_line.gsub!(/\W+/   , ' ')
         package_items.each_key do |item_name|
+          if (item_name == "") 
+            next
+          end
           if (component_line =~ /#{item_name}/i)
             out.print(statement(0, package_items[item_name]))
           end

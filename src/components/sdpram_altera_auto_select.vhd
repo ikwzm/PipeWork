@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    sdpram_altera_auto_select.vhd
 --!     @brief   Synchronous Dual Port RAM Model for Altera FPGA.
---!     @version 1.0.5
---!     @date    2012/8/30
+--!     @version 1.5.9
+--!     @date    2016/3/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012 Ichiro Kawazome
+--      Copyright (C) 2012-2016 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -126,7 +126,7 @@ begin
     process (WE)
         constant BE_LEN  : integer := 2**(WWIDTH-WEBIT-3);
         constant BE_ALL1 : std_logic_vector(BE_LEN-1 downto 0) := (others => '1');
-        constant BE_ALL0 : std_logic_vector(BE_LEN-1 downto 0) := (others => '1');
+        constant BE_ALL0 : std_logic_vector(BE_LEN-1 downto 0) := (others => '0');
         constant WE_ALL0 : std_logic_vector(WE'range) := (others => '0');
     begin
         if (WE /= WE_ALL0) then

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.6
-#       Created     :   2015/4/26
+#       Version     :   0.0.8
+#       Created     :   2015/10/7
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -468,7 +468,7 @@ module PipeWork
       def initialize
         super
         @verbose                = nil
-        @exclusion_library_list = ["IEEE"]
+        @exclusion_library_list = ["IEEE", "STD"]
       end
       #---------------------------------------------------------------------------
       # analyze_path : 与えられたパス名を解析し、ディレクトリならば再帰的に探索し、
@@ -707,15 +707,20 @@ module PipeWork
       #---------------------------------------------------------------------------
       def select_bound_unit(top_list)
         #-------------------------------------------------------------------------
-        # bind_name_list を初期化する.
+        # bind_name_list と top__name_list を初期化する.
         # 自分が管理しているライブラリ名とユニット名はあらかじめ0をセットしておく.
         #-------------------------------------------------------------------------
         bind_name_list = Hash.new
+        top__name_list = Hash.new
         self.each do |unit|
           if (bind_name_list.key?(unit.library_name) == false)
             bind_name_list[unit.library_name] = Hash.new
           end
+          if (top__name_list.key?(unit.library_name) == false)
+            top__name_list[unit.library_name] = Hash.new
+          end
           bind_name_list[unit.library_name][unit.name] = 0
+          top__name_list[unit.library_name][unit.name] = 0
         end
         # bind_name_list.each_key do |library_name|
         #   bind_name_list[library_name].each_key do |unit_name|
@@ -754,6 +759,10 @@ module PipeWork
             # ユニットが見つかった場合は
             #---------------------------------------------------------------------
             found_unit_list.each do |unit|
+              #-------------------------------------------------------------------
+              # top__name_list にユニットを登録
+              #-------------------------------------------------------------------
+              top__name_list[unit.library_name][unit.name] = 1
               #-------------------------------------------------------------------
               # use_unit_list を検索して、見つかった Unit の名前とライブラリ
               # を bind_name_list に登録する. もし bind_name_list にまだ登録されて
@@ -844,7 +853,12 @@ module PipeWork
         #-------------------------------------------------------------------------
         # マークされたユニットのみ抽出して返す.
         #-------------------------------------------------------------------------
-        return LibraryUnitList.new.concat(self.select{ |unit| bind_name_list[unit.library_name][unit.name] > 0})
+        return LibraryUnitList.new.concat(
+            self.select{ |unit| 
+                (bind_name_list[unit.library_name][unit.name] > 0) or
+                (top__name_list[unit.library_name][unit.name] > 0)
+            }
+        )
       end
       #---------------------------------------------------------------------------
       # デバッグ用
