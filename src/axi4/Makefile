@@ -11,7 +11,7 @@ ENTITY_FILES = axi4_master_address_channel_controller.vhd \
                axi4_data_outlet_port.vhd                  \
                ${ENDLIST}
 
-components.vhd : ${ENTITY_FILES}
+axi4_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK AXI4 LIBRARY DESCRIPTION' \
             --version 1.5.9 \
