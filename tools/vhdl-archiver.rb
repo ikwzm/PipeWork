@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.8
-#       Created     :   2015/10/1
+#       Version     :   0.0.9
+#       Created     :   2016/6/18
 #       File name   :   vhdl-arichiver.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   複数のVHDLのソースコードを解析してパッケージの依存関係を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2014-2015 Ichiro Kawazome
+#       Copyright (C) 2014-2016 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -46,14 +46,14 @@ require 'optparse'
 require 'find'
 require 'set'
 require 'yaml'
-require_relative 'PipeWork/vhdl-reader'
+require_relative 'lib/pipework/vhdl-reader'
 class VhdlArchiver
   #-------------------------------------------------------------------------------
   # initialize    :
   #-------------------------------------------------------------------------------
   def initialize
     @program_name      = "vhdl-archiver"
-    @program_version   = "0.0.8"
+    @program_version   = "0.0.9"
     @program_id        = @program_name + " " + @program_version
     @library_name      = ""
     @verbose           = false

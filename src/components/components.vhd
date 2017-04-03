@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.5.8                                                           --
---!     @date    2015/09/20                                                      --
+--!     @version 1.5.9                                                           --
+--!     @date    2016/03/13                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2015 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2016 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -865,7 +865,7 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい。
-                      integer range 0 to 1 := 1;
+                      integer range 0 to 2 := 2;
         O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
@@ -873,7 +873,7 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい.
-                      integer range 0 to 1 := 1;
+                      integer range 0 to 2 := 2;
         I_CLK_FALL  : --! @brief USE INPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のクロック(I_CLK)の立ち下がりを使うかどう

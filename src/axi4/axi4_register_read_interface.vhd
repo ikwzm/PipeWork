@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 1.5.5
---!     @date    2014/3/8
+--!     @version 1.5.9
+--!     @date    2016/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2016 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -221,8 +221,6 @@ architecture RTL of AXI4_REGISTER_READ_INTERFACE is
     signal   rbuf_busy          : std_logic;
     signal   outlet_error       : std_logic;
     signal   size_error         : boolean;
-    constant TRAN_SEL           : std_logic_vector(0 downto 0) := "1";
-    constant TRAN_LAST          : std_logic := '1';
     type     STATE_TYPE        is (IDLE, PREPARE, XFER_DATA, TURN_AR);
     signal   curr_state         : STATE_TYPE;
 begin
@@ -390,7 +388,7 @@ begin
             POOL_DATA_BITS  => REGS_DATA_WIDTH , -- 
             TRAN_ADDR_BITS  => REGS_ADDR_WIDTH , -- 
             TRAN_SIZE_BITS  => XFER_MAX_SIZE+1 , --
-            TRAN_SEL_BITS   => TRAN_SEL'length , -- 
+            TRAN_SEL_BITS   => 1               , -- 
             BURST_LEN_BITS  => AXI4_ALEN_WIDTH , -- 
             ALIGNMENT_BITS  => ALIGNMENT_BITS  , --
             PULL_SIZE_BITS  => REGS_DATA_SIZE+1, --
@@ -417,8 +415,8 @@ begin
             BURST_LEN       => burst_length    , -- In  :
             BURST_SIZE      => word_size       , -- In  :
             START_PTR       => xfer_req_addr   , -- In  :
-            TRAN_LAST       => TRAN_LAST       , -- In  :
-            TRAN_SEL        => TRAN_SEL        , -- In  :
+            TRAN_LAST       => '1'             , -- In  :
+            TRAN_SEL        => "1"             , -- In  :
             XFER_VAL        => open            , -- Out :
             XFER_DVAL       => xfer_beat_ben   , -- Out :
             XFER_LAST       => open            , -- Out :
