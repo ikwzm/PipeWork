@@ -101,16 +101,19 @@ entity  PIPELINE_REGISTER_CONTROLLER is
                       --!   とを示す.
                       --! * この出力信号の範囲が1からではなく0から始まっている事に
                       --!   注意. これはQUEUE_SIZE=0の場合に対応するため.
+                      --! * QUEUE_SIZE>=1 の場合、LOAD(0) は LOAD(1) と同じ値を出力
+                      --!   する.
                       out std_logic_vector(QUEUE_SIZE downto 0);
         SHIFT       : --! @brief REGISTER SHIFT :
                       --! パイプラインレジスタシフト信号.
-                      --! * QUEUE_SIZE >=2 のパイプラインレジスタにおいて、パイプ
+                      --! * QUEUE_SIZE>=2 のパイプラインレジスタにおいて、パイプ
                       --!   ラインレジスタの内容を出力方向にシフトすることを示す
                       --!   出力信号.
                       --! * LOAD(i)='1' and SHIFT(i)='1' でキューの i+1 の内容を
                       --!   i にロードする.
                       --! * LOAD(i)='1' and SHIFT(i)='0' で前段のパイプラインレジ
                       --!   スタからの演算結果を i にロードする.
+                      --! * QUEUE_SIZE<2 の場合、SHIFT 信号は全て'0'を出力する.
                       out std_logic_vector(QUEUE_SIZE downto 0);
     -------------------------------------------------------------------------------
     -- ステータス
@@ -121,6 +124,8 @@ entity  PIPELINE_REGISTER_CONTROLLER is
                       --!   す信号.
                       --! * この出力信号の範囲が1からではなく0から始まっている事に
                       --!   注意. これはQUEUE_SIZE=0の場合に対応するため.
+                      --! * QUEUE_SIZE>=1 の場合、VALID(0) は VALID(1) と同じ値を出
+                      --!   力する.
                       out std_logic_vector(QUEUE_SIZE downto 0)
     );
 end PIPELINE_REGISTER_CONTROLLER;
@@ -135,42 +140,43 @@ begin
         Q_VAL    <= I_VAL;
         I_RDY    <= Q_RDY;
         VALID(0) <= I_VAL and Q_RDY;
-        LOAD(0)  <= I_VAL and Q_RDY;
+        LOAD (0) <= I_VAL and Q_RDY;
         SHIFT(0) <= '0';
     end generate;
     -------------------------------------------------------------------------------
      -- QUEUE_SIZE=1の場合
     -------------------------------------------------------------------------------
     QUEUE_SIZE_EQ_1: if (QUEUE_SIZE = 1) generate
-        signal   queue_valid   : std_logic;
-        signal   intake_ready  : std_logic;
+        signal   q_valid  : std_logic;
+        signal   i_ready  : std_logic;
     begin
-        I_RDY        <= intake_ready;
-        intake_ready <= '1' when (queue_valid = '0') or
-                                 (queue_valid = '1' and Q_RDY = '1') else '0';
-        LOAD(0)      <= '1' when (I_VAL = '1' and intake_ready = '1') else '0';
-        LOAD(1)      <= '1' when (I_VAL = '1' and intake_ready = '1') else '0';
-        SHIFT(0)     <= '0';
-        SHIFT(1)     <= '0';
-        VALID(0)     <= queue_valid;
-        VALID(1)     <= queue_valid;
+        Q_VAL    <= q_valid;
+        I_RDY    <= i_ready;
+        i_ready  <= '1' when (q_valid = '0') or
+                             (q_valid = '1' and Q_RDY   = '1') else '0';
+        LOAD (0) <= '1' when (I_VAL   = '1' and i_ready = '1') else '0';
+        LOAD (1) <= '1' when (I_VAL   = '1' and i_ready = '1') else '0';
+        SHIFT(0) <= '0';
+        SHIFT(1) <= '0';
+        VALID(0) <= q_valid;
+        VALID(1) <= q_valid;
         process (CLK, RST) begin
             if    (RST = '1') then
-                       queue_valid <= '0';
+                       q_valid <= '0';
             elsif (CLK'event and CLK = '1') then
                if (CLR = '1') then
-                       queue_valid <= '0';
-               elsif (queue_valid = '0') then
+                       q_valid <= '0';
+               elsif (q_valid = '0') then
                    if (I_VAL = '1') then
-                       queue_valid <= '1';
+                       q_valid <= '1';
                    else
-                       queue_valid <= '0';
+                       q_valid <= '0';
                    end if;
                else
                    if (I_VAL = '0' and Q_RDY = '1') then
-                       queue_valid <= '0';
+                       q_valid <= '0';
                    else
-                       queue_valid <= '1';
+                       q_valid <= '1';
                    end if;
                end if;
             end if;

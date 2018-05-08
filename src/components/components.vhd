@@ -1332,16 +1332,19 @@ component PIPELINE_REGISTER_CONTROLLER
                       --!   とを示す.
                       --! * この出力信号の範囲が1からではなく0から始まっている事に
                       --!   注意. これはQUEUE_SIZE=0の場合に対応するため.
+                      --! * QUEUE_SIZE>=1 の場合、LOAD(0) は LOAD(1) と同じ値を出力
+                      --!   する.
                       out std_logic_vector(QUEUE_SIZE downto 0);
         SHIFT       : --! @brief REGISTER SHIFT :
                       --! パイプラインレジスタシフト信号.
-                      --! * QUEUE_SIZE >=2 のパイプラインレジスタにおいて、パイプ
+                      --! * QUEUE_SIZE>=2 のパイプラインレジスタにおいて、パイプ
                       --!   ラインレジスタの内容を出力方向にシフトすることを示す
                       --!   出力信号.
                       --! * LOAD(i)='1' and SHIFT(i)='1' でキューの i+1 の内容を
                       --!   i にロードする.
                       --! * LOAD(i)='1' and SHIFT(i)='0' で前段のパイプラインレジ
                       --!   スタからの演算結果を i にロードする.
+                      --! * QUEUE_SIZE<2 の場合、SHIFT 信号は全て'0'を出力する.
                       out std_logic_vector(QUEUE_SIZE downto 0);
     -------------------------------------------------------------------------------
     -- ステータス
@@ -1352,6 +1355,8 @@ component PIPELINE_REGISTER_CONTROLLER
                       --!   す信号.
                       --! * この出力信号の範囲が1からではなく0から始まっている事に
                       --!   注意. これはQUEUE_SIZE=0の場合に対応するため.
+                      --! * QUEUE_SIZE>=1 の場合、VALID(0) は VALID(1) と同じ値を出
+                      --!   力する.
                       out std_logic_vector(QUEUE_SIZE downto 0)
     );
 end component;
