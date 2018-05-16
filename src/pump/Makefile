@@ -1,5 +1,7 @@
 ENTITY_FILES = pump_control_register.vhd               \
                pump_flow_syncronizer.vhd               \
+               pump_intake_controller.vhd              \
+               pump_outlet_controller.vhd              \
                pump_controller.vhd                     \
                pump_operation_processor.vhd            \
                pump_request_controller.vhd             \
@@ -11,7 +13,7 @@ ENTITY_FILES = pump_control_register.vhd               \
 pump_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION' \
-            --version 1.5.8 \
+            --version 1.7.0 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package PUMP_COMPONENTS \

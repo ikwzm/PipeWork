@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 1.5.5
---!     @date    2014/3/25
+--!     @version 1.7.0
+--!     @date    2018/5/16
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -410,442 +410,333 @@ use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
 use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_MANIFOLD_VALVE;
 use     PIPEWORK.COMPONENTS.FLOAT_OUTLET_MANIFOLD_VALVE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_INTAKE_CONTROLLER;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_OUTLET_CONTROLLER;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PUMP_CONTROLLER is
     ------------------------------------------------------------------------------
     -- 各種サイズカウンタのビット数.
     ------------------------------------------------------------------------------
-    constant SIZE_BITS          : integer := BUF_DEPTH+1;
-    ------------------------------------------------------------------------------
-    -- バッファのバイト数.
-    ------------------------------------------------------------------------------
-    constant BUFFER_SIZE        : std_logic_vector(SIZE_BITS-1  downto 0) := 
-                                  std_logic_vector(to_unsigned(2**BUF_DEPTH, SIZE_BITS));
-    ------------------------------------------------------------------------------
-    -- バッファへのアクセス用信号群.
-    ------------------------------------------------------------------------------
-    constant BUF_INIT_PTR       : std_logic_vector(BUF_DEPTH      -1 downto 0) := (others => '0');
-    constant BUF_UP_BEN         : std_logic_vector(BUF_DEPTH      -1 downto 0) := (others => '1');
+    constant SIZE_BITS          :  integer := BUF_DEPTH+1;
     -------------------------------------------------------------------------------
     -- 入力側の各種信号群.
     -------------------------------------------------------------------------------
-    signal   i_addr_up_ben      : std_logic_vector(I_REQ_ADDR_BITS-1 downto 0);
-    signal   i_buf_ptr_init     : std_logic_vector(BUF_DEPTH      -1 downto 0);
-    signal   i_reset            : std_logic;
-    signal   i_pause            : std_logic;
-    signal   i_stop             : std_logic;
-    signal   i_valve_open       : std_logic;
-    signal   i_tran_running     : std_logic;
-    constant i_valve_load       : std_logic := '0';
+    signal   i_valve_open       :  std_logic;
     -------------------------------------------------------------------------------
     -- 出力側の各種信号群.
     -------------------------------------------------------------------------------
-    signal   o_addr_up_ben      : std_logic_vector(O_REQ_ADDR_BITS-1 downto 0);
-    signal   o_buf_ptr_init     : std_logic_vector(BUF_DEPTH      -1 downto 0);
-    signal   o_reset            : std_logic;
-    signal   o_pause            : std_logic;
-    signal   o_stop             : std_logic;
-    signal   o_valve_open       : std_logic;
-    signal   o_tran_running     : std_logic;
-    constant o_valve_load       : std_logic := '0';
+    signal   o_valve_open       :  std_logic;
     -------------------------------------------------------------------------------
     -- 入力側->出力側の各種信号群.
     -------------------------------------------------------------------------------
-    signal   i2o_valve_open     : std_logic;
-    signal   i2o_push_fin_valid : std_logic;
-    signal   i2o_push_fin_last  : std_logic;
-    signal   i2o_push_fin_size  : std_logic_vector(SIZE_BITS      -1 downto 0);
-    signal   i2o_push_rsv_valid : std_logic;
-    signal   i2o_push_rsv_last  : std_logic;
-    signal   i2o_push_rsv_size  : std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal   i2o_valve_open     :  std_logic;
+    signal   i2o_push_fin_valid :  std_logic;
+    signal   i2o_push_fin_last  :  std_logic;
+    signal   i2o_push_fin_size  :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal   i2o_push_rsv_valid :  std_logic;
+    signal   i2o_push_rsv_last  :  std_logic;
+    signal   i2o_push_rsv_size  :  std_logic_vector(SIZE_BITS      -1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側->入力側の各種信号群.
     -------------------------------------------------------------------------------
-    signal   o2i_valve_open     : std_logic;
-    signal   o2i_pull_fin_valid : std_logic;
-    signal   o2i_pull_fin_last  : std_logic;
-    signal   o2i_pull_fin_size  : std_logic_vector(SIZE_BITS      -1 downto 0);
-    signal   o2i_pull_rsv_valid : std_logic;
-    signal   o2i_pull_rsv_last  : std_logic;
-    signal   o2i_pull_rsv_size  : std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal   o2i_valve_open     :  std_logic;
+    signal   o2i_pull_fin_valid :  std_logic;
+    signal   o2i_pull_fin_last  :  std_logic;
+    signal   o2i_pull_fin_size  :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal   o2i_pull_rsv_valid :  std_logic;
+    signal   o2i_pull_rsv_last  :  std_logic;
+    signal   o2i_pull_rsv_size  :  std_logic_vector(SIZE_BITS      -1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- 入力側のアドレスレジスタ
+    -- 入力側の制御
     -------------------------------------------------------------------------------
-    I_ADDR_REGS: COUNT_UP_REGISTER                   -- 
-        generic map (                                -- 
-            VALID           => I_REQ_ADDR_VALID    , -- 
-            BITS            => I_REQ_ADDR_BITS     , -- 
-            REGS_BITS       => I_REG_ADDR_BITS       -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => I_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => I_CLR               , -- In  :
-            REGS_WEN        => I_ADDR_L            , -- In  :
-            REGS_WDATA      => I_ADDR_D            , -- In  :
-            REGS_RDATA      => I_ADDR_Q            , -- Out :
-            UP_ENA          => i_tran_running      , -- In  :
-            UP_VAL          => I_ACK_VALID         , -- In  :
-            UP_BEN          => i_addr_up_ben       , -- In  :
-            UP_SIZE         => I_ACK_SIZE          , -- In  :
-            COUNTER         => I_REQ_ADDR            -- Out :
-        );                                           -- 
-    i_addr_up_ben <= (others => '0') when (I_ADDR_FIX = '1') else (others => '1');
+    I_CTRL: PUMP_INTAKE_CONTROLLER                       -- 
+        generic map (                                    -- 
+            REQ_ADDR_VALID      => I_REQ_ADDR_VALID    , -- 
+            REQ_ADDR_BITS       => I_REQ_ADDR_BITS     , --   
+            REG_ADDR_BITS       => I_REG_ADDR_BITS     , --   
+            REQ_SIZE_VALID      => I_REQ_SIZE_VALID    , --   
+            REQ_SIZE_BITS       => I_REQ_SIZE_BITS     , --   
+            REG_SIZE_BITS       => I_REG_SIZE_BITS     , --   
+            REG_MODE_BITS       => I_REG_MODE_BITS     , --   
+            REG_STAT_BITS       => I_REG_STAT_BITS     , --   
+            FIXED_FLOW_OPEN     => I_FIXED_FLOW_OPEN   , --   
+            FIXED_POOL_OPEN     => I_FIXED_POOL_OPEN   , --   
+            USE_PUSH_BUF_SIZE   => I_USE_PUSH_BUF_SIZE , --   
+            USE_PULL_RSV_SIZE   => O_USE_PULL_RSV_SIZE , --   
+            BUF_DEPTH           => BUF_DEPTH             --   
+        )                                                -- 
+        port map (                                       -- 
+        ---------------------------------------------------------------------------
+        -- Clock/Reset Signals.
+        ---------------------------------------------------------------------------
+            CLK                 => I_CLK               , -- In  :
+            RST                 => RST                 , -- In  :
+            CLR                 => I_CLR               , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake Control Status Register Interface.
+        ---------------------------------------------------------------------------
+            REG_ADDR_L          => I_ADDR_L            , -- In  :
+            REG_ADDR_D          => I_ADDR_D            , -- In  :
+            REG_ADDR_Q          => I_ADDR_Q            , -- Out :
+            REG_SIZE_L          => I_SIZE_L            , -- In  :
+            REG_SIZE_D          => I_SIZE_D            , -- In  :
+            REG_SIZE_Q          => I_SIZE_Q            , -- Out :
+            REG_MODE_L          => I_MODE_L            , -- In  :
+            REG_MODE_D          => I_MODE_D            , -- In  :
+            REG_MODE_Q          => I_MODE_Q            , -- Out :
+            REG_STAT_L          => I_STAT_L            , -- In  :
+            REG_STAT_D          => I_STAT_D            , -- In  :
+            REG_STAT_Q          => I_STAT_Q            , -- Out :
+            REG_STAT_I          => I_STAT_I            , -- In  :
+            REG_RESET_L         => I_RESET_L           , -- In  :
+            REG_RESET_D         => I_RESET_D           , -- In  :
+            REG_RESET_Q         => I_RESET_Q           , -- Out :
+            REG_START_L         => I_START_L           , -- In  :
+            REG_START_D         => I_START_D           , -- In  :
+            REG_START_Q         => I_START_Q           , -- Out :
+            REG_STOP_L          => I_STOP_L            , -- In  :
+            REG_STOP_D          => I_STOP_D            , -- In  :
+            REG_STOP_Q          => I_STOP_Q            , -- Out :
+            REG_PAUSE_L         => I_PAUSE_L           , -- In  :
+            REG_PAUSE_D         => I_PAUSE_D           , -- In  :
+            REG_PAUSE_Q         => I_PAUSE_Q           , -- Out :
+            REG_FIRST_L         => I_FIRST_L           , -- In  :
+            REG_FIRST_D         => I_FIRST_D           , -- In  :
+            REG_FIRST_Q         => I_FIRST_Q           , -- Out :
+            REG_LAST_L          => I_LAST_L            , -- In  :
+            REG_LAST_D          => I_LAST_D            , -- In  :
+            REG_LAST_Q          => I_LAST_Q            , -- Out :
+            REG_DONE_EN_L       => I_DONE_EN_L         , -- In  :
+            REG_DONE_EN_D       => I_DONE_EN_D         , -- In  :
+            REG_DONE_EN_Q       => I_DONE_EN_Q         , -- Out :
+            REG_DONE_ST_L       => I_DONE_ST_L         , -- In  :
+            REG_DONE_ST_D       => I_DONE_ST_D         , -- In  :
+            REG_DONE_ST_Q       => I_DONE_ST_Q         , -- Out :
+            REG_ERR_ST_L        => I_ERR_ST_L          , -- In  :
+            REG_ERR_ST_D        => I_ERR_ST_D          , -- In  :
+            REG_ERR_ST_Q        => I_ERR_ST_Q          , -- Out :
+        ---------------------------------------------------------------------------
+        -- Intake Configuration Signals.
+        ---------------------------------------------------------------------------
+            ADDR_FIX            => I_ADDR_FIX          , -- In  :
+            BUF_READY_LEVEL     => I_BUF_READY_LEVEL   , -- In  :
+            FLOW_READY_LEVEL    => I_FLOW_READY_LEVEL  , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake Transaction Command Request Signals.
+        ---------------------------------------------------------------------------
+            REQ_VALID           => I_REQ_VALID         , -- Out :
+            REQ_ADDR            => I_REQ_ADDR          , -- Out :
+            REQ_SIZE            => I_REQ_SIZE          , -- Out :
+            REQ_BUF_PTR         => I_REQ_BUF_PTR       , -- Out :
+            REQ_FIRST           => I_REQ_FIRST         , -- Out :
+            REQ_LAST            => I_REQ_LAST          , -- Out :
+            REQ_READY           => I_REQ_READY         , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake Transaction Command Acknowledge Signals.
+        ---------------------------------------------------------------------------
+            ACK_VALID           => I_ACK_VALID         , -- In  :
+            ACK_SIZE            => I_ACK_SIZE          , -- In  :
+            ACK_ERROR           => I_ACK_ERROR         , -- In  :
+            ACK_NEXT            => I_ACK_NEXT          , -- In  :
+            ACK_LAST            => I_ACK_LAST          , -- In  :
+            ACK_STOP            => I_ACK_STOP          , -- In  :
+            ACK_NONE            => I_ACK_NONE          , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake_Transfer Status Signals.
+        ---------------------------------------------------------------------------
+            XFER_BUSY           => I_XFER_BUSY         , -- In  :
+            XFER_DONE           => I_XFER_DONE         , -- In  :
+            XFER_ERROR          => I_XFER_ERROR        , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake Flow Control Signals.
+        ---------------------------------------------------------------------------
+            FLOW_READY          => I_FLOW_READY        , -- Out :
+            FLOW_PAUSE          => I_FLOW_PAUSE        , -- Out :
+            FLOW_STOP           => I_FLOW_STOP         , -- Out :
+            FLOW_LAST           => I_FLOW_LAST         , -- Out :
+            FLOW_SIZE           => I_FLOW_SIZE         , -- Out :
+            PUSH_FIN_VALID      => I_PUSH_FIN_VALID    , -- In  :
+            PUSH_FIN_LAST       => I_PUSH_FIN_LAST     , -- In  :
+            PUSH_FIN_ERROR      => I_PUSH_FIN_ERROR    , -- In  :
+            PUSH_FIN_SIZE       => I_PUSH_FIN_SIZE     , -- In  :
+            PUSH_RSV_VALID      => I_PUSH_RSV_VALID    , -- In  :
+            PUSH_RSV_LAST       => I_PUSH_RSV_LAST     , -- In  :
+            PUSH_RSV_ERROR      => I_PUSH_RSV_ERROR    , -- In  :
+            PUSH_RSV_SIZE       => I_PUSH_RSV_SIZE     , -- In  :
+            PUSH_BUF_RESET      => I_PUSH_BUF_RESET    , -- In  :
+            PUSH_BUF_VALID      => I_PUSH_BUF_VALID    , -- In  :
+            PUSH_BUF_LAST       => I_PUSH_BUF_LAST     , -- In  :
+            PUSH_BUF_ERROR      => I_PUSH_BUF_ERROR    , -- In  :
+            PUSH_BUF_SIZE       => I_PUSH_BUF_SIZE     , -- In  :
+            PUSH_BUF_READY      => I_PUSH_BUF_READY    , -- Out :
+        ---------------------------------------------------------------------------
+        -- Outlet to Intake Flow Control Signals.
+        ---------------------------------------------------------------------------
+            PULL_FIN_VALID      => o2i_pull_fin_valid  , -- In  :
+            PULL_FIN_LAST       => o2i_pull_fin_last   , -- In  :
+            PULL_FIN_SIZE       => o2i_pull_fin_size   , -- In  :
+            PULL_RSV_VALID      => o2i_pull_rsv_valid  , -- In  :
+            PULL_RSV_LAST       => o2i_pull_rsv_last   , -- In  :
+            PULL_RSV_SIZE       => o2i_pull_rsv_size   , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Status Input.
+        ---------------------------------------------------------------------------
+            O_OPEN              => o2i_valve_open      , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake Status Output.
+        ---------------------------------------------------------------------------
+            I_OPEN              => i_valve_open        , -- Out :
+            I_RUNNING           => I_RUNNING           , -- Out :
+            I_DONE              => I_DONE              , -- Out :
+            I_ERROR             => I_ERROR               -- Out :
+        );
+    I_OPEN <= i_valve_open;
     -------------------------------------------------------------------------------
-    -- 入力側のサイズカウンタ
+    -- 出力側の制御
     -------------------------------------------------------------------------------
-    I_SIZE_REGS: COUNT_DOWN_REGISTER                 -- 
-        generic map (                                -- 
-            VALID           => I_REQ_SIZE_VALID    , -- 
-            BITS            => I_REQ_SIZE_BITS     , -- 
-            REGS_BITS       => I_REG_SIZE_BITS       -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => I_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => I_CLR               , -- In  :
-            REGS_WEN        => I_SIZE_L            , -- In  :
-            REGS_WDATA      => I_SIZE_D            , -- In  :
-            REGS_RDATA      => I_SIZE_Q            , -- Out :
-            DN_ENA          => i_tran_running      , -- In  :
-            DN_VAL          => I_ACK_VALID         , -- In  :
-            DN_SIZE         => I_ACK_SIZE          , -- In  :
-            COUNTER         => I_REQ_SIZE          , -- Out :
-            ZERO            => open                , -- Out :
-            NEG             => open                  -- Out :
-       );                                            -- 
-    -------------------------------------------------------------------------------
-    -- 入力側のバッファポインタ
-    -------------------------------------------------------------------------------
-    I_BUF_PTR: COUNT_UP_REGISTER                     -- 
-        generic map (                                -- 
-            VALID           => 1                   , -- 
-            BITS            => BUF_DEPTH           , --
-            REGS_BITS       => BUF_DEPTH             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => I_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => I_CLR               , -- In  :
-            REGS_WEN        => i_buf_ptr_init      , -- In  :
-            REGS_WDATA      => BUF_INIT_PTR        , -- In  :
-            REGS_RDATA      => open                , -- Out :
-            UP_ENA          => i_tran_running      , -- In  :
-            UP_VAL          => I_ACK_VALID         , -- In  :
-            UP_BEN          => BUF_UP_BEN          , -- In  :
-            UP_SIZE         => I_ACK_SIZE          , -- In  :
-            COUNTER         => I_REQ_BUF_PTR         -- Out :
-       );                                            -- 
-    i_buf_ptr_init <= (others => '1') when (i_valve_open = '0') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- 入力側の制御レジスタ
-    -------------------------------------------------------------------------------
-    I_CTRL_REGS: PUMP_CONTROL_REGISTER               -- 
-        generic map (                                -- 
-            MODE_BITS       => I_REG_MODE_BITS     , -- 
-            STAT_BITS       => I_REG_STAT_BITS       -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => I_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => I_CLR               , -- In  :
-            RESET_L         => I_RESET_L           , -- In  :
-            RESET_D         => I_RESET_D           , -- In  :
-            RESET_Q         => i_reset             , -- Out :
-            START_L         => I_START_L           , -- In  :
-            START_D         => I_START_D           , -- In  :
-            START_Q         => I_START_Q           , -- Out :
-            STOP_L          => I_STOP_L            , -- In  :
-            STOP_D          => I_STOP_D            , -- In  :
-            STOP_Q          => i_stop              , -- Out :
-            PAUSE_L         => I_PAUSE_L           , -- In  :
-            PAUSE_D         => I_PAUSE_D           , -- In  :
-            PAUSE_Q         => i_pause             , -- Out :
-            FIRST_L         => I_FIRST_L           , -- In  :
-            FIRST_D         => I_FIRST_D           , -- In  :
-            FIRST_Q         => I_FIRST_Q           , -- Out :
-            LAST_L          => I_LAST_L            , -- In  :
-            LAST_D          => I_LAST_D            , -- In  :
-            LAST_Q          => I_LAST_Q            , -- Out :
-            DONE_EN_L       => I_DONE_EN_L         , -- In  :
-            DONE_EN_D       => I_DONE_EN_D         , -- In  :
-            DONE_EN_Q       => I_DONE_EN_Q         , -- Out :
-            DONE_ST_L       => I_DONE_ST_L         , -- In  :
-            DONE_ST_D       => I_DONE_ST_D         , -- In  :
-            DONE_ST_Q       => I_DONE_ST_Q         , -- Out :
-            ERR_ST_L        => I_ERR_ST_L          , -- In  :
-            ERR_ST_D        => I_ERR_ST_D          , -- In  :
-            ERR_ST_Q        => I_ERR_ST_Q          , -- Out :
-            MODE_L          => I_MODE_L            , -- In  :
-            MODE_D          => I_MODE_D            , -- In  :
-            MODE_Q          => I_MODE_Q            , -- Out :
-            STAT_L          => I_STAT_L            , -- In  :
-            STAT_D          => I_STAT_D            , -- In  :
-            STAT_Q          => I_STAT_Q            , -- Out :
-            STAT_I          => I_STAT_I            , -- In  :
-            REQ_VALID       => I_REQ_VALID         , -- Out :
-            REQ_FIRST       => I_REQ_FIRST         , -- Out :
-            REQ_LAST        => I_REQ_LAST          , -- Out :
-            REQ_READY       => I_REQ_READY         , -- In  :
-            ACK_VALID       => I_ACK_VALID         , -- In  :
-            ACK_ERROR       => I_ACK_ERROR         , -- In  :
-            ACK_NEXT        => I_ACK_NEXT          , -- In  :
-            ACK_LAST        => I_ACK_LAST          , -- In  :
-            ACK_STOP        => I_ACK_STOP          , -- In  :
-            ACK_NONE        => I_ACK_NONE          , -- In  :
-            XFER_BUSY       => I_XFER_BUSY         , -- In  :
-            XFER_DONE       => I_XFER_DONE         , -- In  :
-            XFER_ERROR      => I_XFER_ERROR        , -- In  :
-            VALVE_OPEN      => i_valve_open        , -- Out :
-            TRAN_DONE       => I_DONE              , -- Out :
-            TRAN_ERROR      => I_ERROR             , -- Out :
-            TRAN_BUSY       => i_tran_running        -- Out :
-        );                                           -- 
-    I_RESET_Q <= i_reset;
-    I_PAUSE_Q <= i_pause;
-    I_STOP_Q  <= i_stop;
-    I_OPEN    <= i_valve_open;
-    I_RUNNING <= i_tran_running;
-    -------------------------------------------------------------------------------
-    -- 入力側のバルブ
-    -------------------------------------------------------------------------------
-    I_VALVE: FLOAT_INTAKE_MANIFOLD_VALVE             -- 
-        generic map (                                --
-            FIXED_CLOSE     => 0                   , --
-            FIXED_FLOW_OPEN => I_FIXED_FLOW_OPEN   , --
-            FIXED_POOL_OPEN => I_FIXED_POOL_OPEN   , --
-            USE_PULL_RSV    => O_USE_PULL_RSV_SIZE , --
-            USE_POOL_PUSH   => I_USE_PUSH_BUF_SIZE , --
-            COUNT_BITS      => SIZE_BITS           , -- 
-            SIZE_BITS       => SIZE_BITS             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => I_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => I_CLR               , -- In  :
-            POOL_SIZE       => BUFFER_SIZE         , -- In  :
-            FLOW_READY_LEVEL=> I_FLOW_READY_LEVEL  , -- In  :
-            POOL_READY_LEVEL=> I_BUF_READY_LEVEL   , -- In  :
-            INTAKE_OPEN     => i_valve_open        , -- In  :
-            OUTLET_OPEN     => o2i_valve_open      , -- In  :
-            RESET           => i_reset             , -- In  :
-            PAUSE           => i_pause             , -- In  :
-            STOP            => i_stop              , -- In  :
-            PULL_FIN_VALID  => o2i_pull_fin_valid  , -- In  :
-            PULL_FIN_LAST   => o2i_pull_fin_last   , -- In  :
-            PULL_FIN_SIZE   => o2i_pull_fin_size   , -- In  :
-            PULL_RSV_VALID  => o2i_pull_rsv_valid  , -- In  :
-            PULL_RSV_LAST   => o2i_pull_rsv_last   , -- In  :
-            PULL_RSV_SIZE   => o2i_pull_rsv_size   , -- In  :
-            FLOW_PUSH_VALID => I_ACK_VALID         , -- In  :
-            FLOW_PUSH_LAST  => I_ACK_LAST          , -- In  :
-            FLOW_PUSH_SIZE  => I_ACK_SIZE          , -- In  :
-            FLOW_READY      => I_FLOW_READY        , -- Out :
-            FLOW_PAUSE      => I_FLOW_PAUSE        , -- Out :
-            FLOW_STOP       => I_FLOW_STOP         , -- Out :
-            FLOW_LAST       => I_FLOW_LAST         , -- Out :
-            FLOW_SIZE       => I_FLOW_SIZE         , -- Out :
-            FLOW_COUNT      => open                , -- Out :
-            FLOW_ZERO       => open                , -- Out :
-            FLOW_POS        => open                , -- Out :
-            FLOW_NEG        => open                , -- Out :
-            POOL_PUSH_RESET => I_PUSH_BUF_RESET    , -- In  :
-            POOL_PUSH_VALID => I_PUSH_BUF_VALID    , -- In  :
-            POOL_PUSH_LAST  => I_PUSH_BUF_LAST     , -- In  :
-            POOL_PUSH_SIZE  => I_PUSH_BUF_SIZE     , -- In  :
-            POOL_READY      => I_PUSH_BUF_READY    , -- Out :
-            POOL_COUNT      => open                , -- Out :
-            PAUSED          => open                  -- Out :
-        );                                           -- 
-    -------------------------------------------------------------------------------
-    -- 出力側のアドレスレジスタ
-    -------------------------------------------------------------------------------
-    O_ADDR_REGS: COUNT_UP_REGISTER                   -- 
-        generic map (                                -- 
-            VALID           => O_REQ_ADDR_VALID    , -- 
-            BITS            => O_REQ_ADDR_BITS     , -- 
-            REGS_BITS       => O_REG_ADDR_BITS       -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => O_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => O_CLR               , -- In  :
-            REGS_WEN        => O_ADDR_L            , -- In  :
-            REGS_WDATA      => O_ADDR_D            , -- In  :
-            REGS_RDATA      => O_ADDR_Q            , -- Out :
-            UP_ENA          => o_tran_running      , -- In  :
-            UP_VAL          => O_ACK_VALID         , -- In  :
-            UP_BEN          => o_addr_up_ben       , -- In  :
-            UP_SIZE         => O_ACK_SIZE          , -- In  :
-            COUNTER         => O_REQ_ADDR            -- Out :
-        );                                           -- 
-    o_addr_up_ben <= (others => '0') when (O_ADDR_FIX = '1') else (others => '1');
-    -------------------------------------------------------------------------------
-    -- 出力側のサイズカウンタ
-    -------------------------------------------------------------------------------
-    O_SIZE_REGS: COUNT_DOWN_REGISTER                 -- 
-        generic map (                                -- 
-            VALID           => O_REQ_SIZE_VALID    , --
-            BITS            => O_REQ_SIZE_BITS     , --
-            REGS_BITS       => O_REG_SIZE_BITS       --
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => O_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => O_CLR               , -- In  :
-            REGS_WEN        => O_SIZE_L            , -- In  :
-            REGS_WDATA      => O_SIZE_D            , -- In  :
-            REGS_RDATA      => O_SIZE_Q            , -- Out :
-            DN_ENA          => o_tran_running      , -- In  :
-            DN_VAL          => O_ACK_VALID         , -- In  :
-            DN_SIZE         => O_ACK_SIZE          , -- In  :
-            COUNTER         => O_REQ_SIZE          , -- Out :
-            ZERO            => open                , -- Out :
-            NEG             => open                  -- Out :
-       );                                            -- 
-    -------------------------------------------------------------------------------
-    -- 出力側のバッファポインタ
-    -------------------------------------------------------------------------------
-    O_BUF_PTR: COUNT_UP_REGISTER                     -- 
-        generic map (                                -- 
-            VALID           => 1                   , --
-            BITS            => BUF_DEPTH           , --
-            REGS_BITS       => BUF_DEPTH             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => O_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => O_CLR               , -- In  :
-            REGS_WEN        => o_buf_ptr_init      , -- In  :
-            REGS_WDATA      => BUF_INIT_PTR        , -- In  :
-            REGS_RDATA      => open                , -- Out :
-            UP_ENA          => o_tran_running      , -- In  :
-            UP_VAL          => O_ACK_VALID         , -- In  :
-            UP_BEN          => BUF_UP_BEN          , -- In  :
-            UP_SIZE         => O_ACK_SIZE          , -- In  :
-            COUNTER         => O_REQ_BUF_PTR         -- Out :
-       );                                            -- 
-    o_buf_ptr_init <= (others => '1') when (o_valve_open = '0') else (others => '0');
-    -------------------------------------------------------------------------------
-    -- 出力側の制御レジスタ
-    -------------------------------------------------------------------------------
-    O_CTRL_REGS: PUMP_CONTROL_REGISTER               --
-        generic map (                                --
-            MODE_BITS       => O_REG_MODE_BITS     , --
-            STAT_BITS       => O_REG_STAT_BITS       -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => O_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => O_CLR               , -- In  :
-            RESET_L         => O_RESET_L           , -- In  :
-            RESET_D         => O_RESET_D           , -- In  :
-            RESET_Q         => o_reset             , -- Out :
-            START_L         => O_START_L           , -- In  :
-            START_D         => O_START_D           , -- In  :
-            START_Q         => O_START_Q           , -- Out :
-            STOP_L          => O_STOP_L            , -- In  :
-            STOP_D          => O_STOP_D            , -- In  :
-            STOP_Q          => o_stop              , -- Out :
-            PAUSE_L         => O_PAUSE_L           , -- In  :
-            PAUSE_D         => O_PAUSE_D           , -- In  :
-            PAUSE_Q         => o_pause             , -- Out :
-            FIRST_L         => O_FIRST_L           , -- In  :
-            FIRST_D         => O_FIRST_D           , -- In  :
-            FIRST_Q         => O_FIRST_Q           , -- Out :
-            LAST_L          => O_LAST_L            , -- In  :
-            LAST_D          => O_LAST_D            , -- In  :
-            LAST_Q          => O_LAST_Q            , -- Out :
-            DONE_EN_L       => O_DONE_EN_L         , -- In  :
-            DONE_EN_D       => O_DONE_EN_D         , -- In  :
-            DONE_EN_Q       => O_DONE_EN_Q         , -- Out :
-            DONE_ST_L       => O_DONE_ST_L         , -- In  :
-            DONE_ST_D       => O_DONE_ST_D         , -- In  :
-            DONE_ST_Q       => O_DONE_ST_Q         , -- Out :
-            ERR_ST_L        => O_ERR_ST_L          , -- In  :
-            ERR_ST_D        => O_ERR_ST_D          , -- In  :
-            ERR_ST_Q        => O_ERR_ST_Q          , -- Out :
-            MODE_L          => O_MODE_L            , -- In  :
-            MODE_D          => O_MODE_D            , -- In  :
-            MODE_Q          => O_MODE_Q            , -- Out :
-            STAT_L          => O_STAT_L            , -- In  :
-            STAT_D          => O_STAT_D            , -- In  :
-            STAT_Q          => O_STAT_Q            , -- Out :
-            STAT_I          => O_STAT_I            , -- In  :
-            REQ_VALID       => O_REQ_VALID         , -- Out :
-            REQ_FIRST       => O_REQ_FIRST         , -- Out :
-            REQ_LAST        => O_REQ_LAST          , -- Out :
-            REQ_READY       => O_REQ_READY         , -- In  :
-            ACK_VALID       => O_ACK_VALID         , -- In  :
-            ACK_ERROR       => O_ACK_ERROR         , -- In  :
-            ACK_NEXT        => O_ACK_NEXT          , -- In  :
-            ACK_LAST        => O_ACK_LAST          , -- In  :
-            ACK_STOP        => O_ACK_STOP          , -- In  :
-            ACK_NONE        => O_ACK_NONE          , -- In  :
-            XFER_BUSY       => O_XFER_BUSY         , -- In  :
-            XFER_DONE       => O_XFER_DONE         , -- In  :
-            XFER_ERROR      => O_XFER_ERROR        , -- In  :
-            VALVE_OPEN      => o_valve_open        , -- Out :
-            TRAN_DONE       => O_DONE              , -- Out :
-            TRAN_ERROR      => O_ERROR             , -- Out :
-            TRAN_BUSY       => o_tran_running        -- Out :
-        );                                           -- 
-    O_RESET_Q <= o_reset;
-    O_PAUSE_Q <= o_pause;
-    O_STOP_Q  <= o_stop;
-    O_OPEN    <= o_valve_open;
-    O_RUNNING <= o_tran_running;
-    -------------------------------------------------------------------------------
-    -- 出力側のバルブ
-    -------------------------------------------------------------------------------
-    O_VALVE: FLOAT_OUTLET_MANIFOLD_VALVE             -- 
-        generic map (                                -- 
-            FIXED_CLOSE     => 0                   , --
-            FIXED_FLOW_OPEN => O_FIXED_FLOW_OPEN   , --
-            FIXED_POOL_OPEN => O_FIXED_POOL_OPEN   , --
-            USE_PUSH_RSV    => I_USE_PUSH_RSV_SIZE , --
-            USE_POOL_PULL   => O_USE_PULL_BUF_SIZE , --
-            COUNT_BITS      => SIZE_BITS           , -- 
-            SIZE_BITS       => SIZE_BITS             -- 
-        )                                            -- 
-        port map (                                   -- 
-            CLK             => O_CLK               , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => O_CLR               , -- In  :
-            FLOW_READY_LEVEL=> O_FLOW_READY_LEVEL  , -- In  :
-            POOL_READY_LEVEL=> O_BUF_READY_LEVEL   , -- In  :
-            INTAKE_OPEN     => i2o_valve_open      , -- In  :
-            OUTLET_OPEN     => o_valve_open        , -- In  :
-            RESET           => o_reset             , -- In  :
-            PAUSE           => o_pause             , -- In  :
-            STOP            => o_stop              , -- In  :
-            PUSH_FIN_VALID  => i2o_push_fin_valid  , -- In  :
-            PUSH_FIN_LAST   => i2o_push_fin_last   , -- In  :
-            PUSH_FIN_SIZE   => i2o_push_fin_size   , -- In  :
-            PUSH_RSV_VALID  => i2o_push_rsv_valid  , -- In  :
-            PUSH_RSV_LAST   => i2o_push_rsv_last   , -- In  :
-            PUSH_RSV_SIZE   => i2o_push_rsv_size   , -- In  :
-            FLOW_PULL_VALID => O_ACK_VALID         , -- In  :
-            FLOW_PULL_LAST  => O_ACK_LAST          , -- In  :
-            FLOW_PULL_SIZE  => O_ACK_SIZE          , -- In  :
-            FLOW_READY      => O_FLOW_READY        , -- Out :
-            FLOW_PAUSE      => O_FLOW_PAUSE        , -- Out :
-            FLOW_STOP       => O_FLOW_STOP         , -- Out :
-            FLOW_LAST       => O_FLOW_LAST         , -- Out :
-            FLOW_SIZE       => O_FLOW_SIZE         , -- Out :
-            FLOW_COUNT      => open                , -- Out :
-            FLOW_ZERO       => open                , -- Out :
-            FLOW_POS        => open                , -- Out :
-            FLOW_NEG        => open                , -- Out :
-            POOL_PULL_RESET => O_PULL_BUF_RESET    , -- In  :
-            POOL_PULL_VALID => O_PULL_BUF_VALID    , -- In  :
-            POOL_PULL_LAST  => O_PULL_BUF_LAST     , -- In  :
-            POOL_PULL_SIZE  => O_PULL_BUF_SIZE     , -- In  :
-            POOL_READY      => O_PULL_BUF_READY    , -- Out :
-            POOL_COUNT      => open                , -- Out :
-            PAUSED          => open                  -- Out :
-        );                                           -- 
+    O_CTRL: PUMP_OUTLET_CONTROLLER                       -- 
+        generic map (                                    -- 
+            REQ_ADDR_VALID      => O_REQ_ADDR_VALID    , -- 
+            REQ_ADDR_BITS       => O_REQ_ADDR_BITS     , --   
+            REG_ADDR_BITS       => O_REG_ADDR_BITS     , --   
+            REQ_SIZE_VALID      => O_REQ_SIZE_VALID    , --   
+            REQ_SIZE_BITS       => O_REQ_SIZE_BITS     , --   
+            REG_SIZE_BITS       => O_REG_SIZE_BITS     , --   
+            REG_MODE_BITS       => O_REG_MODE_BITS     , --   
+            REG_STAT_BITS       => O_REG_STAT_BITS     , --   
+            FIXED_FLOW_OPEN     => O_FIXED_FLOW_OPEN   , --   
+            FIXED_POOL_OPEN     => O_FIXED_POOL_OPEN   , --   
+            USE_PULL_BUF_SIZE   => O_USE_PULL_BUF_SIZE , --   
+            USE_PUSH_RSV_SIZE   => I_USE_PUSH_RSV_SIZE , --   
+            BUF_DEPTH           => BUF_DEPTH             --   
+        )                                                -- 
+        port map (                                       -- 
+        ---------------------------------------------------------------------------
+        -- Clock/Reset Signals.
+        ---------------------------------------------------------------------------
+            CLK                 => O_CLK               , -- In  :
+            RST                 => RST                 , -- In  :
+            CLR                 => O_CLR               , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Control Status Register Interface.
+        ---------------------------------------------------------------------------
+            REG_ADDR_L          => O_ADDR_L            , -- In  :
+            REG_ADDR_D          => O_ADDR_D            , -- In  :
+            REG_ADDR_Q          => O_ADDR_Q            , -- Out :
+            REG_SIZE_L          => O_SIZE_L            , -- In  :
+            REG_SIZE_D          => O_SIZE_D            , -- In  :
+            REG_SIZE_Q          => O_SIZE_Q            , -- Out :
+            REG_MODE_L          => O_MODE_L            , -- In  :
+            REG_MODE_D          => O_MODE_D            , -- In  :
+            REG_MODE_Q          => O_MODE_Q            , -- Out :
+            REG_STAT_L          => O_STAT_L            , -- In  :
+            REG_STAT_D          => O_STAT_D            , -- In  :
+            REG_STAT_Q          => O_STAT_Q            , -- Out :
+            REG_STAT_I          => O_STAT_I            , -- In  :
+            REG_RESET_L         => O_RESET_L           , -- In  :
+            REG_RESET_D         => O_RESET_D           , -- In  :
+            REG_RESET_Q         => O_RESET_Q           , -- Out :
+            REG_START_L         => O_START_L           , -- In  :
+            REG_START_D         => O_START_D           , -- In  :
+            REG_START_Q         => O_START_Q           , -- Out :
+            REG_STOP_L          => O_STOP_L            , -- In  :
+            REG_STOP_D          => O_STOP_D            , -- In  :
+            REG_STOP_Q          => O_STOP_Q            , -- Out :
+            REG_PAUSE_L         => O_PAUSE_L           , -- In  :
+            REG_PAUSE_D         => O_PAUSE_D           , -- In  :
+            REG_PAUSE_Q         => O_PAUSE_Q           , -- Out :
+            REG_FIRST_L         => O_FIRST_L           , -- In  :
+            REG_FIRST_D         => O_FIRST_D           , -- In  :
+            REG_FIRST_Q         => O_FIRST_Q           , -- Out :
+            REG_LAST_L          => O_LAST_L            , -- In  :
+            REG_LAST_D          => O_LAST_D            , -- In  :
+            REG_LAST_Q          => O_LAST_Q            , -- Out :
+            REG_DONE_EN_L       => O_DONE_EN_L         , -- In  :
+            REG_DONE_EN_D       => O_DONE_EN_D         , -- In  :
+            REG_DONE_EN_Q       => O_DONE_EN_Q         , -- Out :
+            REG_DONE_ST_L       => O_DONE_ST_L         , -- In  :
+            REG_DONE_ST_D       => O_DONE_ST_D         , -- In  :
+            REG_DONE_ST_Q       => O_DONE_ST_Q         , -- Out :
+            REG_ERR_ST_L        => O_ERR_ST_L          , -- In  :
+            REG_ERR_ST_D        => O_ERR_ST_D          , -- In  :
+            REG_ERR_ST_Q        => O_ERR_ST_Q          , -- Out :
+        ---------------------------------------------------------------------------
+        -- Outlet Configuration Signals.
+        ---------------------------------------------------------------------------
+            ADDR_FIX            => O_ADDR_FIX          , -- In  :
+            BUF_READY_LEVEL     => O_BUF_READY_LEVEL   , -- In  :
+            FLOW_READY_LEVEL    => O_FLOW_READY_LEVEL  , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Transaction Command Request Signals.
+        ---------------------------------------------------------------------------
+            REQ_VALID           => O_REQ_VALID         , -- Out :
+            REQ_ADDR            => O_REQ_ADDR          , -- Out :
+            REQ_SIZE            => O_REQ_SIZE          , -- Out :
+            REQ_BUF_PTR         => O_REQ_BUF_PTR       , -- Out :
+            REQ_FIRST           => O_REQ_FIRST         , -- Out :
+            REQ_LAST            => O_REQ_LAST          , -- Out :
+            REQ_READY           => O_REQ_READY         , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Transaction Command Acknowledge Signals.
+        ---------------------------------------------------------------------------
+            ACK_VALID           => O_ACK_VALID         , -- In  :
+            ACK_SIZE            => O_ACK_SIZE          , -- In  :
+            ACK_ERROR           => O_ACK_ERROR         , -- In  :
+            ACK_NEXT            => O_ACK_NEXT          , -- In  :
+            ACK_LAST            => O_ACK_LAST          , -- In  :
+            ACK_STOP            => O_ACK_STOP          , -- In  :
+            ACK_NONE            => O_ACK_NONE          , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Transfer Status Signals.
+        ---------------------------------------------------------------------------
+            XFER_BUSY           => O_XFER_BUSY         , -- In  :
+            XFER_DONE           => O_XFER_DONE         , -- In  :
+            XFER_ERROR          => O_XFER_ERROR        , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Flow Control Signals.
+        ---------------------------------------------------------------------------
+            FLOW_READY          => O_FLOW_READY        , -- Out :
+            FLOW_PAUSE          => O_FLOW_PAUSE        , -- Out :
+            FLOW_STOP           => O_FLOW_STOP         , -- Out :
+            FLOW_LAST           => O_FLOW_LAST         , -- Out :
+            FLOW_SIZE           => O_FLOW_SIZE         , -- Out :
+            PULL_FIN_VALID      => O_PULL_FIN_VALID    , -- In  :
+            PULL_FIN_LAST       => O_PULL_FIN_LAST     , -- In  :
+            PULL_FIN_ERROR      => O_PULL_FIN_ERROR    , -- In  :
+            PULL_FIN_SIZE       => O_PULL_FIN_SIZE     , -- In  :
+            PULL_RSV_VALID      => O_PULL_RSV_VALID    , -- In  :
+            PULL_RSV_LAST       => O_PULL_RSV_LAST     , -- In  :
+            PULL_RSV_ERROR      => O_PULL_RSV_ERROR    , -- In  :
+            PULL_RSV_SIZE       => O_PULL_RSV_SIZE     , -- In  :
+            PULL_BUF_RESET      => O_PULL_BUF_RESET    , -- In  :
+            PULL_BUF_VALID      => O_PULL_BUF_VALID    , -- In  :
+            PULL_BUF_LAST       => O_PULL_BUF_LAST     , -- In  :
+            PULL_BUF_ERROR      => O_PULL_BUF_ERROR    , -- In  :
+            PULL_BUF_SIZE       => O_PULL_BUF_SIZE     , -- In  :
+            PULL_BUF_READY      => O_PULL_BUF_READY    , -- Out :
+        ---------------------------------------------------------------------------
+        -- Intake to Outlet Flow Control Signals.
+        ---------------------------------------------------------------------------
+            PUSH_FIN_VALID      => i2o_push_fin_valid  , -- In  :
+            PUSH_FIN_LAST       => i2o_push_fin_last   , -- In  :
+            PUSH_FIN_SIZE       => i2o_push_fin_size   , -- In  :
+            PUSH_RSV_VALID      => i2o_push_rsv_valid  , -- In  :
+            PUSH_RSV_LAST       => i2o_push_rsv_last   , -- In  :
+            PUSH_RSV_SIZE       => i2o_push_rsv_size   , -- In  :
+        ---------------------------------------------------------------------------
+        -- Intake Status Input.
+        ---------------------------------------------------------------------------
+            I_OPEN              => i2o_valve_open      , -- In  :
+        ---------------------------------------------------------------------------
+        -- Outlet Status Output.
+        ---------------------------------------------------------------------------
+            O_OPEN              => o_valve_open        , -- Out :
+            O_RUNNING           => O_RUNNING           , -- Out :
+            O_DONE              => O_DONE              , -- Out :
+            O_ERROR             => O_ERROR               -- Out :
+        );
+    O_OPEN <= o_valve_open;
     -------------------------------------------------------------------------------
     -- 入力側から出力側への各種情報転送
     -------------------------------------------------------------------------------
