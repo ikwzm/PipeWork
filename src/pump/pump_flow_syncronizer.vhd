@@ -2,12 +2,12 @@
 --!     @file    pump_flow_syncronizer.vhd
 --!     @brief   PUMP FLOW SYNCRONIZER
 --!              PUMPの入力側と出力側の間で各種情報を伝達するモジュール. 
---!     @version 1.5.5
---!     @date    2014/3/25
+--!     @version 1.7.0
+--!     @date    2018/5/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -66,7 +66,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! するか否かを指定する.
                           --! * PUSH_FIN_VALID = 1 : 有効. 
                           --! * PUSH_FIN_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PUSH_FIN_DELAY  : --! @brief PUSH FINAL SIZE DELAY CYCLE :
                           --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST を遅延するサ
                           --! イクル数を指定する.
@@ -76,19 +76,19 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! するか否かを指定する.
                           --! * PUSH_RSV_VALID = 1 : 有効. 
                           --! * PUSH_RSV_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PULL_FIN_VALID  : --! @brief PULL FINAL SIZE VALID :
                           --! PULL_FIN_VAL/PULL_FIN_SIZE/PULL_FIN_LAST 信号を有効に
                           --! するか否かを指定する.
                           --! * PULL_FIN_VALID = 1 : 有効. 
                           --! * PULL_FIN_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PULL_RSV_VALID  : --! @brief PULL RESERVE SIZE VALID :
                           --! PULL_RSV_VAL/PULL_RSV_SIZE/PULL_RSV_LAST 信号を有効に
                           --! するか否かを指定する.
                           --! * PULL_RSV_VALID = 1 : 有効. 
                           --! * PULL_RSV_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1
+                          integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------

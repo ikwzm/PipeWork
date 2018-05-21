@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/5/16
+--!     @date    2018/5/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -50,7 +50,7 @@ entity  PUMP_CONTROLLER is
                               --! I_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * I_REQ_ADDR_VALID=0で無効.
                               --! * I_REQ_ADDR_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         I_REQ_ADDR_BITS     : --! @brief INTAKE REQUEST ADDRESS BITS :
                               --! I_REQ_ADDR信号のビット数を指定する.
                               --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -65,7 +65,7 @@ entity  PUMP_CONTROLLER is
                               --! I_REQ_SIZE信号を有効にするか否かを指示する.
                               --! * I_REQ_SIZE_VALID=0で無効.
                               --! * I_REQ_SIZE_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         I_REQ_SIZE_BITS     : --! @brief INTAKE REQUEST SIZE BITS :
                               --! I_REQ_SIZE信号のビット数を指定する.
                               --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を
@@ -111,7 +111,7 @@ entity  PUMP_CONTROLLER is
                               --! O_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * O_REQ_ADDR_VAL=0で無効.
                               --! * O_REQ_ADDR_VAL=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         O_REQ_ADDR_BITS     : --! @brief OUTLET REQUEST ADDRESS BITS :
                               --! O_REQ_ADDR信号のビット数を指定する.
                               --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -126,7 +126,7 @@ entity  PUMP_CONTROLLER is
                               --! O_REQ_SIZE信号を有効にするか否かを指示する.
                               --! * O_REQ_SIZE_VAL=0で無効.
                               --! * O_REQ_SIZE_VAL=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         O_REQ_SIZE_BITS     : --! @brief OUTLET REQUEST SIZE BITS :
                               --! O_REQ_SIZE信号のビット数を指定する.
                               --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を

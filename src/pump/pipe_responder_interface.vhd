@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
---!     @version 1.5.5
---!     @date    2014/3/23
+--!     @version 1.7.0
+--!     @date    2018/5/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -44,31 +44,31 @@ entity  PIPE_RESPONDER_INTERFACE is
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=1でデータ転送を行う.
                               --! * PUSH_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         PULL_VALID          : --! @brief PUSH VALID :
                               --! リクエスタ側からレスポンダ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=1でデータ転送を行う.
                               --! * PULL_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                               integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
-                              --! * ADDR_VALID>0で有効.
-                              integer :=  1;
+                              --! * ADDR_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
                               --! REQ_SIZE/ACK_SIZE信号のビット数を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
                               --! * SIZE_VALID=0で無効.
-                              --! * SIZE_VALID>0で有効.
-                              integer :=  1;
+                              --! * SIZE_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;

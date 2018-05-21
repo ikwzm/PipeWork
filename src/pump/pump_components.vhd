@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/05/16                                                      --
+--!     @date    2018/05/21                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -312,7 +312,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! するか否かを指定する.
                           --! * PUSH_FIN_VALID = 1 : 有効. 
                           --! * PUSH_FIN_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PUSH_FIN_DELAY  : --! @brief PUSH FINAL SIZE DELAY CYCLE :
                           --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST を遅延するサ
                           --! イクル数を指定する.
@@ -322,19 +322,19 @@ component PUMP_FLOW_SYNCRONIZER
                           --! するか否かを指定する.
                           --! * PUSH_RSV_VALID = 1 : 有効. 
                           --! * PUSH_RSV_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PULL_FIN_VALID  : --! @brief PULL FINAL SIZE VALID :
                           --! PULL_FIN_VAL/PULL_FIN_SIZE/PULL_FIN_LAST 信号を有効に
                           --! するか否かを指定する.
                           --! * PULL_FIN_VALID = 1 : 有効. 
                           --! * PULL_FIN_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PULL_RSV_VALID  : --! @brief PULL RESERVE SIZE VALID :
                           --! PULL_RSV_VAL/PULL_RSV_SIZE/PULL_RSV_LAST 信号を有効に
                           --! するか否かを指定する.
                           --! * PULL_RSV_VALID = 1 : 有効. 
                           --! * PULL_RSV_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1
+                          integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -535,7 +535,7 @@ component PUMP_INTAKE_CONTROLLER
                               --! REQ_ADDR信号を有効にするか否かを指示する.
                               --! * REQ_ADDR_VALID=0で無効.
                               --! * REQ_ADDR_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         REQ_ADDR_BITS       : --! @brief REQUEST ADDRESS BITS :
                               --! REQ_ADDR信号のビット数を指定する.
                               --! * REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -550,7 +550,7 @@ component PUMP_INTAKE_CONTROLLER
                               --! REQ_SIZE信号を有効にするか否かを指示する.
                               --! * REQ_SIZE_VALID=0で無効.
                               --! * REQ_SIZE_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         REQ_SIZE_BITS       : --! @brief REQUEST SIZE BITS :
                               --! REQ_SIZE信号のビット数を指定する.
                               --! * REQ_SIZE_VALID=0の場合でもビット数は１以上を
@@ -726,7 +726,7 @@ component PUMP_OUTLET_CONTROLLER
                               --! REQ_ADDR信号を有効にするか否かを指示する.
                               --! * REQ_ADDR_VALID=0で無効.
                               --! * REQ_ADDR_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         REQ_ADDR_BITS       : --! @brief REQUEST ADDRESS BITS :
                               --! REQ_ADDR信号のビット数を指定する.
                               --! * REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -741,7 +741,7 @@ component PUMP_OUTLET_CONTROLLER
                               --! REQ_SIZE信号を有効にするか否かを指示する.
                               --! * REQ_SIZE_VALID=0で無効.
                               --! * REQ_SIZE_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         REQ_SIZE_BITS       : --! @brief REQUEST SIZE BITS :
                               --! REQ_SIZE信号のビット数を指定する.
                               --! * REQ_SIZE_VALID=0の場合でもビット数は１以上を
@@ -922,7 +922,7 @@ component PUMP_CONTROLLER
                               --! I_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * I_REQ_ADDR_VALID=0で無効.
                               --! * I_REQ_ADDR_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         I_REQ_ADDR_BITS     : --! @brief INTAKE REQUEST ADDRESS BITS :
                               --! I_REQ_ADDR信号のビット数を指定する.
                               --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -937,7 +937,7 @@ component PUMP_CONTROLLER
                               --! I_REQ_SIZE信号を有効にするか否かを指示する.
                               --! * I_REQ_SIZE_VALID=0で無効.
                               --! * I_REQ_SIZE_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         I_REQ_SIZE_BITS     : --! @brief INTAKE REQUEST SIZE BITS :
                               --! I_REQ_SIZE信号のビット数を指定する.
                               --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を
@@ -983,7 +983,7 @@ component PUMP_CONTROLLER
                               --! O_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * O_REQ_ADDR_VAL=0で無効.
                               --! * O_REQ_ADDR_VAL=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         O_REQ_ADDR_BITS     : --! @brief OUTLET REQUEST ADDRESS BITS :
                               --! O_REQ_ADDR信号のビット数を指定する.
                               --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -998,7 +998,7 @@ component PUMP_CONTROLLER
                               --! O_REQ_SIZE信号を有効にするか否かを指示する.
                               --! * O_REQ_SIZE_VAL=0で無効.
                               --! * O_REQ_SIZE_VAL=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         O_REQ_SIZE_BITS     : --! @brief OUTLET REQUEST SIZE BITS :
                               --! O_REQ_SIZE信号のビット数を指定する.
                               --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を
@@ -1459,31 +1459,31 @@ component PUMP_REQUEST_CONTROLLER
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=1でデータ転送を行う.
                               --! * PUSH_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1:= 1;
         PULL_VALID          : --! @brief PUSH VALID :
                               --! リクエスタ側からレスポンダ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=1でデータ転送を行う.
                               --! * PULL_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                               integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
-                              --! * ADDR_VALID>0で有効.
-                              integer :=  1;
+                              --! * ADDR_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
                               --! REQ_SIZE/ACK_SIZE信号のビット数を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
                               --! * SIZE_VALID=0で無効.
-                              --! * SIZE_VALID>0で有効.
-                              integer :=  1;
+                              --! * SIZE_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
@@ -1902,15 +1902,15 @@ component PIPE_REQUESTER_INTERFACE
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=1でデータ転送を行う.
                               --! * PUSH_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 :=  1;
         PULL_VALID          : --! @brief PUSH VALID :
                               --! リクエスタ側からレスポンダ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=1でデータ転送を行う.
                               --! * PULL_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 :=  1;
         T_CLK_RATE          : --! @brief RESPONDER CLOCK RATE :
                               --! M_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
                               --! エスト側のクロック(M_CLK)との関係を指定する.
@@ -1927,16 +1927,16 @@ component PIPE_REQUESTER_INTERFACE
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
-                              --! * ADDR_VALID>0で有効.
-                              integer :=  1;
+                              --! * ADDR_VALID=1で有効.
+                              integer range 0 to 1 :=  1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
                               --! 各種サイズ信号のビット幅を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
                               --! * SIZE_VALID=0で無効.
-                              --! * SIZE_VALID>0で有効.
-                              integer :=  1;
+                              --! * SIZE_VALID=1で有効.
+                              integer range 0 to 1 :=  1;
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
@@ -2308,31 +2308,31 @@ component PIPE_RESPONDER_INTERFACE
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=1でデータ転送を行う.
                               --! * PUSH_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         PULL_VALID          : --! @brief PUSH VALID :
                               --! リクエスタ側からレスポンダ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=1でデータ転送を行う.
                               --! * PULL_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                               integer := 32;
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
-                              --! * ADDR_VALID>0で有効.
-                              integer :=  1;
+                              --! * ADDR_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
                               --! REQ_SIZE/ACK_SIZE信号のビット数を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
                               --! * SIZE_VALID=0で無効.
-                              --! * SIZE_VALID>0で有効.
-                              integer :=  1;
+                              --! * SIZE_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;
@@ -2756,15 +2756,15 @@ component PIPE_CONTROLLER
         PUSH_VALID          : --! @brief PUSH VALID :
                               --! レスポンダ側からリクエスタ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PUSH_VALID>1でデータ転送を行う.
+                              --! * PUSH_VALID=1でデータ転送を行う.
                               --! * PUSH_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         PULL_VALID          : --! @brief PUSH VALID :
                               --! リクエスタ側からレスポンダ側へのデータ転送を行うか
                               --! どうかを指定する.
-                              --! * PULL_VALID>1でデータ転送を行う.
+                              --! * PULL_VALID=1でデータ転送を行う.
                               --! * PULL_VALID=0でデータ転送を行わない.
-                              integer :=  1;
+                              integer range 0 to 1 := 1;
         T_CLK_RATE          : --! @brief RESPONDER CLOCK RATE :
                               --! M_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
                               --! エスト側のクロック(M_CLK)との関係を指定する.
@@ -2781,16 +2781,16 @@ component PIPE_CONTROLLER
         ADDR_VALID          : --! @brief Request Address Valid :
                               --! REQ_ADDR信号を有効にするかどうかを指定する.
                               --! * ADDR_VALID=0で無効.
-                              --! * ADDR_VALID>0で有効.
-                              integer :=  1;
+                              --! * ADDR_VALID=1で有効.
+                              integer range 0 to 1 := 1;
         SIZE_BITS           : --! @brief Transfer Size Bits :
                               --! 各種サイズ信号のビット幅を指定する.
                               integer := 32;
         SIZE_VALID          : --! @brief Request Size Valid :
                               --! REQ_SIZE信号を有効にするかどうかを指定する.
                               --! * SIZE_VALID=0で無効.
-                              --! * SIZE_VALID>0で有効.
-                              integer :=  1;
+                              --! * SIZE_VALID=1で有効.
+                              integer range 0 to 1 :=  1;
         MODE_BITS           : --! @brief Request Mode Bits :
                               --! REQ_MODE信号のビット数を指定する.
                               integer := 32;

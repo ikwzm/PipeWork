@@ -2,7 +2,7 @@
 --!     @file    pump_outletcontroller.vhd
 --!     @brief   PUMP OUTLET CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/5/16
+--!     @date    2018/5/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -45,7 +45,7 @@ entity  PUMP_OUTLET_CONTROLLER is
                               --! REQ_ADDR信号を有効にするか否かを指示する.
                               --! * REQ_ADDR_VALID=0で無効.
                               --! * REQ_ADDR_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         REQ_ADDR_BITS       : --! @brief REQUEST ADDRESS BITS :
                               --! REQ_ADDR信号のビット数を指定する.
                               --! * REQ_ADDR_VALID=0の場合でもビット数は１以上を
@@ -60,7 +60,7 @@ entity  PUMP_OUTLET_CONTROLLER is
                               --! REQ_SIZE信号を有効にするか否かを指示する.
                               --! * REQ_SIZE_VALID=0で無効.
                               --! * REQ_SIZE_VALID=1で有効.
-                              integer range 0 to 1 :=  1;
+                              integer range 0 to 1 := 1;
         REQ_SIZE_BITS       : --! @brief REQUEST SIZE BITS :
                               --! REQ_SIZE信号のビット数を指定する.
                               --! * REQ_SIZE_VALID=0の場合でもビット数は１以上を
