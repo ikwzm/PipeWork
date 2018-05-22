@@ -1,7 +1,7 @@
 ENTITY_FILES = pump_control_register.vhd               \
                pump_flow_syncronizer.vhd               \
-               pump_intake_controller.vhd              \
-               pump_outlet_controller.vhd              \
+               pump_controller_intake_side.vhd         \
+               pump_controller_outlet_side.vhd         \
                pump_controller.vhd                     \
                pump_operation_processor.vhd            \
                pump_request_controller.vhd             \

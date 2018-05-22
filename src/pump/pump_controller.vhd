@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/5/21
+--!     @date    2018/5/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -405,13 +405,8 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
-use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
-use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
-use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_MANIFOLD_VALVE;
-use     PIPEWORK.COMPONENTS.FLOAT_OUTLET_MANIFOLD_VALVE;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_INTAKE_CONTROLLER;
-use     PIPEWORK.PUMP_COMPONENTS.PUMP_OUTLET_CONTROLLER;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROLLER_INTAKE_SIDE;
+use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROLLER_OUTLET_SIDE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_FLOW_SYNCRONIZER;
 architecture RTL of PUMP_CONTROLLER is
     ------------------------------------------------------------------------------
@@ -450,7 +445,7 @@ begin
     -------------------------------------------------------------------------------
     -- 入力側の制御
     -------------------------------------------------------------------------------
-    I_CTRL: PUMP_INTAKE_CONTROLLER                       -- 
+    I_SIDE: PUMP_CONTROLLER_INTAKE_SIDE                  -- 
         generic map (                                    -- 
             REQ_ADDR_VALID      => I_REQ_ADDR_VALID    , -- 
             REQ_ADDR_BITS       => I_REQ_ADDR_BITS     , --   
@@ -595,7 +590,7 @@ begin
     -------------------------------------------------------------------------------
     -- 出力側の制御
     -------------------------------------------------------------------------------
-    O_CTRL: PUMP_OUTLET_CONTROLLER                       -- 
+    O_SIDE: PUMP_CONTROLLER_OUTLET_SIDE                  -- 
         generic map (                                    -- 
             REQ_ADDR_VALID      => O_REQ_ADDR_VALID    , -- 
             REQ_ADDR_BITS       => O_REQ_ADDR_BITS     , --   

@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    pump_intake_controller.vhd
---!     @brief   PUMP INTAKE CONTROLLER
+--!     @file    pump_controller_outlet_side.vhd
+--!     @brief   PUMP CONTROLLER OUTLET SIDE
 --!     @version 1.7.0
---!     @date    2018/5/21
+--!     @date    2018/5/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -37,9 +37,9 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief   PUMP INTAKE CONTROLLER :
+--! @brief   PUMP CONTROLLER OUTLET SIDE :
 -----------------------------------------------------------------------------------
-entity  PUMP_INTAKE_CONTROLLER is
+entity  PUMP_CONTROLLER_OUTLET_SIDE is
     generic (
         REQ_ADDR_VALID      : --! @brief REQUEST ADDRESS VALID :
                               --! REQ_ADDR信号を有効にするか否かを指示する.
@@ -83,19 +83,19 @@ entity  PUMP_INTAKE_CONTROLLER is
                               --! * FIXED_FLOW_OPEN=0で状況に応じて開閉する.
                               integer range 0 to 1 := 0;
         FIXED_POOL_OPEN     : --! @brief VALVE FIXED POOL OPEN :
-                              --! PUSH_BUF_READYを常に'1'にするか否かを指定する.
+                              --! PULL_BUF_READYを常に'1'にするか否かを指定する.
                               --! * FIXED_POOL_OPEN=1で常に'1'にする.
                               --! * FIXED_POOL_OPEN=0で状況に応じて開閉する.
                               integer range 0 to 1 := 0;
-        USE_PUSH_BUF_SIZE   : --! @brief USE PUSH BUFFER SIZE :
-                              --! PUSH_BUF_SIZE信号を使用するか否かを指示する.
-                              --! * USE_PUSH_BUF_SIZE=0で使用しない.
-                              --! * USE_PUSH_BUF_SIZE=1で使用する.
+        USE_PULL_BUF_SIZE   : --! @brief USE PULL BUFFER SIZE :
+                              --! PULL_BUF_SIZE信号を使用するか否かを指示する.
+                              --! * USE_PULL_BUF_SIZE=0で使用しない.
+                              --! * USE_PULL_BUF_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
-        USE_PULL_RSV_SIZE   : --! @brief USE PULL RESERVE SIZE :
-                              --! PULL_RSV_SIZE信号を使用するか否かを指示する.
-                              --! * USE_PULL_RSV_SIZE=0で使用しない.
-                              --! * USE_PULL_RSV_SIZE=1で使用する.
+        USE_PUSH_RSV_SIZE   : --! @brief USE PUSH RESERVE SIZE :
+                              --! PUSH_RSV_SIZE信号を使用するか否かを指示する.
+                              --! * USE_PUSH_RSV_SIZE=0で使用しない.
+                              --! * USE_PUSH_RSV_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
         BUF_DEPTH           : --! @brief BUFFER DEPTH :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
@@ -184,49 +184,49 @@ entity  PUMP_INTAKE_CONTROLLER is
         XFER_DONE           : in  std_logic;
         XFER_ERROR          : in  std_logic := '0';
     -------------------------------------------------------------------------------
-    -- Intake Flow Control Signals.
+    -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
         FLOW_READY          : out std_logic;
         FLOW_PAUSE          : out std_logic;
         FLOW_STOP           : out std_logic;
         FLOW_LAST           : out std_logic;
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_FIN_VALID      : in  std_logic;
-        PUSH_FIN_LAST       : in  std_logic;
-        PUSH_FIN_ERROR      : in  std_logic;
-        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_RSV_VALID      : in  std_logic;
-        PUSH_RSV_LAST       : in  std_logic;
-        PUSH_RSV_ERROR      : in  std_logic;
-        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_BUF_RESET      : in  std_logic;
-        PUSH_BUF_VALID      : in  std_logic;
-        PUSH_BUF_LAST       : in  std_logic;
-        PUSH_BUF_ERROR      : in  std_logic;
-        PUSH_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_BUF_READY      : out std_logic;
-    -------------------------------------------------------------------------------
-    -- Outlet Flow Control Signals.
-    -------------------------------------------------------------------------------
         PULL_FIN_VALID      : in  std_logic;
         PULL_FIN_LAST       : in  std_logic;
+        PULL_FIN_ERROR      : in  std_logic;
         PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
         PULL_RSV_VALID      : in  std_logic;
         PULL_RSV_LAST       : in  std_logic;
+        PULL_RSV_ERROR      : in  std_logic;
         PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_BUF_RESET      : in  std_logic;
+        PULL_BUF_VALID      : in  std_logic;
+        PULL_BUF_LAST       : in  std_logic;
+        PULL_BUF_ERROR      : in  std_logic;
+        PULL_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
-    -- Outlet Status Input.
+    -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
-        O_OPEN              : in  std_logic;
+        PUSH_FIN_VALID      : in  std_logic;
+        PUSH_FIN_LAST       : in  std_logic;
+        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_RSV_VALID      : in  std_logic;
+        PUSH_RSV_LAST       : in  std_logic;
+        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
     -------------------------------------------------------------------------------
-    -- Intake Status Output.
+    -- Intake Status Input.
     -------------------------------------------------------------------------------
-        I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
-        I_DONE              : out std_logic;
-        I_ERROR             : out std_logic
+        I_OPEN              : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Status Output.
+    -------------------------------------------------------------------------------
+        O_OPEN              : out std_logic;
+        O_RUNNING           : out std_logic;
+        O_DONE              : out std_logic;
+        O_ERROR             : out std_logic
     );
-end PUMP_INTAKE_CONTROLLER;
+end PUMP_CONTROLLER_OUTLET_SIDE;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -236,9 +236,9 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.COUNT_UP_REGISTER;
 use     PIPEWORK.COMPONENTS.COUNT_DOWN_REGISTER;
-use     PIPEWORK.COMPONENTS.FLOAT_INTAKE_MANIFOLD_VALVE;
+use     PIPEWORK.COMPONENTS.FLOAT_OUTLET_MANIFOLD_VALVE;
 use     PIPEWORK.PUMP_COMPONENTS.PUMP_CONTROL_REGISTER;
-architecture RTL of PUMP_INTAKE_CONTROLLER is
+architecture RTL of PUMP_CONTROLLER_OUTLET_SIDE is
     ------------------------------------------------------------------------------
     -- 各種サイズカウンタのビット数.
     ------------------------------------------------------------------------------
@@ -292,9 +292,9 @@ begin
     -------------------------------------------------------------------------------
     SIZE_REGS: COUNT_DOWN_REGISTER                   -- 
         generic map (                                -- 
-            VALID           => REQ_SIZE_VALID      , -- 
-            BITS            => REQ_SIZE_BITS       , -- 
-            REGS_BITS       => REG_SIZE_BITS         -- 
+            VALID           => REQ_SIZE_VALID      , --
+            BITS            => REQ_SIZE_BITS       , --
+            REGS_BITS       => REG_SIZE_BITS         --
         )                                            -- 
         port map (                                   -- 
             CLK             => CLK                 , -- In  :
@@ -315,7 +315,7 @@ begin
     -------------------------------------------------------------------------------
     BUF_PTR: COUNT_UP_REGISTER                       -- 
         generic map (                                -- 
-            VALID           => 1                   , -- 
+            VALID           => 1                   , --
             BITS            => BUF_DEPTH           , --
             REGS_BITS       => BUF_DEPTH             -- 
         )                                            -- 
@@ -336,9 +336,9 @@ begin
     -------------------------------------------------------------------------------
     -- 制御レジスタ
     -------------------------------------------------------------------------------
-    CTRL_REGS: PUMP_CONTROL_REGISTER                 -- 
-        generic map (                                -- 
-            MODE_BITS       => REG_MODE_BITS       , -- 
+    CTRL_REGS: PUMP_CONTROL_REGISTER                 --
+        generic map (                                --
+            MODE_BITS       => REG_MODE_BITS       , --
             STAT_BITS       => REG_STAT_BITS         -- 
         )                                            -- 
         port map (                                   -- 
@@ -393,25 +393,25 @@ begin
             XFER_DONE       => XFER_DONE           , -- In  :
             XFER_ERROR      => XFER_ERROR          , -- In  :
             VALVE_OPEN      => valve_open          , -- Out :
-            TRAN_DONE       => I_DONE              , -- Out :
-            TRAN_ERROR      => I_ERROR             , -- Out :
+            TRAN_DONE       => O_DONE              , -- Out :
+            TRAN_ERROR      => O_ERROR             , -- Out :
             TRAN_BUSY       => tran_running          -- Out :
         );                                           -- 
     REG_RESET_Q <= reg_reset;
     REG_PAUSE_Q <= reg_pause;
     REG_STOP_Q  <= reg_stop;
-    I_RUNNING   <= tran_running;
-    I_OPEN      <= valve_open;
+    O_RUNNING   <= tran_running;
+    O_OPEN      <= valve_open;
     -------------------------------------------------------------------------------
-    -- 入力側のバルブ
+    -- 出力側のバルブ
     -------------------------------------------------------------------------------
-    VALVE: FLOAT_INTAKE_MANIFOLD_VALVE               -- 
-        generic map (                                --
+    VALVE: FLOAT_OUTLET_MANIFOLD_VALVE               -- 
+        generic map (                                -- 
             FIXED_CLOSE     => 0                   , --
             FIXED_FLOW_OPEN => FIXED_FLOW_OPEN     , --
             FIXED_POOL_OPEN => FIXED_POOL_OPEN     , --
-            USE_PULL_RSV    => USE_PULL_RSV_SIZE   , --
-            USE_POOL_PUSH   => USE_PUSH_BUF_SIZE   , --
+            USE_PUSH_RSV    => USE_PUSH_RSV_SIZE   , --
+            USE_POOL_PULL   => USE_PULL_BUF_SIZE   , --
             COUNT_BITS      => SIZE_BITS           , -- 
             SIZE_BITS       => SIZE_BITS             -- 
         )                                            -- 
@@ -419,23 +419,22 @@ begin
             CLK             => CLK                 , -- In  :
             RST             => RST                 , -- In  :
             CLR             => CLR                 , -- In  :
-            POOL_SIZE       => BUFFER_SIZE         , -- In  :
             FLOW_READY_LEVEL=> FLOW_READY_LEVEL    , -- In  :
             POOL_READY_LEVEL=> BUF_READY_LEVEL     , -- In  :
-            INTAKE_OPEN     => valve_open          , -- In  :
-            OUTLET_OPEN     => O_OPEN              , -- In  :
+            INTAKE_OPEN     => I_OPEN              , -- In  :
+            OUTLET_OPEN     => valve_open          , -- In  :
             RESET           => reg_reset           , -- In  :
             PAUSE           => reg_pause           , -- In  :
             STOP            => reg_stop            , -- In  :
-            PULL_FIN_VALID  => PULL_FIN_VALID      , -- In  :
-            PULL_FIN_LAST   => PULL_FIN_LAST       , -- In  :
-            PULL_FIN_SIZE   => PULL_FIN_SIZE       , -- In  :
-            PULL_RSV_VALID  => PULL_RSV_VALID      , -- In  :
-            PULL_RSV_LAST   => PULL_RSV_LAST       , -- In  :
-            PULL_RSV_SIZE   => PULL_RSV_SIZE       , -- In  :
-            FLOW_PUSH_VALID => ACK_VALID           , -- In  :
-            FLOW_PUSH_LAST  => ACK_LAST            , -- In  :
-            FLOW_PUSH_SIZE  => ACK_SIZE            , -- In  :
+            PUSH_FIN_VALID  => PUSH_FIN_VALID      , -- In  :
+            PUSH_FIN_LAST   => PUSH_FIN_LAST       , -- In  :
+            PUSH_FIN_SIZE   => PUSH_FIN_SIZE       , -- In  :
+            PUSH_RSV_VALID  => PUSH_RSV_VALID      , -- In  :
+            PUSH_RSV_LAST   => PUSH_RSV_LAST       , -- In  :
+            PUSH_RSV_SIZE   => PUSH_RSV_SIZE       , -- In  :
+            FLOW_PULL_VALID => ACK_VALID           , -- In  :
+            FLOW_PULL_LAST  => ACK_LAST            , -- In  :
+            FLOW_PULL_SIZE  => ACK_SIZE            , -- In  :
             FLOW_READY      => FLOW_READY          , -- Out :
             FLOW_PAUSE      => FLOW_PAUSE          , -- Out :
             FLOW_STOP       => FLOW_STOP           , -- Out :
@@ -445,13 +444,13 @@ begin
             FLOW_ZERO       => open                , -- Out :
             FLOW_POS        => open                , -- Out :
             FLOW_NEG        => open                , -- Out :
-            POOL_PUSH_RESET => PUSH_BUF_RESET      , -- In  :
-            POOL_PUSH_VALID => PUSH_BUF_VALID      , -- In  :
-            POOL_PUSH_LAST  => PUSH_BUF_LAST       , -- In  :
-            POOL_PUSH_SIZE  => PUSH_BUF_SIZE       , -- In  :
-            POOL_READY      => PUSH_BUF_READY      , -- Out :
+            POOL_PULL_RESET => PULL_BUF_RESET      , -- In  :
+            POOL_PULL_VALID => PULL_BUF_VALID      , -- In  :
+            POOL_PULL_LAST  => PULL_BUF_LAST       , -- In  :
+            POOL_PULL_SIZE  => PULL_BUF_SIZE       , -- In  :
+            POOL_READY      => PULL_BUF_READY      , -- Out :
             POOL_COUNT      => open                , -- Out :
             PAUSED          => open                  -- Out :
-        );                                           --
+        );                                           -- 
 end RTL;
 

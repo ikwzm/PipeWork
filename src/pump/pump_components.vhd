@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/05/21                                                      --
+--!     @date    2018/05/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -527,9 +527,9 @@ component PUMP_FLOW_SYNCRONIZER
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PUMP_INTAKE_CONTROLLER                                                --
+--! @brief PUMP_CONTROLLER_INTAKE_SIDE                                           --
 -----------------------------------------------------------------------------------
-component PUMP_INTAKE_CONTROLLER
+component PUMP_CONTROLLER_INTAKE_SIDE
     generic (
         REQ_ADDR_VALID      : --! @brief REQUEST ADDRESS VALID :
                               --! REQ_ADDR信号を有効にするか否かを指示する.
@@ -718,9 +718,9 @@ component PUMP_INTAKE_CONTROLLER
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief PUMP_OUTLET_CONTROLLER                                                --
+--! @brief PUMP_CONTROLLER_OUTLET_SIDE                                           --
 -----------------------------------------------------------------------------------
-component PUMP_OUTLET_CONTROLLER
+component PUMP_CONTROLLER_OUTLET_SIDE
     generic (
         REQ_ADDR_VALID      : --! @brief REQUEST ADDRESS VALID :
                               --! REQ_ADDR信号を有効にするか否かを指示する.
