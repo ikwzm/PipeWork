@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/05/22                                                      --
+--!     @date    2018/05/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1268,6 +1268,230 @@ component PUMP_CONTROLLER
         O_RUNNING           : out std_logic;
         O_DONE              : out std_logic;
         O_ERROR             : out std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief PUMP_STREAM_INTAKE_CONTROLLER                                         --
+-----------------------------------------------------------------------------------
+component PUMP_STREAM_INTAKE_CONTROLLER
+    generic (
+        I_CLK_RATE          : --! @brief INPUT CLOCK RATE :
+                              --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側
+                              --! のクロック(O_CLK)との関係を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer :=  1;
+        I_REQ_ADDR_VALID    : --! @brief INTAKE REQUEST ADDRESS VALID :
+                              --! I_REQ_ADDR信号を有効にするか否かを指示する.
+                              --! * I_REQ_ADDR_VALID=0で無効.
+                              --! * I_REQ_ADDR_VALID=1で有効.
+                              integer range 0 to 1 := 1;
+        I_REQ_ADDR_BITS     : --! @brief INTAKE REQUEST ADDRESS BITS :
+                              --! I_REQ_ADDR信号のビット数を指定する.
+                              --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REG_ADDR_BITS     : --! @brief INTAKE ADDRESS REGISTER BITS :
+                              --! I_REG_ADDR信号のビット数を指定する.
+                              --! * I_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REQ_SIZE_VALID    : --! @brief INTAKE REQUEST SIZE VALID :
+                              --! I_REQ_SIZE信号を有効にするか否かを指示する.
+                              --! * I_REQ_SIZE_VALID=0で無効.
+                              --! * I_REQ_SIZE_VALID=1で有効.
+                              integer range 0 to 1 := 1;
+        I_REQ_SIZE_BITS     : --! @brief INTAKE REQUEST SIZE BITS :
+                              --! I_REQ_SIZE信号のビット数を指定する.
+                              --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REG_SIZE_BITS     : --! @brief INTAKE SIZE REGISTER BITS :
+                              --! I_REG_SIZE信号のビット数を指定する.
+                              --! * I_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        I_REG_MODE_BITS     : --! @brief INTAKE MODE REGISTER BITS :
+                              --! I_MODE_L/I_MODE_D/I_MODE_Qのビット数を指定する.
+                              integer := 32;
+        I_REG_STAT_BITS     : --! @brief INTAKE STATUS REGISTER BITS :
+                              --! I_STAT_L/I_STAT_D/I_STAT_Qのビット数を指定する.
+                              integer := 32;
+        I_USE_PUSH_BUF_SIZE : --! @brief INTAKE USE PUSH BUFFER SIZE :
+                              --! I_PUSH_BUF_SIZE信号を使用するか否かを指示する.
+                              --! * I_USE_PUSH_BUF_SIZE=0で使用しない.
+                              --! * I_USE_PUSH_BUF_SIZE=1で使用する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FIXED FLOW OPEN :
+                              --! I_FLOW_READYを常に'1'にするか否かを指定する.
+                              --! * I_FIXED_FLOW_OPEN=1で常に'1'にする.
+                              --! * I_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        I_FIXED_POOL_OPEN   : --! @brief INTAKE VALVE FIXED POOL OPEN :
+                              --! I_PUSH_BUF_READYを常に'1'にするか否かを指定する.
+                              --! * I_FIXED_POOL_OPEN=1で常に'1'にする.
+                              --! * I_FIXED_POOL_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        O_CLK_RATE          : --! @brief OUTPUT CLOCK RATE :
+                              --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側
+                              --! のクロック(O_CLK)との関係を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer :=  1;
+        O_DATA_BITS         : --! @brief OUTPUT STREAM DATA BITS :
+                              --! O_DATA のビット数を指定する.
+                              integer := 32;
+        BUF_DEPTH           : --! @brief BUFFER DEPTH :
+                              --! バッファの容量(バイト数)を２のべき乗値で指定する.
+                              integer := 12;
+        BUF_DATA_BITS       : --! @brief BUFFER DATA BITS :
+                              --! BUF_DATA のビット数を指定する.
+                              integer := 32;
+        I2O_DELAY_CYCLE     : --! @brief DELAY CYCLE :
+                              --! 入力側から出力側への転送する際の遅延サイクルを
+                              --! 指定する.
+                              integer :=  0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    --Reset Signals.
+    -------------------------------------------------------------------------------
+        RST                 : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Clock and Clock Enable.
+    -------------------------------------------------------------------------------
+        I_CLK               : in  std_logic;
+        I_CLR               : in  std_logic;
+        I_CKE               : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Control Register Interface.
+    -------------------------------------------------------------------------------
+        I_ADDR_L            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_ADDR_D            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_ADDR_Q            : out std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_SIZE_L            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_SIZE_D            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_SIZE_Q            : out std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_MODE_L            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_MODE_D            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_MODE_Q            : out std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_STAT_L            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_D            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_Q            : out std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_I            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_RESET_L           : in  std_logic;
+        I_RESET_D           : in  std_logic;
+        I_RESET_Q           : out std_logic;
+        I_START_L           : in  std_logic;
+        I_START_D           : in  std_logic;
+        I_START_Q           : out std_logic;
+        I_STOP_L            : in  std_logic;
+        I_STOP_D            : in  std_logic;
+        I_STOP_Q            : out std_logic;
+        I_PAUSE_L           : in  std_logic;
+        I_PAUSE_D           : in  std_logic;
+        I_PAUSE_Q           : out std_logic;
+        I_FIRST_L           : in  std_logic;
+        I_FIRST_D           : in  std_logic;
+        I_FIRST_Q           : out std_logic;
+        I_LAST_L            : in  std_logic;
+        I_LAST_D            : in  std_logic;
+        I_LAST_Q            : out std_logic;
+        I_DONE_EN_L         : in  std_logic;
+        I_DONE_EN_D         : in  std_logic;
+        I_DONE_EN_Q         : out std_logic;
+        I_DONE_ST_L         : in  std_logic;
+        I_DONE_ST_D         : in  std_logic;
+        I_DONE_ST_Q         : out std_logic;
+        I_ERR_ST_L          : in  std_logic;
+        I_ERR_ST_D          : in  std_logic;
+        I_ERR_ST_Q          : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Configuration Signals.
+    -------------------------------------------------------------------------------
+        I_ADDR_FIX          : in  std_logic;
+        I_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
+    -------------------------------------------------------------------------------
+    -- Intake Transaction Command Request Signals.
+    -------------------------------------------------------------------------------
+        I_REQ_VALID         : out std_logic;
+        I_REQ_ADDR          : out std_logic_vector(I_REQ_ADDR_BITS-1 downto 0);
+        I_REQ_SIZE          : out std_logic_vector(I_REQ_SIZE_BITS-1 downto 0);
+        I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
+        I_REQ_FIRST         : out std_logic;
+        I_REQ_LAST          : out std_logic;
+        I_REQ_READY         : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Transaction Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
+        I_ACK_VALID         : in  std_logic;
+        I_ACK_SIZE          : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_ACK_ERROR         : in  std_logic;
+        I_ACK_NEXT          : in  std_logic;
+        I_ACK_LAST          : in  std_logic;
+        I_ACK_STOP          : in  std_logic;
+        I_ACK_NONE          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        I_XFER_BUSY         : in  std_logic;
+        I_XFER_DONE         : in  std_logic;
+        I_XFER_ERROR        : in  std_logic := '0';
+    -------------------------------------------------------------------------------
+    -- Intake Flow Control Signals.
+    -------------------------------------------------------------------------------
+        I_FLOW_READY        : out std_logic;
+        I_FLOW_PAUSE        : out std_logic;
+        I_FLOW_STOP         : out std_logic;
+        I_FLOW_LAST         : out std_logic;
+        I_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_FIN_VALID    : in  std_logic;
+        I_PUSH_FIN_LAST     : in  std_logic;
+        I_PUSH_FIN_ERROR    : in  std_logic;
+        I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_RSV_VALID    : in  std_logic;
+        I_PUSH_RSV_LAST     : in  std_logic;
+        I_PUSH_RSV_ERROR    : in  std_logic;
+        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_BUF_RESET    : in  std_logic;
+        I_PUSH_BUF_VALID    : in  std_logic;
+        I_PUSH_BUF_LAST     : in  std_logic;
+        I_PUSH_BUF_ERROR    : in  std_logic;
+        I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_BUF_READY    : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Status.
+    -------------------------------------------------------------------------------
+        I_OPEN              : out std_logic;
+        I_RUNNING           : out std_logic;
+        I_DONE              : out std_logic;
+        I_ERROR             : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Clock and Clock Enable.
+    -------------------------------------------------------------------------------
+        O_CLK               : in  std_logic;
+        O_CLR               : in  std_logic;
+        O_CKE               : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Stream Interface.
+    -------------------------------------------------------------------------------
+        O_DATA              : out std_logic_vector(O_DATA_BITS    -1 downto 0);
+        O_STRB              : out std_logic_vector(O_DATA_BITS/8  -1 downto 0);
+        O_LAST              : out std_logic;
+        O_VALID             : out std_logic;
+        O_READY             : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Status.
+    -------------------------------------------------------------------------------
+        O_OPEN              : out std_logic;
+        O_RUNNING           : out std_logic;
+        O_DONE              : out std_logic;
+        O_ERROR             : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Buffer Read Interface.
+    -------------------------------------------------------------------------------
+        BUF_REN             : out std_logic;
+        BUF_PTR             : out std_logic_vector(BUF_DEPTH      -1 downto 0);
+        BUF_DATA            : in  std_logic_vector(BUF_DATA_BITS  -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------
