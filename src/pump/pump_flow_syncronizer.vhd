@@ -3,7 +3,7 @@
 --!     @brief   PUMP FLOW SYNCRONIZER
 --!              PUMPの入力側と出力側の間で各種情報を伝達するモジュール. 
 --!     @version 1.7.0
---!     @date    2018/5/21
+--!     @date    2018/5/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -714,7 +714,7 @@ begin
             );                                                      --
         CLOSE_REGS: DELAY_ADJUSTER                                  -- 
             generic map (                                           -- 
-                DATA_BITS   => 1                                  , -- 
+                DATA_BITS   => CLOSE_INFO_BITS                    , -- 
                 DELAY_MAX   => PUSH_FIN_DELAY                     , -- 
                 DELAY_MIN   => PUSH_FIN_DELAY                       -- 
             )                                                       --
