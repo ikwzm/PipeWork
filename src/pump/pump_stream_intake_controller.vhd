@@ -612,8 +612,6 @@ begin
     -- 出力側から入力側への各種情報転送
     -------------------------------------------------------------------------------
     O2I: block
-        constant  o_open_info       :  std_logic_vector(0 downto 0) := (others => '0');
-        constant  o_close_info      :  std_logic_vector(0 downto 0) := (others => '0');
         signal    o_valve_opened    :  std_logic;
         signal    o2i_valve_opened  :  std_logic;
         constant  null_valid        :  std_logic := '0';

@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/05/23                                                      --
+--!     @date    2018/05/28                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1345,6 +1345,18 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         BUF_DATA_BITS       : --! @brief BUFFER DATA BITS :
                               --! BUF_DATA のビット数を指定する.
                               integer := 32;
+        I2O_OPEN_INFO_BITS  : --! @brief I2O_OPEN_INFO BITS :
+                              --! I_I2O_OPEN_INFO/O_I2O_OPEN_INFO のビット数を指定する.
+                              integer :=  1;
+        I2O_CLOSE_INFO_BITS : --! @brief I2O_CLOSE_INFO BITS :
+                              --! I_I2O_CLOSE_INFO/O_I2O_CLOSE_INFO のビット数を指定する.
+                              integer :=  1;
+        O2I_OPEN_INFO_BITS  : --! @brief O2I_OPEN_INFO BITS :
+                              --! I_O2I_OPEN_INFO/O_O2I_OPEN_INFO のビット数を指定する.
+                              integer :=  1;
+        O2I_CLOSE_INFO_BITS : --! @brief O2I_CLOSE_INFO BITS :
+                              --! I_O2I_CLOSE_INFO/O_O2I_CLOSE_INFO のビット数を指定する.
+                              integer :=  1;
         I2O_DELAY_CYCLE     : --! @brief DELAY CYCLE :
                               --! 入力側から出力側への転送する際の遅延サイクルを
                               --! 指定する.
@@ -1466,6 +1478,16 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_DONE              : out std_logic;
         I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
+    -- Intake Open/Close Infomation Interface
+    -------------------------------------------------------------------------------
+        I_I_OPEN_INFO       : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        I_I_CLOSE_INFO      : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        I_O_OPEN_INFO       : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
+        I_O_OPEN_VALID      : out std_logic;
+        I_O_CLOSE_INFO      : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
+        I_O_CLOSE_VALID     : out std_logic;
+        I_O_OPEN            : out std_logic;
+    -------------------------------------------------------------------------------
     -- Outlet Clock and Clock Enable.
     -------------------------------------------------------------------------------
         O_CLK               : in  std_logic;
@@ -1486,6 +1508,16 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         O_RUNNING           : out std_logic;
         O_DONE              : out std_logic;
         O_ERROR             : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Open/Close Infomation Interface
+    -------------------------------------------------------------------------------
+        O_I_OPEN_INFO       : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        O_I_CLOSE_INFO      : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        O_O_OPEN_INFO       : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
+        O_O_OPEN_VALID      : out std_logic;
+        O_O_CLOSE_INFO      : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
+        O_O_CLOSE_VALID     : out std_logic;
+        O_O_OPEN            : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Buffer Read Interface.
     -------------------------------------------------------------------------------
