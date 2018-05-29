@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/05/28                                                      --
+--!     @date    2018/05/30                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1416,6 +1416,9 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_ERR_ST_L          : in  std_logic;
         I_ERR_ST_D          : in  std_logic;
         I_ERR_ST_Q          : out std_logic;
+        I_CLOSE_ST_L        : in  std_logic;
+        I_CLOSE_ST_D        : in  std_logic;
+        I_CLOSE_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Configuration Signals.
     -------------------------------------------------------------------------------
@@ -1480,13 +1483,12 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
     -- Intake Open/Close Infomation Interface
     -------------------------------------------------------------------------------
-        I_I_OPEN_INFO       : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
-        I_I_CLOSE_INFO      : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
-        I_O_OPEN_INFO       : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
-        I_O_OPEN_VALID      : out std_logic;
-        I_O_CLOSE_INFO      : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
-        I_O_CLOSE_VALID     : out std_logic;
-        I_O_OPEN            : out std_logic;
+        I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        I_I2O_CLOSE_INFO    : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
+        I_O2I_OPEN_VALID    : out std_logic;
+        I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
+        I_O2I_CLOSE_VALID   : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Clock and Clock Enable.
     -------------------------------------------------------------------------------
@@ -1511,13 +1513,14 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
     -------------------------------------------------------------------------------
-        O_I_OPEN_INFO       : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
-        O_I_CLOSE_INFO      : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
-        O_O_OPEN_INFO       : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
-        O_O_OPEN_VALID      : out std_logic;
-        O_O_CLOSE_INFO      : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
-        O_O_CLOSE_VALID     : out std_logic;
-        O_O_OPEN            : out std_logic;
+        O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
+        O_I2O_OPEN_VALID    : out std_logic;
+        O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
+        O_I2O_CLOSE_VALID   : out std_logic;
+        O_O2I_OPEN_INFO     : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        O_O2I_OPEN_VALID    : in  std_logic;
+        O_O2I_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        O_O2I_CLOSE_VALID   : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Buffer Read Interface.
     -------------------------------------------------------------------------------

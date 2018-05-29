@@ -2,7 +2,7 @@
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/5/23
+--!     @date    2018/5/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -182,6 +182,9 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
         I_ERR_ST_L          : in  std_logic;
         I_ERR_ST_D          : in  std_logic;
         I_ERR_ST_Q          : out std_logic;
+        I_CLOSE_ST_L        : in  std_logic;
+        I_CLOSE_ST_D        : in  std_logic;
+        I_CLOSE_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Configuration Signals.
     -------------------------------------------------------------------------------
@@ -246,13 +249,12 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
     -------------------------------------------------------------------------------
     -- Intake Open/Close Infomation Interface
     -------------------------------------------------------------------------------
-        I_I_OPEN_INFO       : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
-        I_I_CLOSE_INFO      : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
-        I_O_OPEN_INFO       : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
-        I_O_OPEN_VALID      : out std_logic;
-        I_O_CLOSE_INFO      : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
-        I_O_CLOSE_VALID     : out std_logic;
-        I_O_OPEN            : out std_logic;
+        I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        I_I2O_CLOSE_INFO    : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
+        I_O2I_OPEN_VALID    : out std_logic;
+        I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
+        I_O2I_CLOSE_VALID   : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Clock and Clock Enable.
     -------------------------------------------------------------------------------
@@ -277,13 +279,14 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
     -------------------------------------------------------------------------------
-        O_I_OPEN_INFO       : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
-        O_I_CLOSE_INFO      : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
-        O_O_OPEN_INFO       : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
-        O_O_OPEN_VALID      : out std_logic;
-        O_O_CLOSE_INFO      : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
-        O_O_CLOSE_VALID     : out std_logic;
-        O_O_OPEN            : out std_logic;
+        O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
+        O_I2O_OPEN_VALID    : out std_logic;
+        O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
+        O_I2O_CLOSE_VALID   : out std_logic;
+        O_O2I_OPEN_INFO     : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        O_O2I_OPEN_VALID    : in  std_logic;
+        O_O2I_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        O_O2I_CLOSE_VALID   : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Buffer Read Interface.
     -------------------------------------------------------------------------------
@@ -315,38 +318,51 @@ architecture RTL of PUMP_STREAM_INTAKE_CONTROLLER is
     signal    i_open_valid          :  std_logic;
     signal    i_close_valid         :  std_logic;
     -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    constant  I_STAT_CLOSE_POS      :  integer := 0;
+    constant  I_STAT_REG_LO         :  integer := 1;
+    constant  I_STAT_REG_HI         :  integer := I_REG_STAT_BITS;
+    constant  I_STAT_BITS           :  integer := I_STAT_REG_HI + 1;
+    signal    i_status_load         :  std_logic_vector(I_STAT_BITS-1 downto 0);
+    signal    i_status_wbit         :  std_logic_vector(I_STAT_BITS-1 downto 0);
+    signal    i_status_regs         :  std_logic_vector(I_STAT_BITS-1 downto 0);
+    signal    i_status_in           :  std_logic_vector(I_STAT_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
     -- 出力側の各種信号群.
     -------------------------------------------------------------------------------
     signal    o_valve_open          :  std_logic;
-    signal    o_open_valid          :  std_logic;
-    signal    o_close_valid         :  std_logic;
     signal    o_pull_fin_valid      :  std_logic;
     signal    o_pull_fin_last       :  std_logic;
-    signal    o_pull_fin_size       :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal    o_pull_fin_size       :  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 入力側->出力側の各種信号群.
     -------------------------------------------------------------------------------
     signal    i2o_valve_open        :  std_logic;
+    signal    i2o_open_info         :  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
     signal    i2o_open_valid        :  std_logic;
+    signal    i2o_close_info        :  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
     signal    i2o_close_valid       :  std_logic;
     signal    i2o_push_fin_valid    :  std_logic;
     signal    i2o_push_fin_last     :  std_logic;
-    signal    i2o_push_fin_size     :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal    i2o_push_fin_size     :  std_logic_vector(SIZE_BITS-1 downto 0);
     signal    i2o_push_rsv_valid    :  std_logic;
     signal    i2o_push_rsv_last     :  std_logic;
-    signal    i2o_push_rsv_size     :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal    i2o_push_rsv_size     :  std_logic_vector(SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- 出力側->入力側の各種信号群.
     -------------------------------------------------------------------------------
     signal    o2i_valve_open        :  std_logic;
+    signal    o2i_open_info         :  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
     signal    o2i_open_valid        :  std_logic;
+    signal    o2i_close_info        :  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
     signal    o2i_close_valid       :  std_logic;
     signal    o2i_pull_fin_valid    :  std_logic;
     signal    o2i_pull_fin_last     :  std_logic;
-    signal    o2i_pull_fin_size     :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal    o2i_pull_fin_size     :  std_logic_vector(SIZE_BITS-1 downto 0);
     signal    o2i_pull_rsv_valid    :  std_logic;
     signal    o2i_pull_rsv_last     :  std_logic;
-    signal    o2i_pull_rsv_size     :  std_logic_vector(SIZE_BITS      -1 downto 0);
+    signal    o2i_pull_rsv_size     :  std_logic_vector(SIZE_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- 入力側の制御
@@ -360,7 +376,7 @@ begin
             REQ_SIZE_BITS       => I_REQ_SIZE_BITS     , --   
             REG_SIZE_BITS       => I_REG_SIZE_BITS     , --   
             REG_MODE_BITS       => I_REG_MODE_BITS     , --   
-            REG_STAT_BITS       => I_REG_STAT_BITS     , --   
+            REG_STAT_BITS       => I_STAT_BITS         , --   
             FIXED_FLOW_OPEN     => I_FIXED_FLOW_OPEN   , --   
             FIXED_POOL_OPEN     => I_FIXED_POOL_OPEN   , --   
             USE_PUSH_BUF_SIZE   => I_USE_PUSH_BUF_SIZE , --   
@@ -386,10 +402,10 @@ begin
             REG_MODE_L          => I_MODE_L            , -- In  :
             REG_MODE_D          => I_MODE_D            , -- In  :
             REG_MODE_Q          => I_MODE_Q            , -- Out :
-            REG_STAT_L          => I_STAT_L            , -- In  :
-            REG_STAT_D          => I_STAT_D            , -- In  :
-            REG_STAT_Q          => I_STAT_Q            , -- Out :
-            REG_STAT_I          => I_STAT_I            , -- In  :
+            REG_STAT_L          => i_status_load       , -- In  :
+            REG_STAT_D          => i_status_wbit       , -- In  :
+            REG_STAT_Q          => i_status_regs       , -- Out :
+            REG_STAT_I          => i_status_in         , -- In  :
             REG_RESET_L         => I_RESET_L           , -- In  :
             REG_RESET_D         => I_RESET_D           , -- In  :
             REG_RESET_Q         => I_RESET_Q           , -- Out :
@@ -492,13 +508,26 @@ begin
             I_DONE              => I_DONE              , -- Out :
             I_ERROR             => I_ERROR               -- Out :
         );
-    I_OPEN          <= i_valve_open;
+    I_OPEN <= i_valve_open;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    i_status_load(I_STAT_CLOSE_POS)                   <= I_CLOSE_ST_L;
+    i_status_wbit(I_STAT_CLOSE_POS)                   <= I_CLOSE_ST_D;
+    i_status_in  (I_STAT_CLOSE_POS)                   <= o2i_close_valid;
+    I_CLOSE_ST_Q <= i_status_regs(I_STAT_CLOSE_POS);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    i_status_load(I_STAT_REG_HI downto I_STAT_REG_LO) <= I_STAT_L;
+    i_status_wbit(I_STAT_REG_HI downto I_STAT_REG_LO) <= I_STAT_D;
+    i_status_in  (I_STAT_REG_HI downto I_STAT_REG_LO) <= I_STAT_I;
+    I_STAT_Q     <= i_status_regs(I_STAT_REG_HI downto I_STAT_REG_LO);
     -------------------------------------------------------------------------------
     -- 入力側から出力側への各種情報転送
     -------------------------------------------------------------------------------
     I2O: block
         signal    i_valve_opened    :  std_logic;
-        signal    i2o_valve_opened  :  std_logic;
         constant  null_valid        :  std_logic := '0';
         constant  null_last         :  std_logic := '0';
         constant  null_size         :  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
@@ -547,9 +576,9 @@ begin
                 I_CLR           => I_CLR               , -- In  :
                 I_CKE           => I_CKE               , -- In  :
                 I_OPEN_VAL      => i_open_valid        , -- In  :
-                I_OPEN_INFO     => I_I_OPEN_INFO       , -- In  :
+                I_OPEN_INFO     => I_I2O_OPEN_INFO     , -- In  :
                 I_CLOSE_VAL     => i_close_valid       , -- In  :
-                I_CLOSE_INFO    => I_I_CLOSE_INFO      , -- In  :
+                I_CLOSE_INFO    => I_I2O_CLOSE_INFO    , -- In  :
                 I_PUSH_FIN_VAL  => I_PUSH_FIN_VALID    , -- In  :
                 I_PUSH_FIN_LAST => I_PUSH_FIN_LAST     , -- In  :
                 I_PUSH_FIN_SIZE => I_PUSH_FIN_SIZE     , -- In  :
@@ -569,9 +598,9 @@ begin
                 O_CLR           => O_CLR               , -- In  :
                 O_CKE           => O_CKE               , -- In  :
                 O_OPEN_VAL      => i2o_open_valid      , -- Out :
-                O_OPEN_INFO     => O_O_OPEN_INFO       , -- Out :
+                O_OPEN_INFO     => i2o_open_info       , -- Out :
                 O_CLOSE_VAL     => i2o_close_valid     , -- Out :
-                O_CLOSE_INFO    => O_O_CLOSE_INFO      , -- Out :
+                O_CLOSE_INFO    => i2o_close_info      , -- Out :
                 O_PUSH_FIN_VAL  => i2o_push_fin_valid  , -- Out :
                 O_PUSH_FIN_LAST => i2o_push_fin_last   , -- Out :
                 O_PUSH_FIN_SIZE => i2o_push_fin_size   , -- Out :
@@ -585,55 +614,16 @@ begin
                 O_PULL_RSV_LAST => open                , -- Out :
                 O_PULL_RSV_SIZE => open                  -- Out :
             );                                           -- 
-        ---------------------------------------------------------------------------
-        -- 
-        ---------------------------------------------------------------------------
-        process (O_CLK, RST) begin
-            if (RST = '1') then
-                    i2o_valve_opened <= '0';
-            elsif (O_CLK'event and O_CLK = '1') then
-                if (O_CLR = '1' or i2o_close_valid = '1') then
-                    i2o_valve_opened <= '0';
-                elsif (i2o_open_valid  = '1') then
-                    i2o_valve_opened <= '1';
-                end if;
-            end if;
-        end process;
-        i2o_valve_open <= '1' when (i2o_valve_opened = '1' and i2o_close_valid = '0') or
-                                   (i2o_open_valid   = '1') else '0';
-        ---------------------------------------------------------------------------
-        -- 
-        ---------------------------------------------------------------------------
-        O_O_OPEN        <= i2o_valve_open;
-        O_O_OPEN_VALID  <= i2o_open_valid;
-        O_O_CLOSE_VALID <= i2o_close_valid;
     end block;        
     -------------------------------------------------------------------------------
     -- 出力側から入力側への各種情報転送
     -------------------------------------------------------------------------------
     O2I: block
-        signal    o_valve_opened    :  std_logic;
         signal    o2i_valve_opened  :  std_logic;
         constant  null_valid        :  std_logic := '0';
         constant  null_last         :  std_logic := '0';
         constant  null_size         :  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     begin
-        ---------------------------------------------------------------------------
-        -- 
-        ---------------------------------------------------------------------------
-        process (O_CLK, RST) begin
-            if (RST = '1') then
-                    o_valve_opened <= '0';
-            elsif (O_CLK'event and O_CLK = '1') then
-                if (O_CLR = '1') then
-                    o_valve_opened <= '0';
-                else
-                    o_valve_opened <= o_valve_open;
-                end if;
-            end if;
-        end process;
-        o_open_valid  <= '1' when (o_valve_open = '1' and o_valve_opened = '0') else '0';
-        o_close_valid <= '1' when (o_valve_open = '0' and o_valve_opened = '1') else '0';
         ---------------------------------------------------------------------------
         -- クロック同期回路
         ---------------------------------------------------------------------------
@@ -661,10 +651,10 @@ begin
                 I_CLK           => O_CLK               , -- In  :
                 I_CLR           => O_CLR               , -- In  :
                 I_CKE           => O_CKE               , -- In  :
-                I_OPEN_VAL      => o_open_valid        , -- In  :
-                I_OPEN_INFO     => O_I_OPEN_INFO       , -- In  :
-                I_CLOSE_VAL     => o_close_valid       , -- In  :
-                I_CLOSE_INFO    => O_I_CLOSE_INFO      , -- In  :
+                I_OPEN_VAL      => O_O2I_OPEN_VALID    , -- In  :
+                I_OPEN_INFO     => O_O2I_OPEN_INFO     , -- In  :
+                I_CLOSE_VAL     => O_O2I_CLOSE_VALID   , -- In  :
+                I_CLOSE_INFO    => O_O2I_CLOSE_INFO    , -- In  :
                 I_PUSH_FIN_VAL  => null_valid          , -- In  :
                 I_PUSH_FIN_LAST => null_last           , -- In  :
                 I_PUSH_FIN_SIZE => null_size           , -- In  :
@@ -684,9 +674,9 @@ begin
                 O_CLR           => I_CLR               , -- In  :
                 O_CKE           => I_CKE               , -- In  :
                 O_OPEN_VAL      => o2i_open_valid      , -- Out :
-                O_OPEN_INFO     => I_O_OPEN_INFO       , -- Out :
+                O_OPEN_INFO     => o2i_open_info       , -- Out :
                 O_CLOSE_VAL     => o2i_close_valid     , -- Out :
-                O_CLOSE_INFO    => I_O_CLOSE_INFO      , -- Out :
+                O_CLOSE_INFO    => o2i_close_info      , -- Out :
                 O_PUSH_FIN_VAL  => open                , -- Out :
                 O_PUSH_FIN_LAST => open                , -- Out :
                 O_PUSH_FIN_SIZE => open                , -- Out :
@@ -719,9 +709,10 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        I_O_OPEN        <= o2i_valve_open;
-        I_O_OPEN_VALID  <= o2i_open_valid;
-        I_O_CLOSE_VALID <= o2i_close_valid;
+        I_O2I_OPEN_INFO   <= o2i_open_info;
+        I_O2I_OPEN_VALID  <= o2i_open_valid;
+        I_O2I_CLOSE_INFO  <= o2i_close_info;
+        I_O2I_CLOSE_VALID <= o2i_close_valid;
     end block;
     -------------------------------------------------------------------------------
     --
@@ -741,7 +732,60 @@ begin
         signal    flow_count        :  std_logic_vector(SIZE_BITS      -1 downto 0);
         signal    flow_last         :  std_logic;
         signal    flow_ready        :  std_logic;
+        signal    port_busy         :  std_logic;
+        signal    o_valve_opened    :  std_logic;
+        signal    i2o_valve_opened  :  std_logic;
+        signal    i2o_close_busy    :  std_logic;
     begin
+        ---------------------------------------------------------------------------
+        -- 
+        ---------------------------------------------------------------------------
+        process (O_CLK, RST) begin
+            if (RST = '1') then
+                    i2o_valve_opened <= '0';
+            elsif (O_CLK'event and O_CLK = '1') then
+                if (O_CLR = '1' or i2o_close_valid = '1') then
+                    i2o_valve_opened <= '0';
+                elsif (i2o_open_valid  = '1') then
+                    i2o_valve_opened <= '1';
+                end if;
+            end if;
+        end process;
+        i2o_valve_open <= '1' when (i2o_valve_opened = '1' and i2o_close_valid = '0') or
+                                   (i2o_open_valid   = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- 
+        ---------------------------------------------------------------------------
+        O_I2O_OPEN_INFO   <= i2o_open_info;
+        O_I2O_OPEN_VALID  <= i2o_open_valid;
+        ---------------------------------------------------------------------------
+        -- 
+        ---------------------------------------------------------------------------
+        process (O_CLK, RST) begin
+            if (RST = '1') then
+                    i2o_close_busy   <= '0';
+                    O_I2O_CLOSE_INFO <= (others => '0');
+            elsif (O_CLK'event and O_CLK = '1') then
+                if (O_CLR = '1') then
+                    i2o_close_busy   <= '0';
+                    O_I2O_CLOSE_INFO <= (others => '0');
+                elsif (i2o_close_busy = '0') then
+                    if (i2o_close_valid = '1') then
+                        i2o_close_busy   <= '1';
+                        O_I2O_CLOSE_INFO <= i2o_close_info;
+                    else
+                        i2o_close_busy   <= '0';
+                    end if;
+                else
+                    if (port_busy = '0') then
+                        i2o_close_busy   <= '0';
+                    else
+                        i2o_close_busy   <= '1';
+                    end if;
+                end if;
+            end if;
+        end process;
+        O_I2O_CLOSE_VALID <= '1' when (i2o_close_busy = '1' and port_busy = '0') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -867,7 +911,7 @@ begin
             -----------------------------------------------------------------------
                 POOL_BUSY       => pool_busy           , -- Out :
                 POOL_DONE       => pool_done           , -- Out :
-                BUSY            => o_valve_open          -- Out :
+                BUSY            => port_busy             -- Out :
             );                                           -- 
         ---------------------------------------------------------------------------
         --
@@ -890,8 +934,28 @@ begin
         pool_last  <= flow_last;
         pool_valid <= '1' when (flow_ready = '1' and pool_ready = '1') else '0';
         ---------------------------------------------------------------------------
+        -- 
+        ---------------------------------------------------------------------------
+        process (O_CLK, RST) begin
+            if (RST = '1') then
+                    o_valve_opened <= '0';
+            elsif (O_CLK'event and O_CLK = '1') then
+                if (O_CLR = '1') then
+                    o_valve_opened <= '0';
+                elsif (O_O2I_CLOSE_VALID = '1') then
+                    o_valve_opened <= '0';
+                elsif (O_O2I_OPEN_VALID  = '1') then
+                    o_valve_opened <= '1';
+                end if;
+            end if;
+        end process;
+        o_valve_open  <= '1' when (O_O2I_OPEN_VALID = '1' or o_valve_opened = '1') else '0';
+        ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        O_OPEN <= o_valve_open;
+        O_OPEN    <= o_valve_open;
+        O_RUNNING <= o_valve_open;
+        O_DONE    <= O_O2I_CLOSE_VALID;
+        O_ERROR   <= '0';
     end block;
 end RTL;
