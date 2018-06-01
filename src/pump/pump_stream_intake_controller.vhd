@@ -560,7 +560,7 @@ begin
                 XFER_SIZE_BITS  => SIZE_BITS           , --
                 PUSH_FIN_DELAY  => I2O_DELAY_CYCLE     , --
                 PUSH_FIN_VALID  => 1                   , --
-                PUSH_RSV_VALID  => 1                   , --
+                PUSH_RSV_VALID  => 0                   , --
                 PULL_FIN_VALID  => 0                   , --
                 PULL_RSV_VALID  => 0                     --
             )                                            -- 
