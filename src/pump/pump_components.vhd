@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/05/30                                                      --
+--!     @date    2018/06/02                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1527,6 +1527,266 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         BUF_REN             : out std_logic;
         BUF_PTR             : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         BUF_DATA            : in  std_logic_vector(BUF_DATA_BITS  -1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief PUMP_STREAM_OUTLET_CONTROLLER                                         --
+-----------------------------------------------------------------------------------
+component PUMP_STREAM_OUTLET_CONTROLLER
+    generic (
+        O_CLK_RATE          : --! @brief OUTPUT CLOCK RATE :
+                              --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側
+                              --! のクロック(O_CLK)との関係を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer :=  1;
+        O_REQ_ADDR_VALID    : --! @brief OUTLET REQUEST ADDRESS VALID :
+                              --! O_REQ_ADDR信号を有効にするか否かを指示する.
+                              --! * O_REQ_ADDR_VALID=0で無効.
+                              --! * O_REQ_ADDR_VALID=1で有効.
+                              integer range 0 to 1 := 1;
+        O_REQ_ADDR_BITS     : --! @brief OUTLET REQUEST ADDRESS BITS :
+                              --! O_REQ_ADDR信号のビット数を指定する.
+                              --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REG_ADDR_BITS     : --! @brief OUTLET ADDRESS REGISTER BITS :
+                              --! O_REG_ADDR信号のビット数を指定する.
+                              --! * O_REQ_ADDR_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REQ_SIZE_VALID    : --! @brief OUTLET REQUEST SIZE VALID :
+                              --! O_REQ_SIZE信号を有効にするか否かを指示する.
+                              --! * O_REQ_SIZE_VALID=0で無効.
+                              --! * O_REQ_SIZE_VALID=1で有効.
+                              integer range 0 to 1 := 1;
+        O_REQ_SIZE_BITS     : --! @brief OUTLET REQUEST SIZE BITS :
+                              --! O_REQ_SIZE信号のビット数を指定する.
+                              --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REG_SIZE_BITS     : --! @brief OUTLET SIZE REGISTER BITS :
+                              --! O_REG_SIZE信号のビット数を指定する.
+                              --! * O_REQ_SIZE_VALID=0の場合でもビット数は１以上を
+                              --!   指定しなければならない.
+                              integer := 32;
+        O_REG_MODE_BITS     : --! @brief OUTLET MODE REGISTER BITS :
+                              --! O_MODE_L/O_MODE_D/O_MODE_Qのビット数を指定する.
+                              integer := 32;
+        O_REG_STAT_BITS     : --! @brief OUTLET STATUS REGISTER BITS :
+                              --! O_STAT_L/O_STAT_D/O_STAT_Qのビット数を指定する.
+                              integer := 32;
+        O_USE_PULL_BUF_SIZE : --! @brief OUTLET USE PULL BUFFER SIZE :
+                              --! O_PULL_BUF_SIZE信号を使用するか否かを指示する.
+                              --! * O_USE_PULL_BUF_SIZE=0で使用しない.
+                              --! * O_USE_PULL_BUF_SIZE=1で使用する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FIXED FLOW OPEN :
+                              --! O_FLOW_READYを常に'1'にするか否かを指定する.
+                              --! * O_FIXED_FLOW_OPEN=1で常に'1'にする.
+                              --! * O_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        O_FIXED_POOL_OPEN   : --! @brief OUTLET VALVE FIXED POOL OPEN :
+                              --! O_PULL_BUF_READYを常に'1'にするか否かを指定する.
+                              --! * O_FIXED_POOL_OPEN=1で常に'1'にする.
+                              --! * O_FIXED_POOL_OPEN=0で状況に応じて開閉する.
+                              integer range 0 to 1 := 0;
+        I_CLK_RATE          : --! @brief INPUT CLOCK RATE :
+                              --! O_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側
+                              --! のクロック(O_CLK)との関係を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer :=  1;
+        I_DATA_BITS         : --! @brief INPUT STREAM DATA BITS :
+                              --! I_DATA のビット数を指定する.
+                              integer := 32;
+        BUF_DEPTH           : --! @brief BUFFER DEPTH :
+                              --! バッファの容量(バイト数)を２のべき乗値で指定する.
+                              integer := 12;
+        BUF_DATA_BITS       : --! @brief BUFFER DATA BITS :
+                              --! BUF_DATA のビット数を指定する.
+                              integer := 32;
+        O2I_OPEN_INFO_BITS  : --! @brief O2I_OPEN_INFO BITS :
+                              --! I_O2I_OPEN_INFO/O_O2I_OPEN_INFO のビット数を指定する.
+                              integer :=  1;
+        O2I_CLOSE_INFO_BITS : --! @brief O2I_CLOSE_INFO BITS :
+                              --! I_O2I_CLOSE_INFO/O_O2I_CLOSE_INFO のビット数を指定する.
+                              integer :=  1;
+        I2O_OPEN_INFO_BITS  : --! @brief I2O_OPEN_INFO BITS :
+                              --! I_I2O_OPEN_INFO/O_I2O_OPEN_INFO のビット数を指定する.
+                              integer :=  1;
+        I2O_CLOSE_INFO_BITS : --! @brief I2O_CLOSE_INFO BITS :
+                              --! I_I2O_CLOSE_INFO/O_I2O_CLOSE_INFO のビット数を指定する.
+                              integer :=  1;
+        I2O_DELAY_CYCLE     : --! @brief DELAY CYCLE :
+                              --! 入力側から出力側への転送する際の遅延サイクルを
+                              --! 指定する.
+                              integer :=  0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    --Reset Signals.
+    -------------------------------------------------------------------------------
+        RST                 : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Clock and Clock Enable.
+    -------------------------------------------------------------------------------
+        O_CLK               : in  std_logic;
+        O_CLR               : in  std_logic;
+        O_CKE               : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Control Register Interface.
+    -------------------------------------------------------------------------------
+        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_Q            : out std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_Q            : out std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_Q            : out std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_Q            : out std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_RESET_L           : in  std_logic;
+        O_RESET_D           : in  std_logic;
+        O_RESET_Q           : out std_logic;
+        O_START_L           : in  std_logic;
+        O_START_D           : in  std_logic;
+        O_START_Q           : out std_logic;
+        O_STOP_L            : in  std_logic;
+        O_STOP_D            : in  std_logic;
+        O_STOP_Q            : out std_logic;
+        O_PAUSE_L           : in  std_logic;
+        O_PAUSE_D           : in  std_logic;
+        O_PAUSE_Q           : out std_logic;
+        O_FIRST_L           : in  std_logic;
+        O_FIRST_D           : in  std_logic;
+        O_FIRST_Q           : out std_logic;
+        O_LAST_L            : in  std_logic;
+        O_LAST_D            : in  std_logic;
+        O_LAST_Q            : out std_logic;
+        O_DONE_EN_L         : in  std_logic;
+        O_DONE_EN_D         : in  std_logic;
+        O_DONE_EN_Q         : out std_logic;
+        O_DONE_ST_L         : in  std_logic;
+        O_DONE_ST_D         : in  std_logic;
+        O_DONE_ST_Q         : out std_logic;
+        O_ERR_ST_L          : in  std_logic;
+        O_ERR_ST_D          : in  std_logic;
+        O_ERR_ST_Q          : out std_logic;
+        O_CLOSE_ST_L        : in  std_logic;
+        O_CLOSE_ST_D        : in  std_logic;
+        O_CLOSE_ST_Q        : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Configuration Signals.
+    -------------------------------------------------------------------------------
+        O_ADDR_FIX          : in  std_logic;
+        O_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
+    -------------------------------------------------------------------------------
+    -- Outlet Transaction Command Request Signals.
+    -------------------------------------------------------------------------------
+        O_REQ_VALID         : out std_logic;
+        O_REQ_ADDR          : out std_logic_vector(O_REQ_ADDR_BITS-1 downto 0);
+        O_REQ_SIZE          : out std_logic_vector(O_REQ_SIZE_BITS-1 downto 0);
+        O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
+        O_REQ_FIRST         : out std_logic;
+        O_REQ_LAST          : out std_logic;
+        O_REQ_READY         : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Transaction Command Acknowledge Signals.
+    -------------------------------------------------------------------------------
+        O_ACK_VALID         : in  std_logic;
+        O_ACK_SIZE          : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_ACK_ERROR         : in  std_logic;
+        O_ACK_NEXT          : in  std_logic;
+        O_ACK_LAST          : in  std_logic;
+        O_ACK_STOP          : in  std_logic;
+        O_ACK_NONE          : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Transfer Status Signals.
+    -------------------------------------------------------------------------------
+        O_XFER_BUSY         : in  std_logic;
+        O_XFER_DONE         : in  std_logic;
+        O_XFER_ERROR        : in  std_logic := '0';
+    -------------------------------------------------------------------------------
+    -- Outlet Flow Control Signals.
+    -------------------------------------------------------------------------------
+        O_FLOW_READY        : out std_logic;
+        O_FLOW_PAUSE        : out std_logic;
+        O_FLOW_STOP         : out std_logic;
+        O_FLOW_LAST         : out std_logic;
+        O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_FIN_VALID    : in  std_logic;
+        O_PULL_FIN_LAST     : in  std_logic;
+        O_PULL_FIN_ERROR    : in  std_logic;
+        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_RSV_VALID    : in  std_logic;
+        O_PULL_RSV_LAST     : in  std_logic;
+        O_PULL_RSV_ERROR    : in  std_logic;
+        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_BUF_RESET    : in  std_logic;
+        O_PULL_BUF_VALID    : in  std_logic;
+        O_PULL_BUF_LAST     : in  std_logic;
+        O_PULL_BUF_ERROR    : in  std_logic;
+        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_BUF_READY    : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Status.
+    -------------------------------------------------------------------------------
+        O_OPEN              : out std_logic;
+        O_RUNNING           : out std_logic;
+        O_DONE              : out std_logic;
+        O_ERROR             : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Outlet Open/Close Infomation Interface
+    -------------------------------------------------------------------------------
+        O_O2I_OPEN_INFO     : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        O_O2I_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
+        O_I2O_OPEN_VALID    : out std_logic;
+        O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
+        O_I2O_CLOSE_VALID   : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Clock and Clock Enable.
+    -------------------------------------------------------------------------------
+        I_CLK               : in  std_logic;
+        I_CLR               : in  std_logic;
+        I_CKE               : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Stream Interface.
+    -------------------------------------------------------------------------------
+        I_DATA              : in  std_logic_vector(I_DATA_BITS    -1 downto 0);
+        I_STRB              : in  std_logic_vector(I_DATA_BITS/8  -1 downto 0);
+        I_LAST              : in  std_logic;
+        I_VALID             : in  std_logic;
+        I_READY             : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Status.
+    -------------------------------------------------------------------------------
+        I_OPEN              : out std_logic;
+        I_RUNNING           : out std_logic;
+        I_DONE              : out std_logic;
+        I_ERROR             : out std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Open/Close Infomation Interface
+    -------------------------------------------------------------------------------
+        I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
+        I_O2I_OPEN_VALID    : out std_logic;
+        I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
+        I_O2I_CLOSE_VALID   : out std_logic;
+        I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
+        I_I2O_OPEN_VALID    : in  std_logic;
+        I_I2O_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
+        I_I2O_CLOSE_VALID   : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Intake Buffer Read Interface.
+    -------------------------------------------------------------------------------
+        BUF_WEN             : out std_logic;
+        BUF_BEN             : out std_logic_vector(BUF_DATA_BITS/8-1 downto 0);
+        BUF_PTR             : out std_logic_vector(BUF_DEPTH      -1 downto 0);
+        BUF_DATA            : out std_logic_vector(BUF_DATA_BITS  -1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------

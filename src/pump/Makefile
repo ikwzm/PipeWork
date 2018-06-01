@@ -4,6 +4,7 @@ ENTITY_FILES = pump_control_register.vhd               \
                pump_controller_outlet_side.vhd         \
                pump_controller.vhd                     \
                pump_stream_intake_controller.vhd       \
+               pump_stream_outlet_controller.vhd       \
                pump_operation_processor.vhd            \
                pump_request_controller.vhd             \
                pipe_requester_interface.vhd            \
