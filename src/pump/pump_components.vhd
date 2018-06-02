@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/06/02                                                      --
+--!     @date    2018/06/03                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -304,6 +304,9 @@ component PUMP_FLOW_SYNCRONIZER
         CLOSE_INFO_BITS : --! @brief CLOSE INFOMATION BITS :
                           --! I_CLOSE_INFO/O_CLOSE_INFOのビット数を指定する.
                           integer :=  1;
+        EVENT_SIZE      : --! @brief EVENT SIZE
+                          --! イベントの数を指定する.
+                          integer :=  1;
         XFER_SIZE_BITS  : --! @brief SIZE BITS :
                           --! 各種サイズ信号のビット数を指定する.
                           integer :=  8;
@@ -351,7 +354,7 @@ component PUMP_FLOW_SYNCRONIZER
                           in  std_logic;
         I_CLR           : --! @brief INPUT CLEAR :
                           --! 入力側の同期リセット信号(ハイ・アクティブ).
-                          in  std_logic;
+                          in  std_logic := '0';
         I_CKE           : --! @brief INPUT CLOCK ENABLE :
                           --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
                           --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の
@@ -360,33 +363,38 @@ component PUMP_FLOW_SYNCRONIZER
                           --!   るように入力されなければならない.
                           --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時の
                           --!   み有効. それ以外は未使用.
-                          in  std_logic;
+                          in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- 入力側からのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
         I_OPEN_VAL      : --! @brief INPUT OPEN VALID :
                           --! 入力側からのOPEN(トランザクションの開始)を指示する信号.
                           --! * I_OPEN_INFO が有効であることを示す.
-                          in  std_logic;
+                          in  std_logic := '0';
         I_OPEN_INFO     : --! @brief INPUT OPEN INFOMATION DATA :
                           --! OPEN(トランザクションの開始)時に出力側に伝達する各種
                           --! 情報入力.
                           --! * I_OPEN_VALがアサートされている時のみ有効.
-                          in  std_logic_vector(OPEN_INFO_BITS -1 downto 0);
+                          in  std_logic_vector(OPEN_INFO_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からのCLOSE(トランザクションの終了)を指示する信号.
     -------------------------------------------------------------------------------
         I_CLOSE_VAL     : --! @brief INPUT CLOSE VALID :
                           --! 入力側からのCLOSE(トランザクションの終了)を指示する信号.
                           --! * I_CLOSE_INFO が有効であることを示す.
-                          in  std_logic;
+                          in  std_logic := '0';
         I_CLOSE_INFO    : --! @brief INPUT CLOSE INFOMATION DATA :
                           --! CLOSE(トランザクションの終了)時に出力側に伝達する各種
                           --! 情報入力.
                           --! * I_CLOSE_VALがアサートされている時のみ有効.
-                          in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
+                          in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
+    -- 入力側からのイベントを通知する信号.
+    -------------------------------------------------------------------------------
+        I_EVENT         : --! @brief INPUT EVENT
+                          in  std_logic_vector(EVENT_SIZE     -1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- 入力側からのPUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PUSH_FIN_VAL  : --! @brief INPUT PUSH FINAL VALID :
                           --! * I_PUSH_FIN_LAST/SIZE が有効であることを示す.
@@ -398,7 +406,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! 入力側から出力側への転送が"確定した"バイト数を入力.
                           in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
+    -- 入力側からのPUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PUSH_RSV_VAL  : --! @brief INPUT PUSH RESERVE VALID :
                           --! * I_PUSH_RSV_LAST/SIZE が有効であることを示す.
@@ -410,7 +418,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! 入力側から出力側への転送が"予定された"バイト数を入力.
                           in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
+    -- 入力側からのPULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PULL_FIN_VAL  : --! @brief INPUT PULL FINAL VALID :
                           --! * I_PULL_FIN_LAST/SIZE が有効であることを示す.
@@ -422,7 +430,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! 出力側から入力側への転送が"確定した"バイト数を入力.
                           in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
+    -- 入力側からのPULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PULL_RSV_VAL  : --! @brief INPUT PULL RESERVE VALID :
                           --! * I_PULL_RSV_LAST/SIZE が有効であることを示す.
@@ -450,7 +458,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --!   るように入力されなければならない.
                           --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ
                           --!   有効. それ以外は未使用.
-                          in  std_logic;
+                          in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- 出力側へのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
@@ -477,7 +485,12 @@ component PUMP_FLOW_SYNCRONIZER
                           --! * I_CLOSE_VALがアサートされている時のみ有効.
                           out std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
+    -- 出力側へのイベントを通知する信号.
+    -------------------------------------------------------------------------------
+        O_EVENT         : --! @brief OUTPUT EVENT
+                          out std_logic_vector(EVENT_SIZE     -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側へのPUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PUSH_FIN_VAL  : --! @brief OUTPUT PUSH FINAL VALID :
                           --! * O_PUSH_FIN_LAST/SIZE が有効であることを示す.
@@ -489,7 +502,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! 入力側から出力側への転送が"確定した"バイト数を出力.
                           out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
+    -- 出力側へのPUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PUSH_RSV_VAL  : --! @brief OUTPUT PUSH RESERVE VALID :
                           --! * O_PUSH_RSV_LAST/SIZE が有効であることを示す.
@@ -501,7 +514,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! 入力側から出力側への転送が"予定された"バイト数を出力.
                           out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
+    -- 出力側へのPULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PULL_FIN_VAL  : --! @brief OUTPUT PULL FINAL VALID :
                           --! * O_PULL_FIN_LAST/SIZE が有効であることを示す.
@@ -513,7 +526,7 @@ component PUMP_FLOW_SYNCRONIZER
                           --! 出力側から入力側への転送が"確定した"バイト数を出力.
                           out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
+    -- 出力側へのPULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PULL_RSV_VAL  : --! @brief OUTPUT PULL RESERVE VALID :
                           --! * O_PULL_RSV_LAST/SIZE が有効であることを示す.
