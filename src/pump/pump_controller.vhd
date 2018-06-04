@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/5/23
+--!     @date    2018/6/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -322,16 +322,16 @@ entity  PUMP_CONTROLLER is
         I_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
         I_PUSH_FIN_VALID    : in  std_logic;
         I_PUSH_FIN_LAST     : in  std_logic;
-        I_PUSH_FIN_ERROR    : in  std_logic;
+        I_PUSH_FIN_ERROR    : in  std_logic := '0';
         I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_RSV_VALID    : in  std_logic;
-        I_PUSH_RSV_LAST     : in  std_logic;
-        I_PUSH_RSV_ERROR    : in  std_logic;
-        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_BUF_RESET    : in  std_logic;
+        I_PUSH_RSV_VALID    : in  std_logic := '0';
+        I_PUSH_RSV_LAST     : in  std_logic := '0';
+        I_PUSH_RSV_ERROR    : in  std_logic := '0';
+        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        I_PUSH_BUF_RESET    : in  std_logic := '0';
         I_PUSH_BUF_VALID    : in  std_logic;
         I_PUSH_BUF_LAST     : in  std_logic;
-        I_PUSH_BUF_ERROR    : in  std_logic;
+        I_PUSH_BUF_ERROR    : in  std_logic := '0';
         I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
@@ -377,16 +377,16 @@ entity  PUMP_CONTROLLER is
         O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
         O_PULL_FIN_VALID    : in  std_logic;
         O_PULL_FIN_LAST     : in  std_logic;
-        O_PULL_FIN_ERROR    : in  std_logic;
+        O_PULL_FIN_ERROR    : in  std_logic := '0';
         O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_RSV_VALID    : in  std_logic;
-        O_PULL_RSV_LAST     : in  std_logic;
-        O_PULL_RSV_ERROR    : in  std_logic;
-        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_BUF_RESET    : in  std_logic;
+        O_PULL_RSV_VALID    : in  std_logic := '0';
+        O_PULL_RSV_LAST     : in  std_logic := '0';
+        O_PULL_RSV_ERROR    : in  std_logic := '0';
+        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        O_PULL_BUF_RESET    : in  std_logic := '0';
         O_PULL_BUF_VALID    : in  std_logic;
         O_PULL_BUF_LAST     : in  std_logic;
-        O_PULL_BUF_ERROR    : in  std_logic;
+        O_PULL_BUF_ERROR    : in  std_logic := '0';
         O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
@@ -578,6 +578,7 @@ begin
         -- Outlet Status Input.
         ---------------------------------------------------------------------------
             O_OPEN              => o2i_valve_open      , -- In  :
+            O_STOP              => '0'                 , -- In  :
         ---------------------------------------------------------------------------
         -- Intake Status Output.
         ---------------------------------------------------------------------------
@@ -723,6 +724,7 @@ begin
         -- Intake Status Input.
         ---------------------------------------------------------------------------
             I_OPEN              => i2o_valve_open      , -- In  :
+            I_STOP              => '0'                 , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Status Output.
         ---------------------------------------------------------------------------
@@ -738,6 +740,7 @@ begin
     I2O: block
         constant  i_open_info   :  std_logic_vector(0 downto 0) := (others => '0');
         constant  i_close_info  :  std_logic_vector(0 downto 0) := (others => '0');
+        constant  i_event       :  std_logic_vector(0 downto 0) := (others => '0');
         signal    i_open_valid  :  std_logic;
         signal    i_close_valid :  std_logic;
         signal    o_open_valid  :  std_logic;
@@ -773,6 +776,7 @@ begin
                 O_CLK_RATE      => O_CLK_RATE          , --
                 OPEN_INFO_BITS  => i_open_info'length  , --
                 CLOSE_INFO_BITS => i_close_info'length , --
+                EVENT_SIZE      => i_event'length      , --
                 XFER_SIZE_BITS  => SIZE_BITS           , --
                 PUSH_FIN_DELAY  => I2O_DELAY_CYCLE     , --
                 PUSH_FIN_VALID  => 1                   , --
@@ -795,6 +799,7 @@ begin
                 I_OPEN_INFO     => i_open_info         , -- In  :
                 I_CLOSE_VAL     => i_close_valid       , -- In  :
                 I_CLOSE_INFO    => i_close_info        , -- In  :
+                I_EVENT         => i_event             , -- In  :
                 I_PUSH_FIN_VAL  => I_PUSH_FIN_VALID    , -- In  :
                 I_PUSH_FIN_LAST => I_PUSH_FIN_LAST     , -- In  :
                 I_PUSH_FIN_SIZE => I_PUSH_FIN_SIZE     , -- In  :
@@ -817,6 +822,7 @@ begin
                 O_OPEN_INFO     => open                , -- Out :
                 O_CLOSE_VAL     => o_close_valid       , -- Out :
                 O_CLOSE_INFO    => open                , -- Out :
+                O_EVENT         => open                , -- Out :
                 O_PUSH_FIN_VAL  => i2o_push_fin_valid  , -- Out :
                 O_PUSH_FIN_LAST => i2o_push_fin_last   , -- Out :
                 O_PUSH_FIN_SIZE => i2o_push_fin_size   , -- Out :
@@ -853,6 +859,7 @@ begin
     O2I: block
         constant  o_open_info   :  std_logic_vector(0 downto 0) := (others => '0');
         constant  o_close_info  :  std_logic_vector(0 downto 0) := (others => '0');
+        constant  o_event       :  std_logic_vector(0 downto 0) := (others => '0');
         signal    o_open_valid  :  std_logic;
         signal    o_close_valid :  std_logic;
         signal    i_open_valid  :  std_logic;
@@ -888,6 +895,7 @@ begin
                 O_CLK_RATE      => I_CLK_RATE          , --
                 OPEN_INFO_BITS  => o_open_info'length  , --
                 CLOSE_INFO_BITS => o_close_info'length , --
+                EVENT_SIZE      => o_event'length      , --
                 XFER_SIZE_BITS  => SIZE_BITS           , --
                 PUSH_FIN_DELAY  => 0                   , --
                 PUSH_FIN_VALID  => 0                   , --
@@ -910,6 +918,7 @@ begin
                 I_OPEN_INFO     => o_open_info         , -- In  :
                 I_CLOSE_VAL     => o_close_valid       , -- In  :
                 I_CLOSE_INFO    => o_close_info        , -- In  :
+                I_EVENT         => o_event             , -- In  :
                 I_PUSH_FIN_VAL  => null_valid          , -- In  :
                 I_PUSH_FIN_LAST => null_last           , -- In  :
                 I_PUSH_FIN_SIZE => null_size           , -- In  :
@@ -932,6 +941,7 @@ begin
                 O_OPEN_INFO     => open                , -- Out :
                 O_CLOSE_VAL     => i_close_valid       , -- Out :
                 O_CLOSE_INFO    => open                , -- Out :
+                O_EVENT         => open                , -- Out :
                 O_PUSH_FIN_VAL  => open                , -- Out :
                 O_PUSH_FIN_LAST => open                , -- Out :
                 O_PUSH_FIN_SIZE => open                , -- Out :

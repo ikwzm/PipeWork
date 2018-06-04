@@ -675,7 +675,7 @@ component PUMP_CONTROLLER_INTAKE_SIDE
     -------------------------------------------------------------------------------
         ACK_VALID           : in  std_logic;
         ACK_SIZE            : in  std_logic_vector(BUF_DEPTH       downto 0);
-        ACK_ERROR           : in  std_logic;
+        ACK_ERROR           : in  std_logic := '0';
         ACK_NEXT            : in  std_logic;
         ACK_LAST            : in  std_logic;
         ACK_STOP            : in  std_logic;
@@ -696,16 +696,16 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
         PUSH_FIN_VALID      : in  std_logic;
         PUSH_FIN_LAST       : in  std_logic;
-        PUSH_FIN_ERROR      : in  std_logic;
+        PUSH_FIN_ERROR      : in  std_logic := '0';
         PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_RSV_VALID      : in  std_logic;
-        PUSH_RSV_LAST       : in  std_logic;
-        PUSH_RSV_ERROR      : in  std_logic;
-        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_BUF_RESET      : in  std_logic;
+        PUSH_RSV_VALID      : in  std_logic := '0';
+        PUSH_RSV_LAST       : in  std_logic := '0';
+        PUSH_RSV_ERROR      : in  std_logic := '0';
+        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
+        PUSH_BUF_RESET      : in  std_logic := '0';
         PUSH_BUF_VALID      : in  std_logic;
         PUSH_BUF_LAST       : in  std_logic;
-        PUSH_BUF_ERROR      : in  std_logic;
+        PUSH_BUF_ERROR      : in  std_logic := '0';
         PUSH_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
         PUSH_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
@@ -714,13 +714,14 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         PULL_FIN_VALID      : in  std_logic;
         PULL_FIN_LAST       : in  std_logic;
         PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PULL_RSV_VALID      : in  std_logic;
-        PULL_RSV_LAST       : in  std_logic;
-        PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_RSV_VALID      : in  std_logic := '0';
+        PULL_RSV_LAST       : in  std_logic := '0';
+        PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Status Input.
     -------------------------------------------------------------------------------
         O_OPEN              : in  std_logic;
+        O_STOP              : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Intake Status Output.
     -------------------------------------------------------------------------------
@@ -866,7 +867,7 @@ component PUMP_CONTROLLER_OUTLET_SIDE
     -------------------------------------------------------------------------------
         ACK_VALID           : in  std_logic;
         ACK_SIZE            : in  std_logic_vector(BUF_DEPTH       downto 0);
-        ACK_ERROR           : in  std_logic;
+        ACK_ERROR           : in  std_logic := '0';
         ACK_NEXT            : in  std_logic;
         ACK_LAST            : in  std_logic;
         ACK_STOP            : in  std_logic;
@@ -887,16 +888,16 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
         PULL_FIN_VALID      : in  std_logic;
         PULL_FIN_LAST       : in  std_logic;
-        PULL_FIN_ERROR      : in  std_logic;
+        PULL_FIN_ERROR      : in  std_logic := '0';
         PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PULL_RSV_VALID      : in  std_logic;
-        PULL_RSV_LAST       : in  std_logic;
-        PULL_RSV_ERROR      : in  std_logic;
-        PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PULL_BUF_RESET      : in  std_logic;
+        PULL_RSV_VALID      : in  std_logic := '0';
+        PULL_RSV_LAST       : in  std_logic := '0';
+        PULL_RSV_ERROR      : in  std_logic := '0';
+        PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
+        PULL_BUF_RESET      : in  std_logic := '0';
         PULL_BUF_VALID      : in  std_logic;
         PULL_BUF_LAST       : in  std_logic;
-        PULL_BUF_ERROR      : in  std_logic;
+        PULL_BUF_ERROR      : in  std_logic := '0';
         PULL_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
         PULL_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
@@ -905,13 +906,14 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         PUSH_FIN_VALID      : in  std_logic;
         PUSH_FIN_LAST       : in  std_logic;
         PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_RSV_VALID      : in  std_logic;
-        PUSH_RSV_LAST       : in  std_logic;
-        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_RSV_VALID      : in  std_logic := '0';
+        PUSH_RSV_LAST       : in  std_logic := '0';
+        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Intake Status Input.
     -------------------------------------------------------------------------------
         I_OPEN              : in  std_logic;
+        I_STOP              : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Outlet Status Output.
     -------------------------------------------------------------------------------
@@ -1207,16 +1209,16 @@ component PUMP_CONTROLLER
         I_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
         I_PUSH_FIN_VALID    : in  std_logic;
         I_PUSH_FIN_LAST     : in  std_logic;
-        I_PUSH_FIN_ERROR    : in  std_logic;
+        I_PUSH_FIN_ERROR    : in  std_logic := '0';
         I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_RSV_VALID    : in  std_logic;
-        I_PUSH_RSV_LAST     : in  std_logic;
-        I_PUSH_RSV_ERROR    : in  std_logic;
-        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_BUF_RESET    : in  std_logic;
+        I_PUSH_RSV_VALID    : in  std_logic := '0';
+        I_PUSH_RSV_LAST     : in  std_logic := '0';
+        I_PUSH_RSV_ERROR    : in  std_logic := '0';
+        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        I_PUSH_BUF_RESET    : in  std_logic := '0';
         I_PUSH_BUF_VALID    : in  std_logic;
         I_PUSH_BUF_LAST     : in  std_logic;
-        I_PUSH_BUF_ERROR    : in  std_logic;
+        I_PUSH_BUF_ERROR    : in  std_logic := '0';
         I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
@@ -1262,16 +1264,16 @@ component PUMP_CONTROLLER
         O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
         O_PULL_FIN_VALID    : in  std_logic;
         O_PULL_FIN_LAST     : in  std_logic;
-        O_PULL_FIN_ERROR    : in  std_logic;
+        O_PULL_FIN_ERROR    : in  std_logic := '0';
         O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_RSV_VALID    : in  std_logic;
-        O_PULL_RSV_LAST     : in  std_logic;
-        O_PULL_RSV_ERROR    : in  std_logic;
-        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_BUF_RESET    : in  std_logic;
+        O_PULL_RSV_VALID    : in  std_logic := '0';
+        O_PULL_RSV_LAST     : in  std_logic := '0';
+        O_PULL_RSV_ERROR    : in  std_logic := '0';
+        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        O_PULL_BUF_RESET    : in  std_logic := '0';
         O_PULL_BUF_VALID    : in  std_logic;
         O_PULL_BUF_LAST     : in  std_logic;
-        O_PULL_BUF_ERROR    : in  std_logic;
+        O_PULL_BUF_ERROR    : in  std_logic := '0';
         O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
@@ -1502,6 +1504,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_O2I_OPEN_VALID    : out std_logic;
         I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
         I_O2I_CLOSE_VALID   : out std_logic;
+        I_O2I_STOP_VALID    : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Clock and Clock Enable.
     -------------------------------------------------------------------------------
@@ -1526,10 +1529,13 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
     -------------------------------------------------------------------------------
+        O_I2O_RESET         : out std_logic;
+        O_I2O_STOP_VALID    : out std_logic;
         O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
         O_I2O_OPEN_VALID    : out std_logic;
         O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
         O_I2O_CLOSE_VALID   : out std_logic;
+        O_O2I_STOP_VALID    : in  std_logic;
         O_O2I_OPEN_INFO     : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         O_O2I_OPEN_VALID    : in  std_logic;
         O_O2I_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
@@ -1761,6 +1767,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_I2O_OPEN_VALID    : out std_logic;
         O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
         O_I2O_CLOSE_VALID   : out std_logic;
+        O_I2O_STOP_VALID    : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Clock and Clock Enable.
     -------------------------------------------------------------------------------
@@ -1785,10 +1792,13 @@ component PUMP_STREAM_OUTLET_CONTROLLER
     -------------------------------------------------------------------------------
     -- Intake Open/Close Infomation Interface
     -------------------------------------------------------------------------------
+        I_O2I_RESET         : out std_logic;
+        I_O2I_STOP_VALID    : out std_logic;
         I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
         I_O2I_OPEN_VALID    : out std_logic;
         I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
         I_O2I_CLOSE_VALID   : out std_logic;
+        I_I2O_STOP_VALID    : in  std_logic;
         I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         I_I2O_OPEN_VALID    : in  std_logic;
         I_I2O_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');

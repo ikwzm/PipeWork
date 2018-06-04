@@ -2,7 +2,7 @@
 --!     @file    pump_controller_outlet_side.vhd
 --!     @brief   PUMP CONTROLLER OUTLET SIDE
 --!     @version 1.7.0
---!     @date    2018/5/23
+--!     @date    2018/6/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -172,7 +172,7 @@ entity  PUMP_CONTROLLER_OUTLET_SIDE is
     -------------------------------------------------------------------------------
         ACK_VALID           : in  std_logic;
         ACK_SIZE            : in  std_logic_vector(BUF_DEPTH       downto 0);
-        ACK_ERROR           : in  std_logic;
+        ACK_ERROR           : in  std_logic := '0';
         ACK_NEXT            : in  std_logic;
         ACK_LAST            : in  std_logic;
         ACK_STOP            : in  std_logic;
@@ -193,16 +193,16 @@ entity  PUMP_CONTROLLER_OUTLET_SIDE is
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
         PULL_FIN_VALID      : in  std_logic;
         PULL_FIN_LAST       : in  std_logic;
-        PULL_FIN_ERROR      : in  std_logic;
+        PULL_FIN_ERROR      : in  std_logic := '0';
         PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PULL_RSV_VALID      : in  std_logic;
-        PULL_RSV_LAST       : in  std_logic;
-        PULL_RSV_ERROR      : in  std_logic;
-        PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PULL_BUF_RESET      : in  std_logic;
+        PULL_RSV_VALID      : in  std_logic := '0';
+        PULL_RSV_LAST       : in  std_logic := '0';
+        PULL_RSV_ERROR      : in  std_logic := '0';
+        PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
+        PULL_BUF_RESET      : in  std_logic := '0';
         PULL_BUF_VALID      : in  std_logic;
         PULL_BUF_LAST       : in  std_logic;
-        PULL_BUF_ERROR      : in  std_logic;
+        PULL_BUF_ERROR      : in  std_logic := '0';
         PULL_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
         PULL_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
@@ -211,13 +211,14 @@ entity  PUMP_CONTROLLER_OUTLET_SIDE is
         PUSH_FIN_VALID      : in  std_logic;
         PUSH_FIN_LAST       : in  std_logic;
         PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_RSV_VALID      : in  std_logic;
-        PUSH_RSV_LAST       : in  std_logic;
-        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_RSV_VALID      : in  std_logic := '0';
+        PUSH_RSV_LAST       : in  std_logic := '0';
+        PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Intake Status Input.
     -------------------------------------------------------------------------------
         I_OPEN              : in  std_logic;
+        I_STOP              : in  std_logic := '0';
     -------------------------------------------------------------------------------
     -- Outlet Status Output.
     -------------------------------------------------------------------------------
@@ -261,6 +262,8 @@ architecture RTL of PUMP_CONTROLLER_OUTLET_SIDE is
     signal   reg_reset          :  std_logic;
     signal   reg_pause          :  std_logic;
     signal   reg_stop           :  std_logic;
+    signal   intake_stop        :  std_logic;
+    signal   valve_stop         :  std_logic;
     signal   valve_open         :  std_logic;
     signal   tran_running       :  std_logic;
 begin
@@ -403,6 +406,21 @@ begin
     O_RUNNING   <= tran_running;
     O_OPEN      <= valve_open;
     -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    process(CLK, RST) begin
+        if (RST = '1') then
+                intake_stop <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if    (CLR = '1' or reg_reset = '1' or valve_open = '0') then
+                intake_stop <= '0';
+            elsif (I_STOP = '1') then
+                intake_stop <= '1';
+            end if;
+        end if;
+    end process;
+    valve_stop <= '1' when (reg_stop = '1' or intake_stop = '1') else '0';
+    -------------------------------------------------------------------------------
     -- 出力側のバルブ
     -------------------------------------------------------------------------------
     VALVE: FLOAT_OUTLET_MANIFOLD_VALVE               -- 
@@ -425,7 +443,7 @@ begin
             OUTLET_OPEN     => valve_open          , -- In  :
             RESET           => reg_reset           , -- In  :
             PAUSE           => reg_pause           , -- In  :
-            STOP            => reg_stop            , -- In  :
+            STOP            => valve_stop          , -- In  :
             PUSH_FIN_VALID  => PUSH_FIN_VALID      , -- In  :
             PUSH_FIN_LAST   => PUSH_FIN_LAST       , -- In  :
             PUSH_FIN_SIZE   => PUSH_FIN_SIZE       , -- In  :
