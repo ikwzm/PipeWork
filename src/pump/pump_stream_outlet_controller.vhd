@@ -795,6 +795,9 @@ begin
         end process;
         o2i_valve_open    <= '1' when (o2i_valve_opened = '1' and o2i_close_valid = '0') or
                                       (o2i_open_valid   = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- 
+        ---------------------------------------------------------------------------
         I_O2I_OPEN_INFO   <= o2i_open_info;
         I_O2I_OPEN_VALID  <= o2i_open_valid;
         I_O2I_CLOSE_INFO  <= o2i_close_info;
