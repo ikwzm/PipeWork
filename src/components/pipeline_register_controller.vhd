@@ -3,7 +3,7 @@
 --!     @brief   PIPELINE REGISTER CONTROLLER MODULE :
 --!              パイプラインレジスタ制御モジュール
 --!     @version 1.7.0
---!     @date    2018/5/8
+--!     @date    2018/6/14
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -126,7 +126,9 @@ entity  PIPELINE_REGISTER_CONTROLLER is
                       --!   注意. これはQUEUE_SIZE=0の場合に対応するため.
                       --! * QUEUE_SIZE>=1 の場合、VALID(0) は VALID(1) と同じ値を出
                       --!   力する.
-                      out std_logic_vector(QUEUE_SIZE downto 0)
+                      out std_logic_vector(QUEUE_SIZE downto 0);
+        BUSY        : --! @brief QUEUE BUSY  :
+                      out std_logic
     );
 end PIPELINE_REGISTER_CONTROLLER;
 library ieee;
@@ -142,6 +144,7 @@ begin
         VALID(0) <= I_VAL and Q_RDY;
         LOAD (0) <= I_VAL and Q_RDY;
         SHIFT(0) <= '0';
+        BUSY     <= '0';
     end generate;
     -------------------------------------------------------------------------------
      -- QUEUE_SIZE=1の場合
@@ -160,6 +163,7 @@ begin
         SHIFT(1) <= '0';
         VALID(0) <= q_valid;
         VALID(1) <= q_valid;
+        BUSY     <= q_valid;
         process (CLK, RST) begin
             if    (RST = '1') then
                        q_valid <= '0';
@@ -337,6 +341,7 @@ begin
         LOAD (QUEUE_SIZE downto 1) <= queue_data_load;
         SHIFT(0)                   <= queue_data_shift(FIRST_OF_QUEUE);
         SHIFT(QUEUE_SIZE downto 1) <= queue_data_shift;
+        BUSY                       <= curr_queue_valid(FIRST_OF_QUEUE);
     end generate;
 end RTL;
 

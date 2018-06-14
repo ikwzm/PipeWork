@@ -11,6 +11,7 @@ ENTITY_FILES = chopper.vhd                             \
                sdpram.vhd                              \
                count_down_register.vhd                 \
                count_up_register.vhd                   \
+               pipeline_register.vhd                   \
                pipeline_register_controller.vhd        \
                pool_intake_port.vhd                    \
                pool_outlet_port.vhd                    \
