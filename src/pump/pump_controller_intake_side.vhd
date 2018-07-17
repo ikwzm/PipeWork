@@ -2,7 +2,7 @@
 --!     @file    pump_controller_intake_side.vhd
 --!     @brief   PUMP CONTROLLER INTAKE SIDE
 --!     @version 1.7.0
---!     @date    2018/6/3
+--!     @date    2018/7/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -223,9 +223,12 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
     -- Intake Status Output.
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
-        I_DONE              : out std_logic;
-        I_ERROR             : out std_logic
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
+        TRAN_BUSY           : out std_logic;
+        TRAN_DONE           : out std_logic;
+        TRAN_ERROR          : out std_logic
     );
 end PUMP_CONTROLLER_INTAKE_SIDE;
 -----------------------------------------------------------------------------------
@@ -262,10 +265,10 @@ architecture RTL of PUMP_CONTROLLER_INTAKE_SIDE is
     signal   reg_reset          :  std_logic;
     signal   reg_pause          :  std_logic;
     signal   reg_stop           :  std_logic;
-    signal   outlet_stop        :  std_logic;
     signal   valve_stop         :  std_logic;
     signal   valve_open         :  std_logic;
-    signal   tran_running       :  std_logic;
+    signal   transaction_busy   :  std_logic;
+    signal   transaction_error  :  std_logic;
 begin
     -------------------------------------------------------------------------------
     -- アドレスレジスタ
@@ -283,7 +286,7 @@ begin
             REGS_WEN        => REG_ADDR_L          , -- In  :
             REGS_WDATA      => REG_ADDR_D          , -- In  :
             REGS_RDATA      => REG_ADDR_Q          , -- Out :
-            UP_ENA          => tran_running        , -- In  :
+            UP_ENA          => transaction_busy    , -- In  :
             UP_VAL          => ACK_VALID           , -- In  :
             UP_BEN          => addr_up_ben         , -- In  :
             UP_SIZE         => ACK_SIZE            , -- In  :
@@ -306,7 +309,7 @@ begin
             REGS_WEN        => REG_SIZE_L          , -- In  :
             REGS_WDATA      => REG_SIZE_D          , -- In  :
             REGS_RDATA      => REG_SIZE_Q          , -- Out :
-            DN_ENA          => tran_running        , -- In  :
+            DN_ENA          => transaction_busy    , -- In  :
             DN_VAL          => ACK_VALID           , -- In  :
             DN_SIZE         => ACK_SIZE            , -- In  :
             COUNTER         => REQ_SIZE            , -- Out :
@@ -329,7 +332,7 @@ begin
             REGS_WEN        => buf_ptr_init        , -- In  :
             REGS_WDATA      => BUF_INIT_PTR        , -- In  :
             REGS_RDATA      => open                , -- Out :
-            UP_ENA          => tran_running        , -- In  :
+            UP_ENA          => transaction_busy    , -- In  :
             UP_VAL          => ACK_VALID           , -- In  :
             UP_BEN          => BUF_UP_BEN          , -- In  :
             UP_SIZE         => ACK_SIZE            , -- In  :
@@ -396,30 +399,30 @@ begin
             XFER_DONE       => XFER_DONE           , -- In  :
             XFER_ERROR      => XFER_ERROR          , -- In  :
             VALVE_OPEN      => valve_open          , -- Out :
-            TRAN_DONE       => I_DONE              , -- Out :
-            TRAN_ERROR      => I_ERROR             , -- Out :
-            TRAN_BUSY       => tran_running          -- Out :
+            TRAN_DONE       => TRAN_DONE           , -- Out :
+            TRAN_ERROR      => transaction_error   , -- Out :
+            TRAN_BUSY       => transaction_busy      -- Out :
         );                                           -- 
     REG_RESET_Q <= reg_reset;
     REG_PAUSE_Q <= reg_pause;
     REG_STOP_Q  <= reg_stop;
-    I_RUNNING   <= tran_running;
+    TRAN_BUSY   <= transaction_busy;
+    TRAN_ERROR  <= transaction_error;
     I_OPEN      <= valve_open;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     process(CLK, RST) begin
         if (RST = '1') then
-                outlet_stop <= '0';
+                valve_stop <= '0';
         elsif (CLK'event and CLK = '1') then
-            if    (CLR = '1' or reg_reset = '1' or valve_open = '0') then
-                outlet_stop <= '0';
-            elsif (O_STOP = '1') then
-                outlet_stop <= '1';
+            if    (CLR = '1'    or reg_reset = '1' or valve_open = '0') then
+                valve_stop <= '0';
+            elsif (O_STOP = '1' or reg_stop  = '1' or transaction_error = '1') then
+                valve_stop <= '1';
             end if;
         end if;
     end process;
-    valve_stop <= '1' when (reg_stop = '1' or outlet_stop = '1') else '0';
     -------------------------------------------------------------------------------
     -- 入力側のバルブ
     -------------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/6/3
+--!     @date    2018/7/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -240,12 +240,12 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
-    -- Outlet Status.
+    -- Outlet Status Signals.
     -------------------------------------------------------------------------------
         O_OPEN              : out std_logic;
-        O_RUNNING           : out std_logic;
-        O_DONE              : out std_logic;
-        O_ERROR             : out std_logic;
+        O_TRAN_BUSY         : out std_logic;
+        O_TRAN_DONE         : out std_logic;
+        O_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
     -------------------------------------------------------------------------------
@@ -274,7 +274,6 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
     -- Intake Status.
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
         I_DONE              : out std_logic;
         I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
@@ -519,9 +518,12 @@ begin
         -- Outlet Status Output.
         ---------------------------------------------------------------------------
             O_OPEN              => o_valve_open        , -- Out :
-            O_RUNNING           => O_RUNNING           , -- Out :
-            O_DONE              => O_DONE              , -- Out :
-            O_ERROR             => O_ERROR               -- Out :
+        ---------------------------------------------------------------------------
+        -- Transaction Status Signals.
+        ---------------------------------------------------------------------------
+            TRAN_BUSY           => O_TRAN_BUSY         , -- Out :
+            TRAN_DONE           => O_TRAN_DONE         , -- Out :
+            TRAN_ERROR          => O_TRAN_ERROR          -- Out :
         );
     O_OPEN <= o_valve_open;
     -------------------------------------------------------------------------------
@@ -975,7 +977,6 @@ begin
         --
         ---------------------------------------------------------------------------
         I_OPEN    <= i_valve_open;
-        I_RUNNING <= i_valve_open;
         I_DONE    <= i_close_valid;
         I_ERROR   <= '0';
     end block;

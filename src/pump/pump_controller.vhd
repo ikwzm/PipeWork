@@ -2,7 +2,7 @@
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/6/3
+--!     @date    2018/7/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -583,9 +583,9 @@ begin
         -- Intake Status Output.
         ---------------------------------------------------------------------------
             I_OPEN              => i_valve_open        , -- Out :
-            I_RUNNING           => I_RUNNING           , -- Out :
-            I_DONE              => I_DONE              , -- Out :
-            I_ERROR             => I_ERROR               -- Out :
+            TRAN_BUSY           => I_RUNNING           , -- Out :
+            TRAN_DONE           => I_DONE              , -- Out :
+            TRAN_ERROR          => I_ERROR               -- Out :
         );
     I_OPEN <= i_valve_open;
     -------------------------------------------------------------------------------
@@ -729,9 +729,9 @@ begin
         -- Outlet Status Output.
         ---------------------------------------------------------------------------
             O_OPEN              => o_valve_open        , -- Out :
-            O_RUNNING           => O_RUNNING           , -- Out :
-            O_DONE              => O_DONE              , -- Out :
-            O_ERROR             => O_ERROR               -- Out :
+            TRAN_BUSY           => O_RUNNING           , -- Out :
+            TRAN_DONE           => O_DONE              , -- Out :
+            TRAN_ERROR          => O_ERROR               -- Out :
         );
     O_OPEN <= o_valve_open;
     -------------------------------------------------------------------------------

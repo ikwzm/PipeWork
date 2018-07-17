@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 1.7.0                                                           --
---!     @date    2018/06/05                                                      --
+--!     @date    2018/07/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -726,9 +726,12 @@ component PUMP_CONTROLLER_INTAKE_SIDE
     -- Intake Status Output.
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
-        I_DONE              : out std_logic;
-        I_ERROR             : out std_logic
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
+        TRAN_BUSY           : out std_logic;
+        TRAN_DONE           : out std_logic;
+        TRAN_ERROR          : out std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -918,9 +921,12 @@ component PUMP_CONTROLLER_OUTLET_SIDE
     -- Outlet Status Output.
     -------------------------------------------------------------------------------
         O_OPEN              : out std_logic;
-        O_RUNNING           : out std_logic;
-        O_DONE              : out std_logic;
-        O_ERROR             : out std_logic
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
+        TRAN_BUSY           : out std_logic;
+        TRAN_DONE           : out std_logic;
+        TRAN_ERROR          : out std_logic
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -1489,14 +1495,14 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
-    -- Intake Status.
+    -- Intake Status Signals.
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
-        I_DONE              : out std_logic;
-        I_ERROR             : out std_logic;
+        I_TRAN_BUSY         : out std_logic;
+        I_TRAN_DONE         : out std_logic;
+        I_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
-    -- Intake Open/Close Infomation Interface
+    -- Intake Open/Close Infomation Interface Signals.
     -------------------------------------------------------------------------------
         I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         I_I2O_CLOSE_INFO    : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
@@ -1523,7 +1529,6 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -- Outlet Status.
     -------------------------------------------------------------------------------
         O_OPEN              : out std_logic;
-        O_RUNNING           : out std_logic;
         O_DONE              : out std_logic;
         O_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
@@ -1752,12 +1757,12 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
-    -- Outlet Status.
+    -- Outlet Status Signals.
     -------------------------------------------------------------------------------
         O_OPEN              : out std_logic;
-        O_RUNNING           : out std_logic;
-        O_DONE              : out std_logic;
-        O_ERROR             : out std_logic;
+        O_TRAN_BUSY         : out std_logic;
+        O_TRAN_DONE         : out std_logic;
+        O_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
     -------------------------------------------------------------------------------
@@ -1786,7 +1791,6 @@ component PUMP_STREAM_OUTLET_CONTROLLER
     -- Intake Status.
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
         I_DONE              : out std_logic;
         I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------

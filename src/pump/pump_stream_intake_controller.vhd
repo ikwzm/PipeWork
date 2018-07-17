@@ -2,7 +2,7 @@
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
 --!     @version 1.7.0
---!     @date    2018/6/3
+--!     @date    2018/7/13
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -240,14 +240,14 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
         I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
         I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
-    -- Intake Status.
+    -- Intake Status Signals.
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
-        I_RUNNING           : out std_logic;
-        I_DONE              : out std_logic;
-        I_ERROR             : out std_logic;
+        I_TRAN_BUSY         : out std_logic;
+        I_TRAN_DONE         : out std_logic;
+        I_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
-    -- Intake Open/Close Infomation Interface
+    -- Intake Open/Close Infomation Interface Signals.
     -------------------------------------------------------------------------------
         I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         I_I2O_CLOSE_INFO    : in  std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
@@ -274,7 +274,6 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
     -- Outlet Status.
     -------------------------------------------------------------------------------
         O_OPEN              : out std_logic;
-        O_RUNNING           : out std_logic;
         O_DONE              : out std_logic;
         O_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
@@ -514,9 +513,12 @@ begin
         -- Intake Status Output.
         ---------------------------------------------------------------------------
             I_OPEN              => i_valve_open        , -- Out :
-            I_RUNNING           => I_RUNNING           , -- Out :
-            I_DONE              => I_DONE              , -- Out :
-            I_ERROR             => I_ERROR               -- Out :
+        ---------------------------------------------------------------------------
+        -- Transaction Status Signals.
+        ---------------------------------------------------------------------------
+            TRAN_BUSY           => I_TRAN_BUSY         , -- Out :
+            TRAN_DONE           => I_TRAN_DONE         , -- Out :
+            TRAN_ERROR          => I_TRAN_ERROR          -- Out :
         );
     I_OPEN <= i_valve_open;
     -------------------------------------------------------------------------------
@@ -1001,7 +1003,6 @@ begin
         --
         ---------------------------------------------------------------------------
         O_OPEN    <= o_valve_open;
-        O_RUNNING <= o_valve_open;
         O_DONE    <= O_O2I_CLOSE_VALID;
         O_ERROR   <= '0';
     end block;
