@@ -1510,7 +1510,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_O2I_OPEN_VALID    : out std_logic;
         I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
         I_O2I_CLOSE_VALID   : out std_logic;
-        I_O2I_STOP_VALID    : out std_logic;
+        I_O2I_STOP          : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Clock and Clock Enable.
     -------------------------------------------------------------------------------
@@ -1530,17 +1530,17 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
         O_OPEN              : out std_logic;
         O_DONE              : out std_logic;
-        O_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
     -------------------------------------------------------------------------------
         O_I2O_RESET         : out std_logic;
-        O_I2O_STOP_VALID    : out std_logic;
+        O_I2O_STOP          : out std_logic;
+        O_I2O_ERROR         : out std_logic;
         O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
         O_I2O_OPEN_VALID    : out std_logic;
         O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
         O_I2O_CLOSE_VALID   : out std_logic;
-        O_O2I_STOP_VALID    : in  std_logic;
+        O_O2I_STOP          : in  std_logic;
         O_O2I_OPEN_INFO     : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         O_O2I_OPEN_VALID    : in  std_logic;
         O_O2I_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
@@ -1772,7 +1772,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_I2O_OPEN_VALID    : out std_logic;
         O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
         O_I2O_CLOSE_VALID   : out std_logic;
-        O_I2O_STOP_VALID    : out std_logic;
+        O_I2O_STOP          : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Clock and Clock Enable.
     -------------------------------------------------------------------------------
@@ -1792,17 +1792,17 @@ component PUMP_STREAM_OUTLET_CONTROLLER
     -------------------------------------------------------------------------------
         I_OPEN              : out std_logic;
         I_DONE              : out std_logic;
-        I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Open/Close Infomation Interface
     -------------------------------------------------------------------------------
         I_O2I_RESET         : out std_logic;
-        I_O2I_STOP_VALID    : out std_logic;
+        I_O2I_STOP          : out std_logic;
+        I_O2I_ERROR         : out std_logic;
         I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
         I_O2I_OPEN_VALID    : out std_logic;
         I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
         I_O2I_CLOSE_VALID   : out std_logic;
-        I_I2O_STOP_VALID    : in  std_logic;
+        I_I2O_STOP          : in  std_logic;
         I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         I_I2O_OPEN_VALID    : in  std_logic;
         I_I2O_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
