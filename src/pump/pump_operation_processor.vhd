@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_operation_processor.vhd
 --!     @brief   PUMP Operation Processor
---!     @version 1.5.6
---!     @date    2014/5/22
+--!     @version 1.7.0
+--!     @date    2018/5/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without

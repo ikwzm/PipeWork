@@ -2,12 +2,12 @@
 --!     @file    pump_flow_syncronizer.vhd
 --!     @brief   PUMP FLOW SYNCRONIZER
 --!              PUMPの入力側と出力側の間で各種情報を伝達するモジュール. 
---!     @version 1.5.5
---!     @date    2014/3/25
+--!     @version 1.7.0
+--!     @date    2018/6/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -58,6 +58,9 @@ entity  PUMP_FLOW_SYNCRONIZER is
         CLOSE_INFO_BITS : --! @brief CLOSE INFOMATION BITS :
                           --! I_CLOSE_INFO/O_CLOSE_INFOのビット数を指定する.
                           integer :=  1;
+        EVENT_SIZE      : --! @brief EVENT SIZE
+                          --! イベントの数を指定する.
+                          integer :=  1;
         XFER_SIZE_BITS  : --! @brief SIZE BITS :
                           --! 各種サイズ信号のビット数を指定する.
                           integer :=  8;
@@ -66,7 +69,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! するか否かを指定する.
                           --! * PUSH_FIN_VALID = 1 : 有効. 
                           --! * PUSH_FIN_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PUSH_FIN_DELAY  : --! @brief PUSH FINAL SIZE DELAY CYCLE :
                           --! PUSH_FIN_VAL/PUSH_FIN_SIZE/PUSH_FIN_LAST を遅延するサ
                           --! イクル数を指定する.
@@ -76,19 +79,19 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! するか否かを指定する.
                           --! * PUSH_RSV_VALID = 1 : 有効. 
                           --! * PUSH_RSV_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PULL_FIN_VALID  : --! @brief PULL FINAL SIZE VALID :
                           --! PULL_FIN_VAL/PULL_FIN_SIZE/PULL_FIN_LAST 信号を有効に
                           --! するか否かを指定する.
                           --! * PULL_FIN_VALID = 1 : 有効. 
                           --! * PULL_FIN_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1;
+                          integer range 0 to 1 := 1;
         PULL_RSV_VALID  : --! @brief PULL RESERVE SIZE VALID :
                           --! PULL_RSV_VAL/PULL_RSV_SIZE/PULL_RSV_LAST 信号を有効に
                           --! するか否かを指定する.
                           --! * PULL_RSV_VALID = 1 : 有効. 
                           --! * PULL_RSV_VALID = 0 : 無効. 回路は省略される.
-                          integer :=  1
+                          integer range 0 to 1 := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -105,7 +108,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           in  std_logic;
         I_CLR           : --! @brief INPUT CLEAR :
                           --! 入力側の同期リセット信号(ハイ・アクティブ).
-                          in  std_logic;
+                          in  std_logic := '0';
         I_CKE           : --! @brief INPUT CLOCK ENABLE :
                           --! 入力側のクロック(I_CLK)の立上りが有効であることを示す信号.
                           --! * この信号は I_CLK_RATE > 1 の時に、I_CLK と O_CLK の
@@ -114,33 +117,38 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --!   るように入力されなければならない.
                           --! * この信号は I_CLK_RATE > 1 かつ O_CLK_RATE = 1の時の
                           --!   み有効. それ以外は未使用.
-                          in  std_logic;
+                          in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- 入力側からのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
         I_OPEN_VAL      : --! @brief INPUT OPEN VALID :
                           --! 入力側からのOPEN(トランザクションの開始)を指示する信号.
                           --! * I_OPEN_INFO が有効であることを示す.
-                          in  std_logic;
+                          in  std_logic := '0';
         I_OPEN_INFO     : --! @brief INPUT OPEN INFOMATION DATA :
                           --! OPEN(トランザクションの開始)時に出力側に伝達する各種
                           --! 情報入力.
                           --! * I_OPEN_VALがアサートされている時のみ有効.
-                          in  std_logic_vector(OPEN_INFO_BITS -1 downto 0);
+                          in  std_logic_vector(OPEN_INFO_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側からのCLOSE(トランザクションの終了)を指示する信号.
     -------------------------------------------------------------------------------
         I_CLOSE_VAL     : --! @brief INPUT CLOSE VALID :
                           --! 入力側からのCLOSE(トランザクションの終了)を指示する信号.
                           --! * I_CLOSE_INFO が有効であることを示す.
-                          in  std_logic;
+                          in  std_logic := '0';
         I_CLOSE_INFO    : --! @brief INPUT CLOSE INFOMATION DATA :
                           --! CLOSE(トランザクションの終了)時に出力側に伝達する各種
                           --! 情報入力.
                           --! * I_CLOSE_VALがアサートされている時のみ有効.
-                          in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
+                          in  std_logic_vector(CLOSE_INFO_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
+    -- 入力側からのイベントを通知する信号.
+    -------------------------------------------------------------------------------
+        I_EVENT         : --! @brief INPUT EVENT
+                          in  std_logic_vector(EVENT_SIZE     -1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- 入力側からのPUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PUSH_FIN_VAL  : --! @brief INPUT PUSH FINAL VALID :
                           --! * I_PUSH_FIN_LAST/SIZE が有効であることを示す.
@@ -152,7 +160,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! 入力側から出力側への転送が"確定した"バイト数を入力.
                           in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
+    -- 入力側からのPUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PUSH_RSV_VAL  : --! @brief INPUT PUSH RESERVE VALID :
                           --! * I_PUSH_RSV_LAST/SIZE が有効であることを示す.
@@ -164,7 +172,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! 入力側から出力側への転送が"予定された"バイト数を入力.
                           in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
+    -- 入力側からのPULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PULL_FIN_VAL  : --! @brief INPUT PULL FINAL VALID :
                           --! * I_PULL_FIN_LAST/SIZE が有効であることを示す.
@@ -176,7 +184,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! 出力側から入力側への転送が"確定した"バイト数を入力.
                           in  std_logic_vector(XFER_SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 入力側からの、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
+    -- 入力側からのPULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         I_PULL_RSV_VAL  : --! @brief INPUT PULL RESERVE VALID :
                           --! * I_PULL_RSV_LAST/SIZE が有効であることを示す.
@@ -204,7 +212,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --!   るように入力されなければならない.
                           --! * この信号は O_CLK_RATE > 1 かつ I_CLK_RATE = 1の時のみ
                           --!   有効. それ以外は未使用.
-                          in  std_logic;
+                          in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- 出力側へのOPEN(トランザクションの開始)を指示する信号.
     -------------------------------------------------------------------------------
@@ -231,7 +239,12 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! * I_CLOSE_VALがアサートされている時のみ有効.
                           out std_logic_vector(CLOSE_INFO_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
+    -- 出力側へのイベントを通知する信号.
+    -------------------------------------------------------------------------------
+        O_EVENT         : --! @brief OUTPUT EVENT
+                          out std_logic_vector(EVENT_SIZE     -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- 出力側へのPUSH_FIN(入力側から出力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PUSH_FIN_VAL  : --! @brief OUTPUT PUSH FINAL VALID :
                           --! * O_PUSH_FIN_LAST/SIZE が有効であることを示す.
@@ -243,7 +256,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! 入力側から出力側への転送が"確定した"バイト数を出力.
                           out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
+    -- 出力側へのPUSH_RSV(入力側から出力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PUSH_RSV_VAL  : --! @brief OUTPUT PUSH RESERVE VALID :
                           --! * O_PUSH_RSV_LAST/SIZE が有効であることを示す.
@@ -255,7 +268,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! 入力側から出力側への転送が"予定された"バイト数を出力.
                           out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
+    -- 出力側へのPULL_FIN(出力側から入力側への転送"が確定した"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PULL_FIN_VAL  : --! @brief OUTPUT PULL FINAL VALID :
                           --! * O_PULL_FIN_LAST/SIZE が有効であることを示す.
@@ -267,7 +280,7 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! 出力側から入力側への転送が"確定した"バイト数を出力.
                           out std_logic_vector(XFER_SIZE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 出力側への、PULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
+    -- 出力側へのPULL_RSV(出力側から入力側への転送"が予定された"バイト数)信号.
     -------------------------------------------------------------------------------
         O_PULL_RSV_VAL  : --! @brief OUTPUT PULL RESERVE VALID :
                           --! * O_PULL_RSV_LAST/SIZE が有効であることを示す.
@@ -304,6 +317,7 @@ architecture  RTL of PUMP_FLOW_SYNCRONIZER is
               DATA_LO           : integer;          -- i_data/o_data   の *_INFO の最下位ビット位置
               DATA_HI           : integer;          -- i_data/o_data   の *_INFO の最上位ビット位置
     end record;
+    type      INFO_RANGE_VECTOR is array (integer range <>) of INFO_RANGE_TYPE;
     -------------------------------------------------------------------------------
     --! @brief PUSH_FIN_XXX/PUSH_RSV_XXX/PULL_FIN_XXX/PULL_RSV_XXX の 
     --!        i_valid/o_valid/i_data/o_dataのビットの割り当てを保持する定数の型.
@@ -326,6 +340,7 @@ architecture  RTL of PUMP_FLOW_SYNCRONIZER is
               DATA_HI           : integer;          -- i_data/o_data の最上位ビット位置
               OPEN_INFO         : INFO_RANGE_TYPE;  -- OPEN_INFOの各種ビット位置
               CLOSE_INFO        : INFO_RANGE_TYPE;  -- CLOSE_INFOの各種ビット位置
+              EVENT             : INFO_RANGE_VECTOR(EVENT_SIZE-1 downto 0);
               PUSH_FIN          : SIZE_RANGE_TYPE;  -- PUSH_FIN_XXXの各種ビット位置
               PUSH_RSV          : SIZE_RANGE_TYPE;  -- PUSH_RSV_XXXの各種ビット位置
               PULL_FIN          : SIZE_RANGE_TYPE;  -- PULL_FIN_XXXの各種ビット位置
@@ -375,6 +390,9 @@ architecture  RTL of PUMP_FLOW_SYNCRONIZER is
         ---------------------------------------------------------------------------
         SET_INFO_RANGE(v.OPEN_INFO , OPEN_INFO_BITS );
         SET_INFO_RANGE(v.CLOSE_INFO, CLOSE_INFO_BITS);
+        for i in 0 to EVENT_SIZE-1 loop
+            SET_INFO_RANGE(v.EVENT(i), 1);
+        end loop;
         if (PUSH_FIN_VALID /= 0) then
             SET_SIZE_RANGE(v.PUSH_FIN, XFER_SIZE_BITS);
         end if;
@@ -473,6 +491,30 @@ begin
             O_VAL       => i_valid(VEC_RANGE.CLOSE_INFO.VAL_POS)  , -- Out :
             O_RDY       => i_ready                                  -- In  :
         );                                                          -- 
+    ------------------------------------------------------------------------------
+    --! @brief I_EVENT 入力レジスタ.
+    --! * I_EVENT 信号を SYNCRONIZER の I_VAL/I_DATA に入力.
+    ------------------------------------------------------------------------------
+    I_EVENT_N: for i in 0 to EVENT_SIZE-1 generate
+        REGS: SYNCRONIZER_INPUT_PENDING_REGISTER                    --
+            generic map (                                           --
+                DATA_BITS   => 1                                  , -- 
+                OPERATION   => 1                                    -- 
+            )                                                       -- 
+            port map (                                              -- 
+                CLK         => I_CLK                              , -- In  :
+                RST         => RST                                , -- In  :
+                CLR         => I_CLR                              , -- In  :
+                I_DATA      => "1"                                , -- In  :
+                I_VAL       => I_EVENT(i)                         , -- In  :
+                I_PAUSE     => i_pause                            , -- In  :
+                P_DATA      => open                               , -- Out :
+                P_VAL       => open                               , -- Out :
+                O_DATA      => i_data (VEC_RANGE.EVENT(i).DATA_HI downto VEC_RANGE.EVENT(i).DATA_LO),
+                O_VAL       => i_valid(VEC_RANGE.EVENT(i).VAL_POS), -- Out :
+                O_RDY       => i_ready                              -- In  :
+            );                                                      -- 
+    end generate;
     ------------------------------------------------------------------------------
     --! @brief I_PUSH_FIN_VAL/I_PUSH_FIN_LAST/I_PUSH_FIN_SIZE 入力レジスタ.
     --! * I_PUSH_FIN_VAL 信号を SYNCRONIZER の I_VAL  に入力.
@@ -684,6 +726,12 @@ begin
     O_OPEN_VAL  <= o_valid(VEC_RANGE.OPEN_INFO.VAL_POS);
     O_OPEN_INFO <= o_data (VEC_RANGE.OPEN_INFO.DATA_HI downto VEC_RANGE.OPEN_INFO.DATA_LO);
     ------------------------------------------------------------------------------
+    --! @brief O_EVENT を出力. 
+    ------------------------------------------------------------------------------
+    O_EVENT_N : for i in 0 to EVENT_SIZE-1 generate
+        O_EVENT(i) <= '1' when (o_valid(VEC_RANGE.EVENT(i).VAL_POS) = '1') else '0';
+    end generate;
+    ------------------------------------------------------------------------------
     --! @brief O_PUSH_FIN_XXX/O_CLOSE_VAL/O_CLOSE_INFO を出力.
     --! * PUSH_FIN_VALID /= 0 の場合は、O_PUSH_FIN は PUSH_FIN_DELAY で指定された
     --!   サイクル分だけ遅延して出力する.     
@@ -714,7 +762,7 @@ begin
             );                                                      --
         CLOSE_REGS: DELAY_ADJUSTER                                  -- 
             generic map (                                           -- 
-                DATA_BITS   => 1                                  , -- 
+                DATA_BITS   => CLOSE_INFO_BITS                    , -- 
                 DELAY_MAX   => PUSH_FIN_DELAY                     , -- 
                 DELAY_MIN   => PUSH_FIN_DELAY                       -- 
             )                                                       --
