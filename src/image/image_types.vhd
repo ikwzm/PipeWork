@@ -45,9 +45,9 @@ package IMAGE_TYPES is
     --! @brief Image Window の ボーダー処理タイプの定義
     -------------------------------------------------------------------------------
     type      IMAGE_WINDOW_BORDER_TYPE is (
-                  IMAGE_WINDOW_BORDER_NONE;
-                  IMAGE_WINDOW_BORDER_CONSTANT;
-                  IMAGE_WINDOW_BORDER_REPEAT_EDGE;
+                  IMAGE_WINDOW_BORDER_NONE,
+                  IMAGE_WINDOW_BORDER_CONSTANT,
+                  IMAGE_WINDOW_BORDER_REPEAT_EDGE
     );
     -------------------------------------------------------------------------------
     --! @brief Image Window の 属性(Attribute)信号の定義
@@ -184,6 +184,11 @@ package IMAGE_TYPES is
                   C                 :  integer;
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE;
+    function  GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  C                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector;
     -------------------------------------------------------------------------------
     --! @brief Image Window Data から X 方向の属性を取り出す関数
     -------------------------------------------------------------------------------
@@ -192,6 +197,11 @@ package IMAGE_TYPES is
                   X                 :  integer;
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE;
+    function  GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  X                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector;
     -------------------------------------------------------------------------------
     --! @brief Image Window Data から  Y方向の属性を取り出す関数
     -------------------------------------------------------------------------------
@@ -200,6 +210,11 @@ package IMAGE_TYPES is
                   Y                 :  integer;
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE;
+    function  GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  Y                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector;
     -------------------------------------------------------------------------------
     --! @brief Image Window Data に要素を追加するプロシージャ
     -------------------------------------------------------------------------------
@@ -218,6 +233,11 @@ package IMAGE_TYPES is
                   C                 :  in    integer;
                   ATRB              :  in    IMAGE_ATRB_TYPE;
         variable  DATA              :  inout std_logic_vector);
+    procedure SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+                  PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
+                  C                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
     --! @brief Image Window Data に X 方向の属性を追加するプロシージャ
     -------------------------------------------------------------------------------
@@ -226,6 +246,11 @@ package IMAGE_TYPES is
                   X                 :  in    integer;
                   ATRB              :  in    IMAGE_ATRB_TYPE;
         variable  DATA              :  inout std_logic_vector);
+    procedure SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+                  PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
+                  X                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
     --! @brief Image Window Data に Y 方向の属性を追加するプロシージャ
     -------------------------------------------------------------------------------
@@ -233,6 +258,11 @@ package IMAGE_TYPES is
                   PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
                   Y                 :  in    integer;
                   ATRB              :  in    IMAGE_ATRB_TYPE;
+        variable  DATA              :  inout std_logic_vector);
+    procedure SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+                  PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
+                  Y                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
     --! @brief Image Window が列(X方向)の最初であることを示す関数
@@ -385,7 +415,7 @@ package body IMAGE_TYPES is
                   ELEM_BITS         => ELEM_BITS,
                   SHAPE             => SHAPE    ,
                   STRIDE            => NEW_IMAGE_WINDOW_STRIDE_PARAM(1,1),
-                  BORDER_TYPE       => IMAGE_WINDOW_BORDER_NONE,
+                  BORDER_TYPE       => IMAGE_WINDOW_BORDER_NONE
                );
     end function;
     -------------------------------------------------------------------------------
@@ -469,7 +499,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     --! @brief std_logic_vector を Attribute に変換する関数
     -------------------------------------------------------------------------------
-    function  to_attr(
+    function  to_atrb_type(
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
@@ -520,11 +550,11 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               std_logic_vector
     is
-        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE           -1 downto 0) is DATA;
+        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE           -1 downto 0) is DATA;
         variable  elem_data         :  std_logic_vector(PARAM.DATA.ELEM_FIELD.SIZE-1 downto 0);
         variable  element           :  std_logic_vector(PARAM.ELEM_BITS           -1 downto 0);
     begin
-        elem_data := temp_data(PARAM.DATA.ELEM_FIELD.HI downto PARAM.DATA.ELEM_FIELD.LO);
+        elem_data := input_data(PARAM.DATA.ELEM_FIELD.HI downto PARAM.DATA.ELEM_FIELD.LO);
         element   := elem_data(((Y-PARAM.SHAPE.Y.LO)*PARAM.SHAPE.X.SIZE*PARAM.SHAPE.C.SIZE +
                                 (X-PARAM.SHAPE.X.LO)*PARAM.SHAPE.C.SIZE                    +
                                 (C-PARAM.SHAPE.C.LO)                                       + 1)*PARAM.ELEM_BITS-1 downto
@@ -541,14 +571,46 @@ package body IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   C                 :  integer;
                   DATA              :  std_logic_vector)
+                  return               std_logic_vector
+    is
+        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
+        variable  atrb_c_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
+    begin
+        atrb_c_data  := input_data((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_C_FIELD.LO downto
+                                   (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_C_FIELD.LO);
+        return atrb_c_data;
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Data から Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  C                 :  integer;
+                  DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
-        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE             -1 downto 0) is DATA;
-        variable  atrb_c_data       :  std_logic_vector(PARAM.DATA.ATRB_C_FIELD.SIZE-1 downto 0);
+        variable  atrb_c_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_c_data := temp_data(PARAM.DATA.ATRB_C_FIELD.HI downto PARAM.DATA.ATRB_C_FIELD.LO);
-        return to_attr(atrb_c_data((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1 downto
-                                   (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS));
+        atrb_c_data := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(PARAM, C, DATA);
+        return to_atrb_type(atrb_c_data);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Data から X 方向 の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  X                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector
+    is
+        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
+        variable  atrb_x_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
+    begin
+        atrb_x_data  := input_data((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_X_FIELD.LO downto
+                                   (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_X_FIELD.LO);
+        return atrb_x_data;
     end function;
     
     -------------------------------------------------------------------------------
@@ -560,12 +622,27 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
-        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE             -1 downto 0) is DATA;
-        variable  atrb_x_data       :  std_logic_vector(PARAM.DATA.ATRB_X_FIELD.SIZE-1 downto 0);
+        variable  atrb_x_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_x_data := temp_data(PARAM.DATA.ATRB_X_FIELD.HI downto PARAM.DATA.ATRB_X_FIELD.LO);
-        return to_attr(atrb_x_data((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 downto
-                                   (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS));
+        atrb_x_data := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(PARAM, X, DATA);
+        return to_atrb_type(atrb_x_data);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Data から Y 方向 の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  Y                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector
+    is
+        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
+        variable  atrb_y_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
+    begin
+        atrb_y_data  := input_data((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_Y_FIELD.LO downto
+                                   (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_Y_FIELD.LO);
+        return atrb_y_data;
     end function;
     
     -------------------------------------------------------------------------------
@@ -577,12 +654,10 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
-        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE             -1 downto 0) is DATA;
-        variable  atrb_y_data       :  std_logic_vector(PARAM.DATA.ATRB_Y_FIELD.SIZE-1 downto 0);
+        variable  atrb_y_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_y_data := temp_data(PARAM.DATA.ATRB_Y_FIELD.HI downto PARAM.DATA.ATRB_Y_FIELD.LO);
-        return to_attr(atrb_y_data((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 downto
-                                   (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS));
+        atrb_y_data := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(PARAM, Y, DATA);
+        return to_atrb_type(atrb_y_data);
     end function;
     
     -------------------------------------------------------------------------------
@@ -611,12 +686,44 @@ package body IMAGE_TYPES is
     procedure SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
                   PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
                   C                 :  in    integer;
-                  ATRB              :  in    IMAGE_ATRB_TYPE;
+                  ATRB              :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector)
     is
     begin
         DATA((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_C_FIELD.LO downto
-             (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_C_FIELD.LO) := to_std_logic_vector(ATRB);
+             (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_C_FIELD.LO) := ATRB;
+    end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Data に Column の属性を追加するプロシージャ
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+                  PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
+                  C                 :  in    integer;
+                  ATRB              :  in    IMAGE_ATRB_TYPE;
+        variable  DATA              :  inout std_logic_vector)
+    is
+    begin
+        SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+            PARAM => PARAM,
+            C     => C,
+            ATRB  => to_std_logic_vector(ATRB),
+            DATA  => DATA
+        );
+    end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Data に X 方向の属性を追加するプロシージャ
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+                  PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
+                  X                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector)
+    is
+    begin
+        DATA((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_X_FIELD.LO downto
+             (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_X_FIELD.LO) := ATRB;
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -629,8 +736,26 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_X_FIELD.LO downto
-             (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_X_FIELD.LO) := to_std_logic_vector(ATRB);
+        SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+            PARAM => PARAM,
+            X     => X,
+            ATRB  => to_std_logic_vector(ATRB),
+            DATA  => DATA
+        );
+    end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Data に Y 方向の属性を追加するプロシージャ
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+                  PARAM             :  in    IMAGE_WINDOW_PARAM_TYPE;
+                  Y                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector)
+    is
+    begin
+        DATA((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_Y_FIELD.LO downto
+             (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_Y_FIELD.LO) := ATRB;
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -643,8 +768,12 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_Y_FIELD.LO downto
-             (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_Y_FIELD.LO) := to_std_logic_vector(ATRB);
+        SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+            PARAM => PARAM,
+            Y     => Y,
+            ATRB  => to_std_logic_vector(ATRB),
+            DATA  => DATA
+        );
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -668,7 +797,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_x.start = TRUE) then
                     start_x := TRUE;
-                end if
+                end if;
             end loop;
         else
             for x_pos in PARAM.SHAPE.X.LO to 0+(PARAM.STRIDE.X-1) loop
@@ -679,7 +808,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_x.start = TRUE) then
                     start_x := TRUE;
-                end if
+                end if;
             end loop;
         end if;
         return start_x;
@@ -706,7 +835,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_y.start = TRUE) then
                     start_y := TRUE;
-                end if
+                end if;
             end loop;
         else
             for y_pos in PARAM.SHAPE.Y.LO to 0+(PARAM.STRIDE.Y-1) loop
@@ -717,7 +846,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_y.start = TRUE) then
                     start_y := TRUE;
-                end if
+                end if;
             end loop;
         end if;
         return start_y;
@@ -744,7 +873,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_x.last = TRUE) then
                     last_x := TRUE;
-                end if
+                end if;
             end loop;
         else
             for x_pos in 0-(PARAM.STRIDE.X-1) to PARAM.SHAPE.X.HI loop
@@ -755,7 +884,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_x.last = TRUE) then
                     last_x := TRUE;
-                end if
+                end if;
             end loop;
         end if;
         return last_x;
@@ -782,7 +911,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_y.last = TRUE) then
                     last_y := TRUE;
-                end if
+                end if;
             end loop;
         else
             for y_pos in 0-(PARAM.STRIDE.Y-1) to PARAM.SHAPE.Y.HI loop
@@ -793,7 +922,7 @@ package body IMAGE_TYPES is
                           );
                 if (atrb_y.last = TRUE) then
                     last_y := TRUE;
-                end if
+                end if;
             end loop;
         end if;
         return last_y;
