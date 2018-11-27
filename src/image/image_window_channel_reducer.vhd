@@ -2,8 +2,8 @@
 --!     @file    image_window_channel_reducer.vhd
 --!     @brief   Image Window Channel Reducer MODULE :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
---!     @version 1.8.9
---!     @date    2018/11/21
+--!     @version 1.8.0
+--!     @date    2018/11/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -142,6 +142,7 @@ library ieee;
 use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
+use     PIPEWORK.COMPONENTS.REDUCER;
 architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
     -- 想定するチャネル数が可変であることを示すフラグ
@@ -178,33 +179,34 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
         end if;
     end function;
     -------------------------------------------------------------------------------
-    -- 内部で一単位として扱うチャネルの数
-    -------------------------------------------------------------------------------
-    constant  T_CHANNEL_SIZE        :  integer := CALC_UNIT_CHANNEL_SIZE;
-    -------------------------------------------------------------------------------
     -- 内部で一単位として扱うウィンドウパラメータ
     -------------------------------------------------------------------------------
     constant  T_PARAM               :  IMAGE_WINDOW_PARAM_TYPE
                                     := NEW_IMAGE_WINDOW_PARAM(
                                          ELEM_BITS => I_PARAM.ELEM_BITS,
-                                         C         => NEW_IMAGE_VECTOR_RANGE(T_CHANNEL_SIZE),
+                                         C         => NEW_IMAGE_VECTOR_RANGE(CALC_UNIT_CHANNEL_SIZE),
                                          X         => I_PARAM.SHAPE.X,
                                          Y         => I_PARAM.SHAPE.Y
                                        );
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    constant  I_WINDOW_DATA_NUM     :  integer := I_PARAM.SHAPE.C.SIZE / T_CHANNEL_SIZE;
+    constant  I_WINDOW_DATA_NUM     :  integer := I_PARAM.SHAPE.C.SIZE / T_PARAM.SHAPE.C.SIZE;
     signal    i_window_data         :  std_logic_vector(I_WINDOW_DATA_NUM*T_PARAM.DATA.SIZE-1 downto 0);
     signal    i_window_strb         :  std_logic_vector(I_WINDOW_DATA_NUM                  -1 downto 0);
     signal    i_window_last         :  std_logic;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    constant  O_WINDOW_DATA_NUM     :  integer := O_PARAM.SHAPE.C.SIZE / T_CHANNEL_SIZE;
+    constant  O_WINDOW_DATA_NUM     :  integer := O_PARAM.SHAPE.C.SIZE / T_PARAM.SHAPE.C.SIZE;
     signal    o_window_data         :  std_logic_vector(O_WINDOW_DATA_NUM*T_PARAM.DATA.SIZE-1 downto 0);
     signal    o_window_strb         :  std_logic_vector(O_WINDOW_DATA_NUM                  -1 downto 0);
-    signal    o_window_last         :  std_logic_vector(O_WINDOW_DATA_NUM                  -1 downto 0);
+    signal    o_window_last         :  std_logic;
+    constant  o_window_shift        :  std_logic_vector(O_WINDOW_DATA_NUM downto O_WINDOW_DATA_NUM) := "0";
+    constant  offset                :  std_logic_vector(O_WINDOW_DATA_NUM-1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -293,5 +295,140 @@ begin
             i_window_strb <= (others => '1');
             i_window_last <= '0';
         end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    QUEUE: REDUCER                                  -- 
+        generic map (                               -- 
+            WORD_BITS       => T_PARAM.DATA.SIZE  , -- 
+            STRB_BITS       => 1                  , -- 
+            I_WIDTH         => I_WINDOW_DATA_NUM  , -- 
+            O_WIDTH         => O_WINDOW_DATA_NUM  , -- 
+            QUEUE_SIZE      => 0                  , -- 
+            VALID_MIN       => 0                  , -- 
+            VALID_MAX       => 0                  , --
+            O_VAL_SIZE      => O_WINDOW_DATA_NUM  , -- 
+            O_SHIFT_MIN     => o_shift'low        , --
+            O_SHIFT_MAX     => o_shift'high       , --
+            I_JUSTIFIED     => 1                  , -- 
+            FLUSH_ENABLE    => 0                    -- 
+        )                                           -- 
+        port map (                                  -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK                , -- In  :
+            RST             => RST                , -- In  :
+            CLR             => CLR                , -- In  :
+        ---------------------------------------------------------------------------
+        -- 各種制御信号
+        ---------------------------------------------------------------------------
+            START           => START              , -- In  :
+            OFFSET          => offset             , -- In  :
+            DONE            => DONE               , -- In  :
+            FLUSH           => '0'                , -- In  :
+            BUSY            => BUSY               , -- Out :
+            VALID           => open               , -- Out :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            I_ENABLE        => I_ENABLE           , -- In  :
+            I_STRB          => i_window_strb      , -- In  :
+            I_DATA          => i_window_data      , -- In  :
+            I_DONE          => i_window_last      , -- In  :
+            I_FLUSH         => '0'                , -- In  :
+            I_VAL           => I_VALID            , -- In  :
+            I_RDY           => I_READY            , -- Out :
+        ---------------------------------------------------------------------------
+        -- 出力側 I/F
+        ---------------------------------------------------------------------------
+            O_ENABLE        => O_ENABLE           , -- In  :
+            O_DATA          => o_window_data      , -- Out :
+            O_STRB          => o_window_strb      , -- Out :
+            O_DONE          => o_window_last      , -- Out :
+            O_FLUSH         => open               , -- Out :
+            O_VAL           => O_VALID            , -- Out :
+            O_RDY           => O_READY            , -- In  :
+            O_SHIFT         => o_window_shift       -- In  :
+    );
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    process(o_window_data, o_window_strb, o_window_last)
+        variable  outlet_data       :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        variable  outlet_c_done     :  boolean;
+        variable  outlet_c_atrb     :  IMAGE_ATRB_TYPE;
+    begin
+        for o in 0 to O_WINDOW_DATA_NUM-1 loop
+            for c_pos in T_PARAM.SHAPE.C.LO to T_PARAM.SHAPE.C.HI loop
+                for x_pos in T_PARAM.SHAPE.X.LO to T_PARAM.SHAPE.X.HI loop
+                    for y_pos in T_PARAM.SHAPE.Y.LO tT O_PARAM.SHAPE.Y.HI loop
+                        SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
+                            PARAM   => O_PARAM,
+                            C       => c_pos+o*T_PARAM.SHAPE.C.SIZE,
+                            X       => x_pos,
+                            Y       => y_pos,
+                            ELEMENT => GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
+                                           PARAM  => T_PARAM,
+                                           C      => c_pos,
+                                           X      => x_pos,
+                                           Y      => y_pos,
+                                           DATA   => o_window_data((o+1)*T_PARAM.DATA.SIZE-1 downto o*T_PARAM.DATA.SIZE)),
+                            DATA    => outlet_data
+                        );
+                    end loop;
+                end loop;
+            end loop;
+        end loop;
+        outlet_c_done := FALSE;
+        for o in 0 to O_WINDOW_DATA_NUM-1 loop
+            for c_pos in T_PARAM.SHAPE.C.LO to T_PARAM.SHAPE.C.HI loop
+                outlet_c_atrb := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
+                                    PARAM => T_PARAM,
+                                    C     => c_pos,
+                                    DATA  => o_window_data((o+1)*T_PARAM.DATA.SIZE-1 downto o*T_PARAM.DATA.SIZE)
+                                 );
+                if (VARIABLE_CHANNEL_SIZE = TRUE) then
+                    if (outlet_c_done = TRUE) then
+                        outlet_c_atrb.VALID := FALSE;
+                        outlet_c_atrb.FIRST := FALSE;
+                        outlet_c_atrb.LAST  := TRUE;
+                    elsif (o_window_strb(o)    = '1'  and o_window_last      = '1' ) and 
+                          (outlet_c_atrb.VALID = TRUE and outlet_c_atrb.LAST = TRUE) then
+                        outlet_c_done       := TRUE;
+                    end if;
+                end if;
+                SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+                    PARAM    => O_PARAM,
+                    C        => c_pos+o*T_PARAM.SHAPE.C.SIZE,
+                    ATRB     => outlet_c_atrb,
+                    DATA     => outlet_data
+                );
+            end loop;
+        end loop;
+        for x_pos in T_PARAM.SHAPE.X.LO to T_PARAM.SHAPE.X.HI loop
+                SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+                    PARAM    => O_PARAM,
+                    X        => x_pos,
+                    ATRB     => GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                                    PARAM => T_PARAM,
+                                    X     => x_pos,
+                                    DATA  => o_window_data(T_PARAM.DATA.SIZE-1 downto 0)),
+                    DATA     => outlet_data
+                );
+        end loop;
+        for y_pos in T_PARAM.SHAPE.Y.LO to T_PARAM.SHAPE.Y.HI loop
+                SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+                    PARAM    => O_PARAM,
+                    Y        => y_pos,
+                    ATRB     => GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                                    PARAM => T_PARAM,
+                                    Y     => y_pos,
+                                    DATA  => o_window_data(T_PARAM.DATA.SIZE-1 downto 0)),
+                    DATA     => outlet_data
+                );
+        end loop;
+        O_DATA <= outlet_data;
     end process;
 end RTL;

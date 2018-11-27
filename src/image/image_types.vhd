@@ -2,7 +2,7 @@
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
 --!     @version 1.8.0
---!     @date    2018/11/19
+--!     @date    2018/11/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -41,6 +41,14 @@ use     ieee.numeric_std.all;
 --! @brief Image の各種タイプ/定数を定義しているパッケージ.
 -----------------------------------------------------------------------------------
 package IMAGE_TYPES is
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の ボーダー処理タイプの定義
+    -------------------------------------------------------------------------------
+    type      IMAGE_WINDOW_BORDER_TYPE is (
+                  IMAGE_WINDOW_BORDER_NONE;
+                  IMAGE_WINDOW_BORDER_CONSTANT;
+                  IMAGE_WINDOW_BORDER_REPEAT_EDGE;
+    );
     -------------------------------------------------------------------------------
     --! @brief Image Window の 属性(Attribute)信号の定義
     -------------------------------------------------------------------------------
@@ -116,6 +124,7 @@ package IMAGE_TYPES is
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
                   STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
                   DATA              :  IMAGE_WINDOW_DATA_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE;
     end record;
     -------------------------------------------------------------------------------
     --! @brief Image Window の各種パラメータをを設定する関数群
@@ -123,8 +132,14 @@ package IMAGE_TYPES is
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE;
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
                   STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE)
-                  return              IMAGE_WINDOW_PARAM_TYPE;
+                  return               IMAGE_WINDOW_PARAM_TYPE;
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE)
@@ -219,6 +234,34 @@ package IMAGE_TYPES is
                   Y                 :  in    integer;
                   ATRB              :  in    IMAGE_ATRB_TYPE;
         variable  DATA              :  inout std_logic_vector);
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が列(X方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_START_X(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が行(Y方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_START_Y(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が列(X方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_LAST_X(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が行(Y方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_LAST_Y(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean;
 end IMAGE_TYPES;
 -----------------------------------------------------------------------------------
 --! @brief Image の各種タイプ/定数を定義しているパッケージ.
@@ -307,7 +350,8 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
-                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE)
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE)
                   return               IMAGE_WINDOW_PARAM_TYPE
     is
         variable  param             :  IMAGE_WINDOW_PARAM_TYPE;
@@ -316,6 +360,7 @@ package body IMAGE_TYPES is
         param.ATRB_BITS         := IMAGE_ATRB_BITS;
         param.SHAPE             := SHAPE;
         param.STRIDE            := STRIDE;
+        param.BORDER_TYPE       := BORDER_TYPE;
         param.DATA.ELEM_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.ELEM_BITS * SHAPE.C.SIZE * SHAPE.X.SIZE * SHAPE.Y.SIZE);
         param.DATA.ATRB_C_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ELEM_FIELD  .HI +1, param.ATRB_BITS * SHAPE.C.SIZE -1);
         param.DATA.ATRB_X_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD.HI +1, param.ATRB_BITS * SHAPE.X.SIZE -1);
@@ -325,6 +370,23 @@ package body IMAGE_TYPES is
         param.DATA.HI           := param.DATA.ATRB_FIELD.HI;
         param.DATA.SIZE         := param.DATA.HI - param.DATA.LO + 1;
         return param;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE
+    is
+    begin
+        return NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  SHAPE             => SHAPE    ,
+                  STRIDE            => NEW_IMAGE_WINDOW_STRIDE_PARAM(1,1),
+                  BORDER_TYPE       => IMAGE_WINDOW_BORDER_NONE,
+               );
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image Window の各種パラメータをを設定する関数
@@ -458,10 +520,11 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               std_logic_vector
     is
+        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE           -1 downto 0) is DATA;
         variable  elem_data         :  std_logic_vector(PARAM.DATA.ELEM_FIELD.SIZE-1 downto 0);
         variable  element           :  std_logic_vector(PARAM.ELEM_BITS           -1 downto 0);
     begin
-        elem_data := DATA(PARAM.DATA.ELEM_FIELD.HI downto PARAM.DATA.ELEM_FIELD.LO);
+        elem_data := temp_data(PARAM.DATA.ELEM_FIELD.HI downto PARAM.DATA.ELEM_FIELD.LO);
         element   := elem_data(((Y-PARAM.SHAPE.Y.LO)*PARAM.SHAPE.X.SIZE*PARAM.SHAPE.C.SIZE +
                                 (X-PARAM.SHAPE.X.LO)*PARAM.SHAPE.C.SIZE                    +
                                 (C-PARAM.SHAPE.C.LO)                                       + 1)*PARAM.ELEM_BITS-1 downto
@@ -480,9 +543,10 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
+        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE             -1 downto 0) is DATA;
         variable  atrb_c_data       :  std_logic_vector(PARAM.DATA.ATRB_C_FIELD.SIZE-1 downto 0);
     begin
-        atrb_c_data := DATA(PARAM.DATA.ATRB_C_FIELD.HI downto PARAM.DATA.ATRB_C_FIELD.LO);
+        atrb_c_data := temp_data(PARAM.DATA.ATRB_C_FIELD.HI downto PARAM.DATA.ATRB_C_FIELD.LO);
         return to_attr(atrb_c_data((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1 downto
                                    (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS));
     end function;
@@ -496,9 +560,10 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
+        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE             -1 downto 0) is DATA;
         variable  atrb_x_data       :  std_logic_vector(PARAM.DATA.ATRB_X_FIELD.SIZE-1 downto 0);
     begin
-        atrb_x_data := DATA(PARAM.DATA.ATRB_X_FIELD.HI downto PARAM.DATA.ATRB_X_FIELD.LO);
+        atrb_x_data := temp_data(PARAM.DATA.ATRB_X_FIELD.HI downto PARAM.DATA.ATRB_X_FIELD.LO);
         return to_attr(atrb_x_data((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 downto
                                    (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS));
     end function;
@@ -512,9 +577,10 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_ATRB_TYPE
     is
+        alias     temp_data         :  std_logic_vector(PARAM.DATA.SIZE             -1 downto 0) is DATA;
         variable  atrb_y_data       :  std_logic_vector(PARAM.DATA.ATRB_Y_FIELD.SIZE-1 downto 0);
     begin
-        atrb_y_data := DATA(PARAM.DATA.ATRB_Y_FIELD.HI downto PARAM.DATA.ATRB_Y_FIELD.LO);
+        atrb_y_data := temp_data(PARAM.DATA.ATRB_Y_FIELD.HI downto PARAM.DATA.ATRB_Y_FIELD.LO);
         return to_attr(atrb_y_data((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 downto
                                    (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS));
     end function;
@@ -580,5 +646,157 @@ package body IMAGE_TYPES is
         DATA((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_Y_FIELD.LO downto
              (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_Y_FIELD.LO) := to_std_logic_vector(ATRB);
     end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が列(X方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_START_X(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean
+    is
+        variable  start_x           :  boolean;
+        variable  atrb_x            :  IMAGE_ATRB_TYPE;
+    begin
+        start_x := FALSE;
+        if (PARAM.BORDER_TYPE = IMAGE_WINDOW_BORDER_NONE) then
+            for x_pos in PARAM.SHAPE.X.LO to PARAM.SHAPE.X.LO+(PARAM.STRIDE.X-1) loop
+                atrb_x := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              X     => x_pos
+                          );
+                if (atrb_x.start = TRUE) then
+                    start_x := TRUE;
+                end if
+            end loop;
+        else
+            for x_pos in PARAM.SHAPE.X.LO to 0+(PARAM.STRIDE.X-1) loop
+                atrb_x := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              X     => x_pos
+                          );
+                if (atrb_x.start = TRUE) then
+                    start_x := TRUE;
+                end if
+            end loop;
+        end if;
+        return start_x;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が行(Y方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_START_Y(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean
+    is
+        variable  start_y           :  boolean;
+        variable  atrb_y            :  IMAGE_ATRB_TYPE;
+    begin
+        start_y := FALSE;
+        if (PARAM.BORDER_TYPE = IMAGE_WINDOW_BORDER_NONE) then
+            for y_pos in PARAM.SHAPE.Y.LO to PARAM.SHAPE.Y.LO+(PARAM.STRIDE.Y-1) loop
+                atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              Y     => y_pos
+                          );
+                if (atrb_y.start = TRUE) then
+                    start_y := TRUE;
+                end if
+            end loop;
+        else
+            for y_pos in PARAM.SHAPE.Y.LO to 0+(PARAM.STRIDE.Y-1) loop
+                atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              Y     => y_pos
+                          );
+                if (atrb_y.start = TRUE) then
+                    start_y := TRUE;
+                end if
+            end loop;
+        end if;
+        return start_y;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が列(X方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_LAST_X(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean
+    is
+        variable  last_x            :  boolean;
+        variable  atrb_x            :  IMAGE_ATRB_TYPE;
+    begin
+        last_x := FALSE;
+        if (PARAM.BORDER_TYPE = IMAGE_WINDOW_BORDER_NONE) then
+            for x_pos in PARAM.SHAPE.X.HI-(PARAM.STRIDE.X-1) to PARAM.SHAPE.X.HI loop
+                atrb_x := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              X     => x_pos
+                          );
+                if (atrb_x.last = TRUE) then
+                    last_x := TRUE;
+                end if
+            end loop;
+        else
+            for x_pos in 0-(PARAM.STRIDE.X-1) to PARAM.SHAPE.X.HI loop
+                atrb_x := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              X     => x_pos
+                          );
+                if (atrb_x.last = TRUE) then
+                    last_x := TRUE;
+                end if
+            end loop;
+        end if;
+        return last_x;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window が行(Y方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_WINDOW_DATA_IS_LAST_Y(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               boolean
+    is
+        variable  last_y            :  boolean;
+        variable  atrb_y            :  IMAGE_ATRB_TYPE;
+    begin
+        last_y := FALSE;
+        if (PARAM.BORDER_TYPE = IMAGE_WINDOW_BORDER_NONE) then
+            for y_pos in PARAM.SHAPE.Y.HI-(PARAM.STRIDE.Y-1) to PARAM.SHAPE.Y.HI loop
+                atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              Y     => y_pos
+                          );
+                if (atrb_y.last = TRUE) then
+                    last_y := TRUE;
+                end if
+            end loop;
+        else
+            for y_pos in 0-(PARAM.STRIDE.Y-1) to PARAM.SHAPE.Y.HI loop
+                atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                              PARAM => PARAM,
+                              DATA  => DATA,
+                              Y     => y_pos
+                          );
+                if (atrb_y.last = TRUE) then
+                    last_y := TRUE;
+                end if
+            end loop;
+        end if;
+        return last_y;
+    end function;
 
 end IMAGE_TYPES;
