@@ -75,6 +75,8 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_VECTOR_RANGE(LO,HI:integer) return IMAGE_VECTOR_RANGE_TYPE;
     function  NEW_IMAGE_VECTOR_RANGE(SIZE :integer) return IMAGE_VECTOR_RANGE_TYPE;
+    function  NEW_IMAGE_VECTOR_RANGE(PREV :IMAGE_VECTOR_RANGE_TYPE;
+                                     SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE;
     -------------------------------------------------------------------------------
     --! @brief Image Data(一回の転送単位) の各種パラメータを定義するレコードタイプ.
     -------------------------------------------------------------------------------
@@ -321,6 +323,15 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_VECTOR_RANGE(0, SIZE-1);
     end function;
     -------------------------------------------------------------------------------
+    --! @brief Image Vector の各種パラメータを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_VECTOR_RANGE(PREV :IMAGE_VECTOR_RANGE_TYPE;
+                                     SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE
+    is
+    begin
+        return NEW_IMAGE_VECTOR_RANGE((PREV.HI+1), (PREV.HI+1)+(SIZE-1));
+    end function;
+    -------------------------------------------------------------------------------
     --! @brief Image Window の形(各辺の大きさ)を設定する関数
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_WINDOW_SHAPE_PARAM(C,X,Y:IMAGE_VECTOR_RANGE_TYPE) return IMAGE_WINDOW_SHAPE_PARAM_TYPE
@@ -391,11 +402,12 @@ package body IMAGE_TYPES is
         param.SHAPE             := SHAPE;
         param.STRIDE            := STRIDE;
         param.BORDER_TYPE       := BORDER_TYPE;
-        param.DATA.ELEM_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.ELEM_BITS * SHAPE.C.SIZE * SHAPE.X.SIZE * SHAPE.Y.SIZE);
-        param.DATA.ATRB_C_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ELEM_FIELD  .HI +1, param.ATRB_BITS * SHAPE.C.SIZE -1);
-        param.DATA.ATRB_X_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD.HI +1, param.ATRB_BITS * SHAPE.X.SIZE -1);
-        param.DATA.ATRB_Y_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_X_FIELD.HI +1, param.ATRB_BITS * SHAPE.Y.SIZE -1);
-        param.DATA.ATRB_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD.LO   , param.DATA.ATRB_Y_FIELD.HI       );
+        param.DATA.ELEM_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.ELEM_BITS * param.SHAPE.C.SIZE * param.SHAPE.X.SIZE * param.SHAPE.Y.SIZE);
+        param.DATA.ATRB_C_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ELEM_FIELD  , param.ATRB_BITS * param.SHAPE.C.SIZE);
+        param.DATA.ATRB_X_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD, param.ATRB_BITS * param.SHAPE.X.SIZE);
+        param.DATA.ATRB_Y_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_X_FIELD, param.ATRB_BITS * param.SHAPE.Y.SIZE);
+        param.DATA.ATRB_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD.LO,
+                                                          param.DATA.ATRB_Y_FIELD.HI);
         param.DATA.LO           := param.DATA.ELEM_FIELD.LO;
         param.DATA.HI           := param.DATA.ATRB_FIELD.HI;
         param.DATA.SIZE         := param.DATA.HI - param.DATA.LO + 1;
