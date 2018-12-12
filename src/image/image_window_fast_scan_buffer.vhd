@@ -3,7 +3,7 @@
 --!     @brief   Image Window Fast Scan Buffer MODULE :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/4
+--!     @date    2018/12/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -86,30 +86,17 @@ entity  IMAGE_WINDOW_FAST_SCAN_BUFFER is
                           --! 同期リセット信号.アクティブハイ.
                           in  std_logic;
     -------------------------------------------------------------------------------
-    -- 各種制御信号
-    -------------------------------------------------------------------------------
-        START           : --! @brief START :
-                          --! 開始信号.
-                          --! * 最初にデータ入力と同時にアサートしても構わない.
-                          in  std_logic := '0';
-        DONE            : --! @brief DONE :
-                          --! 終了信号.
-                          --! * この信号をアサートすることで、キューに残っているデータ
-                          --!   を掃き出す.
-                          in  std_logic := '0';
-        BUSY            : --! @brief BUSY :
-                          --! ビジー信号.
-                          --! * 最初にデータが入力されたときにアサートされる.
-                          --! * 最後のデータが出力し終えたらネゲートされる.
-                          out std_logic;
-    -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
-        I_ENABLE        : --! @brief INPUT ENABLE :
-                          --! 入力許可信号.
-                          --! * この信号がアサートされている場合、キューの入力を許可する.
-                          --! * この信号がネゲートされている場合、I_READY はアサートされない.
+        I_START         : --! @brief INPUT START REQUEST :
+                          --! 入力開始信号.
+                          --! * I_ENABLE = '1' の時、この信号をアサートすることで
+                          --!   入力を開始する.
                           in  std_logic := '1';
+        I_ENABLE        : --! @brief INPUT ENABLE :
+                          --! 入力開始可能信号.
+                          --! * 入力開始可能状態であることを示す信号.
+                          out std_logic;
         I_DATA          : --! @brief INPUT WINDOW DATA :
                           --! ウィンドウデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
@@ -128,10 +115,15 @@ entity  IMAGE_WINDOW_FAST_SCAN_BUFFER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_ENABLE        : --! @brief OUTPUT ENABLE :
-                          --! 出力許可信号.
-                          --! * この信号がアサートされている場合、キューの出力を許可する.
-                          --! * この信号がネゲートされている場合、O_VALID はアサートされない.
+        O_FEED          : --! @brief OUTPUT FEED :
+                          --! 出力終了信号.
+                          --! * この信号をアサートすることでバッファをクリアして
+                          --!   入力可能な状態に戻る.
+                          in  std_logic := '1';
+        O_RETURN        : --! @brief OUTPUT RETURN :
+                          --! 再出力要求信号.
+                          --! * この信号をアサートすることでバッファの内容を再度
+                          --!   出力する.
                           in  std_logic := '1';
         O_DATA          : --! @brief OUTPUT WINDOW DATA :
                           --! ウィンドウデータ出力.
@@ -197,14 +189,102 @@ architecture RTL of IMAGE_WINDOW_FAST_SCAN_BUFFER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    subtype   BANK_STATE_TYPE       is std_logic_vector(0 to BANK_SIZE-1);
+    type      BANK_STATE_VECTOR     is array(integer range <>) of BANK_STATE_TYPE;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  INIT_BANK_STATE(LO,HI: integer) return BANK_STATE_VECTOR is
+        variable i_vec :  BANK_STATE_VECTOR(LO to HI);
+    begin
+        for i in i_vec'range loop
+            for bank in 0 to BANK_SIZE-1 loop
+                if (i-LO = bank) then
+                    i_vec(i)(bank) := '1';
+                else
+                    i_vec(i)(bank) := '0';
+                end if;
+            end loop;
+        end loop;
+        return i_vec;
+    end function;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  STRIDE_BANK_STATE(I_VEC: BANK_STATE_VECTOR; STRIDE: integer) return BANK_STATE_VECTOR is
+        variable o_vec :  BANK_STATE_VECTOR(I_VEC'range);
+    begin
+        for i in o_vec'range loop
+            for bank in 0 to BANK_SIZE-1 loop
+                o_vec(i)(bank) := I_VEC(i)((BANK_SIZE+bank-STRIDE) mod BANK_SIZE);
+            end loop;
+        end loop;
+        return o_vec;
+    end function;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  IS_LAST_BANK(BANK_STATE: BANK_STATE_TYPE; STRIDE: integer) return boolean is
+        variable last :  boolean;
+    begin
+        last := FALSE;
+        for bank in BANK_SIZE-1 downto BANK_SIZE-STRIDE loop
+            if (BANK_STATE(bank) = '1') then
+                last := TRUE;
+            end if;
+        end loop;
+        return last;
+    end function;
+    function  IS_LAST_BANK(I_VEC: BANK_STATE_VECTOR; STRIDE: integer) return boolean is
+    begin
+        return IS_LAST_BANK(I_VEC(I_VEC'low), STRIDE);
+    end function;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     subtype   BUF_DATA_TYPE         is std_logic_vector(2**BUF_WIDTH-1 downto 0);
     type      BUF_DATA_VECTOR       is array(integer range <>) of BUF_DATA_TYPE;
     subtype   BUF_ADDR_TYPE         is std_logic_vector(BUF_DEPTH-BUF_WIDTH-1 downto 0);
     type      BUF_ADDR_VECTOR       is array(integer range <>) of BUF_ADDR_TYPE;
-    subtype   BUF_SIZE_TYPE         is std_logic_vector(BUF_DEPTH-BUF_WIDTH   downto 0);
-    type      BUF_SIZE_VECTOR       is array(integer range <>) of BUF_SIZE_TYPE;
     subtype   BUF_WENA_TYPE         is std_logic_vector(0 downto 0);
     type      BUF_WENA_VECTOR       is array(integer range <>) of BUF_WENA_TYPE;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  NEXT_BUF_ADDR(
+                  BUF_ADDR          :  BUF_ADDR_VECTOR;
+                  BANK_STATE        :  BANK_STATE_VECTOR;
+                  BASE_ADDR         :  integer;
+                  CHANNEL_COUNT     :  integer;
+                  START_CHANNEL     :  std_logic
+              )   return               BUF_ADDR_VECTOR
+    is
+        variable  next_addr_vector  :  BUF_ADDR_VECTOR(BUF_ADDR'range);
+        variable  base_curr_addr    :  BUF_ADDR_TYPE;
+        variable  base_next_addr    :  BUF_ADDR_TYPE;
+        variable  select_next_addr  :  boolean;
+    begin
+        if (START_CHANNEL = '1') then
+            base_curr_addr := std_logic_vector(to_unsigned(BASE_ADDR                , BUF_ADDR_TYPE'length));
+            base_next_addr := std_logic_vector(to_unsigned(BASE_ADDR + CHANNEL_COUNT, BUF_ADDR_TYPE'length));
+            select_next_addr      := TRUE;
+            for bank in next_addr_vector'range loop
+                if (select_next_addr = TRUE and BANK_STATE(BANK_STATE'low)(bank) = '1') then
+                    select_next_addr := FALSE;
+                end if;
+                if (select_next_addr = TRUE) then
+                    next_addr_vector(bank) := base_next_addr;
+                else
+                    next_addr_vector(bank) := base_curr_addr;
+                end if;
+            end loop;
+        else
+            for bank in next_addr_vector'range loop
+                next_addr_vector(bank) := std_logic_vector(unsigned(BUF_ADDR(bank)) + 1);
+            end loop;
+        end if;
+        return next_addr_vector;
+    end function;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -216,18 +296,12 @@ architecture RTL of IMAGE_WINDOW_FAST_SCAN_BUFFER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    wr_addr               :  BUF_SIZE_TYPE;
-    signal    wr_bank_state         :  std_logic_vector(0 to   BANK_SIZE-1);
-    signal    wr_bank_active        :  std_logic_vector(0 to 2*BANK_SIZE-1);
+    signal    intake_x_count        :  integer range 0 to ELEMENT_SIZE;
+    signal    intake_channel_count  :  integer range 0 to ELEMENT_SIZE;
+    signal    intake_last_atrb_c    :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.C.LO to I_PARAM.SHAPE.C.HI);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    channel_count         :  BUF_SIZE_TYPE;
-    signal    channel_atrb_last     :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.C.LO to I_PARAM.SHAPE.C.HI);
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal    intake_channel_size   :  BUF_SIZE_TYPE;
     signal    intake_start_c        :  std_logic;
     signal    intake_last_c         :  std_logic;
     signal    intake_start_x        :  std_logic;
@@ -240,16 +314,18 @@ architecture RTL of IMAGE_WINDOW_FAST_SCAN_BUFFER is
     -------------------------------------------------------------------------------
     signal    outlet_valid          :  std_logic;
     signal    outlet_ready          :  std_logic;
+    signal    outlet_start_c        :  std_logic;
     signal    outlet_last_c         :  std_logic;
+    signal    outlet_start_x        :  std_logic;
     signal    outlet_last_x         :  std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    type      STATE_TYPE            is (IDLE_STATE,
-                                        WAIT_STATE,
-                                        STORE_STATE,
-                                        FLUSH_STATE,
-                                        DONE_STATE);
+    type      STATE_TYPE            is (IDLE_STATE  ,
+                                        INTAKE_STATE,
+                                        OUTLET_START_STATE,
+                                        OUTLET_STATE,
+                                        OUTLET_DONE_STATE);
     signal    curr_state            :  STATE_TYPE;
 begin
     -------------------------------------------------------------------------------
@@ -264,30 +340,28 @@ begin
             else
                 case curr_state is
                     when IDLE_STATE =>
-                        if (I_ENABLE = '1') then
-                            curr_state <= WAIT_STATE;
+                        if (I_START = '1') then
+                            curr_state <= INTAKE_STATE;
                         else
                             curr_state <= IDLE_STATE;
                         end if;
-                    when WAIT_STATE =>
-                        if (intake_valid = '1' and intake_ready = '1' and intake_start_x = '1') then
-                            curr_state <= STORE_STATE;
-                        else
-                            curr_state <= WAIT_STATE;
-                        end if;
-                    when STORE_STATE =>
+                    when INTAKE_STATE =>
                         if (intake_valid = '1' and intake_ready = '1' and intake_last_x = '1' and intake_last_c = '1') then
-                            curr_state <= FLUSH_STATE;
+                            curr_state <= OUTLET_START_STATE;
                         else
-                            curr_state <= STORE_STATE;
+                            curr_state <= INTAKE_STATE;
                         end if;
-                    when FLUSH_STATE =>
-                        if (outlet_valid = '1' and outlet_ready = '1' and outlet_last_x = '1' and outlet_last_c = '1') then
-                            curr_state <= DONE_STATE;
+                    when OUTLET_START_STATE =>
+                            curr_state <= OUTLET_STATE;
+                    when OUTLET_STATE =>
+                        if    (O_RETURN = '1') then
+                            curr_state <= OUTLET_START_STATE;
+                        elsif (O_FEED   = '1') then
+                            curr_state <= OUTLET_DONE_STATE;
                         else
-                            curr_state <= FLUSH_STATE;
+                            curr_state <= OUTLET_STATE;
                         end if;
-                    when DONE_STATE =>
+                    when OUTLET_DONE_STATE =>
                         curr_state <= IDLE_STATE;
                     when others     =>
                         curr_state <= IDLE_STATE;
@@ -296,276 +370,294 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    --
+    -- I_ENABLE       :
     -------------------------------------------------------------------------------
-    intake_ready <= '1' when (curr_state = WAIT_STATE or curr_state = STORE_STATE) else '0';
-    I_READY      <= intake_ready;
-    
+    I_ENABLE     <= '1' when (curr_state = IDLE_STATE  ) else '0';
     -------------------------------------------------------------------------------
-    -- intake_start_c : 
-    -- intake_last_c  : 
-    -- intake_start_x : 
-    -- intake_last_x  : 
-    -- intake_valid_y : 
+    -- I_READY        :
+    -- intake_ready   : 
     -------------------------------------------------------------------------------
-    process (I_DATA) 
-        variable atrb_y  :  IMAGE_ATRB_TYPE;
-    begin
-        if (IMAGE_WINDOW_DATA_IS_START_C(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_start_c <= '1';
-        else
-            intake_start_c <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_C( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_last_c  <= '1';
-        else
-            intake_last_c  <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_START_X(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_start_x <= '1';
-        else
-            intake_start_x <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_X( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_last_x  <= '1';
-        else
-            intake_last_x  <= '0';
-        end if;
-        atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
-                      PARAM => I_PARAM,
-                      Y     => I_PARAM.SHAPE.Y.LO,
-                      DATA  => I_DATA
-                  );
-        if (atrb_y.VALID = TRUE) then
-            intake_valid_y <= '1';
-        else
-            intake_valid_y <= '0';
-        end if;
-    end process;
+    intake_ready <= '1' when (curr_state = INTAKE_STATE) else '0';
+    I_READY      <= '1' when (curr_state = INTAKE_STATE) else '0';
     -------------------------------------------------------------------------------
-    -- intake_valid : 
+    -- 入力側ブロック
     -------------------------------------------------------------------------------
-    intake_valid <= '1' when (I_VALID = '1' and intake_valid_y = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- intake_channel_size : 
-    -- channel_count       :
-    -- channel_atrb_last   : 
-    -------------------------------------------------------------------------------
-    CHANNEL_SIZE_EQ_0: if (CHANNEL_SIZE = 0) generate
-    begin
-        process(channel_count, intake_start_x, intake_start_c) begin
-            if (intake_start_x = '1') then
-                if (intake_start_c = '1') then
-                    intake_channel_size <= std_logic_vector(to_unsigned(1, intake_channel_size'length));
-                else
-                    intake_channel_size <= std_logic_vector(unsigned(channel_count)+1);
-                end if;
+    INTAKE: block
+        signal    channel_count     :  integer range 0 to ELEMENT_SIZE;
+        signal    base_addr         :  integer range 0 to (ELEMENT_SIZE+BANK_SIZE-1)/BANK_SIZE;
+        signal    bank_state        :  BANK_STATE_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
+    begin 
+        ---------------------------------------------------------------------------
+        -- 入力データの各種属性
+        ---------------------------------------------------------------------------
+        -- intake_start_c : 
+        -- intake_last_c  : 
+        -- intake_start_x : 
+        -- intake_last_x  : 
+        -- intake_valid_y : 
+        ---------------------------------------------------------------------------
+        process (I_DATA) 
+            variable atrb_y  :  IMAGE_ATRB_TYPE;
+        begin
+            if (IMAGE_WINDOW_DATA_IS_START_C(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+                intake_start_c <= '1';
             else
-                    intake_channel_size <= channel_count;
+                intake_start_c <= '0';
+            end if;
+            if (IMAGE_WINDOW_DATA_IS_LAST_C( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+                intake_last_c  <= '1';
+            else
+                intake_last_c  <= '0';
+            end if;
+            if (IMAGE_WINDOW_DATA_IS_START_X(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+                intake_start_x <= '1';
+            else
+                intake_start_x <= '0';
+            end if;
+            if (IMAGE_WINDOW_DATA_IS_LAST_X( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+                intake_last_x  <= '1';
+            else
+                intake_last_x  <= '0';
+            end if;
+            atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                          PARAM => I_PARAM,
+                          Y     => I_PARAM.SHAPE.Y.LO,
+                          DATA  => I_DATA
+                      );
+            if (atrb_y.VALID = TRUE) then
+                intake_valid_y <= '1';
+            else
+                intake_valid_y <= '0';
             end if;
         end process;
-        process (CLK, RST) begin
+        ---------------------------------------------------------------------------
+        -- intake_valid : 
+        ---------------------------------------------------------------------------
+        intake_valid <= '1' when (I_VALID = '1' and intake_valid_y = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- CHANNEL_SIZE が可変長の場合
+        ---------------------------------------------------------------------------
+        -- channel_count        : 
+        -- intake_channel_count :
+        -- intake_last_atrb_c   : 
+        ---------------------------------------------------------------------------
+        CHANNEL_SIZE_EQ_0: if (CHANNEL_SIZE = 0) generate
+        begin
+            process(intake_channel_count, intake_start_x, intake_start_c) begin
+                if (intake_start_x = '1') then
+                    if (intake_start_c = '1') then
+                        channel_count <= 1;
+                    else
+                        channel_count <= intake_channel_count + 1;
+                    end if;
+                else
+                        channel_count <= intake_channel_count;
+                end if;
+            end process;
+            process (CLK, RST) begin
+                if (RST = '1') then
+                        intake_channel_count <= 0;
+                        intake_last_atrb_c   <= (others => (VALID => FALSE, START => FALSE, LAST => FALSE));
+                elsif (CLK'event and CLK = '1') then
+                    if (CLR = '1' or curr_state = IDLE_STATE) then
+                        intake_channel_count <= 0;
+                        intake_last_atrb_c   <= (others => (VALID => FALSE, START => FALSE, LAST => FALSE));
+                    elsif (intake_valid = '1' and intake_ready = '1' and intake_start_x = '1') then
+                        intake_channel_count <= channel_count;
+                        if (intake_last_c = '1') then
+                            intake_last_atrb_c <= GET_ATRB_C_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
+                        end if;
+                    end if;
+                end if;
+            end process;
+        end generate;
+        ---------------------------------------------------------------------------
+        -- CHANNEL_SIZE が固定値の場合
+        ---------------------------------------------------------------------------
+        -- channel_count        : 
+        -- intake_channel_count :
+        -- intake_last_atrb_c   : 
+        ---------------------------------------------------------------------------
+        CHANNEL_SIZE_GT_0: if (CHANNEL_SIZE > 0) generate
+            function CALC_CHANNEL_COUNT return integer is
+            begin
+                return (CHANNEL_SIZE + O_PARAM.SHAPE.C.SIZE - 1)  /  O_PARAM.SHAPE.C.SIZE;
+            end function;
+            function CALC_LAST_ATRB_C return IMAGE_ATRB_VECTOR is
+                variable  channel_count     :  integer;
+                variable  channel_last_pos  :  integer;
+                variable  last_atrb_c       :  IMAGE_ATRB_VECTOR(0 to I_PARAM.SHAPE.C.SIZE-1);
+            begin
+                channel_count    := (CHANNEL_SIZE + O_PARAM.SHAPE.C.SIZE - 1)  /  O_PARAM.SHAPE.C.SIZE;
+                channel_last_pos := (CHANNEL_SIZE + O_PARAM.SHAPE.C.SIZE - 1) mod O_PARAM.SHAPE.C.SIZE;
+                for c_pos in last_atrb_c'range loop
+                    last_atrb_c(c_pos).VALID := (c_pos <= channel_last_pos);
+                    last_atrb_c(c_pos).LAST  := (c_pos >= channel_last_pos);
+                    last_atrb_c(c_pos).START := (c_pos = 0 and channel_count = 1);
+                end loop;
+                return last_atrb_c;
+            end function;
+        begin
+            channel_count        <= CALC_CHANNEL_COUNT;
+            intake_channel_count <= CALC_CHANNEL_COUNT;
+            intake_last_atrb_c   <= CALC_LAST_ATRB_C;
+        end generate;
+        ---------------------------------------------------------------------------
+        -- intake_x_count :
+        ---------------------------------------------------------------------------
+        process(CLK, RST)
+            variable  atrb_x_vector  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
+            function  CALC_X_COUNT(
+                          PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                          ATRB_VEC   :  IMAGE_ATRB_VECTOR)
+                          return        integer
+            is
+                alias     i_atrb_vec :  IMAGE_ATRB_VECTOR(0 to ATRB_VEC'length-1) is ATRB_VEC;
+                variable  count      :  integer range 0 to PARAM.SHAPE.X.SIZE;
+            begin
+                if (i_atrb_vec'length = 1) then
+                    if (i_atrb_vec(0).VALID = TRUE) then
+                        count := 1;
+                    else
+                        count := 0;
+                    end if;
+                else
+                    count := CALC_X_COUNT(PARAM, i_atrb_vec(0                   to i_atrb_vec'high/2))
+                           + CALC_X_COUNT(PARAM, i_atrb_vec(i_atrb_vec'high/2+1 to i_atrb_vec'high  ));
+                end if;
+                return count;
+            end function;
+        begin 
             if (RST = '1') then
-                    channel_count     <= std_logic_vector(to_unsigned(0, channel_count'length));
-                    channel_atrb_last <= (others => (VALID => FALSE, START => FALSE, LAST => FALSE));
+                    intake_x_count <= 0;
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1' or curr_state = IDLE_STATE) then
+                    intake_x_count <= 0;
+                elsif (intake_valid = '1' and intake_ready = '1' and intake_last_c = '1') then
+                    atrb_x_vector  := GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
+                    intake_x_count <= intake_x_count + CALC_X_COUNT(I_PARAM, atrb_x_vector);
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        -- bank_state  :
+        -- base_addr   :
+        ---------------------------------------------------------------------------
+        process(CLK, RST) begin 
+            if (RST = '1') then
+                    bank_state  <= INIT_BANK_STATE(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
+                    base_addr   <= 0;
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1' or curr_state = IDLE_STATE) then
+                    bank_state  <= INIT_BANK_STATE(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
+                    base_addr   <= 0;
+                else
+                    if (intake_valid = '1' and intake_ready = '1' and intake_last_c = '1') then
+                        if (IS_LAST_BANK(bank_state, I_PARAM.STRIDE.X) = TRUE) then
+                            base_addr <= base_addr + channel_count;
+                        end if;
+                        bank_state <= STRIDE_BANK_STATE(bank_state, I_PARAM.STRIDE.X);
+                    end if;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        -- buf_we    :
+        -- buf_waddr :
+        ---------------------------------------------------------------------------
+        process(CLK, RST)
+            variable  atrb_x_vec  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
+            variable  bank_we     :  std_logic_vector(0 to BANK_SIZE-1);
+            variable  addr_next   :  boolean;
+            variable  start_addr  :  integer range 0 to ELEMENT_SIZE;
+        begin 
+            if (RST = '1') then
+                    buf_we    <= (others => (others => '0'));
+                    buf_waddr <= (others => (others => '0'));
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
-                    channel_count     <= std_logic_vector(to_unsigned(0, channel_count'length));
-                    channel_atrb_last <= (others => (VALID => FALSE, START => FALSE, LAST => FALSE));
-                elsif (intake_valid = '1' and intake_ready = '1' and intake_start_x = '1') then
-                    channel_count     <= intake_channel_size;
-                    if (intake_last_c = '1') then
-                        channel_atrb_last <= GET_ATRB_C_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
-                    end if;
+                    buf_we    <= (others => (others => '0'));
+                    buf_waddr <= (others => (others => '0'));
+                elsif (intake_valid = '1' and intake_ready = '1') then
+                    atrb_x_vec := GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
+                    for bank in buf_we'range loop
+                        bank_we(bank) := '0';
+                        for x_pos in bank_state'range loop
+                            if (bank_state(x_pos)(bank) = '1' and atrb_x_vec(x_pos).VALID = TRUE) then
+                                bank_we(bank) := bank_we(bank) or '1';
+                            end if;
+                        end loop;
+                        if (bank_we(bank) = '1') then
+                            buf_we(bank) <= (others => '1');
+                        else
+                            buf_we(bank) <= (others => '0');
+                        end if;
+                    end loop;
+                    buf_waddr <= NEXT_BUF_ADDR(
+                                     BUF_ADDR      => buf_waddr     ,
+                                     BANK_STATE    => bank_state    ,
+                                     BASE_ADDR     => base_addr     ,
+                                     CHANNEL_COUNT => channel_count ,
+                                     START_CHANNEL => intake_start_c
+                                 );
+                else
+                    buf_we <= (others => (others => '0'));
                 end if;
             end if;
         end process;
-    end generate;
-    CHANNEL_SIZE_GT_0: if (CHANNEL_SIZE > 0) generate
-        function CALC_CHANNEL_COUNT return BUF_SIZE_TYPE is
-            variable  channel_count     :  integer;
-        begin
-            channel_count := (CHANNEL_SIZE + O_PARAM.SHAPE.C.SIZE - 1) / O_PARAM.SHAPE.C.SIZE;
-            return std_logic_vector(to_unsigned(channel_count, BUF_SIZE_TYPE'length));
-        end function;
-        function CALC_CHANNEL_ATRB_LAST return IMAGE_ATRB_VECTOR is
-            variable  channel_count     :  integer;
-            variable  channel_atrb_last :  IMAGE_ATRB_VECTOR(0 to I_PARAM.SHAPE.C.SIZE-1);
-            variable  channel_last_pos  :  integer;
-        begin
-            channel_count    := (CHANNEL_SIZE + O_PARAM.SHAPE.C.SIZE - 1)  /  O_PARAM.SHAPE.C.SIZE;
-            channel_last_pos := (CHANNEL_SIZE + O_PARAM.SHAPE.C.SIZE - 1) mod O_PARAM.SHAPE.C.SIZE;
-            for c_pos in channel_atrb_last'range loop
-                channel_atrb_last(c_pos).VALID := (c_pos <= channel_last_pos);
-                channel_atrb_last(c_pos).LAST  := (c_pos >= channel_last_pos);
-                channel_atrb_last(c_pos).START := (c_pos = 0 and channel_count = 1);
-            end loop;
-            return channel_atrb_last;
-        end function;
-    begin
-        intake_channel_size <= channel_count;
-        channel_count       <= CALC_CHANNEL_COUNT;
-        channel_atrb_last   <= CALC_CHANNEL_ATRB_LAST;
-    end generate;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    process(CLK, RST)
-        constant  BANK_ALL_0       :  std_logic_vector(0 to   BANK_SIZE-1) := (others => '0');
-        variable  curr_bank_state  :  std_logic_vector(0 to 2*BANK_SIZE-1);
-        variable  shft_bank_state  :  std_logic_vector(0 to 2*BANK_SIZE-1);
-        variable  next_bank_state  :  std_logic_vector(0 to   BANK_SIZE-1);
-        function  next_bank_active(bank_state: std_logic_vector) return std_logic_vector is
-            variable bank_active   :  std_logic_vector(0 to 2*BANK_SIZE-1);
-            variable bank_on       :  std_logic;
-        begin
-            for i in bank_active'range loop
-                bank_on := '0';
-                for n in 0 to I_PARAM.SHAPE.X.SIZE-1 loop
-                    if ((i-n) >= 0 and (i-n) <= BANK_SIZE-1) then
-                        bank_on := bank_on or bank_state(i-n);
-                    end if;
-                end loop;
-                bank_active(i) := bank_on;
-            end loop;
-            return bank_active;
-        end function;
-    begin 
-        if (RST = '1') then
-                next_bank_state := (0 to 0 => '1', others => '0');
-                wr_bank_state   <= next_bank_state;
-                wr_bank_active  <= next_bank_active(next_bank_state);
-                wr_addr         <= (others => '0');
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1' or curr_state = IDLE_STATE) then
-                next_bank_state := (0 to 0 => '1', others => '0');
-                wr_bank_state   <= next_bank_state;
-                wr_bank_active  <= next_bank_active(next_bank_state);
-                wr_addr         <= (others => '0');
-            else
-                if (intake_valid = '1' and intake_ready = '1' and intake_last_c = '1') then
-                    for i in curr_bank_state'range loop
-                        if (i >= wr_bank_state'low and i <= wr_bank_state'high) then
-                            curr_bank_state(i) := wr_bank_state(i);
-                        else
-                            curr_bank_state(i) := '0';
-                        end if;
+        ---------------------------------------------------------------------------
+        -- buf_wdata : 
+        ---------------------------------------------------------------------------
+        process(CLK, RST)
+            constant  TMP_PARAM :  IMAGE_WINDOW_PARAM_TYPE
+                                := NEW_IMAGE_WINDOW_PARAM(
+                                       ELEM_BITS => I_PARAM.ELEM_BITS,
+                                       C         => I_PARAM.SHAPE.C,
+                                       X         => NEW_IMAGE_VECTOR_RANGE(1),
+                                       Y         => NEW_IMAGE_VECTOR_RANGE(1)
+                                   );
+            variable  tmp_data  :  std_logic_vector(TMP_PARAM.DATA.SIZE-1 downto 0);
+            variable  element   :  std_logic_vector(TMP_PARAM.ELEM_BITS-1 downto 0);
+            variable  buf_data  :  BUF_DATA_TYPE;
+            variable  x_sel     :  std_logic_vector(0 to I_PARAM.SHAPE.X.SIZE-1);
+        begin 
+            if (RST = '1') then
+                    buf_wdata <= (others => (others => '0'));
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    buf_wdata <= (others => (others => '0'));
+                else
+                    for bank in 0 to BANK_SIZE-1 loop
+                        buf_data := (others => '0');
+                        tmp_data := (others => '0');
+                        for x_pos in I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI loop
+                            if (bank_state(x_pos)(bank) = '1') then
+                                for c_pos in I_PARAM.SHAPE.C.LO to I_PARAM.SHAPE.C.HI loop
+                                    element := GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
+                                                   PARAM   => I_PARAM,
+                                                   C       => c_pos,
+                                                   X       => x_pos,
+                                                   Y       => I_PARAM.SHAPE.Y.LO,
+                                                   DATA    => I_DATA
+                                                );
+                                    SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
+                                                   PARAM   => TMP_PARAM,
+                                                   C       => c_pos,
+                                                   X       => 0,
+                                                   Y       => 0,
+                                                   ELEMENT => element,
+                                                   DATA    => tmp_data
+                                    );
+                                end loop;
+                                buf_data := buf_data or tmp_data(TMP_PARAM.DATA.ELEM_FIELD.HI downto TMP_PARAM.DATA.ELEM_FIELD.LO);
+                            end if;
+                        end loop;
+                        buf_wdata(bank) <= buf_data;
                     end loop;
-                    for i in shft_bank_state'range loop
-                        if (i-I_PARAM.STRIDE.X >= curr_bank_state'low and i-I_PARAM.STRIDE.X <= curr_bank_state'high) then
-                            shft_bank_state(i) := curr_bank_state(i-I_PARAM.STRIDE.X);
-                        else
-                            shft_bank_state(i) := '0';
-                        end if;
-                    end loop;
-                    if (shft_bank_state(wr_bank_state'range) = BANK_ALL_0) then
-                        next_bank_state := shft_bank_state(BANK_SIZE to 2*BANK_SIZE-1);
-                        wr_addr <= std_logic_vector(unsigned(wr_addr) + unsigned(intake_channel_size));
-                    else
-                        next_bank_state := shft_bank_state(0         to BANK_SIZE  -1);
-                    end if;
-                    wr_bank_state  <= next_bank_state;
-                    wr_bank_active <= next_bank_active(next_bank_state);
                 end if;
             end if;
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    process(CLK, RST)
-        variable  init_waddr  :  BUF_SIZE_TYPE;
-    begin 
-        if (RST = '1') then
-                buf_waddr <= (others => (others => '0'));
-                buf_we    <= (others => (others => '0'));
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then
-                buf_waddr <= (others => (others => '0'));
-                buf_we    <= (others => (others => '0'));
-            elsif (intake_valid = '1' and intake_ready = '1') then
-                for i in buf_waddr'range loop
-                    if (intake_start_c = '1') then
-                        if    (wr_bank_active(i) = '1') then
-                            init_waddr := std_logic_vector(unsigned(wr_addr));
-                        else
-                            init_waddr := std_logic_vector(unsigned(wr_addr) + unsigned(intake_channel_size));
-                        end if;
-                        buf_waddr(i) <= init_waddr(BUF_ADDR_TYPE'range);
-                    else
-                        buf_waddr(i) <= std_logic_vector(unsigned(buf_waddr(i)) + 1);
-                    end if;
-                end loop;
-                for i in buf_we'range loop
-                    if (wr_bank_active(i) = '1' or wr_bank_active(i+BANK_SIZE) = '1') then
-                        buf_we(i) <= (others => '1');
-                    else
-                        buf_we(i) <= (others => '0');
-                    end if;
-                end loop;
-            else
-                buf_we    <= (others => (others => '0'));
-            end if;
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    process(CLK, RST)
-        constant  TMP_PARAM :  IMAGE_WINDOW_PARAM_TYPE
-                            := NEW_IMAGE_WINDOW_PARAM(
-                                   ELEM_BITS => I_PARAM.ELEM_BITS,
-                                   C         => I_PARAM.SHAPE.C,
-                                   X         => NEW_IMAGE_VECTOR_RANGE(1),
-                                   Y         => NEW_IMAGE_VECTOR_RANGE(1)
-                               );
-        variable  tmp_data  :  std_logic_vector(TMP_PARAM.DATA.SIZE-1 downto 0);
-        variable  element   :  std_logic_vector(TMP_PARAM.ELEM_BITS-1 downto 0);
-        variable  buf_data  :  BUF_DATA_TYPE;
-        variable  x_sel     :  std_logic_vector(0 to I_PARAM.SHAPE.X.SIZE-1);
-    begin 
-        if (RST = '1') then
-                buf_wdata <= (others => (others => '0'));
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then
-                buf_wdata <= (others => (others => '0'));
-            else
-                for bank in 0 to BANK_SIZE-1 loop
-                    for x_pos in 0 to I_PARAM.SHAPE.X.SIZE-1 loop
-                        if ((bank-x_pos) >= wr_bank_state'low) then
-                            x_sel(x_pos) := wr_bank_state(bank-x_pos);
-                        else
-                            x_sel(x_pos) := wr_bank_state(bank-x_pos+wr_bank_state'high+1);
-                        end if;
-                    end loop;
-                    buf_data := (others => '0');
-                    for x_pos in 0 to I_PARAM.SHAPE.X.SIZE-1 loop
-                        if (x_sel(x_pos) = '1') then
-                            for c_pos in I_PARAM.SHAPE.C.LO to I_PARAM.SHAPE.C.HI loop
-                                element := GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
-                                               PARAM   => I_PARAM,
-                                               C       => c_pos,
-                                               X       => x_pos + I_PARAM.SHAPE.X.LO,
-                                               Y       => I_PARAM.SHAPE.Y.LO,
-                                               DATA    => I_DATA
-                                            );
-                                SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
-                                               PARAM   => TMP_PARAM,
-                                               C       => c_pos,
-                                               X       => 0,
-                                               Y       => 0,
-                                               ELEMENT => element,
-                                               DATA    => tmp_data
-                                );
-                            end loop;
-                            buf_data := buf_data or tmp_data(TMP_PARAM.DATA.ELEM_FIELD.HI downto TMP_PARAM.DATA.ELEM_FIELD.LO);
-                        end if;
-                    end loop;
-                    buf_wdata(bank) <= buf_data;
-                end loop;
-            end if;
-        end if;
-    end process;
+        end process;
+    end block;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -589,12 +681,113 @@ begin
             );                                    -- 
     end generate;                                 -- 
     -------------------------------------------------------------------------------
-    --
+    -- 入力側ブロック
     -------------------------------------------------------------------------------
-    outlet_valid  <= '1' when (curr_state = FLUSH_STATE) else '0';
-    outlet_ready  <= '1' when (O_READY = '1') else '0';
-    outlet_last_c <= '1';
-    outlet_last_x <= '1';
+    OUTLET: block
+        signal    bank_state        :  BANK_STATE_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
+        signal    base_addr         :  integer range 0 to (ELEMENT_SIZE+BANK_SIZE-1)/BANK_SIZE;
+        signal    curr_buf_raddr    :  BUF_ADDR_VECTOR(0 to BANK_SIZE-1);
+        signal    channel_pos     :  integer range 0 to ELEMENT_SIZE;
+    begin
+        ---------------------------------------------------------------------------
+        -- bank_state  :
+        -- base_addr   :
+        ---------------------------------------------------------------------------
+        process(CLK, RST) begin 
+            if (RST = '1') then
+                    bank_state  <= INIT_BANK_STATE(O_PARAM.SHAPE.X.LO, O_PARAM.SHAPE.X.HI);
+                    base_addr   <= 0;
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1' or curr_state = IDLE_STATE) then
+                    bank_state  <= INIT_BANK_STATE(O_PARAM.SHAPE.X.LO, O_PARAM.SHAPE.X.HI);
+                    base_addr   <= 0;
+                else
+                    if (outlet_valid = '1' and outlet_ready = '1' and outlet_last_c = '1') then
+                        if (IS_LAST_BANK(bank_state, O_PARAM.STRIDE.X) = TRUE) then
+                            base_addr <= base_addr + intake_channel_count;
+                        end if;
+                        bank_state <= STRIDE_BANK_STATE(bank_state, O_PARAM.STRIDE.X);
+                    end if;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        -- buf_raddr :
+        ---------------------------------------------------------------------------
+        process (bank_state, curr_buf_raddr, base_addr, intake_channel_count, outlet_valid, outlet_ready, outlet_start_c) begin
+            if (outlet_valid = '1' and outlet_ready = '1') then
+                buf_raddr <= NEXT_BUF_ADDR(
+                                 BUF_ADDR      => curr_buf_raddr       ,
+                                 BANK_STATE    => bank_state           ,
+                                 BASE_ADDR     => base_addr            ,
+                                 CHANNEL_COUNT => intake_channel_count ,
+                                 START_CHANNEL => outlet_start_c
+                             );
+            else
+                buf_raddr <= curr_buf_raddr;
+            end if;
+        end process;
+        process(CLK, RST) begin 
+            if (RST = '1') then
+                    curr_buf_raddr <= (others => (others => '0'));
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    curr_buf_raddr <= (others => (others => '0'));
+                else
+                    curr_buf_raddr <= buf_raddr;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        -- channel_pos    :
+        -- outlet_start_c :
+        -- outlet_last_c  :
+        ---------------------------------------------------------------------------
+        process(CLK, RST)
+            variable next_pos :  integer range 0 to ELEMENT_SIZE;
+        begin 
+            if (RST = '1') then
+                    channel_pos    <=  0 ;
+                    outlet_start_c <= '1';
+                    outlet_last_c  <= '1';
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    channel_pos    <=  0 ;
+                    outlet_start_c <= '1';
+                    outlet_last_c  <= '1';
+                else
+                    if (curr_state = OUTLET_START_STATE) then
+                        next_pos := 0;
+                    elsif (outlet_valid = '1' and outlet_ready = '1') then
+                        if (channel_pos >= intake_channel_count-1) then
+                            next_pos := 0;
+                        else
+                            next_pos := channel_pos + 1;
+                        end if;
+                    else
+                        next_pos := channel_pos;
+                    end if;
+                    if (next_pos = 0) then
+                        outlet_start_c <= '1';
+                    else
+                        outlet_start_c <= '0';
+                    end if;
+                    if (next_pos  >= intake_channel_count-1) then
+                        outlet_last_c  <= '1';
+                    else
+                        outlet_last_c  <= '0';
+                    end if;
+                    channel_pos <= next_pos;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        outlet_valid  <= '1' when (curr_state = OUTLET_STATE) else '0';
+        outlet_ready  <= '1' when (O_READY = '1') else '0';
+        outlet_last_x <= '1';
+    end block;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------

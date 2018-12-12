@@ -1,5 +1,6 @@
 ENTITY_FILES = image_window_channel_reducer.vhd        \
-               image_window_fast_scan_buffer.vhd       \
+               image_window_buffer.vhd                 \
+               image_window_buffer_writer.vhd          \
                ${ENDLIST}
 
 pump_components.vhd : ${ENTITY_FILES}
