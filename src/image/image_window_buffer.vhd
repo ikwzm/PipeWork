@@ -141,7 +141,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.COMPONENTS.SDPRAM;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_WRITER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE;
 architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     -- メモリのバンク数
@@ -154,7 +154,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     -- メモリのビット幅
     -------------------------------------------------------------------------------
-    function  CALC_RAM_WIDTH    return integer is
+    function  CALC_BUF_WIDTH    return integer is
         variable width              :  integer;
     begin
         width := 0;
@@ -163,11 +163,11 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         end loop;
         return width;
     end function;
-    constant  RAM_WIDTH             :  integer := CALC_RAM_WIDTH;
+    constant  BUF_WIDTH             :  integer := CALC_BUF_WIDTH;
     -------------------------------------------------------------------------------
     -- メモリバンク１つあたりの深さ(ビット単位)を２のべき乗値で示す
     -------------------------------------------------------------------------------
-    function  CALC_RAM_DEPTH    return integer is
+    function  CALC_BUF_DEPTH    return integer is
         variable size               :  integer;
         variable depth              :  integer;
     begin
@@ -179,41 +179,24 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         end loop;
         return depth;
     end function;
-    constant  RAM_DEPTH             :  integer := CALC_RAM_DEPTH;
+    constant  BUF_DEPTH             :  integer := CALC_BUF_DEPTH;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  RAM_DATA_BITS         :  integer := 2**RAM_WIDTH;
-    constant  RAM_ADDR_BITS         :  integer := RAM_DEPTH - RAM_WIDTH;
-    constant  RAM_WENA_BITS         :  integer := 1;
-    signal    buf_wdata             :  std_logic_vector(LINE_SIZE*BANK_SIZE*RAM_DATA_BITS-1 downto 0);
-    signal    buf_waddr             :  std_logic_vector(LINE_SIZE*BANK_SIZE*RAM_ADDR_BITS-1 downto 0);
-    signal    buf_we                :  std_logic_vector(LINE_SIZE*BANK_SIZE*RAM_WENA_BITS-1 downto 0);
-    signal    buf_rdata             :  std_logic_vector(LINE_SIZE*BANK_SIZE*RAM_DATA_BITS-1 downto 0);
-    signal    buf_raddr             :  std_logic_vector(LINE_SIZE*BANK_SIZE*RAM_ADDR_BITS-1 downto 0);
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    constant  W_PARAM               :  IMAGE_WINDOW_PARAM_TYPE
-                                    := NEW_IMAGE_WINDOW_PARAM(
-                                           ELEM_BITS    => I_PARAM.ELEM_BITS,
-                                           SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
-                                                               C => I_PARAM.SHAPE.C,
-                                                               X => I_PARAM.SHAPE.X,
-                                                               Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
-                                                           ),
-                                           STRIDE       => I_PARAM.STRIDE,
-                                           BORDER_TYPE  => I_PARAM.BORDER_TYPE
-                                       );
-    signal    w_data                :  std_logic_vector(W_PARAM.DATA.SIZE-1 downto 0);
-    signal    w_valid               :  std_logic;
-    signal    w_ready               :  std_logic;
+    constant  BUF_DATA_BITS         :  integer := 2**BUF_WIDTH;
+    constant  BUF_ADDR_BITS         :  integer := BUF_DEPTH - BUF_WIDTH;
+    constant  BUF_WENA_BITS         :  integer := 1;
+    signal    buf_wdata             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
+    signal    buf_waddr             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
+    signal    buf_we                :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_WENA_BITS-1 downto 0);
+    signal    buf_rdata             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
+    signal    buf_raddr             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     signal    outlet_c_size         :  integer range 0 to ELEMENT_SIZE;
     signal    outlet_x_size         :  integer range 0 to ELEMENT_SIZE;
-    signal    outlet_y_atrb         :  IMAGE_ATRB_VECTOR(W_PARAM.SHAPE.Y.LO to W_PARAM.SHAPE.Y.HI);
+    signal    outlet_y_atrb         :  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
     signal    outlet_valid          :  std_logic_vector(LINE_SIZE-1 downto 0);
     signal    outlet_feed           :  std_logic_vector(LINE_SIZE-1 downto 0);
     signal    outlet_return         :  std_logic_vector(LINE_SIZE-1 downto 0);
@@ -221,31 +204,23 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    I_SHAPE_Y_SIZE_EQ_1: if I_PARAM.SHAPE.Y.SIZE = 1 and LINE_SIZE = 1 generate
-        w_data  <= I_DATA;
-        w_valid <= I_VALID;
-        I_READY <= w_ready;
-    end generate;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    WRITER: IMAGE_WINDOW_BUFFER_WRITER           -- 
+    INTAKE: IMAGE_WINDOW_BUFFER_INTAKE           -- 
         generic map(                             -- 
-            I_PARAM         => W_PARAM         , -- 
+            I_PARAM         => I_PARAM         , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE    , -- 
             CHANNEL_SIZE    => CHANNEL_SIZE    , -- 
             BANK_SIZE       => BANK_SIZE       , -- 
             LINE_SIZE       => LINE_SIZE       , -- 
-            RAM_ADDR_BITS   => RAM_ADDR_BITS   , --
-            RAM_DATA_BITS   => RAM_DATA_BITS     -- 
+            BUF_ADDR_BITS   => BUF_ADDR_BITS   , --
+            BUF_DATA_BITS   => BUF_DATA_BITS     -- 
         )                                        -- 
         port map(                                -- 
             CLK             => CLK             , -- In  :
             RST             => RST             , -- In  :
             CLR             => CLR             , -- In  :
-            I_DATA          => w_data          , -- In  :
-            I_VALID         => w_valid         , -- In  :
-            I_READY         => w_ready         , -- Out :
+            I_DATA          => I_DATA          , -- In  :
+            I_VALID         => I_VALID         , -- In  :
+            I_READY         => I_READY         , -- Out :
             O_VALID         => outlet_valid    , -- Out :
             O_C_SIZE        => outlet_c_size   , -- Out :
             O_X_SIZE        => outlet_x_size   , -- Out :
@@ -262,28 +237,28 @@ begin
     BUF_L:  for line in 0 to LINE_SIZE-1 generate
         B:  for bank in 0 to BANK_SIZE-1 generate
                 constant  RAM_ID :  integer := ID + (line*BANK_SIZE)+bank;
-                signal    wdata  :  std_logic_vector(RAM_DATA_BITS-1 downto 0);
-                signal    waddr  :  std_logic_vector(RAM_ADDR_BITS-1 downto 0);
-                signal    we     :  std_logic_vector(RAM_WENA_BITS-1 downto 0);
-                signal    rdata  :  std_logic_vector(RAM_DATA_BITS-1 downto 0);
-                signal    raddr  :  std_logic_vector(RAM_ADDR_BITS-1 downto 0);
+                signal    wdata  :  std_logic_vector(BUF_DATA_BITS-1 downto 0);
+                signal    waddr  :  std_logic_vector(BUF_ADDR_BITS-1 downto 0);
+                signal    we     :  std_logic_vector(BUF_WENA_BITS-1 downto 0);
+                signal    rdata  :  std_logic_vector(BUF_DATA_BITS-1 downto 0);
+                signal    raddr  :  std_logic_vector(BUF_ADDR_BITS-1 downto 0);
             begin
             -----------------------------------------------------------------------
             --
             -----------------------------------------------------------------------
-            wdata <= buf_wdata((line*BANK_SIZE+bank+1)*RAM_DATA_BITS-1 downto (line*BANK_SIZE+bank)*RAM_DATA_BITS);
-            waddr <= buf_waddr((line*BANK_SIZE+bank+1)*RAM_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*RAM_ADDR_BITS);
-            we    <= buf_we   ((line*BANK_SIZE+bank+1)*RAM_WENA_BITS-1 downto (line*BANK_SIZE+bank)*RAM_WENA_BITS);
-            raddr <= buf_raddr((line*BANK_SIZE+bank+1)*RAM_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*RAM_ADDR_BITS);
-            buf_rdata((line*BANK_SIZE+bank+1)*RAM_DATA_BITS-1 downto (line*BANK_SIZE+bank)*RAM_DATA_BITS) <= rdata;
+            wdata <= buf_wdata((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS);
+            waddr <= buf_waddr((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS);
+            we    <= buf_we   ((line*BANK_SIZE+bank+1)*BUF_WENA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_WENA_BITS);
+            raddr <= buf_raddr((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS);
+            buf_rdata((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS) <= rdata;
             -----------------------------------------------------------------------
             --
             -----------------------------------------------------------------------
             RAM: SDPRAM                   -- 
                 generic map (             -- 
-                    DEPTH   => RAM_DEPTH, -- メモリの深さ(ビット単位)を2のべき乗値で指定する.
-                    RWIDTH  => RAM_WIDTH, -- リードデータ(RDATA)の幅(ビット数)を2のべき乗値で指定する.
-                    WWIDTH  => RAM_WIDTH, -- ライトデータ(WDATA)の幅(ビット数)を2のべき乗値で指定する.
+                    DEPTH   => BUF_DEPTH, -- メモリの深さ(ビット単位)を2のべき乗値で指定する.
+                    RWIDTH  => BUF_WIDTH, -- リードデータ(RDATA)の幅(ビット数)を2のべき乗値で指定する.
+                    WWIDTH  => BUF_WIDTH, -- ライトデータ(WDATA)の幅(ビット数)を2のべき乗値で指定する.
                     WEBIT   => 0        , -- ライトイネーブル信号(WE)の幅(ビット数)を2のべき乗値で指定する.
                     ID      => RAM_ID     -- どのモジュールで使われているかを示す識別番号.
                 )                         -- 
