@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2018/12/14                                                      --
+--!     @date    2018/12/16                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -43,6 +43,77 @@ use     PIPEWORK.IMAGE_TYPES.all;
 --! @brief PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                         --
 -----------------------------------------------------------------------------------
 package IMAGE_COMPONENTS is
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_ATRB_GENERATOR                                                  --
+-----------------------------------------------------------------------------------
+component IMAGE_ATRB_GENERATOR
+    generic (
+        ATRB_SIZE       : --! @brief ATTRIBUTE VECTOR SIZE :
+                          integer := 1;
+        STRIDE          : --! @brief STRIDE SIZE SIZE :
+                          integer := 1;
+        MAX_SIZE        : --! @brief MAX SIZE :
+                          integer := 8;
+        MAX_START_BORDER: --! @brief MAX START BORDER SIZE :
+                          integer := 0;
+        MAX_LAST_BORDER : --! @brief MAX LAST  BORDER SIZE :
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力 I/F
+    -------------------------------------------------------------------------------
+        LOAD            : --! @brief LOAD :
+                          in  std_logic;
+        CHOP            : --! @brief COUNT ENABLE :
+                          in  std_logic;
+        SIZE            : --! @brief SIZE :
+                          in  integer range 0 to MAX_SIZE;
+        START_BORDER    : --! @brief START BORDER SIZE :
+                          in  integer range 0 to MAX_START_BORDER := 0;
+        LAST_BORDER     : --! @brief LAST  BORDER SIZE :
+                          in  integer range 0 to MAX_LAST_BORDER  := 0;
+    -------------------------------------------------------------------------------
+    -- 出力 I/F
+    -------------------------------------------------------------------------------
+        ATRB            : --! @brief OUTPUT ATTRIBUTE VECTOR:
+                          --! 属性出力.
+                          out IMAGE_ATRB_VECTOR(0 to ATRB_SIZE-1);
+        START           : --! @brief OUTPUT START :
+                          --! 現在の出力が最初の出力であることを示す.
+                          out std_logic;
+        LAST            : --! @brief OUTPUT LAST :
+                          --! 現在の出力が最後の出力であることを示す.
+                          out std_logic;
+        TERM            : --! @brief OUTPUT TERMINATE :
+                          --! 現在の最終位置が負になっていることを示す.
+                          out std_logic;
+        NEXT_ATRB       : --! @brief OUTPUT ATTRIBUTE VECTOR(NEXT CYCLE) :
+                          --! 次のクロックでの属性出力.
+                          out IMAGE_ATRB_VECTOR(0 to ATRB_SIZE-1);
+        NEXT_START      : --! @brief OUTPUT START(NEXT CYCLE) :
+                          --! 次のクロックでの出力が最初の出力であることを示す.
+                          out std_logic;
+        NEXT_LAST       : --! @brief OUTPUT LAST(NEXT_CYCLE) :
+                          --! 次のクロックでの出力が最後の出力であることを示す.
+                          out std_logic;
+        NEXT_TERM       : --! @brief OUTPUT TERMINATE(NEXT_CYCLE) :
+                          --! 次のクロックでの最終位置が負になっていることを示す.
+                          out std_logic
+    );
+end component;
 -----------------------------------------------------------------------------------
 --! @brief IMAGE_WINDOW_CHANNEL_REDUCER                                          --
 -----------------------------------------------------------------------------------
