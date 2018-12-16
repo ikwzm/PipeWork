@@ -117,6 +117,9 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
+library DUMMY_PLUG;
+use     DUMMY_PLUG.UTIL.BIN_TO_STRING;
+use     DUMMY_PLUG.UTIL.HEX_TO_STRING;
 architecture RTL of IMAGE_ATRB_GENERATOR is
     -------------------------------------------------------------------------------
     -- CALC_BITS : 引数で指定された数を表現出来るビット数を計算する関数
@@ -125,7 +128,7 @@ architecture RTL of IMAGE_ATRB_GENERATOR is
         variable bits : integer;
     begin
         bits := 0;
-        while (2**bits < NUM) loop
+        while (2**bits <= NUM) loop
             bits := bits + 1;
         end loop;
         return bits;
@@ -146,11 +149,11 @@ architecture RTL of IMAGE_ATRB_GENERATOR is
     -------------------------------------------------------------------------------
     -- MAX_LAST_POS_BITS  : MAX_LAST_POS を表現するのに必要なビット数
     -------------------------------------------------------------------------------
-    constant  MAX_LAST_POS_BITS     :  integer := CALC_BITS(MAX_SIZE+MAX_START_BORDER+MAX_LAST_BORDER-1);
+    constant  MAX_LAST_POS_BITS     :  integer := MAX(1, CALC_BITS(MAX_SIZE+MAX_START_BORDER+MAX_LAST_BORDER-1));
     -------------------------------------------------------------------------------
     -- ATRB_POS_BITS : ATRB 配列の位置を表現するのに必要なビット数
     -------------------------------------------------------------------------------
-    constant  ATRB_POS_BITS         :  integer := CALC_BITS(ATRB_SIZE-1);
+    constant  ATRB_POS_BITS         :  integer := MAX(1, CALC_BITS(ATRB_SIZE-1));
     -------------------------------------------------------------------------------
     -- LAST_POS_BITS : curr_last_pos/next_last_pos を表現するのに必要なビット数
     --                 curr_last_pos/next_last_pos は signed 型なので１ビット多い
@@ -265,14 +268,14 @@ begin
         variable last_pos  :  signed(LAST_POS_BITS-1 downto 0);
     begin
         if    (LOAD = '1') then
-            last_pos := to_signed(SIZE, LAST_POS_BITS);
+            last_pos := to_01(to_signed(SIZE, LAST_POS_BITS));
             if (MAX_START_BORDER > 0) then
                 last_pos := last_pos + START_BORDER;
             end if;
         elsif (CHOP = '1') then
-            last_pos  := curr_last_pos - STRIDE;
+            last_pos  := to_01(curr_last_pos) - STRIDE;
         else
-            last_pos  := curr_last_pos;
+            last_pos  := to_01(curr_last_pos);
         end if;
         next_last_pos <= last_pos;
         next_pos_term <= last_pos(last_pos'high);
@@ -313,13 +316,13 @@ begin
     -- next_atrb_valid : 次のクロックでの ATRB.VALID の値
     -- next_atrb_last  : 次のクロックでの ATRB.LAST の値
     -------------------------------------------------------------------------------
-    process (next_last_pos, next_pos_term)
+    process (next_last_pos, next_start_pos, next_pos_term)
         variable next_last_pos_hi      :  unsigned(next_last_pos'high-1 downto ATRB_POS_BITS);
         variable next_last_pos_lo      :  unsigned(ATRB_POS_BITS-1      downto 0);
         constant NEXT_LAST_POS_HI_ZERO :  unsigned(next_last_pos_hi'range) := (others => '0');
     begin
-        next_last_pos_hi := unsigned(next_last_pos(next_last_pos_hi'range));
-        next_last_pos_lo := unsigned(next_last_pos(next_last_pos_lo'range));
+        next_last_pos_hi := to_01(unsigned(next_last_pos(next_last_pos_hi'range)));
+        next_last_pos_lo := to_01(unsigned(next_last_pos(next_last_pos_lo'range)));
         if    (next_pos_term = '1') then
             next_atrb_valid <= (others => '0');
             next_atrb_last  <= (others => '1');
