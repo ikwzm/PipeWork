@@ -117,9 +117,6 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-library DUMMY_PLUG;
-use     DUMMY_PLUG.UTIL.BIN_TO_STRING;
-use     DUMMY_PLUG.UTIL.HEX_TO_STRING;
 architecture RTL of IMAGE_ATRB_GENERATOR is
     -------------------------------------------------------------------------------
     -- CALC_BITS : 引数で指定された数を表現出来るビット数を計算する関数
