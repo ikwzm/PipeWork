@@ -268,7 +268,7 @@ begin
         variable last_pos  :  signed(LAST_POS_BITS-1 downto 0);
     begin
         if    (LOAD = '1') then
-            last_pos := to_01(to_signed(SIZE, LAST_POS_BITS));
+            last_pos := to_01(to_signed(SIZE-1, LAST_POS_BITS));
             if (MAX_START_BORDER > 0) then
                 last_pos := last_pos + START_BORDER;
             end if;
