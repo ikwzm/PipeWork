@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.7.0                                                           --
---!     @date    2018/06/14                                                      --
+--!     @version 1.7.1                                                           --
+--!     @date    2018/12/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -2863,6 +2863,97 @@ component REGISTER_ACCESS_ADAPTER
     -- レジスタリードデータ入力
     -------------------------------------------------------------------------------
         O_RDATA     : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief UNROLLED_LOOP_COUNTER                                                 --
+-----------------------------------------------------------------------------------
+component UNROLLED_LOOP_COUNTER
+    generic (
+        STRIDE          : --! @brief STRIDE SIZE :
+                          --! １回のループで加算する値を指定.
+                          integer := 1;
+        UNROLL          : --! @brief UNROLL SIZE :
+                          --! Unroll する数を指定する.
+                          integer := 1;
+        MAX_LOOP_SIZE   : --! @brief MAX LOOP SIZE :
+                          --! ループ回数の最大値を指定する.
+                          integer := 8;
+        MAX_LOOP_INIT   : --! @brief MAX LOOP INIT SIZE :
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力 I/F
+    -------------------------------------------------------------------------------
+        LOOP_START      : --! @brief LOOP START :
+                          --! LOOP_SIZE と LOOP_INIT をロードしてループを開始するこ
+                          --! とを指示する信号.
+                          in  std_logic;
+        LOOP_NEXT       : --! @brief COUNT ENABLE :
+                          --! ループを一つ進めることを指定する信号.
+                          in  std_logic;
+        LOOP_SIZE       : --! @brief LOOP SIZE :
+                          --! ループする回数を指定する.
+                          in  integer range 0 to MAX_LOOP_SIZE;
+        LOOP_INIT       : --! @brief UNROLL OFFSET SIZE :
+                          --! ループカウンタの初期値を指定する.
+                          in  integer range 0 to MAX_LOOP_INIT := 0;
+    -------------------------------------------------------------------------------
+    -- 出力 I/F
+    -------------------------------------------------------------------------------
+        LOOP_DONE       : --! @brief OUTPUT LOOP DONE :
+                          --! ループ終了信号出力.
+                          --! * ループが終了"する"ことを示す信号.
+                          out std_logic;
+        LOOP_BUSY       : --! @brief OUTPUT LOOP BUSY :
+                          --! ループ有効信号出力.
+                          --! * ループ中であることを示す信号.
+                          out std_logic;
+        LOOP_VALID      : --! @brief OUTPUT LOOP VALID VECTOR:
+                          --! ループ有効信号出力.
+                          --! * Unroll されたループのうち、有効な部分が '1' のセッ
+                          --!   トされる.
+                          out std_logic_vector(UNROLL-1 downto 0);
+        LOOP_FIRST      : --! @brief OUTPUT LOOP FIRST :
+                          --! ループの最初であることを示す出力信号.
+                          out std_logic;
+        LOOP_LAST       : --! @brief OUTPUT LOOP LAST :
+                          --! ループの最後であることを示す出力信号.
+                          out std_logic;
+        LOOP_TERM       : --! @brief OUTPUT LOOP TERMINATE :
+                          --! ループが終了したことを示す出力信号.
+                          out std_logic;
+        NEXT_BUSY       : --! @brief OUTPUT LOOP BUSY(NEXT_CYCLE) :
+                          --! ループ有効信号出力.
+                          --! * ループ中であることを示す信号.
+                          out std_logic;
+        NEXT_VALID      : --! @brief OUTPUT LOOP VALID VECTOR(NEXT CYCLE) :
+                          --! 次のクロックでのループ有効信号出力.
+                          --! * Unroll されたループのうち、有効な部分が '1' のセッ
+                          --!   トされる.
+                          out std_logic_vector(UNROLL-1 downto 0);
+        NEXT_FIRST      : --! @brief OUTPUT LOOP FIRST(NEXT CYCLE) :
+                          --! 次のクロックでループの最初であることを示す出力信号.
+                          out std_logic;
+        NEXT_LAST       : --! @brief OUTPUT LOOP LAST(NEXT_CYCLE) :
+                          --! 次のクロックでループの最後になることを示す出力信号.
+                          out std_logic;
+        NEXT_TERM       : --! @brief OUTPUT LOOP TERMINATE(NEXT_CYCLE) :
+                          --! 次のクロックでループが終了することを示す出力信号.
+                          out std_logic
     );
 end component;
 end COMPONENTS;
