@@ -2,7 +2,7 @@
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
 --!     @version 1.8.0
---!     @date    2018/12/5
+--!     @date    2018/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -85,6 +85,7 @@ package IMAGE_TYPES is
                   HI                :  integer;
                   SIZE              :  integer;
                   ELEM_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
+                  INFO_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
                   ATRB_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
                   ATRB_C_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
                   ATRB_X_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
@@ -123,6 +124,7 @@ package IMAGE_TYPES is
     type      IMAGE_WINDOW_PARAM_TYPE is record
                   ELEM_BITS         :  integer;  -- 1要素(Element  )のビット数
                   ATRB_BITS         :  integer;  -- 1属性(Attribute)のビット数
+                  INFO_BITS         :  integer;  -- その他情報のビット数
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
                   STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
                   DATA              :  IMAGE_WINDOW_DATA_PARAM_TYPE;
@@ -133,9 +135,22 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
                   STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE;
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE;
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE)
                   return               IMAGE_WINDOW_PARAM_TYPE;
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
@@ -144,11 +159,29 @@ package IMAGE_TYPES is
                   return               IMAGE_WINDOW_PARAM_TYPE;
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE)
                   return               IMAGE_WINDOW_PARAM_TYPE;
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE;
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
                   C                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE;
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE;
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
                   X                 :  IMAGE_VECTOR_RANGE_TYPE;
                   Y                 :  IMAGE_VECTOR_RANGE_TYPE)
                   return               IMAGE_WINDOW_PARAM_TYPE;
@@ -402,8 +435,18 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_VECTOR_RANGE(PREV :IMAGE_VECTOR_RANGE_TYPE;
                                      SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE
     is
+        variable param :  IMAGE_VECTOR_RANGE_TYPE;
     begin
-        return NEW_IMAGE_VECTOR_RANGE((PREV.HI+1), (PREV.HI+1)+(SIZE-1));
+        if (SIZE > 0) then
+            param.LO   := PREV.HI+1;
+            param.HI   := PREV.HI+1 + SIZE-1;
+            param.SIZE := SIZE;
+        else
+            param.LO   := PREV.HI+1;
+            param.HI   := PREV.HI+1;
+            param.SIZE := SIZE;
+        end if;
+        return param;
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image Window の形(各辺の大きさ)を設定する関数
@@ -464,6 +507,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
                   SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
                   STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE)
@@ -473,6 +517,7 @@ package body IMAGE_TYPES is
     begin
         param.ELEM_BITS         := ELEM_BITS;
         param.ATRB_BITS         := IMAGE_ATRB_BITS;
+        param.INFO_BITS         := INFO_BITS;
         param.SHAPE             := SHAPE;
         param.STRIDE            := STRIDE;
         param.BORDER_TYPE       := BORDER_TYPE;
@@ -483,9 +528,52 @@ package body IMAGE_TYPES is
         param.DATA.ATRB_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD.LO,
                                                           param.DATA.ATRB_Y_FIELD.HI);
         param.DATA.LO           := param.DATA.ELEM_FIELD.LO;
-        param.DATA.HI           := param.DATA.ATRB_FIELD.HI;
+        param.DATA.INFO_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_FIELD, INFO_BITS);
+        if (INFO_BITS > 0) then
+            param.DATA.HI       := param.DATA.INFO_FIELD.HI;
+        else
+            param.DATA.HI       := param.DATA.ATRB_FIELD.HI;
+        end if;
         param.DATA.SIZE         := param.DATA.HI - param.DATA.LO + 1;
         return param;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_WINDOW_BORDER_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE
+    is
+    begin 
+        return NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
+                  SHAPE             => SHAPE    ,
+                  STRIDE            => STRIDE   ,
+                  BORDER_TYPE       => IMAGE_WINDOW_BORDER_NONE
+               );
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE;
+                  STRIDE            :  IMAGE_WINDOW_STRIDE_PARAM_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE
+    is
+    begin
+        return NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => INFO_BITS,
+                  SHAPE             => SHAPE    ,
+                  STRIDE            => STRIDE   ,
+                  BORDER_TYPE       => IMAGE_WINDOW_BORDER_NONE
+               );
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image Window の各種パラメータをを設定する関数
@@ -499,9 +587,27 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
                   SHAPE             => SHAPE    ,
                   STRIDE            => STRIDE   ,
                   BORDER_TYPE       => IMAGE_WINDOW_BORDER_NONE
+               );
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  SHAPE             :  IMAGE_WINDOW_SHAPE_PARAM_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE
+    is
+    begin
+        return NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => INFO_BITS,
+                  SHAPE             => SHAPE    ,
+                  STRIDE            => NEW_IMAGE_WINDOW_STRIDE_PARAM(1,1)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -515,8 +621,27 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
                   SHAPE             => SHAPE    ,
                   STRIDE            => NEW_IMAGE_WINDOW_STRIDE_PARAM(1,1)
+               );
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE
+    is
+    begin
+        return NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => INFO_BITS,
+                  SHAPE             => NEW_IMAGE_WINDOW_SHAPE_PARAM(C,X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -532,7 +657,25 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
                   SHAPE             => NEW_IMAGE_WINDOW_SHAPE_PARAM(C,X,Y)
+               );
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  return               IMAGE_WINDOW_PARAM_TYPE
+    is
+    begin
+        return NEW_IMAGE_WINDOW_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => INFO_BITS,
+                  SHAPE             => NEW_IMAGE_WINDOW_SHAPE_PARAM(X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -547,6 +690,7 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
                   SHAPE             => NEW_IMAGE_WINDOW_SHAPE_PARAM(X,Y)
                );
     end function;
@@ -563,6 +707,7 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
                   SHAPE             => NEW_IMAGE_WINDOW_SHAPE_PARAM(C,X,Y)
                );
     end function;
@@ -578,6 +723,7 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_WINDOW_PARAM(
                   ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => 0        ,
                   SHAPE             => NEW_IMAGE_WINDOW_SHAPE_PARAM(X,Y)
                );
     end function; 
