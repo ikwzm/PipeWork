@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2018/12/17                                                      --
+--!     @date    2018/12/27                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -418,12 +418,6 @@ component IMAGE_WINDOW_BUFFER_INTAKE
     generic (
         I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
                           --! 入力側のウィンドウのパラメータを指定する.
-                          --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE でなければならない.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
-                          --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE でなければならない.
-                          --! O_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
