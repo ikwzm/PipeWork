@@ -60,6 +60,12 @@ entity  IMAGE_WINDOW_BUFFER is
                           --! チャネル数を指定する.
                           --! チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
+        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
+                          integer := 1;
+        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
+                          integer := 1;
+        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
+                          integer := 1;
         MEM_BANK_SIZE   : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
@@ -83,6 +89,11 @@ entity  IMAGE_WINDOW_BUFFER is
         CLR             : --! @brief SYNCRONOUSE RESET :
                           --! 同期リセット信号.アクティブハイ.
                           in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
+                          in  integer range 0 to MAX_D_SIZE := 1;
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
@@ -117,6 +128,8 @@ entity  IMAGE_WINDOW_BUFFER is
         O_DATA          : --! @brief OUTPUT WINDOW DATA :
                           --! ウィンドウデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        O_D_ATRB        : --! @brief OUTPUT CHANNEL ATTRIBUTE :
+                          out IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
         O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
                           --! 出力ウィンドウデータ有効信号.
                           --! * O_DATA が有効であることを示す.
@@ -142,6 +155,7 @@ library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.COMPONENTS.SDPRAM;
 use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET;
 architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     -- メモリのバンク数
@@ -152,7 +166,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     constant  LINE_SIZE             :  integer := MEM_LINE_SIZE;
     -------------------------------------------------------------------------------
-    -- メモリのビット幅
+    -- BUF_WIDTH : メモリのビット幅を２のべき乗値で示す
     -------------------------------------------------------------------------------
     function  CALC_BUF_WIDTH    return integer is
         variable width              :  integer;
@@ -165,7 +179,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
     end function;
     constant  BUF_WIDTH             :  integer := CALC_BUF_WIDTH;
     -------------------------------------------------------------------------------
-    -- メモリバンク１つあたりの深さ(ビット単位)を２のべき乗値で示す
+    -- BUF_DEPTH: メモリバンク１つあたりの深さ(ビット単位)を２のべき乗値で示す
     -------------------------------------------------------------------------------
     function  CALC_BUF_DEPTH    return integer is
         variable size               :  integer;
@@ -194,12 +208,24 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    outlet_c_size         :  integer range 0 to ELEMENT_SIZE;
-    signal    outlet_x_size         :  integer range 0 to ELEMENT_SIZE;
-    signal    outlet_y_atrb         :  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-    signal    outlet_valid          :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    outlet_feed           :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    outlet_return         :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    x_size                :  integer range 0 to ELEMENT_SIZE;
+    signal    c_size                :  integer range 0 to ELEMENT_SIZE;
+    signal    c_offset              :  integer range 0 to 2**BUF_ADDR_BITS;
+    signal    line_atrb             :  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+    signal    line_valid            :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    line_feed             :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    line_return           :  std_logic_vector(LINE_SIZE-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    signal    outlet_data           :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+    signal    outlet_d_atrb         :  IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
+    signal    outlet_valid          :  std_logic;
+    signal    outlet_ready          :  std_logic;
+    signal    outlet_line_last      :  std_logic;
+    signal    outlet_last           :  std_logic;
+    signal    outlet_feed           :  std_logic;
+    signal    outlet_return         :  std_logic;
 begin
     -------------------------------------------------------------------------------
     --
@@ -221,12 +247,13 @@ begin
             I_DATA          => I_DATA          , -- In  :
             I_VALID         => I_VALID         , -- In  :
             I_READY         => I_READY         , -- Out :
-            O_VALID         => outlet_valid    , -- Out :
-            O_C_SIZE        => outlet_c_size   , -- Out :
-            O_X_SIZE        => outlet_x_size   , -- Out :
-            O_Y_ATRB        => outlet_y_atrb   , -- Out :
-            O_FEED          => outlet_feed     , -- In  :
-            O_RETURN        => outlet_return   , -- In  :
+            O_LINE_VALID    => line_valid      , -- Out :
+            O_X_SIZE        => x_size          , -- Out :
+            O_C_SIZE        => c_size          , -- Out :
+            O_C_OFFSET      => c_offset        , -- Out :
+            O_LINE_ATRB     => line_atrb       , -- Out :
+            O_LINE_FEED     => line_feed       , -- In  :
+            O_LINE_RETURN   => line_return     , -- In  :
             BUF_DATA        => buf_wdata       , -- Out :
             BUF_ADDR        => buf_waddr       , -- Out :
             BUF_WE          => buf_we            -- Out :
@@ -273,4 +300,73 @@ begin
                 );                        -- 
         end generate;
     end generate;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    OUTLET: IMAGE_WINDOW_BUFFER_OUTLET           -- 
+        generic map (                            -- 
+            O_PARAM         => O_PARAM         , -- 
+            ELEMENT_SIZE    => ELEMENT_SIZE    , --   
+            CHANNEL_SIZE    => CHANNEL_SIZE    , --   
+            BANK_SIZE       => BANK_SIZE       , --   
+            LINE_SIZE       => LINE_SIZE       , --
+            MAX_D_SIZE      => MAX_D_SIZE      , --
+            D_STRIDE        => D_STRIDE        , --
+            D_UNROLL        => D_UNROLL        , --
+            BUF_ADDR_BITS   => BUF_ADDR_BITS   , --   
+            BUF_DATA_BITS   => BUF_DATA_BITS     --
+        )                                        -- 
+        port map (                               -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK             , -- In  :
+            RST             => RST             , -- In  :
+            CLR             => CLR             , -- In  :
+        ---------------------------------------------------------------------------
+        -- 各種サイズ
+        ---------------------------------------------------------------------------
+            X_SIZE          => x_size          , -- In  :
+            D_SIZE          => d_size          , -- In  :
+            C_SIZE          => c_size          , -- In  :
+            C_OFFSET        => c_offset        , -- Out :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            I_LINE_VALID    => line_valid      , -- In  :
+            I_LINE_ATRB     => line_atrb       , -- In  :
+            I_LINE_FEED     => line_feed       , -- Out :
+            I_LINE_RETURN   => line_return     , -- Out :
+        ---------------------------------------------------------------------------
+        -- 出力側 I/F
+        ---------------------------------------------------------------------------
+            O_DATA          => outlet_data     , -- Out :
+            O_D_ATRB        => outlet_d_atrb   , -- Out :
+            O_VALID         => outlet_valid    , -- Out :
+            O_READY         => outlet_ready    , -- In  :
+            O_LAST          => outlet_last     , -- In  :
+            O_FEED          => outlet_feed     , -- In  :
+            O_RETURN        => outlet_return   , -- In  :
+        ---------------------------------------------------------------------------
+        -- バッファメモリ I/F
+        ---------------------------------------------------------------------------
+            BUF_DATA        => buf_rdata       , -- In  :
+            BUF_ADDR        => buf_raddr         -- Out :
+        );
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    O_DATA   <= outlet_data;
+    O_D_ATRB <= outlet_d_atrb;
+    O_VALID  <= outlet_valid;
+    outlet_ready  <= O_READY;
+    outlet_line_last <= '1' when (IMAGE_WINDOW_DATA_IS_LAST_C(O_PARAM, outlet_data) and
+                                  IMAGE_WINDOW_DATA_IS_LAST_X(O_PARAM, outlet_data) and
+                                  outlet_d_atrb(outlet_d_atrb'high).LAST            and
+                                  outlet_valid = '1' and outlet_ready = '1'        ) else '0';
+    outlet_last      <= '1' when (outlet_line_last = '1' and
+                                  IMAGE_WINDOW_DATA_IS_LAST_Y(O_PARAM, outlet_data)) else '0';
+    outlet_feed      <= '1' when (outlet_line_last = '1' and O_FEED   = '1') else '0';
+    outlet_return    <= '1' when (outlet_line_last = '1' and O_RETURN = '1') else '0';
+
 end RTL;

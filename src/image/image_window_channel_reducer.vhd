@@ -3,7 +3,7 @@
 --!     @brief   Image Window Channel Reducer MODULE :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/11/22
+--!     @date    2018/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -184,6 +184,7 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
     constant  T_PARAM               :  IMAGE_WINDOW_PARAM_TYPE
                                     := NEW_IMAGE_WINDOW_PARAM(
                                          ELEM_BITS => I_PARAM.ELEM_BITS,
+                                         INFO_BITS => I_PARAM.INFO_BITS,
                                          C         => NEW_IMAGE_VECTOR_RANGE(CALC_UNIT_CHANNEL_SIZE),
                                          X         => I_PARAM.SHAPE.X,
                                          Y         => I_PARAM.SHAPE.Y
@@ -204,9 +205,6 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
     signal    o_window_last         :  std_logic;
     constant  o_window_shift        :  std_logic_vector(O_WINDOW_DATA_NUM downto O_WINDOW_DATA_NUM) := "0";
     constant  offset                :  std_logic_vector(O_WINDOW_DATA_NUM-1 downto 0) := (others => '0');
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -278,6 +276,9 @@ begin
                               DATA  => t_data
                 );
             end loop;
+            if (I_PARAM.INFO_BITS > 0) then
+                t_data(T_PARAM.DATA.INFO_FIELD.HI downto T_PARAM.DATA.INFO_FIELD.LO) := I_DATA(I_PARAM.DATA.INFO_FIELD.HI downto I_PARAM.DATA.INFO_FIELD.LO);
+            end if;
             i_window_data((i+1)*T_PARAM.DATA.SIZE-1 downto i*T_PARAM.DATA.SIZE) <= t_data;
         end loop;
         if (VARIABLE_CHANNEL_SIZE = TRUE) then
@@ -405,7 +406,7 @@ begin
                         c_atrb.VALID := FALSE;
                         c_atrb.START := FALSE;
                         c_atrb.LAST  := TRUE;
-                    elsif (o_window_strb(o)    = '1'  and o_window_last      = '1' ) and 
+                    elsif (o_window_strb(o)    = '1' and o_window_last = '1' ) and 
                           (c_atrb.VALID = TRUE and c_atrb.LAST = TRUE) then
                         channel_over := TRUE;
                     end if;
@@ -444,6 +445,9 @@ begin
                     DATA  => outlet_data
                 );
         end loop;
+        if (T_PARAM.INFO_BITS > 0) then
+            outlet_data(O_PARAM.DATA.INFO_FIELD.HI downto O_PARAM.DATA.INFO_FIELD.LO) := o_window_data(T_PARAM.DATA.INFO_FIELD.HI downto T_PARAM.DATA.INFO_FIELD.LO);
+        end if;
         O_DATA <= outlet_data;
     end process;
 end RTL;

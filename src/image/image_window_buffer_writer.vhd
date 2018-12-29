@@ -3,7 +3,7 @@
 --!     @brief   Image Window Buffer Writer MODULE :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/12
+--!     @date    2018/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -120,21 +120,23 @@ entity  IMAGE_WINDOW_BUFFER_WRITER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_VALID         : --! @brief OUTPUT VALID :
+        O_LINE_VALID    : --! @brief OUTPUT LINE VALID :
                           --! ライン有効信号.
                           out std_logic_vector(LINE_SIZE-1 downto 0);
-        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
-                          out integer range 0 to ELEMENT_SIZE;
         O_X_SIZE        : --! @brief OUTPUT X SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        O_Y_ATRB        : --! @brief OUTPUT ATTRIBUTE Y :
+        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
+                          out integer range 0 to ELEMENT_SIZE;
+        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
+                          out integer range 0 to 2**BUF_ADDR_BITS;
+        O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
                           out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        O_FEED          : --! @brief OUTPUT FEED :
+        O_LINE_FEED     : --! @brief OUTPUT LINE FEED :
                           --! 出力終了信号.
                           --! * この信号をアサートすることでバッファをクリアして
                           --!   入力可能な状態に戻る.
                           in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
-        O_RETURN        : --! @brief OUTPUT RETURN :
+        O_LINE_RETURN   : --! @brief OUTPUT LINE RETURN :
                           --! 再出力要求信号.
                           --! * この信号をアサートすることでバッファの内容を再度
                           --!   出力する.
@@ -329,6 +331,7 @@ begin
     -- CHANNEL_SIZE が可変長の場合
     -------------------------------------------------------------------------------
     -- channel_offset : 
+    -- O_C_OFFSET     : 
     -- O_C_SIZE       : 
     -------------------------------------------------------------------------------
     CHANNEL_SIZE_EQ_0: if (CHANNEL_SIZE = 0) generate
@@ -355,7 +358,8 @@ begin
                 end if;
             end if;
         end process;
-        O_C_SIZE <= curr_channel_count;
+        O_C_OFFSET <= curr_channel_offset;
+        O_C_SIZE   <= curr_channel_count;
     end generate;
     -------------------------------------------------------------------------------
     -- CHANNEL_SIZE が固定値の場合
@@ -366,6 +370,7 @@ begin
     CHANNEL_SIZE_GT_0: if (CHANNEL_SIZE > 0) generate
     begin
         channel_offset <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
+        O_C_OFFSET     <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
         O_C_SIZE       <=  CHANNEL_SIZE;
     end generate;
     -------------------------------------------------------------------------------
@@ -427,9 +432,9 @@ begin
                                 line_state <= LINE_INTAKE_STATE;
                             end if;
                         when LINE_OUTLET_STATE =>
-                            if    (O_RETURN(LINE) = '1') then
+                            if    (O_LINE_RETURN(LINE) = '1') then
                                 line_state <= LINE_OUTLET_STATE;
-                            elsif (O_FEED(LINE)   = '1') then
+                            elsif (O_LINE_FEED(LINE)   = '1') then
                                 line_state <= LINE_IDLE_STATE;
                             else
                                 line_state <= LINE_OUTLET_STATE;
@@ -445,11 +450,11 @@ begin
         ---------------------------------------------------------------------------
         I_LINE_READY(LINE) <= '1' when (line_state = LINE_IDLE_STATE) else '0';
         ---------------------------------------------------------------------------
-        -- O_VALID (LINE) :
-        -- O_Y_ATRB(LINE) :
+        -- O_LINE_VALID (LINE) :
+        -- O_lINE_ATRB(LINE) :
         ---------------------------------------------------------------------------
-        O_VALID (LINE)     <= '1' when (line_state = LINE_OUTLET_STATE) else '0';
-        O_Y_ATRB(LINE)     <= line_atrb;
+        O_LINE_VALID(LINE) <= '1' when (line_state = LINE_OUTLET_STATE) else '0';
+        O_lINE_ATRB(LINE)  <= line_atrb;
         ---------------------------------------------------------------------------
         -- bank_wena_array :
         ---------------------------------------------------------------------------

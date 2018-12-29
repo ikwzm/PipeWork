@@ -2,7 +2,9 @@ ENTITY_FILES = image_atrb_generator.vhd                \
                image_window_channel_reducer.vhd        \
                image_window_buffer.vhd                 \
                image_window_buffer_writer.vhd          \
+               image_window_buffer_reader.vhd          \
                image_window_buffer_intake.vhd          \
+               image_window_buffer_outlet.vhd          \
                ${ENDLIST}
 
 pump_components.vhd : ${ENTITY_FILES}

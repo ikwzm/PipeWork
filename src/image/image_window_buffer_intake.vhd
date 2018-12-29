@@ -100,21 +100,24 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_VALID         : --! @brief OUTPUT VALID :
+        O_LINE_VALID    : --! @brief OUTPUT LINE VALID :
                           --! ライン有効信号.
                           out std_logic_vector(LINE_SIZE-1 downto 0);
-        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
-                          out integer range 0 to ELEMENT_SIZE;
         O_X_SIZE        : --! @brief OUTPUT X SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        O_Y_ATRB        : --! @brief OUTPUT ATTRIBUTE Y :
+        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
+                          out integer range 0 to ELEMENT_SIZE;
+        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
+                          out integer range 0 to 2**BUF_ADDR_BITS;
+        O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
+                          --! ライン属性出力.
                           out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        O_FEED          : --! @brief OUTPUT FEED :
+        O_LINE_FEED     : --! @brief OUTPUT LINE FEED :
                           --! 出力終了信号.
                           --! * この信号をアサートすることでバッファをクリアして
                           --!   入力可能な状態に戻る.
                           in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
-        O_RETURN        : --! @brief OUTPUT RETURN :
+        O_LINE_RETURN   : --! @brief OUTPUT LINE RETURN :
                           --! 再出力要求信号.
                           --! * この信号をアサートすることでバッファの内容を再度
                           --!   出力する.
@@ -459,15 +462,15 @@ begin
             BUF_DATA_BITS   => BUF_DATA_BITS         --   
         )                                            -- 
         port map (                                   -- 
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
         -- クロック&リセット信号
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
             CLK             => CLK                 , -- In  :
             RST             => RST                 , -- In  :
             CLR             => CLR                 , -- In  :
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
         -- 入力側 I/F
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
             I_DATA          => intake_data         , -- In  :
             I_START_C       => intake_start_c      , -- In  :
             I_LAST_C        => intake_last_c       , -- In  :
@@ -480,18 +483,19 @@ begin
             I_LINE_IDLE     => intake_line_idle    , -- In  :
             I_LINE_START    => intake_line_start   , -- In  :
             I_LINE_READY    => intake_line_ready   , -- Out :
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
         -- 出力側 I/F
-        -------------------------------------------------------------------------------
-            O_VALID         => O_VALID             , -- Out :
-            O_C_SIZE        => O_C_SIZE            , -- Out :
+        ---------------------------------------------------------------------------
+            O_LINE_VALID    => O_LINE_VALID        , -- Out :
             O_X_SIZE        => O_X_SIZE            , -- Out :
-            O_Y_ATRB        => O_Y_ATRB            , -- Out :
-            O_FEED          => O_FEED              , -- In  :
-            O_RETURN        => O_RETURN            , -- In  :
-        -------------------------------------------------------------------------------
+            O_C_SIZE        => O_C_SIZE            , -- Out :
+            O_C_OFFSET      => O_C_OFFSET          , -- Out :
+            O_LINE_ATRB     => O_LINE_ATRB         , -- Out :
+            O_LINE_FEED     => O_LINE_FEED         , -- In  :
+            O_LINE_RETURN   => O_LINE_RETURN       , -- In  :
+        ---------------------------------------------------------------------------
         -- バッファ I/F
-        -------------------------------------------------------------------------------
+        ---------------------------------------------------------------------------
             BUF_DATA        => BUF_DATA            , -- Out :
             BUF_ADDR        => BUF_ADDR            , -- Out :
             BUF_WE          => BUF_WE                -- Out :
