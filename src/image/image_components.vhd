@@ -2,12 +2,12 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2018/12/30                                                      --
+--!     @date    2019/01/04                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2018 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2019 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -315,202 +315,6 @@ component IMAGE_WINDOW_BUFFER
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief IMAGE_WINDOW_BUFFER_WRITER                                            --
------------------------------------------------------------------------------------
-component IMAGE_WINDOW_BUFFER_WRITER
-    generic (
-        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
-                          --! 入力側のウィンドウのパラメータを指定する.
-                          --! I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
-                          --! 列方向のエレメント数を指定する.
-                          integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
-        BANK_SIZE       : --! @brief MEMORY BANK SIZE :
-                          --! メモリのバンク数を指定する.
-                          integer := 1;
-        LINE_SIZE       : --! @brief MEMORY LINE SIZE :
-                          --! メモリのライン数を指定する.
-                          integer := 1;
-        BUF_ADDR_BITS   : --! メモリのアドレスのビット幅を指定する.
-                          integer := 8;
-        BUF_DATA_BITS   : --! メモリのデータのビット幅を指定する.
-                          integer := 8
-    );
-    port (
-    -------------------------------------------------------------------------------
-    -- クロック&リセット信号
-    -------------------------------------------------------------------------------
-        CLK             : --! @brief CLOCK :
-                          --! クロック信号
-                          in  std_logic; 
-        RST             : --! @brief ASYNCRONOUSE RESET :
-                          --! 非同期リセット信号.アクティブハイ.
-                          in  std_logic;
-        CLR             : --! @brief SYNCRONOUSE RESET :
-                          --! 同期リセット信号.アクティブハイ.
-                          in  std_logic;
-    -------------------------------------------------------------------------------
-    -- 入力側 I/F
-    -------------------------------------------------------------------------------
-        I_DATA          : --! @brief INPUT WINDOW DATA :
-                          --! ウィンドウデータ入力.
-                          in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_START_C       : --! @brief INPUT WINDOW CHANNEL START :
-                          --! ウィンドウがチャネルの最初であることを示す. 
-                          in  std_logic;
-        I_LAST_C        : --! @brief INPUT WINDOW CHANNEL LAST :
-                          --! ウィンドウがチャネルの最後であることを示す. 
-                          in  std_logic;
-        I_START_X       : --! @brief INPUT WINDOW CHANNEL X :
-                          --! ウィンドウが X方向の最初であることを示す. 
-                          in  std_logic;
-        I_LAST_X        : --! @brief INPUT WINDOW CHANNEL X :
-                          --! ウィンドウが X方向の最後であることを示す. 
-                          in  std_logic;
-        I_START_Y       : --! @brief INPUT WINDOW CHANNEL Y :
-                          --! ウィンドウが Y方向の最初であることを示す. 
-                          in  std_logic;
-        I_LAST_Y        : --! @brief INPUT WINDOW CHANNEL Y :
-                          --! ウィンドウが Y方向の最後であることを示す. 
-                          in  std_logic;
-        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
-                          --! 入力ウィンドウデータ有効信号.
-                          --! * I_DATA/I_START_C/I_LAST_C/I_START_X/I_LAST_Xが有効
-                          --! であることを示す.
-                          in  std_logic;
-        I_CLEAR         : --! @brief INPUT WINDOW STATE CLEAR :
-                          in  std_logic;
-        I_LINE_IDLE     : --! @brief INPUT WINDOW LINE IDLE :
-                          in  std_logic;
-        I_LINE_START    : --! @brief INPUT WINDOW LINE START :
-                          in  std_logic_vector(LINE_SIZE-1 downto 0);
-        I_LINE_READY    : --! @brief INPUT WINDOW LINE READY :
-                          out std_logic_vector(LINE_SIZE-1 downto 0);
-    -------------------------------------------------------------------------------
-    -- 出力側 I/F
-    -------------------------------------------------------------------------------
-        O_LINE_VALID    : --! @brief OUTPUT LINE VALID :
-                          --! ライン有効信号.
-                          out std_logic_vector(LINE_SIZE-1 downto 0);
-        O_X_SIZE        : --! @brief OUTPUT X SIZE :
-                          out integer range 0 to ELEMENT_SIZE;
-        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
-                          out integer range 0 to ELEMENT_SIZE;
-        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
-                          out integer range 0 to 2**BUF_ADDR_BITS;
-        O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
-                          out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        O_LINE_FEED     : --! @brief OUTPUT LINE FEED :
-                          --! 出力終了信号.
-                          --! * この信号をアサートすることでバッファをクリアして
-                          --!   入力可能な状態に戻る.
-                          in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
-        O_LINE_RETURN   : --! @brief OUTPUT LINE RETURN :
-                          --! 再出力要求信号.
-                          --! * この信号をアサートすることでバッファの内容を再度
-                          --!   出力する.
-                          in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
-    -------------------------------------------------------------------------------
-    -- バッファ I/F
-    -------------------------------------------------------------------------------
-        BUF_DATA        : --! @brief BUFFER WRITE DATA :
-                          out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
-        BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
-                          out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
-        BUF_WE          : --! @brief BUFFER WRITE ENABLE :
-                          out std_logic_vector(LINE_SIZE*BANK_SIZE              -1 downto 0)
-    );
-end component;
------------------------------------------------------------------------------------
---! @brief IMAGE_WINDOW_BUFFER_READER                                            --
------------------------------------------------------------------------------------
-component IMAGE_WINDOW_BUFFER_READER
-    generic (
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
-                          --! 列方向のエレメント数を指定する.
-                          integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
-        BANK_SIZE       : --! @brief MEMORY BANK SIZE :
-                          --! メモリのバンク数を指定する.
-                          integer := 1;
-        LINE_SIZE       : --! @brief MEMORY LINE SIZE :
-                          --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
-                          integer := 1;
-        BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
-                          integer := 8;
-        BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
-    );
-    port (
-    -------------------------------------------------------------------------------
-    -- クロック&リセット信号
-    -------------------------------------------------------------------------------
-        CLK             : --! @brief CLOCK :
-                          --! クロック信号
-                          in  std_logic; 
-        RST             : --! @brief ASYNCRONOUSE RESET :
-                          --! 非同期リセット信号.アクティブハイ.
-                          in  std_logic;
-        CLR             : --! @brief SYNCRONOUSE RESET :
-                          --! 同期リセット信号.アクティブハイ.
-                          in  std_logic;
-    -------------------------------------------------------------------------------
-    -- 入力側 I/F
-    -------------------------------------------------------------------------------
-        I_LINE_START    : --! @brief INPUT LINE START :
-                          --! ライン開始信号.
-                          in  std_logic_vector(LINE_SIZE-1 downto 0);
-        I_LINE_ATRB     : --! @brief INPUT LINE ATTRIBUTE :
-                          --! ライン属性入力.
-                          in  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
-        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
-        C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
-        C_OFFSET        : --! @brief OUTPUT CHANNEL BUFFER ADDRESS OFFSET :
-                          in  integer range 0 to 2**BUF_ADDR_BITS;
-    -------------------------------------------------------------------------------
-    -- 出力側 I/F
-    -------------------------------------------------------------------------------
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
-                          out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
-                          --! * O_DATAが有効であることを示す.
-                          out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
-                          in  std_logic;
-    -------------------------------------------------------------------------------
-    -- バッファメモリ I/F
-    -------------------------------------------------------------------------------
-        BUF_DATA        : --! @brief BUFFER READ DATA :
-                          in  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
-        BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
-                          out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0)
-    );
-end component;
------------------------------------------------------------------------------------
 --! @brief IMAGE_WINDOW_BUFFER_INTAKE                                            --
 -----------------------------------------------------------------------------------
 component IMAGE_WINDOW_BUFFER_INTAKE
@@ -601,6 +405,273 @@ component IMAGE_WINDOW_BUFFER_INTAKE
                           out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
         BUF_WE          : --! @brief BUFFER WRITE ENABLE :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE              -1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER                                --
+-----------------------------------------------------------------------------------
+component IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER
+    generic (
+        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
+                          --! 入力側のウィンドウのパラメータを指定する.
+                          --! I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
+                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
+                          --! 列方向のエレメント数を指定する.
+                          integer := 256;
+        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
+                          --! チャネル数を指定する.
+                          --! チャネル数が可変の場合は 0 を指定する.
+                          integer := 0;
+        BANK_SIZE       : --! @brief MEMORY BANK SIZE :
+                          --! メモリのバンク数を指定する.
+                          integer := 1;
+        LINE_SIZE       : --! @brief MEMORY LINE SIZE :
+                          --! メモリのライン数を指定する.
+                          integer := 1;
+        BUF_ADDR_BITS   : --! メモリのアドレスのビット幅を指定する.
+                          integer := 8;
+        BUF_DATA_BITS   : --! メモリのデータのビット幅を指定する.
+                          integer := 8
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_ENABLE        : --! @brief INPUT WINDOW ENABLE :
+                          in  std_logic;
+        I_LINE_START    : --! @brief INPUT WINDOW LINE START :
+                          --  ラインの入力を開始することを示す.
+                          in  std_logic_vector(LINE_SIZE-1 downto 0);
+        I_LINE_DONE     : --! @brief INPUT WINDOW LINE DONE :
+                          --  ラインの入力が終了したことを示す.
+                          out std_logic_vector(LINE_SIZE-1 downto 0);
+        I_DATA          : --! @brief INPUT WINDOW DATA :
+                          --! ウィンドウデータ入力.
+                          in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
+        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
+                          --! 入力ウィンドウデータ有効信号.
+                          --! * I_DATAが有効であることを示す.
+                          in  std_logic;
+        I_READY         : --! @brief INPUT WINDOW DATA READY :
+                          --! 入力ウィンドウデータレディ信号.
+                          --! * キューが次のウィンドウデータを入力出来ることを示す.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_X_SIZE        : --! @brief OUTPUT X SIZE :
+                          out integer range 0 to ELEMENT_SIZE;
+        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
+                          out integer range 0 to ELEMENT_SIZE;
+        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
+                          out integer range 0 to 2**BUF_ADDR_BITS;
+    -------------------------------------------------------------------------------
+    -- バッファ I/F
+    -------------------------------------------------------------------------------
+        BUF_DATA        : --! @brief BUFFER WRITE DATA :
+                          out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
+        BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
+                          out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
+        BUF_WE          : --! @brief BUFFER WRITE ENABLE :
+                          out std_logic_vector(LINE_SIZE*BANK_SIZE              -1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR                              --
+-----------------------------------------------------------------------------------
+component IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR
+    generic (
+        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
+                          --! 入力側のウィンドウのパラメータを指定する.
+                          --! * I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.SHAPE.C.SIZE = O_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.X.SIZE = O_PARAM.SHAPE.X.SIZE でなければならない.
+                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
+                          --! 出力側のウィンドウのパラメータを指定する.
+                          --! * O_PARAM.ELEM_SIZE    = I_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.SHAPE.C.SIZE = I_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.X.SIZE = I_PARAM.SHAPE.X.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
+                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        LINE_SIZE       : --! @brief MEMORY LINE SIZE :
+                          --! メモリのライン数を指定する.
+                          integer := 1;
+        QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_DATA          : --! @brief INPUT WINDOW DATA :
+                          --! ウィンドウデータ入力.
+                          in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
+        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
+                          --! 入力ウィンドウデータ有効信号.
+                          --! * I_DATAが有効であることを示す.
+                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+                          --!   に取り込まれる.
+                          in  std_logic;
+        I_READY         : --! @brief INPUT WINDOW DATA READY :
+                          --! 入力ウィンドウデータレディ信号.
+                          --! * キューが次のウィンドウデータを入力出来ることを示す.
+                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+                          --!   に取り込まれる.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側 Window I/F
+    -------------------------------------------------------------------------------
+        O_ENABLE        : --! @brief OUTPUT ENABLE :
+                          --! 出力許可信号.
+                          out std_logic;
+        O_LINE_START    : --! @brief OUTPUT LINE VALID :
+                          --! ライン有効信号.
+                          out std_logic_vector(LINE_SIZE-1 downto 0);
+        O_LINE_DONE     : --! @brief OUTPUT LINE DONE :
+                          --! ライン有効信号.
+                          in  std_logic_vector(LINE_SIZE-1 downto 0);
+        O_DATA          : --! @brief OUTPUT WINDOW DATA :
+                          --! ウィンドウデータ出力.
+                          out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
+                          --! 出力ウィンドウデータ有効信号.
+                          --! * O_DATAが有効であることを示す.
+                          out std_logic;
+        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
+                          --! 出力ウィンドウデータレディ信号.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- ライン制御 I/F
+    -------------------------------------------------------------------------------
+        LINE_VALID      : --! @brief OUTPUT LINE VALID :
+                          --! ライン出力有効信号.
+                          out std_logic_vector(LINE_SIZE-1 downto 0);
+        LINE_ATRB       : --! @brief OUTPUT LINE ATTRIBUTE :
+                          --! ライン属性出力.
+                          out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+        LINE_FEED       : --! @brief OUTPUT LINE FEED :
+                          --! 出力終了信号.
+                          --! * この信号をアサートすることでバッファをクリアして
+                          --!   入力可能な状態に戻る.
+                          in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
+        LINE_RETURN     : --! @brief OUTPUT LINE RETURN :
+                          --! 再出力要求信号.
+                          --! * この信号をアサートすることでバッファの内容を再度
+                          --!   出力する.
+                          in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0')
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_WINDOW_BUFFER_READER                                            --
+-----------------------------------------------------------------------------------
+component IMAGE_WINDOW_BUFFER_READER
+    generic (
+        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
+                          --! 出力側のウィンドウのパラメータを指定する.
+                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
+                          --! 列方向のエレメント数を指定する.
+                          integer := 256;
+        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
+                          --! チャネル数を指定する.
+                          --! チャネル数が可変の場合は 0 を指定する.
+                          integer := 0;
+        BANK_SIZE       : --! @brief MEMORY BANK SIZE :
+                          --! メモリのバンク数を指定する.
+                          integer := 1;
+        LINE_SIZE       : --! @brief MEMORY LINE SIZE :
+                          --! メモリのライン数を指定する.
+                          integer := 1;
+        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
+                          integer := 1;
+        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
+                          integer := 1;
+        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
+                          integer := 1;
+        BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
+                          integer := 8;
+        BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
+                          integer := 8
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_LINE_START    : --! @brief INPUT LINE START :
+                          --! ライン開始信号.
+                          in  std_logic_vector(LINE_SIZE-1 downto 0);
+        I_LINE_ATRB     : --! @brief INPUT LINE ATTRIBUTE :
+                          --! ライン属性入力.
+                          in  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+        X_SIZE          : --! @brief INPUT X SIZE :
+                          in  integer range 0 to ELEMENT_SIZE;
+        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
+                          in  integer range 0 to MAX_D_SIZE := 1;
+        C_SIZE          : --! @brief INPUT CHANNEL SIZE :
+                          in  integer range 0 to ELEMENT_SIZE;
+        C_OFFSET        : --! @brief OUTPUT CHANNEL BUFFER ADDRESS OFFSET :
+                          in  integer range 0 to 2**BUF_ADDR_BITS;
+    -------------------------------------------------------------------------------
+    -- 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_DATA          : --! @brief OUTPUT WINDOW DATA :
+                          --! ウィンドウデータ出力.
+                          out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
+                          --! 出力ウィンドウデータ有効信号.
+                          --! * O_DATAが有効であることを示す.
+                          out std_logic;
+        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
+                          --! 出力ウィンドウデータレディ信号.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- バッファメモリ I/F
+    -------------------------------------------------------------------------------
+        BUF_DATA        : --! @brief BUFFER READ DATA :
+                          in  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
+        BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
+                          out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0)
     );
 end component;
 -----------------------------------------------------------------------------------

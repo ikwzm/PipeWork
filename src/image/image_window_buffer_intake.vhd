@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    image_window_buffer_intake.vhd
---!     @brief   Image Window Buffer Intake MODULE :
+--!     @brief   Image Window Buffer Intake Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/27
+--!     @date    2019/1/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -141,319 +141,99 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_WRITER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER;
 architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    subtype   LINE_SELECT_TYPE      is std_logic_vector(0 to LINE_SIZE-1);
-    type      LINE_SELECT_VECTOR    is array(integer range <>) of LINE_SELECT_TYPE;
-    signal    line_select           :  LINE_SELECT_VECTOR(I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI);
-    constant  LINE_ALL_1            :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
-    constant  LINE_ALL_0            :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
+    constant  C_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
+                            := NEW_IMAGE_WINDOW_PARAM(
+                                   ELEM_BITS    => I_PARAM.ELEM_BITS,
+                                   SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                       C => I_PARAM.SHAPE.C,
+                                                       X => I_PARAM.SHAPE.X,
+                                                       Y => I_PARAM.SHAPE.Y
+                                                   ),
+                                   STRIDE       => I_PARAM.STRIDE,
+                                   BORDER_TYPE  => I_PARAM.BORDER_TYPE
+                               );
+    signal    c_data        :  std_logic_vector(C_PARAM.DATA.SIZE-1 downto 0);
+    signal    c_valid       :  std_logic;
+    signal    c_ready       :  std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    function  INIT_LINE_SELECT(LO,HI: integer) return LINE_SELECT_VECTOR is
-        variable i_vec :  LINE_SELECT_VECTOR(LO to HI);
-    begin
-        for i in i_vec'range loop
-            for line in 0 to LINE_SIZE-1 loop
-                if (i-LO = line) then
-                    i_vec(i)(line) := '1';
-                else
-                    i_vec(i)(line) := '0';
-                end if;
-            end loop;
-        end loop;
-        return i_vec;
-    end function;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    function  STRIDE_LINE_SELECT(I_VEC: LINE_SELECT_VECTOR; STRIDE: integer) return LINE_SELECT_VECTOR is
-        variable o_vec :  LINE_SELECT_VECTOR(I_VEC'range);
-    begin
-        for i in o_vec'range loop
-            for line in 0 to LINE_SIZE-1 loop
-                o_vec(i)(line) := I_VEC(i)((LINE_SIZE+line-STRIDE) mod LINE_SIZE);
-            end loop;
-        end loop;
-        return o_vec;
-    end function;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    type      STATE_TYPE            is (IDLE_STATE  ,
-                                        WAIT_STATE  ,
-                                        INTAKE_STATE,
-                                        FLUSH_STATE);
-    signal    curr_state            :  STATE_TYPE;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    constant  INTAKE_PARAM          :  IMAGE_WINDOW_PARAM_TYPE
-                                    := NEW_IMAGE_WINDOW_PARAM(
-                                           ELEM_BITS    => I_PARAM.ELEM_BITS,
-                                           SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
-                                                               C => I_PARAM.SHAPE.C,
-                                                               X => I_PARAM.SHAPE.X,
-                                                               Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
-                                                           ),
-                                           STRIDE       => I_PARAM.STRIDE,
-                                           BORDER_TYPE  => I_PARAM.BORDER_TYPE
-                                       );
-    signal    intake_data           :  std_logic_vector(INTAKE_PARAM.DATA.SIZE-1 downto 0);
-    signal    intake_start_c        :  std_logic;
-    signal    intake_last_c         :  std_logic;
-    signal    intake_start_x        :  std_logic;
-    signal    intake_last_x         :  std_logic;
-    signal    intake_start_y        :  std_logic;
-    signal    intake_last_y         :  std_logic;
-    signal    intake_valid          :  std_logic;
-    signal    intake_ready          :  std_logic;
-    signal    intake_clear          :  std_logic;
-    signal    intake_line_idle      :  std_logic;
-    signal    intake_line_start     :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    intake_line_ready     :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    intake_line_valid     :  std_logic_vector(LINE_SIZE-1 downto 0);
+    constant  L_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
+                            := NEW_IMAGE_WINDOW_PARAM(
+                                   ELEM_BITS    => C_PARAM.ELEM_BITS,
+                                   SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                       C => C_PARAM.SHAPE.C,
+                                                       X => C_PARAM.SHAPE.X,
+                                                       Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
+                                                   ),
+                                   STRIDE       => C_PARAM.STRIDE,
+                                   BORDER_TYPE  => C_PARAM.BORDER_TYPE
+                               );
+    signal    l_data        :  std_logic_vector(L_PARAM.DATA.SIZE-1 downto 0);
+    signal    l_valid       :  std_logic;
+    signal    l_ready       :  std_logic;
+    signal    l_enable      :  std_logic;
+    signal    l_start       :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    l_done        :  std_logic_vector(LINE_SIZE-1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- 入力データの各種属性
+    -- 
     -------------------------------------------------------------------------------
-    -- intake_start_c    : 
-    -- intake_last_c     : 
-    -- intake_start_x    : 
-    -- intake_last_x     : 
+    c_data  <= I_DATA;
+    c_valid <= I_VALID;
+    I_READY <= c_ready;
     -------------------------------------------------------------------------------
-    process (I_DATA) 
-        variable atrb_y  :  IMAGE_ATRB_TYPE;
-    begin
-        if (IMAGE_WINDOW_DATA_IS_START_C(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_start_c <= '1';
-        else
-            intake_start_c <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_C( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_last_c  <= '1';
-        else
-            intake_last_c  <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_START_X(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_start_x <= '1';
-        else
-            intake_start_x <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_X( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_last_x  <= '1';
-        else
-            intake_last_x  <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_START_Y(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_start_y <= '1';
-        else
-            intake_start_y <= '0';
-        end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_Y( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
-            intake_last_y  <= '1';
-        else
-            intake_last_y  <= '0';
-        end if;
-    end process;
+    -- LINE_SELECTOR :
     -------------------------------------------------------------------------------
-    -- curr_state  :
-    -------------------------------------------------------------------------------
-    process (CLK, RST) begin
-        if (RST = '1') then
-                curr_state <= IDLE_STATE;
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then
-                curr_state <= IDLE_STATE;
-            else
-                case curr_state is
-                    when IDLE_STATE =>
-                            curr_state <= WAIT_STATE;
-                    when WAIT_STATE =>
-                        if (intake_line_start /= LINE_ALL_0) then
-                            curr_state <= INTAKE_STATE;
-                        else
-                            curr_state <= WAIT_STATE;
-                        end if;
-                    when INTAKE_STATE =>
-                        if (I_VALID = '1' and intake_ready = '1' and intake_last_x  = '1' and intake_last_c  = '1') then
-                            if (intake_last_y = '1') then
-                                curr_state <= FLUSH_STATE;
-                            else
-                                curr_state <= WAIT_STATE;
-                            end if;
-                        else
-                                curr_state <= INTAKE_STATE;
-                        end if;
-                    when FLUSH_STATE =>
-                        if (intake_line_ready = LINE_ALL_1) then
-                            curr_state <= IDLE_STATE;
-                        else
-                            curr_state <= FLUSH_STATE;
-                        end if;
-                    when others     =>
-                            curr_state <= IDLE_STATE;
-                end case;
-            end if;
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    intake_ready <= '1' when (curr_state = INTAKE_STATE) else '0';
-    I_READY      <= '1' when (curr_state = INTAKE_STATE) else '0';
-    -------------------------------------------------------------------------------
-    -- intake_line_valid :
-    -------------------------------------------------------------------------------
-    process (I_DATA, line_select)
-        variable  atrb_y_vector  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI);
-        variable  line_valid     :  std_logic_vector(LINE_SIZE-1 downto 0);
-    begin
-        atrb_y_vector := GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
-        line_valid    := (others => '0');
-        for line in 0 to LINE_SIZE-1 loop
-            for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
-                if line_select(y_pos)(line) = '1' and atrb_y_vector(y_pos).VALID then
-                    line_valid(line) := line_valid(line) or '1';
-                end if;
-            end loop;
-        end loop;
-        intake_line_valid <= line_valid;
-    end process;
-    -------------------------------------------------------------------------------
-    -- intake_line_start :
-    -------------------------------------------------------------------------------
-    process (curr_state, I_VALID, intake_line_valid, intake_line_ready)
-        variable line_pause :  std_logic_vector(LINE_SIZE-1 downto 0);
-        variable line_start :  std_logic_vector(LINE_SIZE-1 downto 0);
-    begin
-        for line in 0 to LINE_SIZE-1 loop
-            if    (intake_line_valid(line) = '1' and intake_line_ready(line) = '1') then
-                line_pause(line) := '0';
-                line_start(line) := '1';
-            elsif (intake_line_valid(line) = '1' and intake_line_ready(line) = '0') then
-                line_pause(line) := '1';
-                line_start(line) := '0';
-            else
-                line_pause(line) := '0';
-                line_start(line) := '0';
-            end if;
-        end loop;
-        if (curr_state = WAIT_STATE and I_VALID = '1' and line_pause = LINE_ALL_0) then
-            intake_line_start <= line_start;
-        else
-            intake_line_start <= (others => '0');
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    -- line_select  :
-    -------------------------------------------------------------------------------
-    process(CLK, RST) begin 
-        if (RST = '1') then
-                line_select <= INIT_LINE_SELECT(I_PARAM.SHAPE.Y.LO, I_PARAM.SHAPE.Y.HI);
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1' or curr_state = IDLE_STATE) then
-                line_select <= INIT_LINE_SELECT(I_PARAM.SHAPE.Y.LO, I_PARAM.SHAPE.Y.HI);
-            else
-                if (I_VALID = '1' and intake_ready = '1' and intake_last_x = '1' and intake_last_c = '1') then
-                    line_select <= STRIDE_LINE_SELECT(line_select, I_PARAM.STRIDE.Y);
-                end if;
-            end if;
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    -- intake_clear     :
-    -------------------------------------------------------------------------------
-    intake_clear     <= '1' when (curr_state = IDLE_STATE) else '0';
-    -------------------------------------------------------------------------------
-    -- intake_line_idle :
-    -------------------------------------------------------------------------------
-    intake_line_idle <= '1' when (curr_state = WAIT_STATE) else '0';
-    -------------------------------------------------------------------------------
-    -- intake_valid     :
-    -------------------------------------------------------------------------------
-    intake_valid     <= '1' when (curr_state = INTAKE_STATE and I_VALID = '1') else '0';
-    -------------------------------------------------------------------------------
-    -- intake_data  :
-    -------------------------------------------------------------------------------
-    process (I_DATA, line_select)
-        variable  data   :  std_logic_vector(INTAKE_PARAM.DATA.SIZE-1 downto 0);
-        variable  elem   :  std_logic_vector(INTAKE_PARAM.ELEM_BITS-1 downto 0);
-        variable  atrb_x :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-        variable  atrb_y :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-        variable  atrb_c :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-        variable  i_atrb :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-    begin
-        for c_pos in 0 to INTAKE_PARAM.SHAPE.C.SIZE-1 loop
-            atrb_c := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(I_PARAM, c_pos+I_PARAM.SHAPE.C.LO, I_DATA);
-            SET_ATRB_C_TO_IMAGE_WINDOW_DATA(INTAKE_PARAM, c_pos+INTAKE_PARAM.SHAPE.C.LO, atrb_c, data);
-        end loop;
-        for x_pos in 0 to INTAKE_PARAM.SHAPE.X.SIZE-1 loop
-            atrb_x := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(I_PARAM, x_pos+I_PARAM.SHAPE.X.LO, I_DATA);
-            SET_ATRB_X_TO_IMAGE_WINDOW_DATA(INTAKE_PARAM, x_pos+INTAKE_PARAM.SHAPE.X.LO, atrb_x, data);
-        end loop;
-        for line in 0 to LINE_SIZE-1 loop
-            if (LINE_SIZE > 1) then
-                atrb_y := (others => '0');
-                for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
-                    if (line_select(y_pos)(line) = '1') then
-                        i_atrb := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(I_PARAM, y_pos, I_DATA);
-                        atrb_y := atrb_y or i_atrb;
-                    end if;
-                end loop;
-            else
-                atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(I_PARAM, line+I_PARAM.SHAPE.Y.LO, I_DATA);
-            end if;
-            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(INTAKE_PARAM, line+INTAKE_PARAM.SHAPE.Y.LO, atrb_y, data);
-        end loop;
-        for c_pos in 0 to INTAKE_PARAM.SHAPE.C.SIZE-1 loop
-            for x_pos in 0 to INTAKE_PARAM.SHAPE.X.SIZE-1 loop
-                for line  in 0 to LINE_SIZE-1 loop
-                    if (LINE_SIZE > 1) then
-                        elem := (others => '0');
-                        for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
-                            if (line_select(y_pos)(line) = '1') then
-                                elem := elem or GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
-                                                    PARAM   => I_PARAM ,
-                                                    C       => c_pos+I_PARAM.SHAPE.C.LO,
-                                                    X       => x_pos+I_PARAM.SHAPE.X.LO,
-                                                    Y       => y_pos,
-                                                    DATA    => I_DATA
-                                                );
-                            end if;
-                        end loop;
-                    else
-                        elem := GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
-                                                    PARAM   => I_PARAM ,
-                                                    C       => c_pos+I_PARAM.SHAPE.C.LO,
-                                                    X       => x_pos+I_PARAM.SHAPE.X.LO,
-                                                    Y       => line +I_PARAM.SHAPE.Y.LO,
-                                                    DATA    => I_DATA
-                                                );
-                    end if;
-                    SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
-                        PARAM   => INTAKE_PARAM ,
-                        C       => c_pos+INTAKE_PARAM.SHAPE.C.LO,
-                        X       => x_pos+INTAKE_PARAM.SHAPE.X.LO,
-                        Y       => line +INTAKE_PARAM.SHAPE.Y.LO,
-                        ELEMENT => elem    ,
-                        DATA    => data
-                    );
-                end loop;
-            end loop;
-        end loop;
-        intake_data <= data;
-    end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    BUF_WRITER:  IMAGE_WINDOW_BUFFER_WRITER          -- 
+    LINE_SELECTOR: IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR
         generic map (                                -- 
-            I_PARAM         => INTAKE_PARAM        , -- 
+            I_PARAM         => C_PARAM             , -- 
+            O_PARAM         => L_PARAM             , -- 
+            LINE_SIZE       => LINE_SIZE           , --   
+            QUEUE_SIZE      => 1                     --   
+        )                                            -- 
+        port map (                                   -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK                 , -- In  :
+            RST             => RST                 , -- In  :
+            CLR             => CLR                 , -- In  :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            I_DATA          => c_data              , -- In  :
+            I_VALID         => c_valid             , -- In  :
+            I_READY         => c_ready             , -- Out :
+        ---------------------------------------------------------------------------
+        -- 出力側 Window I/F
+        ---------------------------------------------------------------------------
+            O_ENABLE        => l_enable            , -- Out :
+            O_LINE_START    => l_start             , -- Out :
+            O_LINE_DONE     => l_done              , -- Out :
+            O_DATA          => l_data              , -- Out :
+            O_VALID         => l_valid             , -- Out :
+            O_READY         => l_ready             , -- In  :
+        ---------------------------------------------------------------------------
+        -- ライン制御 I/F
+        ---------------------------------------------------------------------------
+            LINE_VALID      => O_LINE_VALID        , -- Out :
+            LINE_ATRB       => O_LINE_ATRB         , -- Out :
+            LINE_FEED       => O_LINE_FEED         , -- In  :
+            LINE_RETURN     => O_LINE_RETURN         -- In  :
+        );
+    -------------------------------------------------------------------------------
+    -- BANK_WRITER :
+    -------------------------------------------------------------------------------
+    BANK_WRITER: IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER
+        generic map (                                -- 
+            I_PARAM         => L_PARAM             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
             CHANNEL_SIZE    => CHANNEL_SIZE        , --   
             BANK_SIZE       => BANK_SIZE           , --   
@@ -471,28 +251,18 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_DATA          => intake_data         , -- In  :
-            I_START_C       => intake_start_c      , -- In  :
-            I_LAST_C        => intake_last_c       , -- In  :
-            I_START_X       => intake_start_x      , -- In  :
-            I_LAST_X        => intake_last_x       , -- In  :
-            I_START_Y       => intake_start_y      , -- In  :
-            I_LAST_Y        => intake_last_y       , -- In  :
-            I_VALID         => intake_valid        , -- In  :
-            I_CLEAR         => intake_clear        , -- In  :
-            I_LINE_IDLE     => intake_line_idle    , -- In  :
-            I_LINE_START    => intake_line_start   , -- In  :
-            I_LINE_READY    => intake_line_ready   , -- Out :
+            I_ENABLE        => l_enable            , -- In  :
+            I_LINE_START    => l_start             , -- In  :
+            I_LINE_DONE     => l_done              , -- Out :
+            I_DATA          => l_data              , -- In  :
+            I_VALID         => l_valid             , -- In  :
+            I_READY         => l_ready             , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_LINE_VALID    => O_LINE_VALID        , -- Out :
             O_X_SIZE        => O_X_SIZE            , -- Out :
             O_C_SIZE        => O_C_SIZE            , -- Out :
             O_C_OFFSET      => O_C_OFFSET          , -- Out :
-            O_LINE_ATRB     => O_LINE_ATRB         , -- Out :
-            O_LINE_FEED     => O_LINE_FEED         , -- In  :
-            O_LINE_RETURN   => O_LINE_RETURN       , -- In  :
         ---------------------------------------------------------------------------
         -- バッファ I/F
         ---------------------------------------------------------------------------

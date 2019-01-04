@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------
 --!     @file    image_window_buffer.vhd
---!     @brief   Image Window Buffer MODULE :
+--!     @brief   Image Window Buffer Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
 --!     @date    2018/12/12

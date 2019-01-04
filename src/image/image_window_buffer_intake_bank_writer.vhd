@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_writer.vhd
---!     @brief   Image Window Buffer Writer MODULE :
+--!     @file    image_window_buffer_intake_bank_writer.vhd
+--!     @brief   Image Window Buffer Intake Bank Writer Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/27
+--!     @date    2019/1/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -40,10 +40,9 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER :
---!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--! @brief   Image Window Buffer Intake Bank Writer :
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_WRITER is
+entity  IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
     generic (
         I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
                           --! 入力側のウィンドウのパラメータを指定する.
@@ -83,64 +82,34 @@ entity  IMAGE_WINDOW_BUFFER_WRITER is
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
+        I_ENABLE        : --! @brief INPUT WINDOW ENABLE :
+                          in  std_logic;
+        I_LINE_START    : --! @brief INPUT WINDOW LINE START :
+                          --  ラインの入力を開始することを示す.
+                          in  std_logic_vector(LINE_SIZE-1 downto 0);
+        I_LINE_DONE     : --! @brief INPUT WINDOW LINE DONE :
+                          --  ラインの入力が終了したことを示す.
+                          out std_logic_vector(LINE_SIZE-1 downto 0);
         I_DATA          : --! @brief INPUT WINDOW DATA :
                           --! ウィンドウデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_START_C       : --! @brief INPUT WINDOW CHANNEL START :
-                          --! ウィンドウがチャネルの最初であることを示す. 
-                          in  std_logic;
-        I_LAST_C        : --! @brief INPUT WINDOW CHANNEL LAST :
-                          --! ウィンドウがチャネルの最後であることを示す. 
-                          in  std_logic;
-        I_START_X       : --! @brief INPUT WINDOW CHANNEL X :
-                          --! ウィンドウが X方向の最初であることを示す. 
-                          in  std_logic;
-        I_LAST_X        : --! @brief INPUT WINDOW CHANNEL X :
-                          --! ウィンドウが X方向の最後であることを示す. 
-                          in  std_logic;
-        I_START_Y       : --! @brief INPUT WINDOW CHANNEL Y :
-                          --! ウィンドウが Y方向の最初であることを示す. 
-                          in  std_logic;
-        I_LAST_Y        : --! @brief INPUT WINDOW CHANNEL Y :
-                          --! ウィンドウが Y方向の最後であることを示す. 
-                          in  std_logic;
         I_VALID         : --! @brief INPUT WINDOW DATA VALID :
                           --! 入力ウィンドウデータ有効信号.
-                          --! * I_DATA/I_START_C/I_LAST_C/I_START_X/I_LAST_Xが有効
-                          --! であることを示す.
+                          --! * I_DATAが有効であることを示す.
                           in  std_logic;
-        I_CLEAR         : --! @brief INPUT WINDOW STATE CLEAR :
-                          in  std_logic;
-        I_LINE_IDLE     : --! @brief INPUT WINDOW LINE IDLE :
-                          in  std_logic;
-        I_LINE_START    : --! @brief INPUT WINDOW LINE START :
-                          in  std_logic_vector(LINE_SIZE-1 downto 0);
-        I_LINE_READY    : --! @brief INPUT WINDOW LINE READY :
-                          out std_logic_vector(LINE_SIZE-1 downto 0);
+        I_READY         : --! @brief INPUT WINDOW DATA READY :
+                          --! 入力ウィンドウデータレディ信号.
+                          --! * キューが次のウィンドウデータを入力出来ることを示す.
+                          out std_logic;
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_LINE_VALID    : --! @brief OUTPUT LINE VALID :
-                          --! ライン有効信号.
-                          out std_logic_vector(LINE_SIZE-1 downto 0);
         O_X_SIZE        : --! @brief OUTPUT X SIZE :
                           out integer range 0 to ELEMENT_SIZE;
         O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to ELEMENT_SIZE;
         O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to 2**BUF_ADDR_BITS;
-        O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
-                          out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        O_LINE_FEED     : --! @brief OUTPUT LINE FEED :
-                          --! 出力終了信号.
-                          --! * この信号をアサートすることでバッファをクリアして
-                          --!   入力可能な状態に戻る.
-                          in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
-        O_LINE_RETURN   : --! @brief OUTPUT LINE RETURN :
-                          --! 再出力要求信号.
-                          --! * この信号をアサートすることでバッファの内容を再度
-                          --!   出力する.
-                          in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- バッファ I/F
     -------------------------------------------------------------------------------
@@ -151,7 +120,7 @@ entity  IMAGE_WINDOW_BUFFER_WRITER is
         BUF_WE          : --! @brief BUFFER WRITE ENABLE :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE              -1 downto 0)
     );
-end IMAGE_WINDOW_BUFFER_WRITER;
+end IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -160,7 +129,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-architecture RTL of IMAGE_WINDOW_BUFFER_WRITER is
+architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -288,37 +257,109 @@ architecture RTL of IMAGE_WINDOW_BUFFER_WRITER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    constant  LINE_ALL_0            :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
+    signal    intake_line_busy      :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    intake_line_done      :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    intake_line_start     :  std_logic_vector(LINE_SIZE-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     signal    base_addr             :  integer range 0 to 2**BUF_ADDR_BITS-1;
     signal    channel_offset        :  integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    type      LINE_STATE_TYPE       is (LINE_IDLE_STATE  ,
-                                        LINE_INTAKE_STATE,
-                                        LINE_OUTLET_STATE);
+    signal    intake_c_start        :  std_logic;
+    signal    intake_c_last         :  std_logic;
+    signal    intake_x_start        :  std_logic;
+    signal    intake_x_last         :  std_logic;
+    signal    intake_y_start        :  std_logic;
+    signal    intake_y_last         :  std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    signal    intake_ready          :  std_logic;
     signal    intake_x_count        :  integer range 0 to ELEMENT_SIZE;
     signal    intake_channel_count  :  integer range 0 to ELEMENT_SIZE;
     signal    intake_last_atrb_c    :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.C.LO to I_PARAM.SHAPE.C.HI);
 begin
     -------------------------------------------------------------------------------
-    -- bank_select :
-    -- base_addr   :
+    -- 入力データの各種属性
     -------------------------------------------------------------------------------
-    process(CLK, RST)
-        constant LINE_ALL_0 :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
-    begin 
+    -- intake_c_start    : 
+    -- intake_c_last     : 
+    -- intake_x_start    : 
+    -- intake_x_last     : 
+    -- intake_y_start    : 
+    -- intake_y_last     : 
+    -------------------------------------------------------------------------------
+    process (I_DATA) 
+        variable atrb_y  :  IMAGE_ATRB_TYPE;
+    begin
+        if (IMAGE_WINDOW_DATA_IS_START_C(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+            intake_c_start <= '1';
+        else
+            intake_c_start <= '0';
+        end if;
+        if (IMAGE_WINDOW_DATA_IS_LAST_C( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+            intake_c_last  <= '1';
+        else
+            intake_c_last  <= '0';
+        end if;
+        if (IMAGE_WINDOW_DATA_IS_START_X(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+            intake_x_start <= '1';
+        else
+            intake_x_start <= '0';
+        end if;
+        if (IMAGE_WINDOW_DATA_IS_LAST_X( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+            intake_x_last  <= '1';
+        else
+            intake_x_last  <= '0';
+        end if;
+        intake_y_start <= '0';
+        intake_y_last  <= '0';
+        for line in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
+            atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(PARAM => I_PARAM, Y => line, DATA => I_DATA);
+            if (atrb_y.VALID and atrb_y.START) then
+                intake_y_start <= '1';
+            end if;
+            if (atrb_y.VALID and atrb_y.LAST ) then
+                intake_y_last  <= '1';
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- intake_ready : 入力可能であることを示す.
+    -- I_READY      : 入力可能であることを示す.
+    -------------------------------------------------------------------------------
+    process(CLK, RST) begin 
         if (RST = '1') then
-                bank_select <= INIT_BANK_SELECT(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
-                base_addr   <= 0;
+                intake_ready <= '0';
         elsif (CLK'event and CLK = '1') then
-            if (CLR = '1' or I_LINE_IDLE = '1') then
-                bank_select <= INIT_BANK_SELECT(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
-                base_addr   <= 0;
+            if (CLR = '1') then
+                intake_ready <= '0';
+            elsif (intake_ready <= '0' and I_LINE_START /= LINE_ALL_0) then
+                intake_ready <= '1';
+            elsif (I_VALID = '1' and intake_ready = '1' and intake_x_last = '1' and intake_c_last = '1') then
+                intake_ready <= '0';
+            end if;
+        end if;
+    end process;
+    I_READY <= intake_ready;
+    -------------------------------------------------------------------------------
+    -- bank_select  : バンク選択信号
+    -- base_addr    : ベースアドレス
+    -------------------------------------------------------------------------------
+    process(CLK, RST) begin 
+        if (RST = '1') then
+                bank_select  <= INIT_BANK_SELECT(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
+                base_addr    <= 0;
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1' or I_LINE_START /= LINE_ALL_0) then
+                bank_select  <= INIT_BANK_SELECT(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
+                base_addr    <= 0;
             else
-                if (I_VALID = '1' and I_LAST_C = '1') then
+                if (I_VALID = '1' and intake_ready = '1' and intake_c_last = '1') then
                     if (IS_LAST_BANK(bank_select, I_PARAM.STRIDE.X) = TRUE) then
                         base_addr <= base_addr + channel_offset;
                     end if;
@@ -327,6 +368,7 @@ begin
             end if;
         end if;
     end process;
+    I_READY <= intake_ready;
     -------------------------------------------------------------------------------
     -- CHANNEL_SIZE が可変長の場合
     -------------------------------------------------------------------------------
@@ -338,8 +380,8 @@ begin
         signal    curr_channel_offset :  integer range 0 to 2**BUF_ADDR_BITS;
         signal    curr_channel_count  :  integer range 0 to ELEMENT_SIZE;
     begin
-        channel_offset <= 1                       when (I_START_X = '1' and I_START_C = '1') else
-                          curr_channel_offset + 1 when (I_START_X = '1' and I_START_C = '0') else
+        channel_offset <= 1                       when (intake_x_start = '1' and intake_c_start = '1') else
+                          curr_channel_offset + 1 when (intake_x_start = '1' and intake_c_start = '0') else
                           curr_channel_offset;
         process (CLK, RST)
             variable  atrb_c_vector  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.C.LO to I_PARAM.SHAPE.C.HI);
@@ -348,10 +390,10 @@ begin
                     curr_channel_offset <= 0;
                     curr_channel_count  <= 0;
             elsif (CLK'event and CLK = '1') then
-                if (CLR = '1' or I_CLEAR = '1') then
+                if (CLR = '1' or I_ENABLE = '0') then
                     curr_channel_offset <= 0;
                     curr_channel_count  <= 0;
-                elsif (I_VALID = '1' and I_START_Y = '1' and I_START_X = '1') then
+                elsif (I_VALID = '1' and intake_ready = '1' and intake_y_start = '1' and intake_x_start = '1') then
                     curr_channel_offset <= channel_offset;
                     atrb_c_vector       := GET_ATRB_C_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
                     curr_channel_count  <= curr_channel_count + CALC_ATRB_VALID_COUNT(I_PARAM, atrb_c_vector);
@@ -383,9 +425,9 @@ begin
         if (RST = '1') then
                 intake_x_count <= 0;
         elsif (CLK'event and CLK = '1') then
-            if (CLR = '1' or I_CLEAR = '1') then
+            if (CLR = '1' or I_ENABLE = '0') then
                 intake_x_count <= 0;
-            elsif (I_VALID = '1' and I_START_Y = '1' and I_LAST_C = '1') then
+            elsif (I_VALID = '1' and intake_ready = '1' and intake_y_start = '1' and intake_c_last = '1') then
                 atrb_x_vector  := GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
                 intake_x_count <= intake_x_count + CALC_ATRB_VALID_COUNT(I_PARAM, atrb_x_vector);
             end if;
@@ -395,79 +437,57 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    L: for LINE in 0 to LINE_SIZE-1 generate
+    L: for line in 0 to LINE_SIZE-1 generate
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
         signal    bank_data_array   :  RAM_DATA_VECTOR(0 to BANK_SIZE-1);
         signal    bank_addr_array   :  RAM_ADDR_VECTOR(0 to BANK_SIZE-1);
         signal    bank_wena_array   :  RAM_WENA_VECTOR(0 to BANK_SIZE-1);
-        signal    line_state        :  LINE_STATE_TYPE;
-        signal    line_atrb         :  IMAGE_ATRB_TYPE;
     begin
         ---------------------------------------------------------------------------
-        -- line_state :
+        -- intake_line_start(line)  :
         ---------------------------------------------------------------------------
-        process (CLK, RST) begin
+        intake_line_start(line) <= '1' when (intake_line_busy(line) = '0') and
+                                            (I_LINE_START /= LINE_ALL_0  ) and
+                                            (I_LINE_START(line)     = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- intake_line_done(line)   :
+        -- I_LINE_DONE(line)        :
+        ---------------------------------------------------------------------------
+        intake_line_done(line)  <= '1' when (intake_line_busy(line) = '1'               ) and
+                                            (I_VALID       = '1' and intake_ready  = '1') and
+                                            (intake_x_last = '1' and intake_c_last = '1') else '0';
+        I_LINE_DONE(line) <= intake_line_done(line);
+        ---------------------------------------------------------------------------
+        -- intake_line_busy(line)   :
+        ---------------------------------------------------------------------------
+        process(CLK, RST) begin 
             if (RST = '1') then
-                    line_state <= LINE_IDLE_STATE;
-                    line_atrb  <= (VALID => FALSE, START => FALSE, LAST => FALSE);
+                    intake_line_busy(line) <= '0';
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
-                    line_state <= LINE_IDLE_STATE;
-                    line_atrb  <= (VALID => FALSE, START => FALSE, LAST => FALSE);
-                else
-                    case line_state is
-                        when LINE_IDLE_STATE =>
-                            if (I_LINE_START(LINE) = '1') then
-                                line_state <= LINE_INTAKE_STATE;
-                                line_atrb  <= GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(I_PARAM, LINE+I_PARAM.SHAPE.Y.LO, I_DATA);
-                            else
-                                line_state <= LINE_IDLE_STATE;
-                            end if;
-                        when LINE_INTAKE_STATE =>
-                            if (I_VALID = '1' and I_LAST_X  = '1' and I_LAST_C  = '1') then
-                                line_state <= LINE_OUTLET_STATE;
-                            else
-                                line_state <= LINE_INTAKE_STATE;
-                            end if;
-                        when LINE_OUTLET_STATE =>
-                            if    (O_LINE_RETURN(LINE) = '1') then
-                                line_state <= LINE_OUTLET_STATE;
-                            elsif (O_LINE_FEED(LINE)   = '1') then
-                                line_state <= LINE_IDLE_STATE;
-                            else
-                                line_state <= LINE_OUTLET_STATE;
-                            end if;
-                        when others     =>
-                            line_state <= LINE_IDLE_STATE;
-                    end case;
+                    intake_line_busy(line) <= '0';
+                elsif (intake_line_start(line) = '1') then
+                    intake_line_busy(line) <= '1';
+                elsif (intake_line_done(line)  = '1') then
+                    intake_line_busy(line) <= '0';
                 end if;
             end if;
         end process;
         ---------------------------------------------------------------------------
-        -- I_LINE_READY(LINE) :
-        ---------------------------------------------------------------------------
-        I_LINE_READY(LINE) <= '1' when (line_state = LINE_IDLE_STATE) else '0';
-        ---------------------------------------------------------------------------
-        -- O_LINE_VALID (LINE) :
-        -- O_lINE_ATRB(LINE) :
-        ---------------------------------------------------------------------------
-        O_LINE_VALID(LINE) <= '1' when (line_state = LINE_OUTLET_STATE) else '0';
-        O_lINE_ATRB(LINE)  <= line_atrb;
-        ---------------------------------------------------------------------------
         -- bank_wena_array :
         ---------------------------------------------------------------------------
         process(CLK, RST)
-            variable  atrb_x_vec  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
-            variable  bank_we     :  std_logic;
+            variable  atrb_x_vec    :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
+            variable  bank_we       :  std_logic;
         begin 
             if (RST = '1') then
                     bank_wena_array <= (others => (others => '0'));
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
                     bank_wena_array <= (others => (others => '0'));
-                elsif (I_VALID = '1' and line_state = LINE_INTAKE_STATE) then
+                elsif (I_VALID = '1' and intake_ready = '1' and intake_line_busy(line) = '1') then
                     atrb_x_vec := GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
                     for bank in 0 to BANK_SIZE-1 loop
                         bank_we := '0';
@@ -495,21 +515,21 @@ begin
             if (RST = '1') then
                     bank_addr_array <= (others => (others => '0'));
             elsif (CLK'event and CLK = '1') then
-                if (CLR = '1' or line_state = LINE_IDLE_STATE) then
+                if (CLR = '1' or intake_line_busy(line) = '0') then
                     bank_addr_array <= (others => (others => '0'));
-                elsif (I_VALID = '1' and line_state = LINE_INTAKE_STATE) then
+                elsif (I_VALID = '1' and intake_ready = '1') then
                     bank_addr_array <= NEXT_RAM_ADDR_VECTOR(
                                            RAM_ADDR       => bank_addr_array,
                                            BANK_SELECT    => bank_select    ,
                                            BASE_ADDR      => base_addr      ,
                                            CHANNEL_OFFSET => channel_offset ,
-                                           START_CHANNEL  => I_START_C
+                                           START_CHANNEL  => intake_c_start
                                       );
                 end if;
             end if;
         end process;
         ---------------------------------------------------------------------------
-        -- bank_data_array : 
+        -- bank_addr_array :
         ---------------------------------------------------------------------------
         process(CLK, RST)
             constant  TEMP_PARAM :  IMAGE_WINDOW_PARAM_TYPE
@@ -539,7 +559,7 @@ begin
                                                      PARAM   => I_PARAM,
                                                      C       => c_pos,
                                                      X       => x_pos,
-                                                     Y       => LINE+I_PARAM.SHAPE.Y.LO,
+                                                     Y       => line+I_PARAM.SHAPE.Y.LO,
                                                      DATA    => I_DATA
                                                  );
                                     SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
@@ -564,7 +584,7 @@ begin
         ---------------------------------------------------------------------------
         process (bank_wena_array) begin
             for bank in 0 to BANK_SIZE-1 loop
-                BUF_WE  ((LINE*BANK_SIZE+bank+1)*RAM_WENA_BITS-1 downto (LINE*BANK_SIZE+bank)*RAM_WENA_BITS) <= bank_wena_array(bank);
+                BUF_WE  ((line*BANK_SIZE+bank+1)*RAM_WENA_BITS-1 downto (line*BANK_SIZE+bank)*RAM_WENA_BITS) <= bank_wena_array(bank);
             end loop;
         end process;
         ---------------------------------------------------------------------------
@@ -572,7 +592,7 @@ begin
         ---------------------------------------------------------------------------
         process (bank_addr_array) begin
             for bank in 0 to BANK_SIZE-1 loop
-                BUF_ADDR((LINE*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (LINE*BANK_SIZE+bank)*BUF_ADDR_BITS) <= bank_addr_array(bank);
+                BUF_ADDR((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS) <= bank_addr_array(bank);
             end loop;
         end process;
         ---------------------------------------------------------------------------
@@ -580,7 +600,7 @@ begin
         ---------------------------------------------------------------------------
         process (bank_data_array) begin
             for bank in 0 to BANK_SIZE-1 loop
-                BUF_DATA((LINE*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (LINE*BANK_SIZE+bank)*BUF_DATA_BITS) <= bank_data_array(bank);
+                BUF_DATA((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS) <= bank_data_array(bank);
             end loop;
         end process;
     end generate;
