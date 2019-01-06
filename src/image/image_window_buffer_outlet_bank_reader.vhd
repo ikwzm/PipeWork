@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_reader.vhd
---!     @brief   Image Window Buffer Reader Module :
+--!     @file    image_window_buffer_outlet_bank_reader.vhd
+--!     @brief   Image Window Buffer Outlet Bank Reader Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/27
+--!     @date    2019/1/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -40,10 +40,10 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER_READER :
+--! @brief   IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER :
 --!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_READER is
+entity  IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
     generic (
         O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
                           --! 出力側のウィンドウのパラメータを指定する.
@@ -70,7 +70,12 @@ entity  IMAGE_WINDOW_BUFFER_READER is
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
@@ -123,7 +128,7 @@ entity  IMAGE_WINDOW_BUFFER_READER is
         BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0)
     );
-end IMAGE_WINDOW_BUFFER_READER;
+end IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -134,8 +139,8 @@ library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_ATRB_GENERATOR;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
-use     PIPEWORK.COMPONENTS.QUEUE_REGISTER;
-architecture RTL of IMAGE_WINDOW_BUFFER_READER is
+use     PIPEWORK.COMPONENTS.PIPELINE_REGISTER;
+architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -280,6 +285,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_READER is
     signal    outlet_data           :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
     signal    outlet_valid          :  std_logic;
     signal    outlet_ready          :  std_logic;
+    signal    outlet_busy           :  std_logic;
 begin
     -------------------------------------------------------------------------------
     -- X LOOP
@@ -648,26 +654,21 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    OUTLET: block
-        constant   QUEUE_SIZE :  integer := 2;
-        signal     q_valid    :  std_logic_vector(QUEUE_SIZE downto 0);
-    begin 
-        QUEUE: QUEUE_REGISTER                      -- 
-            generic map (                          -- 
-                QUEUE_SIZE  => QUEUE_SIZE        , --
-                DATA_BITS   => O_PARAM.DATA.SIZE   -- 
-            )                                      -- 
-            port map (                             -- 
-                CLK         => CLK               , -- In  :
-                RST         => RST               , -- In  :
-                CLR         => CLR               , -- In  :
-                I_DATA      => outlet_data       , -- In  :
-                I_VAL       => outlet_valid      , -- In  :
-                I_RDY       => outlet_ready      , -- Out :
-                Q_DATA      => O_DATA            , -- Out :
-                Q_VAL       => q_valid           , -- Out :
-                Q_RDY       => O_READY             -- In  :
-            );
-        O_VALID <= q_valid(0);
-    end block;
+    QUEUE: PIPELINE_REGISTER                   -- 
+        generic map (                          -- 
+            QUEUE_SIZE  => QUEUE_SIZE        , --
+            WORD_BITS   => O_PARAM.DATA.SIZE   -- 
+        )                                      -- 
+        port map (                             -- 
+            CLK         => CLK               , -- In  :
+            RST         => RST               , -- In  :
+            CLR         => CLR               , -- In  :
+            I_WORD      => outlet_data       , -- In  :
+            I_VAL       => outlet_valid      , -- In  :
+            I_RDY       => outlet_ready      , -- Out :
+            Q_WORD      => O_DATA            , -- Out :
+            Q_VAL       => O_VALID           , -- Out :
+            Q_RDY       => O_READY           , -- In  :
+            BUSY        => outlet_busy         -- Out :
+        );
 end RTL;

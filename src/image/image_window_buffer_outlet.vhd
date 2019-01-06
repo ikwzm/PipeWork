@@ -3,11 +3,11 @@
 --!     @brief   Image Window Buffer Outlet Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/27
+--!     @date    2019/1/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -156,184 +156,53 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_READER;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_CHANNEL_REDUCER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER;
 architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    subtype   LINE_SELECT_TYPE      is std_logic_vector(0 to LINE_SIZE-1);
-    type      LINE_SELECT_VECTOR    is array(integer range <>) of LINE_SELECT_TYPE;
-    signal    line_select           :  LINE_SELECT_VECTOR(O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
-    constant  LINE_ALL_1            :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '1');
-    constant  LINE_ALL_0            :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
+    constant  C_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
+                            := NEW_IMAGE_WINDOW_PARAM(
+                                   ELEM_BITS    => O_PARAM.ELEM_BITS,
+                                   INFO_BITS    => D_UNROLL*IMAGE_ATRB_BITS,
+                                   SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                       C => O_PARAM.SHAPE.C,
+                                                       X => O_PARAM.SHAPE.X,
+                                                       Y => O_PARAM.SHAPE.Y
+                                                   ),
+                                   STRIDE       => O_PARAM.STRIDE,
+                                   BORDER_TYPE  => O_PARAM.BORDER_TYPE
+                               );
+    signal    c_data        :  std_logic_vector(C_PARAM.DATA.SIZE-1 downto 0);
+    signal    c_valid       :  std_logic;
+    signal    c_ready       :  std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    function  INIT_LINE_SELECT(LO,HI: integer) return LINE_SELECT_VECTOR is
-        variable i_vec :  LINE_SELECT_VECTOR(LO to HI);
-    begin
-        for i in i_vec'range loop
-            for line in 0 to LINE_SIZE-1 loop
-                if (i-LO = line) then
-                    i_vec(i)(line) := '1';
-                else
-                    i_vec(i)(line) := '0';
-                end if;
-            end loop;
-        end loop;
-        return i_vec;
-    end function;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    function  STRIDE_LINE_SELECT(I_VEC: LINE_SELECT_VECTOR; STRIDE: integer) return LINE_SELECT_VECTOR is
-        variable o_vec :  LINE_SELECT_VECTOR(I_VEC'range);
-    begin
-        for i in o_vec'range loop
-            for line in 0 to LINE_SIZE-1 loop
-                o_vec(i)(line) := I_VEC(i)((LINE_SIZE+line-STRIDE) mod LINE_SIZE);
-            end loop;
-        end loop;
-        return o_vec;
-    end function;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    type      STATE_TYPE            is (IDLE_STATE       ,
-                                        WAIT_STATE       ,
-                                        OUTLET_STATE     ,
-                                        LINE_RETURN_STATE,
-                                        LINE_FEED_STATE  ,
-                                        DONE_STATE      );
-    signal    curr_state            :  STATE_TYPE;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    constant  OUTLET_PARAM          :  IMAGE_WINDOW_PARAM_TYPE
-                                    := NEW_IMAGE_WINDOW_PARAM(
-                                           ELEM_BITS    => O_PARAM.ELEM_BITS,
-                                           INFO_BITS    => D_UNROLL*IMAGE_ATRB_BITS,
-                                           SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
-                                                               C => O_PARAM.SHAPE.C,
-                                                               X => O_PARAM.SHAPE.X,
-                                                               Y => O_PARAM.SHAPE.Y
-                                                           ),
-                                           STRIDE       => O_PARAM.STRIDE,
-                                           BORDER_TYPE  => O_PARAM.BORDER_TYPE
-                                       );
-    signal    outlet_data           :  std_logic_vector(OUTLET_PARAM.DATA.SIZE-1 downto 0);
-    signal    outlet_valid          :  std_logic;
-    signal    outlet_ready          :  std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    constant  READ_DATA_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
-                                    := NEW_IMAGE_WINDOW_PARAM(
-                                           ELEM_BITS    => O_PARAM.ELEM_BITS,
-                                           INFO_BITS    => D_UNROLL*IMAGE_ATRB_BITS,
-                                           SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
-                                                               C => O_PARAM.SHAPE.C,
-                                                               X => O_PARAM.SHAPE.X,
-                                                               Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
-                                                           ),
-                                           STRIDE       => O_PARAM.STRIDE,
-                                           BORDER_TYPE  => O_PARAM.BORDER_TYPE
-                                       );
-    signal    buf_read_data         :  std_logic_vector(READ_DATA_PARAM.DATA.SIZE-1 downto 0);
-    signal    buf_read_valid        :  std_logic;
-    signal    buf_read_ready        :  std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    signal    line_valid            :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    line_start            :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    line_active           :  std_logic_vector(LINE_SIZE-1 downto 0);
+    constant  L_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
+                            := NEW_IMAGE_WINDOW_PARAM(
+                                   ELEM_BITS    => C_PARAM.ELEM_BITS,
+                                   INFO_BITS    => C_PARAM.INFO_BITS,
+                                   SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                       C => C_PARAM.SHAPE.C,
+                                                       X => C_PARAM.SHAPE.X,
+                                                       Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
+                                                   ),
+                                   STRIDE       => C_PARAM.STRIDE,
+                                   BORDER_TYPE  => C_PARAM.BORDER_TYPE
+                               );
+    signal    l_data        :  std_logic_vector(L_PARAM.DATA.SIZE-1 downto 0);
+    signal    l_valid       :  std_logic;
+    signal    l_ready       :  std_logic;
+    signal    l_start       :  std_logic_vector(LINE_SIZE-1 downto 0);
 begin
     -------------------------------------------------------------------------------
-    -- curr_state  :
-    -------------------------------------------------------------------------------
-    process (CLK, RST) begin
-        if (RST = '1') then
-                curr_state  <= IDLE_STATE;
-                line_select <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
-                line_active <= (others => '0');
-        elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then
-                curr_state  <= IDLE_STATE;
-                line_select <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
-                line_active <= (others => '0');
-            else
-                case curr_state is
-                    when IDLE_STATE =>
-                            curr_state  <= WAIT_STATE;
-                            line_select <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
-                            line_active <= (others => '0');
-                    when WAIT_STATE =>
-                        if (line_valid /= LINE_ALL_0) then
-                            line_active <= line_valid;
-                            curr_state  <= OUTLET_STATE;
-                        else
-                            line_active <= (others => '0');
-                            curr_state  <= WAIT_STATE;
-                        end if;
-                    when OUTLET_STATE =>
-                        if    (O_RETURN = '1') then
-                            curr_state <= LINE_RETURN_STATE;
-                        elsif (O_FEED   = '1' and O_LAST = '0') then
-                            curr_state <= LINE_FEED_STATE;
-                        elsif (O_FEED   = '1' and O_LAST = '1') then
-                            curr_state <= DONE_STATE;
-                        else
-                            curr_state <= OUTLET_STATE;
-                        end if;
-                    when LINE_RETURN_STATE =>
-                        curr_state  <= WAIT_STATE;
-                    when LINE_FEED_STATE =>
-                        curr_state  <= WAIT_STATE;
-                        line_select <= STRIDE_LINE_SELECT(line_select, O_PARAM.STRIDE.Y);
-                    when DONE_STATE =>
-                        curr_state  <= IDLE_STATE;
-                        line_select <= STRIDE_LINE_SELECT(line_select, O_PARAM.STRIDE.Y);
-                    when others     =>
-                        curr_state <= IDLE_STATE;
-                end case;
-            end if;
-        end if;
-    end process;
-    -------------------------------------------------------------------------------
-    -- line_valid :
-    -------------------------------------------------------------------------------
-    process (I_LINE_VALID, line_select)
-        variable  or_reduced_line_valid :  std_logic_vector(LINE_SIZE-1 downto 0);
-    begin
-        or_reduced_line_valid := (others => '0');
-        for line in 0 to LINE_SIZE-1 loop
-            for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
-                if line_select(y_pos)(line) = '1' and I_LINE_VALID(line) = '1' then
-                    or_reduced_line_valid(line) := or_reduced_line_valid(line) or '1';
-                end if;
-            end loop;
-        end loop;
-        line_valid <= or_reduced_line_valid;
-    end process;
-    -------------------------------------------------------------------------------
-    -- line_start :
-    -------------------------------------------------------------------------------
-    line_start    <= line_valid  when (curr_state = WAIT_STATE) else (others => '0');
-    -------------------------------------------------------------------------------
-    -- I_LINE_FEED   :
-    -- I_LINE_RETURN :
-    -------------------------------------------------------------------------------
-    I_LINE_RETURN <= line_active when (curr_state = LINE_RETURN_STATE) else (others => '0');
-    I_LINE_FEED   <= line_active when (curr_state = LINE_FEED_STATE  ) or
-                                      (curr_state = DONE_STATE       ) else (others => '0');
-    -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    BUF_READER: IMAGE_WINDOW_BUFFER_READER       -- 
+    BANK_READER: IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER
         generic map (                            -- 
-            O_PARAM         => READ_DATA_PARAM , -- 
+            O_PARAM         => L_PARAM         , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE    , --   
             CHANNEL_SIZE    => CHANNEL_SIZE    , --   
             BANK_SIZE       => BANK_SIZE       , --   
@@ -354,7 +223,7 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_LINE_START    => line_start      , -- In  :
+            I_LINE_START    => l_start         , -- In  :
             I_LINE_ATRB     => I_LINE_ATRB     , -- In  :
             X_SIZE          => X_SIZE          , -- In  :
             D_SIZE          => D_SIZE          , -- In  :
@@ -363,9 +232,9 @@ begin
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_DATA          => buf_read_data   , -- Out :
-            O_VALID         => buf_read_valid  , -- Out :
-            O_READY         => buf_read_ready  , -- Out :
+            O_DATA          => l_data          , -- Out :
+            O_VALID         => l_valid         , -- Out :
+            O_READY         => l_ready         , -- Out :
         ---------------------------------------------------------------------------
         -- バッファメモリ I/F
         ---------------------------------------------------------------------------
@@ -375,84 +244,61 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    process (buf_read_data, line_select)
-        variable  data   :  std_logic_vector(OUTLET_PARAM.DATA.SIZE-1 downto 0);
-        variable  elem   :  std_logic_vector(OUTLET_PARAM.ELEM_BITS-1 downto 0);
-        variable  atrb_y :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-        variable  i_atrb :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-    begin
-        data(OUTLET_PARAM.DATA.INFO_FIELD  .HI downto OUTLET_PARAM.DATA.INFO_FIELD  .LO) := buf_read_data(READ_DATA_PARAM.DATA.INFO_FIELD  .HI downto READ_DATA_PARAM.DATA.INFO_FIELD  .LO);
-        data(OUTLET_PARAM.DATA.ATRB_C_FIELD.HI downto OUTLET_PARAM.DATA.ATRB_C_FIELD.LO) := buf_read_data(READ_DATA_PARAM.DATA.ATRB_C_FIELD.HI downto READ_DATA_PARAM.DATA.ATRB_C_FIELD.LO);
-        data(OUTLET_PARAM.DATA.ATRB_X_FIELD.HI downto OUTLET_PARAM.DATA.ATRB_X_FIELD.LO) := buf_read_data(READ_DATA_PARAM.DATA.ATRB_X_FIELD.HI downto READ_DATA_PARAM.DATA.ATRB_X_FIELD.LO);
-        for y_pos in OUTLET_PARAM.SHAPE.Y.LO to OUTLET_PARAM.SHAPE.Y.HI loop
-            atrb_y := (others => '0');
-            for line in 0 to LINE_SIZE-1 loop
-                if (line_select(y_pos)(line) = '1') then
-                    if (I_LINE_ATRB(line).VALID) then
-                        i_atrb(IMAGE_ATRB_VALID_POS) := '1';
-                    else
-                        i_atrb(IMAGE_ATRB_VALID_POS) := '0';
-                    end if;
-                    if (I_LINE_ATRB(line).START) then
-                        i_atrb(IMAGE_ATRB_START_POS) := '1';
-                    else
-                        i_atrb(IMAGE_ATRB_START_POS) := '0';
-                    end if;
-                    if (I_LINE_ATRB(line).LAST ) then
-                        i_atrb(IMAGE_ATRB_LAST_POS ) := '1';
-                    else
-                        i_atrb(IMAGE_ATRB_LAST_POS ) := '0';
-                    end if;
-                    atrb_y := atrb_y or i_atrb;
-                end if;
-            end loop;
-            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(OUTLET_PARAM, y_pos, atrb_y, data);
-        end loop;
-        for c_pos in OUTLET_PARAM.SHAPE.C.LO to OUTLET_PARAM.SHAPE.C.HI loop
-        for x_pos in OUTLET_PARAM.SHAPE.X.LO to OUTLET_PARAM.SHAPE.X.HI loop
-        for y_pos in OUTLET_PARAM.SHAPE.Y.LO to OUTLET_PARAM.SHAPE.Y.HI loop
-            elem := (others => '0');
-            for line  in 0 to LINE_SIZE-1 loop
-                if (line_select(y_pos)(line) = '1') then
-                    elem := elem or GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
-                                        PARAM   => READ_DATA_PARAM ,
-                                        C       => c_pos,
-                                        X       => x_pos,
-                                        Y       => line+READ_DATA_PARAM.SHAPE.X.LO,
-                                        DATA    => buf_read_data
-                                    );
-                end if;
-            end loop;
-            SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
-                    PARAM   => OUTLET_PARAM ,
-                    C       => c_pos,
-                    X       => x_pos,
-                    Y       => y_pos,
-                    ELEMENT => elem ,
-                    DATA    => data
-             );
-        end loop;
-        end loop;
-        end loop;
-        outlet_data <= data;
-    end process;
-    outlet_valid   <= buf_read_valid;
-    buf_read_ready <= outlet_ready;
+    LINE_SELECTOR: IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR
+        generic map (                            -- 
+            I_PARAM         => L_PARAM         , -- 
+            O_PARAM         => C_PARAM         , -- 
+            LINE_SIZE       => LINE_SIZE       , --   
+            QUEUE_SIZE      => 1                 --   
+        )                                        -- 
+        port map (                               -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK             , -- In  :
+            RST             => RST             , -- In  :
+            CLR             => CLR             , -- In  :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            I_LINE_START    => l_start         , -- Out :
+            I_DATA          => l_data          , -- In  :
+            I_VALID         => l_valid         , -- In  :
+            I_READY         => l_ready         , -- Out :
+        ---------------------------------------------------------------------------
+        -- 出力側 I/F
+        ---------------------------------------------------------------------------
+            O_DATA          => c_data          , -- Out :
+            O_VALID         => c_valid         , -- Out :
+            O_READY         => c_ready         , -- In  :
+            O_LAST          => O_LAST          , -- In  :
+            O_FEED          => O_FEED          , -- In  :
+            O_RETURN        => O_RETURN        , -- In  :
+        ---------------------------------------------------------------------------
+        -- ライン制御 I/F
+        ---------------------------------------------------------------------------
+            LINE_VALID      => I_LINE_VALID    , -- In  :
+            LINE_ATRB       => I_LINE_ATRB     , -- In  :
+            LINE_FEED       => I_LINE_FEED     , -- Out :
+            LINE_RETURN     => I_LINE_RETURN     -- Out :
+    );
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    O_DATA(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) <= outlet_data(OUTLET_PARAM.DATA.ELEM_FIELD.HI downto OUTLET_PARAM.DATA.ELEM_FIELD.LO);
-    O_DATA(O_PARAM.DATA.ATRB_FIELD.HI downto O_PARAM.DATA.ATRB_FIELD.LO) <= outlet_data(OUTLET_PARAM.DATA.ATRB_FIELD.HI downto OUTLET_PARAM.DATA.ATRB_FIELD.LO);
-    process(outlet_data)
-        variable info :  std_logic_vector(OUTLET_PARAM.INFO_BITS-1 downto 0);
+    process (c_data)
+        alias info :  std_logic_vector(C_PARAM.INFO_BITS-1 downto 0) is c_data(C_PARAM.DATA.INFO_FIELD.HI downto C_PARAM.DATA.INFO_FIELD.LO);
     begin
-        info := outlet_data(OUTLET_PARAM.DATA.INFO_FIELD.HI downto OUTLET_PARAM.DATA.INFO_FIELD.LO);
         for d_pos in 0 to D_UNROLL-1 loop
-            O_D_ATRB(d_pos).VALID <= (info(d_pos*IMAGE_ATRB_BITS+IMAGE_ATRB_VALID_POS) = '1');
-            O_D_ATRB(d_pos).START <= (info(d_pos*IMAGE_ATRB_BITS+IMAGE_ATRB_START_POS) = '1');
-            O_D_ATRB(d_pos).LAST  <= (info(d_pos*IMAGE_ATRB_BITS+IMAGE_ATRB_LAST_POS ) = '1');
+            O_D_ATRB(d_pos).VALID <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_VALID_POS) = '1');
+            O_D_ATRB(d_pos).START <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_START_POS) = '1');
+            O_D_ATRB(d_pos).LAST  <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_LAST_POS ) = '1');
         end loop;
     end process;
-    O_VALID <= outlet_valid;
-    outlet_ready <= O_READY;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    O_DATA(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) <= c_data(C_PARAM.DATA.ELEM_FIELD.HI downto C_PARAM.DATA.ELEM_FIELD.LO);
+    O_DATA(O_PARAM.DATA.ATRB_FIELD.HI downto O_PARAM.DATA.ATRB_FIELD.LO) <= c_data(C_PARAM.DATA.ATRB_FIELD.HI downto C_PARAM.DATA.ATRB_FIELD.LO);
+    O_VALID <= c_valid;
+    c_ready <= O_READY;
 end RTL;
