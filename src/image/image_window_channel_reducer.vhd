@@ -3,11 +3,11 @@
 --!     @brief   Image Window Channel Reducer MODULE :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/1/6
+--!     @date    2019/1/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2019 Ichiro Kawazome
+--      Copyright (C) 2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -170,10 +170,17 @@ library ieee;
 use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.COMPONENTS.REDUCER;
 architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
-    -- 最大公約数(Greatest Common Divisor)を求める関数
+    --! @brief 各種内部パラメータ
+    -------------------------------------------------------------------------------
+    constant  QUEUE_SIZE    :  integer   :=  0 ;
+    constant  I_JUSTIFIED   :  integer   :=  1 ;
+    constant  FLUSH_ENABLE  :  integer   :=  0 ;
+    constant  FLUSH         :  std_logic := '0';
+    constant  I_FLUSH       :  std_logic := '0';
+    -------------------------------------------------------------------------------
+    --! @brief 最大公約数(Greatest Common Divisor)を求める関数
     -------------------------------------------------------------------------------
     function  gcd(A,B:integer) return integer is
     begin
@@ -186,7 +193,7 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
         end if;
     end function;
     -------------------------------------------------------------------------------
-    -- 内部で一単位として扱うチャネルの数を算出する関数
+    --! @brief 内部で一単位として扱うチャネルの数を算出する関数
     -------------------------------------------------------------------------------
     function  CALC_CHANNEL_SIZE return integer is
     begin
@@ -199,44 +206,418 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
             return 1;
         end if;
     end function;
-    constant  CHANNEL_SIZE          :  integer := CALC_CHANNEL_SIZE;
+    -------------------------------------------------------------------------------
+    --! @brief 内部で一単位として扱うチャネルの数
+    -------------------------------------------------------------------------------
+    constant  CHANNEL_SIZE  :  integer := CALC_CHANNEL_SIZE;
+    -------------------------------------------------------------------------------
+    --! @brief 整数の最小値を求める関数.
+    -------------------------------------------------------------------------------
+    function  minimum(L,R : integer) return integer is
+    begin
+        if (L < R) then return L;
+        else            return R;
+        end if;
+    end function;
     -------------------------------------------------------------------------------
     -- 内部で一単位として扱うウィンドウパラメータ
     -------------------------------------------------------------------------------
-    constant  U_PARAM               :  IMAGE_WINDOW_PARAM_TYPE
-                                    := NEW_IMAGE_WINDOW_PARAM(
-                                         ELEM_BITS => I_PARAM.ELEM_BITS,
-                                         INFO_BITS => I_PARAM.INFO_BITS,
-                                         C         => NEW_IMAGE_VECTOR_RANGE(CHANNEL_SIZE),
-                                         X         => I_PARAM.SHAPE.X,
-                                         Y         => I_PARAM.SHAPE.Y
-                                       );
+    constant  U_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
+                            := NEW_IMAGE_WINDOW_PARAM(
+                                   ELEM_BITS => I_PARAM.ELEM_BITS,
+                                   INFO_BITS => I_PARAM.INFO_BITS,
+                                   C         => NEW_IMAGE_VECTOR_RANGE(CHANNEL_SIZE),
+                                   X         => I_PARAM.SHAPE.X,
+                                   Y         => I_PARAM.SHAPE.Y
+                               );
+    constant  WORD_BITS     :  integer := U_PARAM.DATA.SIZE;
     -------------------------------------------------------------------------------
-    -- 
+    --! @brief 入力側のワード数
     -------------------------------------------------------------------------------
-    constant  I_WINDOW_DATA_NUM     :  integer := I_PARAM.SHAPE.C.SIZE / U_PARAM.SHAPE.C.SIZE;
-    signal    i_window_data         :  std_logic_vector(I_WINDOW_DATA_NUM*U_PARAM.DATA.SIZE-1 downto 0);
-    signal    i_window_strb         :  std_logic_vector(I_WINDOW_DATA_NUM                  -1 downto 0);
-    signal    i_window_last         :  std_logic;
+    constant  I_WIDTH       :  integer := I_PARAM.SHAPE.C.SIZE / U_PARAM.SHAPE.C.SIZE;
     -------------------------------------------------------------------------------
-    -- 
+    --! @brief 出力側のワード数
     -------------------------------------------------------------------------------
-    constant  O_WINDOW_DATA_NUM     :  integer := O_PARAM.SHAPE.C.SIZE / U_PARAM.SHAPE.C.SIZE;
-    signal    o_window_data         :  std_logic_vector(O_WINDOW_DATA_NUM*U_PARAM.DATA.SIZE-1 downto 0);
-    signal    o_window_shift        :  std_logic_vector(O_WINDOW_DATA_NUM-1 downto 0);
-    constant  offset                :  std_logic_vector(O_WINDOW_DATA_NUM-1 downto 0) := (others => '0');
-begin
+    constant  O_WIDTH       :  integer := O_PARAM.SHAPE.C.SIZE / U_PARAM.SHAPE.C.SIZE;
+    constant  offset        :  std_logic_vector (O_WIDTH-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
-    -- 
+    --! @brief ワード単位でデータ/データストローブ信号/ワード有効フラグをまとめておく.
     -------------------------------------------------------------------------------
-    process(I_DATA, I_DONE)
+    type      WORD_TYPE     is record
+              DATA          :  std_logic_vector(WORD_BITS-1 downto 0);
+              LAST          :  boolean;
+              VAL           :  boolean;
+    end record;
+    -------------------------------------------------------------------------------
+    --! @brief WORD TYPE の初期化時の値.
+    -------------------------------------------------------------------------------
+    constant  WORD_NULL     :  WORD_TYPE := (DATA => (others => '0'),
+                                             LAST => FALSE,
+                                             VAL  => FALSE);
+    -------------------------------------------------------------------------------
+    --! @brief WORD TYPE の配列の定義.
+    -------------------------------------------------------------------------------
+    type      WORD_VECTOR  is array (INTEGER range <>) of WORD_TYPE;
+    -------------------------------------------------------------------------------
+    --! @brief 指定されたベクタのリダクション論理和を求める関数.
+    -------------------------------------------------------------------------------
+    function  or_reduce(Arg : std_logic_vector) return std_logic is
+        variable result : std_logic;
+    begin
+        result := '0';
+        for i in Arg'range loop
+            result := result or Arg(i);
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief 入力信号のうち最も低い位置の'1'だけを取り出す関数.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- 例) Data(0 to 3) = "1110" => SEL(0 to 3) = "1000"
+    --     Data(0 to 3) = "0111" => SEL(0 to 3) = "0100"
+    --     Data(0 to 3) = "0011" => SEL(0 to 3) = "0010"
+    --     Data(0 to 3) = "0001" => SEL(0 to 3) = "0001"
+    --     Data(0 to 3) = "0000" => SEL(0 to 3) = "0000"
+    --     Data(0 to 3) = "0101" => SEL(0 to 3) = "0101" <- このような入力は禁止
+    -------------------------------------------------------------------------------
+    function  priority_selector(
+                 Data    : std_logic_vector
+    )            return    std_logic_vector
+    is
+        variable result  : std_logic_vector(Data'range);
+    begin
+        for i in Data'range loop
+            if (i = Data'low) then
+                result(i) := Data(i);
+            else
+                result(i) := Data(i) and (not Data(i-1));
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief ワードの配列からSELで指定されたワードを選択する関数.
+    -------------------------------------------------------------------------------
+    function  select_word(
+                 WORDS   :  WORD_VECTOR;
+                 SEL     :  std_logic_vector
+    )            return     WORD_TYPE
+    is
+        alias    i_words :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        alias    i_sel   :  std_logic_vector(0 to   SEL'length-1) is SEL;
+        variable result  :  WORD_TYPE;
+        variable s_vec   :  std_logic_vector(0 to WORDS'length-1);
+    begin
+        for n in WORD_BITS-1 downto 0 loop
+            for i in i_words'range loop
+                if (i_sel'low <= i and i <= i_sel'high) then
+                    s_vec(i) := i_words(i).DATA(n) and i_sel(i);
+                else
+                    s_vec(i) := '0';
+                end if;
+            end loop;
+            result.DATA(n) := or_reduce(s_vec);
+        end loop;
+        for i in i_words'range loop
+            if (i_sel'low <= i and i <= i_sel'high) then
+                if (i_words(i).VAL and i_sel(i) = '1') then
+                    s_vec(i) := '1';
+                else
+                    s_vec(i) := '0';
+                end if;
+            else
+                    s_vec(i) := '0';
+            end if;
+        end loop;
+        result.VAL  := (or_reduce(s_vec) = '1');
+        for i in i_words'range loop
+            if (i_sel'low <= i and i <= i_sel'high) then
+                if (i_words(i).LAST and i_sel(i) = '1') then
+                    s_vec(i) := '1';
+                else
+                    s_vec(i) := '0';
+                end if;
+            else
+                    s_vec(i) := '0';
+            end if;
+        end loop;
+        result.LAST := (or_reduce(s_vec) = '1');
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューの最後にワードを追加した新しいキューを求める関数.
+    -------------------------------------------------------------------------------
+    function  append_words(
+                 QUEUE   :  WORD_VECTOR;
+                 WORDS   :  WORD_VECTOR
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_val   :  std_logic_vector(0 to WORDS'length-1);
+        variable i_sel   :  std_logic_vector(0 to WORDS'length-1);
+        type     bv      is array (INTEGER range <>) of boolean;
+        variable q_val   :  bv(QUEUE'low to QUEUE'high);
+        variable result  :  WORD_VECTOR     (QUEUE'range);
+    begin
+        for q in QUEUE'range loop
+            q_val(q) := QUEUE(q).VAL;
+        end loop;
+        for q in QUEUE'range loop 
+            if (q_val(q) = FALSE) then
+                for i in i_val'range loop
+                    if (q-i-1 >= QUEUE'low) then
+                        if (q_val(q-i-1)) then
+                            i_val(i) := '1';
+                        else
+                            i_val(i) := '0';
+                        end if;
+                    else
+                            i_val(i) := '1';
+                    end if;
+                end loop;
+                i_sel := priority_selector(i_val);
+                result(q) := select_word(WORDS=>i_vec, SEL=>i_sel);
+            else
+                result(q) := QUEUE(q);
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief o_shift信号からONE-HOTのセレクト信号を生成する関数.
+    -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    -- 例) SHIFT(3 downto 0)="0000" => SEL(0 to 4)=(0=>'1',1=>'0',2=>'0',3=>'0',4=>'0')
+    --     SHIFT(3 downto 0)="0001" => SEL(0 to 4)=(0=>'0',1=>'1',2=>'0',3=>'0',4=>'0')
+    --     SHIFT(3 downto 0)="0011" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'1',3=>'0',4=>'0')
+    --     SHIFT(3 downto 0)="0111" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'0',3=>'1',4=>'0')
+    --     SHIFT(3 downto 0)="1111" => SEL(0 to 4)=(0=>'0',1=>'0',2=>'0',3=>'0',4=>'1')
+    -------------------------------------------------------------------------------
+    function  shift_to_selector(
+                 SHIFT   :  std_logic_vector;
+                 MIN     :  integer;
+                 MAX     :  integer
+    )            return     std_logic_vector
+    is
+        variable result  :  std_logic_vector(MIN to MAX);
+    begin
+        for i in result'range loop
+            if    (i < SHIFT'low ) then
+                    result(i) := '0';
+            elsif (i = SHIFT'low ) then
+                if (SHIFT(i) = '0') then
+                    result(i) := '1';
+                else
+                    result(i) := '0';
+                end if;
+            elsif (i <= SHIFT'high) then
+                if (SHIFT(i) = '0' and SHIFT(i-1) = '1') then
+                    result(i) := '1';
+                else
+                    result(i) := '0';
+                end if;
+            elsif (i = SHIFT'high+1) then
+                if (SHIFT(i-1) = '1') then
+                    result(i) := '1';
+                else
+                    result(i) := '0';
+                end if;
+            else
+                    result(i) := '0';
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief ワード配列の有効なデータをLOW側に詰めたワード配列を求める関数.
+    -------------------------------------------------------------------------------
+    function  justify_words(
+                 WORDS   :  WORD_VECTOR
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_val   :  std_logic_vector(0 to WORDS'length-1);
+        variable s_vec   :  WORD_VECTOR     (0 to WORDS'length-1);
+        variable s_sel   :  std_logic_vector(0 to WORDS'length-1);
+        variable result  :  WORD_VECTOR     (0 to WORDS'length-1);
+    begin
+        for i in i_vec'range loop
+            if (i_vec(i).VAL) then
+                i_val(i) := '1';
+            else
+                i_val(i) := '0';
+            end if;
+        end loop;
+        s_sel := priority_selector(i_val);
+        for i in result'range loop
+            result(i) := select_word(
+                WORDS => i_vec(i to WORDS'length-1  ),
+                SEL   => s_sel(0 to WORDS'length-i-1)
+            );
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューを指定した分だけLOW側にシフトした新しいキューを求める関数.
+    -------------------------------------------------------------------------------
+    function  shift_words(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_sel   :  std_logic_vector(0 to SHIFT'high  +1);
+        variable result  :  WORD_VECTOR     (0 to WORDS'length-1);
+    begin
+        i_sel := shift_to_selector(SHIFT, i_sel'low, i_sel'high);
+        for i in result'range loop
+            result(i) := select_word(
+                WORDS => i_vec(i to minimum(i+i_sel'high,i_vec'high)),
+                SEL   => i_sel
+            );
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューから指定した分だけキューに残して残りを削除したキューを求める関数.
+    -------------------------------------------------------------------------------
+    function  flush_words(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     WORD_VECTOR
+    is
+        alias    i_vec   :  WORD_VECTOR(0 to WORDS'length-1) is WORDS;
+        variable result  :  WORD_VECTOR(0 to WORDS'length-1);
+    begin
+        for i in result'range loop
+            if    (i <  SHIFT'low ) then
+                result(i).VAL := i_vec(i).VAL;
+            elsif (i <= SHIFT'high) then
+                result(i).VAL := i_vec(i).VAL and (SHIFT(i) = '1');
+            else
+                result(i).VAL := FALSE;
+            end if;
+            result(i).DATA := (others => '0');
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューに入っているワード数がSHIFTで指定された数未満かどうかを求める関数
+    -------------------------------------------------------------------------------
+    function  words_less_than_shift_size(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     boolean
+    is
+        alias    i_vec   :  WORD_VECTOR(0 to WORDS'length-1) is WORDS;
+        variable result  :  boolean;
+    begin
+        result := FALSE;
+        for i in SHIFT'high downto i_vec'low loop
+            if (i < SHIFT'low) then
+                if (i_vec(i).VAL = FALSE) then
+                    result := TRUE;
+                end if;
+            else
+                if (i_vec(i).VAL = FALSE and SHIFT(i) = '1') then
+                    result := TRUE;
+                end if;
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューに入っているワード数がSHIFTで指定された数を越えているかどうかを求める関数
+    -------------------------------------------------------------------------------
+    function  words_more_than_shift_size(
+                 WORDS   :  WORD_VECTOR;
+                 SHIFT   :  std_logic_vector
+    )            return     boolean
+    is
+        alias    i_vec   :  WORD_VECTOR     (0 to WORDS'length-1) is WORDS;
+        variable i_sel   :  std_logic_vector(0 to SHIFT'high  +1);
+        variable result  :  boolean;
+    begin
+        i_sel  := shift_to_selector(SHIFT, i_sel'low, i_sel'high);
+        result := FALSE;
+        for i in i_vec'range loop
+            if (i_sel'low <= i and i <= i_sel'high) then
+                if (i_sel(i) = '1' and i_vec(i).VAL) then
+                    result := TRUE;
+                end if;
+            end if;
+        end loop;
+        return result;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief キューのサイズを計算する関数.
+    -------------------------------------------------------------------------------
+    function  QUEUE_DEPTH return integer is begin
+        if (QUEUE_SIZE > 0) then
+            if (QUEUE_SIZE >= O_WIDTH+I_WIDTH-1) then
+                return QUEUE_SIZE;
+            else
+                assert (QUEUE_SIZE >= I_WIDTH+O_WIDTH-1)
+                    report "require QUEUE_SIZE >= I_WIDTH+O_WIDTH-1" severity WARNING;
+                return O_WIDTH+I_WIDTH-1;
+            end if;
+        else
+                return O_WIDTH+I_WIDTH+I_WIDTH-1;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief 現在のキューの状態.
+    -------------------------------------------------------------------------------
+    signal    curr_queue    :  WORD_VECTOR(0 to QUEUE_DEPTH-1);
+    -------------------------------------------------------------------------------
+    --! @brief 出力時にキューから取り出す数.
+    -------------------------------------------------------------------------------
+    signal    o_shift       :  std_logic_vector(O_WIDTH-1 downto 0);
+    -------------------------------------------------------------------------------
+    --! @brief 出力側の Channel Attribute.
+    -------------------------------------------------------------------------------
+    type      C_ATRB_VECTOR is array (integer range <>,integer range <>) of IMAGE_ATRB_TYPE;
+    signal    o_c_atrb      :  C_ATRB_VECTOR(0 to O_WIDTH-1, 0 to U_PARAM.SHAPE.C.SIZE-1);
+    -------------------------------------------------------------------------------
+    --! @brief FLUSH 出力フラグ.
+    -------------------------------------------------------------------------------
+    signal    flush_output  : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief FLUSH 保留フラグ.
+    -------------------------------------------------------------------------------
+    signal    flush_pending : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief DONE 出力フラグ.
+    -------------------------------------------------------------------------------
+    signal    done_output   : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief DONE 保留フラグ.
+    -------------------------------------------------------------------------------
+    signal    done_pending  : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief O_VALID信号を内部で使うための信号.
+    -------------------------------------------------------------------------------
+    signal    outlet_valid  : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief I_READY信号を内部で使うための信号.
+    -------------------------------------------------------------------------------
+    signal    intake_ready  : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief BUSY信号を内部で使うための信号.
+    -------------------------------------------------------------------------------
+    signal    curr_busy     : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief 入力データを生成する関数.
+    -------------------------------------------------------------------------------
+    function  i_data_to_words(I_DATA: std_logic_vector) return WORD_VECTOR is
+        variable  words             :  WORD_VECTOR(0 to I_WIDTH-1);
         variable  t_data            :  std_logic_vector(U_PARAM.DATA.SIZE-1 downto 0);
-        variable  t_strb            :  std_logic;
-        variable  c_atrb            :  IMAGE_ATRB_TYPE;
         variable  x_atrb            :  IMAGE_ATRB_TYPE;
         variable  y_atrb            :  IMAGE_ATRB_TYPE;
-    begin
-        for i in 0 to I_WINDOW_DATA_NUM-1 loop
+        variable  c_atrb            :  IMAGE_ATRB_TYPE;
+        variable  t_valid           :  boolean;
+        variable  t_last            :  boolean;
+    begin 
+        for i in 0 to I_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
                     for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
@@ -298,10 +679,8 @@ begin
             if (I_PARAM.INFO_BITS > 0) then
                 t_data(U_PARAM.DATA.INFO_FIELD.HI downto U_PARAM.DATA.INFO_FIELD.LO) := I_DATA(I_PARAM.DATA.INFO_FIELD.HI downto I_PARAM.DATA.INFO_FIELD.LO);
             end if;
-            i_window_data((i+1)*U_PARAM.DATA.SIZE-1 downto i*U_PARAM.DATA.SIZE) <= t_data;
-        end loop;
-        for i in 0 to I_WINDOW_DATA_NUM-1 loop
-            t_strb := '0';
+            t_valid := FALSE;
+            t_last  := FALSE;
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 c_atrb := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
                               PARAM => I_PARAM,
@@ -309,86 +688,302 @@ begin
                               DATA  => I_DATA
                           );
                 if c_atrb.VALID then
-                     t_strb := t_strb or '1';
+                    t_valid := TRUE;
                 end if;
-                i_window_strb(i) <= t_strb;
+                if c_atrb.LAST  then
+                    t_last  := TRUE;
+                end if;
             end loop;
+            words(i).DATA := t_data;
+            words(i).VAL  := t_valid;
+            words(i).LAST := t_last;
         end loop;
-        if (C_DONE /= 0 and IMAGE_WINDOW_DATA_IS_LAST_C(I_PARAM, I_DATA, TRUE)) or
-           (I_DONE = '1') then
-            i_window_last <= '1';
-        else
-            i_window_last <= '0';
+        return words;
+    end function;
+begin
+    -------------------------------------------------------------------------------
+    -- メインプロセス
+    -------------------------------------------------------------------------------
+    process (CLK, RST) 
+        variable    in_words          : WORD_VECTOR(0 to I_WIDTH-1);
+        variable    next_queue        : WORD_VECTOR(curr_queue'range);
+        variable    shift             : std_logic_vector(O_WIDTH-1 downto 0);
+        variable    next_valid_output : boolean;
+        variable    next_last_output  : boolean;
+        variable    next_flush_output : std_logic;
+        variable    next_flush_pending: std_logic;
+        variable    next_flush_fall   : std_logic;
+        variable    next_done_output  : std_logic;
+        variable    next_done_pending : std_logic;
+        variable    next_done_fall    : std_logic;
+        variable    pending_flag      : boolean;
+        variable    flush_output_done : boolean;
+        variable    flush_output_last : boolean;
+    begin
+        if (RST = '1') then
+                curr_queue    <= (others => WORD_NULL);
+                o_shift       <= (others => '0');
+                flush_output  <= '0';
+                flush_pending <= '0';
+                done_output   <= '0';
+                done_pending  <= '0';
+                intake_ready       <= '0';
+                outlet_valid       <= '0';
+                curr_busy     <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                curr_queue    <= (others => WORD_NULL);
+                o_shift       <= (others => '0');
+                flush_output  <= '0';
+                flush_pending <= '0';
+                done_output   <= '0';
+                done_pending  <= '0';
+                intake_ready       <= '0';
+                outlet_valid       <= '0';
+                curr_busy     <= '0';
+            else
+                -------------------------------------------------------------------
+                -- 次のクロックでのキューの状態を示す変数に現在のキューの状態をセット.
+                -------------------------------------------------------------------
+                next_queue := curr_queue;
+                -------------------------------------------------------------------
+                -- キュー初期化時は、OFFSETで指定された分だけ、あらかじめキューに
+                -- ダミーのデータを入れておく.
+                -------------------------------------------------------------------
+                if (START = '1') then
+                    for i in next_queue'range loop
+                        if (i < O_WIDTH-1) then
+                            next_queue(i).VAL := (OFFSET(i) = '1');
+                        else
+                            next_queue(i).VAL := FALSE;
+                        end if;
+                        next_queue(i).DATA := (others => '0');
+                        next_queue(i).LAST := FALSE;
+                    end loop;
+                end if;
+                -------------------------------------------------------------------
+                -- データ入力時は、キューに入力されたワードを追加する.
+                -------------------------------------------------------------------
+                if (I_VALID = '1' and intake_ready = '1') then
+                    in_words := i_data_to_words(I_DATA);
+                    if (I_JUSTIFIED     = 0) and
+                       (in_words'length > 1) then
+                        in_words := justify_words(in_words);
+                    end if;
+                    next_queue := append_words(next_queue, in_words);
+                end if;
+                -------------------------------------------------------------------
+                -- C_DONE=0 の場合はキューに複数分のチャネルが入っている可能性があ
+                -- るため、シフトする値はキューの先頭から探索する必要がある.
+                -- 探索結果は o_shift レジスタに格納されている.
+                -------------------------------------------------------------------
+                -- C_DONE=1 の場合はキューにひとつ分のチャネルしか入っていないので
+                -- O_WIDTH 分 シフトするようにして回路を簡略化する.
+                -------------------------------------------------------------------
+                if (C_DONE = 0) then
+                    shift := o_shift;
+                else
+                    shift := (others => '1');
+                end if;
+                -------------------------------------------------------------------
+                -- データ出力時は、キューの先頭から shift で指定された分だけ、
+                -- データを取り除く.
+                -------------------------------------------------------------------
+                if (outlet_valid = '1' and O_READY = '1') then
+                    if (FLUSH_ENABLE >  0 ) and
+                       (flush_output = '1') then
+                        flush_output_last :=     words_less_than_shift_size(next_queue, shift);
+                        flush_output_done := not words_more_than_shift_size(next_queue, shift);
+                    else
+                        flush_output_last := FALSE;
+                        flush_output_done := FALSE;
+                    end if;
+                    if (flush_output_last) then
+                        next_queue := flush_words(next_queue, shift);
+                    else
+                        next_queue := shift_words(next_queue, shift);
+                    end if;
+                else
+                        flush_output_last := FALSE;
+                        flush_output_done := FALSE;
+                end if;
+                -------------------------------------------------------------------
+                -- 次のクロックでのキューの状態をレジスタに保持
+                -------------------------------------------------------------------
+                curr_queue <= next_queue;
+                -------------------------------------------------------------------
+                --
+                -------------------------------------------------------------------
+                next_valid_output := FALSE;
+                next_last_output  := FALSE;
+                pending_flag      := FALSE;
+                for o in 0 to O_WIDTH-1 loop
+                    if next_last_output then
+                        for c_pos in 0 to U_PARAM.SHAPE.C.SIZE-1 loop
+                            o_c_atrb(o,c_pos).VALID <= FALSE;
+                            o_c_atrb(o,c_pos).LAST  <= TRUE;
+                            o_c_atrb(o,c_pos).START <= FALSE;
+                        end loop;
+                        o_shift(o)        <= '0';
+                        next_valid_output := TRUE;
+                        pending_flag      := next_queue(o).VAL;
+                    else
+                        for c_pos in 0 to U_PARAM.SHAPE.C.SIZE-1 loop
+                            o_c_atrb(o,c_pos) <= GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(U_PARAM, c_pos, next_queue(o).DATA);
+                        end loop;
+                        o_shift(o)        <= '1';
+                        next_valid_output := next_queue(o).VAL;
+                        next_last_output  := next_queue(o).LAST;
+                        pending_flag      := FALSE;
+                    end if;
+                end loop;
+                -------------------------------------------------------------------
+                -- 次のクロックでのキューの状態でO_WIDTHの位置にデータが入って
+                -- いるか否かをチェック.
+                -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                -- この位置にデータがある場合は、O_DONE、O_FLUSH はまだアサートせ
+                -- ずに、一旦ペンディングしておく.
+                -------------------------------------------------------------------
+                if (next_queue'high >= O_WIDTH) then
+                    if (C_DONE /= 0) then
+                        pending_flag := (next_queue(O_WIDTH).VAL);
+                    else
+                        pending_flag := (pending_flag or next_queue(O_WIDTH).VAL);
+                    end if;
+                else
+                    pending_flag := FALSE;
+                end if;
+                -------------------------------------------------------------------
+                -- FLUSH制御
+                -------------------------------------------------------------------
+                if    (FLUSH_ENABLE = 0) then
+                        next_flush_output  := '0';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '0';
+                elsif (flush_output = '1') then
+                    if (flush_output_done) then
+                        next_flush_output  := '0';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '1';
+                    else
+                        next_flush_output  := '1';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '0';
+                    end if;
+                elsif (flush_pending = '1') or
+                      (FLUSH         = '1') or
+                      (I_VALID = '1' and intake_ready = '1' and I_FLUSH = '1') then
+                    if (pending_flag) then
+                        next_flush_output  := '0';
+                        next_flush_pending := '1';
+                        next_flush_fall    := '0';
+                    else
+                        next_flush_output  := '1';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '0';
+                    end if;
+                else
+                        next_flush_output  := '0';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '0';
+                end if;
+                flush_output  <= next_flush_output;
+                flush_pending <= next_flush_pending;
+                -------------------------------------------------------------------
+                -- DONE制御
+                -------------------------------------------------------------------
+                if    (done_output = '1') then
+                    if (next_queue(next_queue'low).VAL = FALSE) then
+                        next_done_output   := '0';
+                        next_done_pending  := '0';
+                        next_done_fall     := '1';
+                    else
+                        next_done_output   := '1';
+                        next_done_pending  := '0';
+                        next_done_fall     := '0';
+                    end if;
+                elsif (done_pending = '1') or
+                      (DONE         = '1') or
+                      (I_VALID = '1' and intake_ready = '1' and I_DONE = '1') or
+                      (I_VALID = '1' and intake_ready = '1' and C_DONE /= 0 and IMAGE_WINDOW_DATA_IS_LAST_C(I_PARAM, I_DATA, TRUE)) then
+                    if (pending_flag) then
+                        next_done_output   := '0';
+                        next_done_pending  := '1';
+                        next_done_fall     := '0';
+                    else
+                        next_done_output   := '1';
+                        next_done_pending  := '0';
+                        next_done_fall     := '0';
+                    end if;
+                else
+                        next_done_output   := '0';
+                        next_done_pending  := '0';
+                        next_done_fall     := '0';
+                end if;
+                done_output   <= next_done_output;
+                done_pending  <= next_done_pending;
+                -------------------------------------------------------------------
+                -- 出力有効信号の生成.
+                -------------------------------------------------------------------
+                if (O_ENABLE = '1') and
+                   ((next_done_output  = '1') or
+                    (next_flush_output = '1') or
+                    (next_valid_output = TRUE)) then
+                    outlet_valid <= '1';
+                else
+                    outlet_valid <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- 入力可能信号の生成.
+                -------------------------------------------------------------------
+                if (I_ENABLE = '1') and 
+                   (next_done_output  = '0' and next_done_pending  = '0') and
+                   (next_flush_output = '0' and next_flush_pending = '0') and
+                   (next_queue(next_queue'length-I_WIDTH).VAL = FALSE) then
+                    intake_ready <= '1';
+                else
+                    intake_ready <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- 現在処理中であることを示すフラグ.
+                -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                -- 最初に入力があった時点で'1'になり、O_DONEまたはO_FLUSHが出力完了
+                -- した時点で'0'になる。
+                -------------------------------------------------------------------
+                if (curr_busy = '1') then
+                    if (next_flush_fall = '1') or
+                       (next_done_fall  = '1') then
+                        curr_busy <= '0';
+                    else
+                        curr_busy <= '1';
+                    end if;
+                else
+                    if (I_VALID = '1' and intake_ready = '1') then
+                        curr_busy <= '1';
+                    else
+                        curr_busy <= '0';
+                    end if;
+                end if;
+            end if;
         end if;
     end process;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    QUEUE: REDUCER                                  -- 
-        generic map (                               -- 
-            WORD_BITS       => U_PARAM.DATA.SIZE  , -- 
-            STRB_BITS       => 1                  , -- 
-            I_WIDTH         => I_WINDOW_DATA_NUM  , -- 
-            O_WIDTH         => O_WINDOW_DATA_NUM  , -- 
-            QUEUE_SIZE      => 0                  , -- 
-            VALID_MIN       => 0                  , -- 
-            VALID_MAX       => 0                  , --
-            O_VAL_SIZE      => O_WINDOW_DATA_NUM  , -- 
-            O_SHIFT_MIN     => o_window_shift'low , --
-            O_SHIFT_MAX     => o_window_shift'high, --
-            I_JUSTIFIED     => 1                  , -- 
-            FLUSH_ENABLE    => 0                    -- 
-        )                                           -- 
-        port map (                                  -- 
-        ---------------------------------------------------------------------------
-        -- クロック&リセット信号
-        ---------------------------------------------------------------------------
-            CLK             => CLK                , -- In  :
-            RST             => RST                , -- In  :
-            CLR             => CLR                , -- In  :
-        ---------------------------------------------------------------------------
-        -- 各種制御信号
-        ---------------------------------------------------------------------------
-            START           => START              , -- In  :
-            OFFSET          => offset             , -- In  :
-            DONE            => DONE               , -- In  :
-            FLUSH           => '0'                , -- In  :
-            BUSY            => BUSY               , -- Out :
-            VALID           => open               , -- Out :
-        ---------------------------------------------------------------------------
-        -- 入力側 I/F
-        ---------------------------------------------------------------------------
-            I_ENABLE        => I_ENABLE           , -- In  :
-            I_STRB          => i_window_strb      , -- In  :
-            I_DATA          => i_window_data      , -- In  :
-            I_DONE          => i_window_last      , -- In  :
-            I_FLUSH         => '0'                , -- In  :
-            I_VAL           => I_VALID            , -- In  :
-            I_RDY           => I_READY            , -- Out :
-        ---------------------------------------------------------------------------
-        -- 出力側 I/F
-        ---------------------------------------------------------------------------
-            O_ENABLE        => O_ENABLE           , -- In  :
-            O_DATA          => o_window_data      , -- Out :
-            O_STRB          => open               , -- Out :
-            O_DONE          => O_DONE             , -- Out :
-            O_FLUSH         => open               , -- Out :
-            O_VAL           => O_VALID            , -- Out :
-            O_RDY           => O_READY            , -- In  :
-            O_SHIFT         => o_window_shift       -- In  :
-    );
+    O_DONE  <= done_output;
+    O_VALID <= outlet_valid;
+    I_READY <= intake_ready;
+    BUSY    <= curr_busy;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    process(o_window_data)
+    process(curr_queue, o_c_atrb)
         variable  outlet_data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        variable  channel_over  :  boolean;
-        variable  o_shift       :  std_logic_vector(o_window_shift'range);
         variable  c_atrb        :  IMAGE_ATRB_TYPE;
         variable  x_atrb        :  IMAGE_ATRB_TYPE;
         variable  y_atrb        :  IMAGE_ATRB_TYPE;
     begin
-        for o in 0 to O_WINDOW_DATA_NUM-1 loop
+        for o in 0 to O_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
                     for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
@@ -402,53 +997,30 @@ begin
                                            C      => c_pos,
                                            X      => x_pos,
                                            Y      => y_pos,
-                                           DATA   => o_window_data((o+1)*U_PARAM.DATA.SIZE-1 downto o*U_PARAM.DATA.SIZE)),
+                                           DATA   => curr_queue(o).DATA
+                                       ),
                             DATA    => outlet_data
                         );
                     end loop;
                 end loop;
             end loop;
         end loop;
-        channel_over := FALSE;
-        for o in 0 to O_WINDOW_DATA_NUM-1 loop
-            if (channel_over = TRUE) then
-                c_atrb.VALID := FALSE;
-                c_atrb.START := FALSE;
-                c_atrb.LAST  := TRUE;
-                for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                    SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
-                        PARAM => O_PARAM,
-                        C     => c_pos+o*U_PARAM.SHAPE.C.SIZE,
-                        ATRB  => c_atrb,
-                        DATA  => outlet_data
-                    );
-                end loop;
-                o_shift(o) := '0';
-            else
-                for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                    c_atrb := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
-                                  PARAM => U_PARAM,
-                                  C     => c_pos,
-                                  DATA  => o_window_data((o+1)*U_PARAM.DATA.SIZE-1 downto o*U_PARAM.DATA.SIZE)
-                              );
-                    SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
-                        PARAM => O_PARAM,
-                        C     => c_pos+o*U_PARAM.SHAPE.C.SIZE,
-                        ATRB  => c_atrb,
-                        DATA  => outlet_data
-                    );
-                    if (c_pos = U_PARAM.SHAPE.C.HI) then
-                        channel_over := (c_atrb.LAST = TRUE);
-                    end if;
-                end loop;
-                o_shift(o) := '1';
-            end if;
+        for o in 0 to O_WIDTH-1 loop
+            for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
+                c_atrb := o_c_atrb(o,c_pos);
+                SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+                    PARAM => O_PARAM,
+                    C     => c_pos+o*U_PARAM.SHAPE.C.SIZE,
+                    ATRB  => c_atrb,
+                    DATA  => outlet_data
+                );
+            end loop;
         end loop;
         for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
                 x_atrb := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
                               PARAM => U_PARAM,
                               X     => x_pos,
-                              DATA  => o_window_data(U_PARAM.DATA.SIZE-1 downto 0)
+                              DATA  => curr_queue(curr_queue'low).DATA
                           );
                 SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
                     PARAM => O_PARAM,
@@ -461,7 +1033,7 @@ begin
                 y_atrb := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
                               PARAM => U_PARAM,
                               Y     => y_pos,
-                              DATA  => o_window_data(U_PARAM.DATA.SIZE-1 downto 0)
+                              DATA  => curr_queue(curr_queue'low).DATA
                           );
                 SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
                     PARAM => O_PARAM,
@@ -471,13 +1043,8 @@ begin
                 );
         end loop;
         if (U_PARAM.INFO_BITS > 0) then
-            outlet_data(O_PARAM.DATA.INFO_FIELD.HI downto O_PARAM.DATA.INFO_FIELD.LO) := o_window_data(U_PARAM.DATA.INFO_FIELD.HI downto U_PARAM.DATA.INFO_FIELD.LO);
+            outlet_data(O_PARAM.DATA.INFO_FIELD.HI downto O_PARAM.DATA.INFO_FIELD.LO) := curr_queue(curr_queue'low).DATA(U_PARAM.DATA.INFO_FIELD.HI downto U_PARAM.DATA.INFO_FIELD.LO);
         end if;
         O_DATA <= outlet_data;
-        if (C_DONE = 0) then
-            o_window_shift <= o_shift;
-        else
-            o_window_shift <= (others => '1');
-        end if;
     end process;
 end RTL;
