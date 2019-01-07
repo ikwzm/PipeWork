@@ -3,7 +3,7 @@
 --!     @brief   Image Window Buffer Intake Line Selector Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/4
+--!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --

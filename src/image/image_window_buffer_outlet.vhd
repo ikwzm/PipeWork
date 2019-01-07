@@ -3,7 +3,7 @@
 --!     @brief   Image Window Buffer Outlet Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/4
+--!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -157,7 +157,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER;
 architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET is
     -------------------------------------------------------------------------------
     --
@@ -200,7 +200,7 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    BANK_READER: IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER
+    BANK_READER: IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER
         generic map (                            -- 
             O_PARAM         => L_PARAM         , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE    , --   

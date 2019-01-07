@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_intake_bank_writer.vhd
---!     @brief   Image Window Buffer Intake Bank Writer Module :
+--!     @file    image_window_buffer_bank_memory_writer.vhd
+--!     @brief   Image Window Buffer Bank Memory Writer Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/4
+--!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -40,9 +40,9 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   Image Window Buffer Intake Bank Writer :
+--! @brief   Image Window Buffer Bank Memory Writer :
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
+entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER is
     generic (
         I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
                           --! 入力側のウィンドウのパラメータを指定する.
@@ -104,11 +104,11 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_X_SIZE        : --! @brief OUTPUT X SIZE :
+        X_SIZE          : --! @brief OUTPUT X SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
+        C_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
+        C_OFFSET        : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
     -- バッファ I/F
@@ -120,7 +120,7 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
         BUF_WE          : --! @brief BUFFER WRITE ENABLE :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE              -1 downto 0)
     );
-end IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER;
+end IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -129,17 +129,29 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
+architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     subtype   RAM_DATA_TYPE         is std_logic_vector(BUF_DATA_BITS-1 downto 0);
-    type      RAM_DATA_VECTOR       is array(integer range <>) of RAM_DATA_TYPE;
     subtype   RAM_ADDR_TYPE         is std_logic_vector(BUF_ADDR_BITS-1 downto 0);
-    type      RAM_ADDR_VECTOR       is array(integer range <>) of RAM_ADDR_TYPE;
-    constant  RAM_WENA_BITS         :  integer := 1;
-    subtype   RAM_WENA_TYPE         is std_logic_vector(RAM_WENA_BITS-1 downto 0);
-    type      RAM_WENA_VECTOR       is array(integer range <>) of RAM_WENA_TYPE;
+    constant  BUF_WENA_BITS         :  integer := 1;
+    subtype   RAM_WENA_TYPE         is std_logic_vector(BUF_WENA_BITS-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    type      BANK_DATA_TYPE        is array(0 to BANK_SIZE-1) of RAM_DATA_TYPE;
+    type      BANK_ADDR_TYPE        is array(0 to BANK_SIZE-1) of RAM_ADDR_TYPE;
+    type      BANK_WENA_TYPE        is array(0 to BANK_SIZE-1) of RAM_WENA_TYPE;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    type      BUF_DATA_TYPE         is array(0 to LINE_SIZE-1) of BANK_DATA_TYPE;
+    type      BUF_ADDR_TYPE         is array(0 to LINE_SIZE-1) of BANK_ADDR_TYPE;
+    type      BUF_WENA_TYPE         is array(0 to LINE_SIZE-1) of BANK_WENA_TYPE;
+    signal    buf_data_array        :  BUF_DATA_TYPE;
+    signal    buf_addr_array        :  BUF_ADDR_TYPE;
+    signal    buf_wena_array        :  BUF_WENA_TYPE;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -197,15 +209,15 @@ architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    function  NEXT_RAM_ADDR_VECTOR(
-                  RAM_ADDR          :  RAM_ADDR_VECTOR;
+    function  CALC_NEXT_BANK_ADDR(
+                  CURR_BANK_ADDR    :  BANK_ADDR_TYPE;
                   BANK_SELECT       :  BANK_SELECT_VECTOR;
                   BASE_ADDR         :  integer;
                   CHANNEL_OFFSET    :  integer;
                   START_CHANNEL     :  std_logic
-              )   return               RAM_ADDR_VECTOR
+              )   return               BANK_ADDR_TYPE
     is
-        variable  next_addr_vector  :  RAM_ADDR_VECTOR(0 to BANK_SIZE-1);
+        variable  next_bank_addr    :  BANK_ADDR_TYPE;
         variable  base_curr_addr    :  RAM_ADDR_TYPE;
         variable  base_next_addr    :  RAM_ADDR_TYPE;
         variable  select_next_addr  :  boolean;
@@ -219,17 +231,17 @@ architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER is
                     select_next_addr := FALSE;
                 end if;
                 if (select_next_addr = TRUE) then
-                    next_addr_vector(bank) := base_next_addr;
+                    next_bank_addr(bank) := base_next_addr;
                 else
-                    next_addr_vector(bank) := base_curr_addr;
+                    next_bank_addr(bank) := base_curr_addr;
                 end if;
             end loop;
         else
             for bank in 0 to BANK_SIZE-1 loop
-                next_addr_vector(bank) := std_logic_vector(unsigned(RAM_ADDR(bank)) + 1);
+                next_bank_addr(bank) := std_logic_vector(unsigned(CURR_BANK_ADDR(bank)) + 1);
             end loop;
         end if;
-        return next_addr_vector;
+        return next_bank_addr;
     end function;
     -------------------------------------------------------------------------------
     --
@@ -373,8 +385,8 @@ begin
     -- CHANNEL_SIZE が可変長の場合
     -------------------------------------------------------------------------------
     -- channel_offset : 
-    -- O_C_OFFSET     : 
-    -- O_C_SIZE       : 
+    -- C_OFFSET       : 
+    -- C_SIZE         : 
     -------------------------------------------------------------------------------
     CHANNEL_SIZE_EQ_0: if (CHANNEL_SIZE = 0) generate
         signal    curr_channel_offset :  integer range 0 to 2**BUF_ADDR_BITS;
@@ -400,8 +412,8 @@ begin
                 end if;
             end if;
         end process;
-        O_C_OFFSET <= curr_channel_offset;
-        O_C_SIZE   <= curr_channel_count;
+        C_OFFSET <= curr_channel_offset;
+        C_SIZE   <= curr_channel_count;
     end generate;
     -------------------------------------------------------------------------------
     -- CHANNEL_SIZE が固定値の場合
@@ -412,12 +424,12 @@ begin
     CHANNEL_SIZE_GT_0: if (CHANNEL_SIZE > 0) generate
     begin
         channel_offset <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
-        O_C_OFFSET     <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
-        O_C_SIZE       <=  CHANNEL_SIZE;
+        C_OFFSET       <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
+        C_SIZE         <=  CHANNEL_SIZE;
     end generate;
     -------------------------------------------------------------------------------
     -- intake_x_count :
-    -- O_X_SIZE       : 
+    -- X_SIZE         : 
     -------------------------------------------------------------------------------
     process(CLK, RST)
         variable  atrb_x_vector  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
@@ -433,17 +445,11 @@ begin
             end if;
         end if;
     end process;
-    O_X_SIZE <= intake_x_count;
+    X_SIZE <= intake_x_count;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     L: for line in 0 to LINE_SIZE-1 generate
-        ---------------------------------------------------------------------------
-        --
-        ---------------------------------------------------------------------------
-        signal    bank_data_array   :  RAM_DATA_VECTOR(0 to BANK_SIZE-1);
-        signal    bank_addr_array   :  RAM_ADDR_VECTOR(0 to BANK_SIZE-1);
-        signal    bank_wena_array   :  RAM_WENA_VECTOR(0 to BANK_SIZE-1);
     begin
         ---------------------------------------------------------------------------
         -- intake_line_start(line)  :
@@ -476,17 +482,17 @@ begin
             end if;
         end process;
         ---------------------------------------------------------------------------
-        -- bank_wena_array :
+        -- buf_wena_array :
         ---------------------------------------------------------------------------
         process(CLK, RST)
             variable  atrb_x_vec    :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
             variable  bank_we       :  std_logic;
         begin 
             if (RST = '1') then
-                    bank_wena_array <= (others => (others => '0'));
+                    buf_wena_array(line) <= (others => (others => '0'));
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
-                    bank_wena_array <= (others => (others => '0'));
+                    buf_wena_array(line) <= (others => (others => '0'));
                 elsif (I_VALID = '1' and intake_ready = '1' and intake_line_busy(line) = '1') then
                     atrb_x_vec := GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
                     for bank in 0 to BANK_SIZE-1 loop
@@ -497,13 +503,13 @@ begin
                             end if;
                         end loop;
                         if (bank_we = '1') then
-                            bank_wena_array(bank) <= (others => '1');
+                            buf_wena_array(line)(bank) <= (others => '1');
                         else
-                            bank_wena_array(bank) <= (others => '0');
+                            buf_wena_array(line)(bank) <= (others => '0');
                         end if;
                     end loop;
                 else
-                    bank_wena_array <= (others => (others => '0'));
+                    buf_wena_array(line) <= (others => (others => '0'));
                 end if;
             end if;
         end process;
@@ -513,18 +519,18 @@ begin
         process(CLK, RST)
         begin
             if (RST = '1') then
-                    bank_addr_array <= (others => (others => '0'));
+                    buf_addr_array(line) <= (others => (others => '0'));
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1' or intake_line_busy(line) = '0') then
-                    bank_addr_array <= (others => (others => '0'));
+                    buf_addr_array(line) <= (others => (others => '0'));
                 elsif (I_VALID = '1' and intake_ready = '1') then
-                    bank_addr_array <= NEXT_RAM_ADDR_VECTOR(
-                                           RAM_ADDR       => bank_addr_array,
-                                           BANK_SELECT    => bank_select    ,
-                                           BASE_ADDR      => base_addr      ,
-                                           CHANNEL_OFFSET => channel_offset ,
-                                           START_CHANNEL  => intake_c_start
-                                      );
+                    buf_addr_array(line) <= CALC_NEXT_BANK_ADDR(
+                                                CURR_BANK_ADDR => buf_addr_array(line),
+                                                BANK_SELECT    => bank_select         ,
+                                                BASE_ADDR      => base_addr           ,
+                                                CHANNEL_OFFSET => channel_offset      ,
+                                                START_CHANNEL  => intake_c_start
+                                            );
                 end if;
             end if;
         end process;
@@ -544,10 +550,10 @@ begin
             variable  bank_data  :  std_logic_vector(BUF_DATA_BITS       -1 downto 0);
         begin 
             if (RST = '1') then
-                    bank_data_array <= (others => (others => '0'));
+                    buf_data_array(line) <= (others => (others => '0'));
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
-                    bank_data_array <= (others => (others => '0'));
+                    buf_data_array(line) <= (others => (others => '0'));
                 else
                     for bank in 0 to BANK_SIZE-1 loop
                         bank_data := (others => '0');
@@ -574,34 +580,40 @@ begin
                                 bank_data := bank_data or temp_data(TEMP_PARAM.DATA.ELEM_FIELD.HI downto TEMP_PARAM.DATA.ELEM_FIELD.LO);
                             end if;
                         end loop;
-                        bank_data_array(bank) <= bank_data;
+                        buf_data_array(line)(bank) <= bank_data;
                     end loop;
                 end if;
             end if;
         end process;
-        ---------------------------------------------------------------------------
-        -- BUF_WE :
-        ---------------------------------------------------------------------------
-        process (bank_wena_array) begin
-            for bank in 0 to BANK_SIZE-1 loop
-                BUF_WE  ((line*BANK_SIZE+bank+1)*RAM_WENA_BITS-1 downto (line*BANK_SIZE+bank)*RAM_WENA_BITS) <= bank_wena_array(bank);
-            end loop;
-        end process;
-        ---------------------------------------------------------------------------
-        -- BUF_ADDR :
-        ---------------------------------------------------------------------------
-        process (bank_addr_array) begin
-            for bank in 0 to BANK_SIZE-1 loop
-                BUF_ADDR((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS) <= bank_addr_array(bank);
-            end loop;
-        end process;
-        ---------------------------------------------------------------------------
-        -- BUF_DATA :
-        ---------------------------------------------------------------------------
-        process (bank_data_array) begin
-            for bank in 0 to BANK_SIZE-1 loop
-                BUF_DATA((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS) <= bank_data_array(bank);
-            end loop;
-        end process;
     end generate;
+    -------------------------------------------------------------------------------
+    -- BUF_WE :
+    -------------------------------------------------------------------------------
+    process (buf_wena_array) begin
+        for line in 0 to LINE_SIZE-1 loop
+            for bank in 0 to BANK_SIZE-1 loop
+                BUF_WE  ((line*BANK_SIZE+bank+1)*BUF_WENA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_WENA_BITS) <= buf_wena_array(line)(bank);
+            end loop;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- BUF_ADDR :
+    -------------------------------------------------------------------------------
+    process (buf_addr_array) begin
+        for line in 0 to LINE_SIZE-1 loop
+            for bank in 0 to BANK_SIZE-1 loop
+                BUF_ADDR((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS) <= buf_addr_array(line)(bank);
+            end loop;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- BUF_DATA :
+    -------------------------------------------------------------------------------
+    process (buf_data_array) begin
+        for line in 0 to LINE_SIZE-1 loop
+            for bank in 0 to BANK_SIZE-1 loop
+                BUF_DATA((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS) <= buf_data_array(line)(bank);
+            end loop;
+        end loop;
+    end process;
 end RTL;

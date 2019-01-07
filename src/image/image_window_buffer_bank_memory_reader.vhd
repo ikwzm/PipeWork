@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_outlet_bank_reader.vhd
---!     @brief   Image Window Buffer Outlet Bank Reader Module :
+--!     @file    image_window_buffer_bank_memory_reader.vhd
+--!     @brief   Image Window Buffer Bank Memory Reader Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/4
+--!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -40,10 +40,10 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER :
+--! @brief   IMAGE_WINDOW_BUFFER_BANK_READER :
 --!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
+entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     generic (
         O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
                           --! 出力側のウィンドウのパラメータを指定する.
@@ -128,7 +128,7 @@ entity  IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
         BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0)
     );
-end IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER;
+end IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -140,14 +140,22 @@ use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_ATRB_GENERATOR;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
 use     PIPEWORK.COMPONENTS.PIPELINE_REGISTER;
-architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
+architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     subtype   RAM_DATA_TYPE         is std_logic_vector(BUF_DATA_BITS-1 downto 0);
-    type      RAM_DATA_VECTOR       is array(integer range <>) of RAM_DATA_TYPE;
     subtype   RAM_ADDR_TYPE         is std_logic_vector(BUF_ADDR_BITS-1 downto 0);
-    type      RAM_ADDR_VECTOR       is array(integer range <>) of RAM_ADDR_TYPE;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    type      BANK_DATA_TYPE        is array(0 to BANK_SIZE-1) of RAM_DATA_TYPE;
+    type      BANK_ADDR_TYPE        is array(0 to BANK_SIZE-1) of RAM_ADDR_TYPE;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    type      BUF_ADDR_TYPE         is array(0 to LINE_SIZE-1) of BANK_ADDR_TYPE;
+    signal    buf_addr_array        :  BUF_ADDR_TYPE;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -205,16 +213,16 @@ architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    function  NEXT_RAM_ADDR_VECTOR(
-                  RAM_ADDR          :  RAM_ADDR_VECTOR;
+    function  CALC_NEXT_BANK_ADDR(
+                  CURR_BANK_ADDR    :  BANK_ADDR_TYPE;
                   BANK_SELECT       :  BANK_SELECT_VECTOR;
                   BASE_ADDR         :  integer;
                   CHANNEL_OFFSET    :  integer;
                   START_CHANNEL     :  std_logic;
                   NEXT_CHANNEL      :  std_logic
-              )   return               RAM_ADDR_VECTOR
+              )   return               BANK_ADDR_TYPE
     is
-        variable  next_addr_vector  :  RAM_ADDR_VECTOR(0 to BANK_SIZE-1);
+        variable  next_bank_addr    :  BANK_ADDR_TYPE;
         variable  base_curr_addr    :  RAM_ADDR_TYPE;
         variable  base_next_addr    :  RAM_ADDR_TYPE;
         variable  select_next_addr  :  boolean;
@@ -228,21 +236,21 @@ architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET_BANK_READER is
                     select_next_addr := FALSE;
                 end if;
                 if (select_next_addr = TRUE) then
-                    next_addr_vector(bank) := base_next_addr;
+                    next_bank_addr(bank) := base_next_addr;
                 else
-                    next_addr_vector(bank) := base_curr_addr;
+                    next_bank_addr(bank) := base_curr_addr;
                 end if;
             end loop;
         elsif (NEXT_CHANNEL = '1') then
             for bank in 0 to BANK_SIZE-1 loop
-                next_addr_vector(bank) := std_logic_vector(unsigned(RAM_ADDR(bank)) + 1);
+                next_bank_addr(bank) := std_logic_vector(unsigned(CURR_BANK_ADDR(bank)) + 1);
             end loop;
         else
             for bank in 0 to BANK_SIZE-1 loop
-                next_addr_vector(bank) := RAM_ADDR(bank);
+                next_bank_addr(bank) := CURR_BANK_ADDR(bank);
             end loop;
         end if;
-        return next_addr_vector;
+        return next_bank_addr;
     end function;
     -------------------------------------------------------------------------------
     -- 
@@ -451,8 +459,8 @@ begin
         ---------------------------------------------------------------------------
         signal    base_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
         signal    channel_offset    :  integer range 0 to 2**BUF_ADDR_BITS;
-        signal    curr_bank_addr    :  RAM_ADDR_VECTOR(0 to BANK_SIZE-1);
-        signal    next_bank_addr    :  RAM_ADDR_VECTOR(0 to BANK_SIZE-1);
+        signal    curr_bank_addr    :  BANK_ADDR_TYPE;
+        signal    next_bank_addr    :  BANK_ADDR_TYPE;
     begin
         ---------------------------------------------------------------------------
         -- base_addr      :
@@ -478,14 +486,18 @@ begin
         ---------------------------------------------------------------------------
         -- next_bank_addr :
         ---------------------------------------------------------------------------
-        next_bank_addr <= NEXT_RAM_ADDR_VECTOR(
-                              RAM_ADDR       => curr_bank_addr,
+        next_bank_addr <= CALC_NEXT_BANK_ADDR(
+                              CURR_BANK_ADDR => curr_bank_addr,
                               BANK_SELECT    => bank_select   ,
                               BASE_ADDR      => base_addr     ,
                               CHANNEL_OFFSET => channel_offset,
                               START_CHANNEL  => c_loop_start  ,
                               NEXT_CHANNEL   => c_loop_next   
                           );
+        ---------------------------------------------------------------------------
+        -- buf_addr_array(line) :
+        ---------------------------------------------------------------------------
+        buf_addr_array(line) <= next_bank_addr;
         ---------------------------------------------------------------------------
         -- curr_bank_addr :
         ---------------------------------------------------------------------------
@@ -500,15 +512,17 @@ begin
                 end if;
             end if;
         end process;
-        ---------------------------------------------------------------------------
-        -- BUF_ADDR :
-        ---------------------------------------------------------------------------
-        process (next_bank_addr) begin
-            for bank in 0 to BANK_SIZE-1 loop
-                BUF_ADDR((LINE*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (LINE*BANK_SIZE+bank)*BUF_ADDR_BITS) <= next_bank_addr(bank);
-            end loop;
-        end process;
     end generate;
+    -------------------------------------------------------------------------------
+    -- BUF_ADDR :
+    -------------------------------------------------------------------------------
+    process (buf_addr_array) begin
+        for line in 0 to LINE_SIZE-1 loop
+            for bank in 0 to BANK_SIZE-1 loop
+                BUF_ADDR((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS) <= buf_addr_array(line)(bank);
+            end loop;
+        end loop;
+    end process;
     -------------------------------------------------------------------------------
     -- line_atrb_vector : 
     -------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 --!     @brief   Image Window Buffer Intake Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/4
+--!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -142,7 +142,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER;
 architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     --
@@ -231,7 +231,7 @@ begin
     -------------------------------------------------------------------------------
     -- BANK_WRITER :
     -------------------------------------------------------------------------------
-    BANK_WRITER: IMAGE_WINDOW_BUFFER_INTAKE_BANK_WRITER
+    BANK_WRITER: IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER
         generic map (                                -- 
             I_PARAM         => L_PARAM             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
@@ -260,9 +260,9 @@ begin
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_X_SIZE        => O_X_SIZE            , -- Out :
-            O_C_SIZE        => O_C_SIZE            , -- Out :
-            O_C_OFFSET      => O_C_OFFSET          , -- Out :
+            X_SIZE          => O_X_SIZE            , -- Out :
+            C_SIZE          => O_C_SIZE            , -- Out :
+            C_OFFSET        => O_C_OFFSET          , -- Out :
         ---------------------------------------------------------------------------
         -- バッファ I/F
         ---------------------------------------------------------------------------

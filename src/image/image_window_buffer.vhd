@@ -3,11 +3,11 @@
 --!     @brief   Image Window Buffer Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2018/12/12
+--!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -66,12 +66,12 @@ entity  IMAGE_WINDOW_BUFFER is
                           integer := 1;
         D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
-        MEM_BANK_SIZE   : --! @brief MEMORY BANK SIZE :
+        BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
-                          integer := 1;
-        MEM_LINE_SIZE   : --! @brief MEMORY LINE SIZE :
+                          integer := 0;
+        LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
+                          integer := 0;
         ID              : --! @brief SDPRAM IDENTIFIER :
                           --! どのモジュールで使われているかを示す識別番号.
                           integer := 0 
@@ -153,220 +153,482 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.COMPONENTS.SDPRAM;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_CHANNEL_REDUCER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY;
 architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
-    -- メモリのバンク数
+    -- 
     -------------------------------------------------------------------------------
-    constant  BANK_SIZE             :  integer := MEM_BANK_SIZE;
+    type      PARAM_TYPE            is record
+                  BANK_SIZE         :  integer;
+                  LINE_SIZE         :  integer;
+                  CHAN_SIZE         :  integer;
+                  USE_BANK          :  boolean;
+                  I_CHAN_ENABLE     :  boolean;
+                  I_CHAN_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  I_CHAN_SIZE       :  integer;
+                  I_CHAN_DONE       :  integer;
+                  I_LINE_ENABLE     :  boolean;
+                  I_LINE_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  I_LINE_QUEUE      :  integer;
+                  O_LINE_ENABLE     :  boolean;
+                  O_LINE_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  O_LINE_QUEUE      :  integer;
+                  O_CHAN_ENABLE     :  boolean;
+                  O_CHAN_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  O_CHAN_SIZE       :  integer;
+                  O_CHAN_DONE       :  integer;
+                  O_EXIT_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+    end record;
     -------------------------------------------------------------------------------
-    -- メモリのライン数
+    --! 最大公約数(Greatest Common Divisor)を求める関数
     -------------------------------------------------------------------------------
-    constant  LINE_SIZE             :  integer := MEM_LINE_SIZE;
-    -------------------------------------------------------------------------------
-    -- BUF_WIDTH : メモリのビット幅を２のべき乗値で示す
-    -------------------------------------------------------------------------------
-    function  CALC_BUF_WIDTH    return integer is
-        variable width              :  integer;
+    function  gcd(A,B:integer) return integer is
     begin
-        width := 0;
-        while (2**width < (O_PARAM.SHAPE.C.SIZE * O_PARAM.ELEM_BITS)) loop
-            width := width + 1;
-        end loop;
-        return width;
+        if    (A < B) then
+            return gcd(B, A);
+        elsif (A mod B = 0) then
+            return B;
+        else
+            return gcd(B, A mod B);
+        end if;
     end function;
-    constant  BUF_WIDTH             :  integer := CALC_BUF_WIDTH;
     -------------------------------------------------------------------------------
-    -- BUF_DEPTH: メモリバンク１つあたりの深さ(ビット単位)を２のべき乗値で示す
+    --! 最小公倍数(Least Common Multiple)を求める関数
     -------------------------------------------------------------------------------
-    function  CALC_BUF_DEPTH    return integer is
-        variable size               :  integer;
-        variable depth              :  integer;
+    function  lcm(A,B:integer) return integer is
+        variable g_c_d : integer;
     begin
-        size  := ELEMENT_SIZE*O_PARAM.ELEM_BITS;
-        size  := (size + BANK_SIZE - 1)/BANK_SIZE;
-        depth := 0;
-        while (2**depth < size) loop
-            depth := depth + 1;
-        end loop;
-        return depth;
+        g_c_d := gcd(A,B);
+        return g_c_d*(A/g_c_d)*(B/g_c_d);
     end function;
-    constant  BUF_DEPTH             :  integer := CALC_BUF_DEPTH;
+    -------------------------------------------------------------------------------
+    --! @brief 整数の最小値を求める関数.
+    -------------------------------------------------------------------------------
+    function  minimum(L,R : integer) return integer is
+    begin
+        if (L < R) then return L;
+        else            return R;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief 整数の最大値を求める関数.
+    -------------------------------------------------------------------------------
+    function  maximum(L,R : integer) return integer is
+    begin
+        if (L > R) then return L;
+        else            return R;
+        end if;
+    end function;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  BUF_DATA_BITS         :  integer := 2**BUF_WIDTH;
-    constant  BUF_ADDR_BITS         :  integer := BUF_DEPTH - BUF_WIDTH;
-    constant  BUF_WENA_BITS         :  integer := 1;
-    signal    buf_wdata             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
-    signal    buf_waddr             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
-    signal    buf_we                :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_WENA_BITS-1 downto 0);
-    signal    buf_rdata             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_DATA_BITS-1 downto 0);
-    signal    buf_raddr             :  std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0);
+    function  INIT_PARAM return PARAM_TYPE is
+        variable  param             :  PARAM_TYPE;
+        variable  lcm_shape_c_size  :  integer;
+        variable  lcm_shape_x_size  :  integer;
+    begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        lcm_shape_c_size   := lcm(I_PARAM.SHAPE.C.SIZE, O_PARAM.SHAPE.C.SIZE);
+        param.CHAN_SIZE    := lcm_shape_c_size;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (BANK_SIZE = 0) then
+            lcm_shape_x_size := lcm(I_PARAM.SHAPE.X.SIZE, O_PARAM.SHAPE.X.SIZE);
+            param.BANK_SIZE  := 1;
+            while (param.BANK_SIZE < lcm_shape_x_size) loop
+                param.BANK_SIZE := 2*param.BANK_SIZE;
+            end loop;
+        else
+            param.BANK_SIZE := BANK_SIZE;
+        end if;
+        param.USE_BANK := TRUE;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (LINE_SIZE = 0) then
+            param.LINE_SIZE := maximum((I_PARAM.SHAPE.Y.SIZE+O_PARAM.SHAPE.Y.SIZE),
+                                       maximum((I_PARAM.SHAPE.Y.SIZE+I_PARAM.STRIDE.Y),
+                                               (O_PARAM.SHAPE.Y.SIZE+O_PARAM.STRIDE.Y)));
+        else
+            param.LINE_SIZE := LINE_SIZE;
+        end if;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        param.I_CHAN_ENABLE:= (I_PARAM.SHAPE.C.SIZE /= lcm_shape_c_size);
+        param.I_CHAN_PARAM := NEW_IMAGE_WINDOW_PARAM(
+                                  ELEM_BITS   => I_PARAM.ELEM_BITS,
+                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                     C => NEW_IMAGE_VECTOR_RANGE(lcm_shape_c_size),
+                                                     X => I_PARAM.SHAPE.X,
+                                                     Y => I_PARAM.SHAPE.Y
+                                                 ),
+                                  STRIDE      => I_PARAM.STRIDE,
+                                  BORDER_TYPE => I_PARAM.BORDER_TYPE
+                              );
+        param.I_CHAN_SIZE  := 0;
+        param.I_CHAN_DONE  := 0;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        param.I_LINE_ENABLE:= TRUE;
+        param.I_LINE_PARAM := NEW_IMAGE_WINDOW_PARAM(
+                                  ELEM_BITS   => param.I_CHAN_PARAM.ELEM_BITS,
+                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                     C => param.I_CHAN_PARAM.SHAPE.C,
+                                                     X => param.I_CHAN_PARAM.SHAPE.X,
+                                                     Y => NEW_IMAGE_VECTOR_RANGE(param.LINE_SIZE)
+                                                 ),
+                                  STRIDE      => param.I_CHAN_PARAM.STRIDE,
+                                  BORDER_TYPE => param.I_CHAN_PARAM.BORDER_TYPE
+                              );
+        param.I_LINE_QUEUE := 2;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        param.O_EXIT_PARAM := NEW_IMAGE_WINDOW_PARAM(
+                                  ELEM_BITS   => O_PARAM.ELEM_BITS,
+                                  INFO_BITS   => D_UNROLL*IMAGE_ATRB_BITS,
+                                  SHAPE       => O_PARAM.SHAPE,
+                                  STRIDE      => O_PARAM.STRIDE,
+                                  BORDER_TYPE => O_PARAM.BORDER_TYPE
+                              );
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        param.O_CHAN_ENABLE:= (O_PARAM.SHAPE.C.SIZE /= lcm_shape_c_size);
+        param.O_CHAN_PARAM := NEW_IMAGE_WINDOW_PARAM(
+                                  ELEM_BITS   => param.O_EXIT_PARAM.ELEM_BITS,
+                                  INFO_BITS   => param.O_EXIT_PARAM.INFO_BITS,
+                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                     C => NEW_IMAGE_VECTOR_RANGE(lcm_shape_c_size),
+                                                     X => param.O_EXIT_PARAM.SHAPE.X,
+                                                     Y => param.O_EXIT_PARAM.SHAPE.Y
+                                                 ),
+                                  STRIDE      => param.O_EXIT_PARAM.STRIDE,
+                                  BORDER_TYPE => param.O_EXIT_PARAM.BORDER_TYPE
+                              );
+        param.O_CHAN_SIZE  := 0;
+        param.O_CHAN_DONE  := 0;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        param.O_LINE_ENABLE:= TRUE;
+        param.O_LINE_PARAM := NEW_IMAGE_WINDOW_PARAM(
+                                  ELEM_BITS   => param.O_CHAN_PARAM.ELEM_BITS,
+                                  INFO_BITS   => param.O_CHAN_PARAM.INFO_BITS,
+                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                                     C => param.O_CHAN_PARAM.SHAPE.C,
+                                                     X => param.O_CHAN_PARAM.SHAPE.X,
+                                                     Y => NEW_IMAGE_VECTOR_RANGE(param.LINE_SIZE)
+                                                 ),
+                                  STRIDE      => param.O_CHAN_PARAM.STRIDE,
+                                  BORDER_TYPE => param.O_CHAN_PARAM.BORDER_TYPE
+                              );
+        param.O_LINE_QUEUE := 2;
+        return param;
+    end function;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    x_size                :  integer range 0 to ELEMENT_SIZE;
-    signal    c_size                :  integer range 0 to ELEMENT_SIZE;
-    signal    c_offset              :  integer range 0 to 2**BUF_ADDR_BITS;
-    signal    line_atrb             :  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-    signal    line_valid            :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    line_feed             :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    line_return           :  std_logic_vector(LINE_SIZE-1 downto 0);
+    constant  PARAM                 :  PARAM_TYPE := INIT_PARAM;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    outlet_data           :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-    signal    outlet_d_atrb         :  IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
-    signal    outlet_valid          :  std_logic;
-    signal    outlet_ready          :  std_logic;
-    signal    outlet_line_last      :  std_logic;
-    signal    outlet_last           :  std_logic;
-    signal    outlet_feed           :  std_logic;
-    signal    outlet_return         :  std_logic;
+    signal    line_atrb             :  IMAGE_ATRB_VECTOR(PARAM.LINE_SIZE-1 downto 0);
+    signal    line_valid            :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    signal    line_feed             :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    signal    line_return           :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    signal    i_chan_data           :  std_logic_vector (PARAM.I_CHAN_PARAM.DATA.SIZE-1 downto 0);
+    signal    i_chan_valid          :  std_logic;
+    signal    i_chan_ready          :  std_logic;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    signal    i_line_data           :  std_logic_vector (PARAM.I_LINE_PARAM.DATA.SIZE-1 downto 0);
+    signal    i_line_valid          :  std_logic;
+    signal    i_line_ready          :  std_logic;
+    signal    i_line_enable         :  std_logic;
+    signal    i_line_start          :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    signal    i_line_done           :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    signal    o_line_data           :  std_logic_vector (PARAM.O_LINE_PARAM.DATA.SIZE-1 downto 0);
+    signal    o_line_valid          :  std_logic;
+    signal    o_line_ready          :  std_logic;
+    signal    o_line_start          :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    signal    o_chan_data           :  std_logic_vector (PARAM.O_CHAN_PARAM.DATA.SIZE-1 downto 0);
+    signal    o_chan_valid          :  std_logic;
+    signal    o_chan_ready          :  std_logic;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    signal    o_exit_data           :  std_logic_vector (PARAM.O_EXIT_PARAM.DATA.SIZE-1 downto 0);
+    signal    o_exit_d_atrb         :  IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
+    signal    o_exit_valid          :  std_logic;
+    signal    o_exit_ready          :  std_logic;
+    signal    o_exit_line_last      :  std_logic;
+    signal    o_exit_frame_last     :  std_logic;
+    signal    o_exit_feed           :  std_logic;
+    signal    o_exit_return         :  std_logic;
 begin
     -------------------------------------------------------------------------------
+    -- INTAKE_CHANNEL_REDUCER
+    -------------------------------------------------------------------------------
+    I_CHAN: if (PARAM.I_CHAN_ENABLE = TRUE) generate
+        REDUCER: IMAGE_WINDOW_CHANNEL_REDUCER
+            generic map (                                -- 
+                I_PARAM         => I_PARAM             , -- 
+                O_PARAM         => PARAM.I_CHAN_PARAM  , -- 
+                C_SIZE          => PARAM.I_CHAN_SIZE   , --   
+                C_DONE          => PARAM.I_CHAN_DONE     --   
+            )                                            -- 
+            port map (                                   -- 
+            -----------------------------------------------------------------------
+            -- クロック&リセット信号
+            -----------------------------------------------------------------------
+                CLK             => CLK                 , -- In  :
+                RST             => RST                 , -- In  :
+                CLR             => CLR                 , -- In  :
+            -----------------------------------------------------------------------
+            -- 入力側 Window I/F
+            -----------------------------------------------------------------------
+                I_DATA          => I_DATA              , -- In  :
+                I_VALID         => I_VALID             , -- In  :
+                I_READY         => I_READY             , -- Out :
+            -----------------------------------------------------------------------
+            -- 出力側 Window I/F
+            -----------------------------------------------------------------------
+                O_DATA          => i_chan_data         , -- Out :
+                O_VALID         => i_chan_valid        , -- Out :
+                O_READY         => i_chan_ready          -- In  :
+            );                                           -- 
+    end generate;
+    I_CHAN_NONE: if (PARAM.I_CHAN_ENABLE = FALSE) generate
+        i_chan_data  <= I_DATA;
+        i_chan_valid <= I_VALID;
+        I_READY <= i_chan_ready;
+    end generate;
+    -------------------------------------------------------------------------------
+    -- INTAKE_LINE_SELECTOR :
+    -------------------------------------------------------------------------------
+    I_LINE: if (PARAM.I_LINE_ENABLE = TRUE) generate
+    begin 
+        SELECTOR: IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR
+            generic map (                                -- 
+                I_PARAM         => PARAM.I_CHAN_PARAM  , -- 
+                O_PARAM         => PARAM.I_LINE_PARAM  , -- 
+                LINE_SIZE       => PARAM.LINE_SIZE     , --   
+                QUEUE_SIZE      => PARAM.I_LINE_QUEUE    --   
+            )                                            -- 
+            port map (                                   -- 
+            -----------------------------------------------------------------------
+            -- クロック&リセット信号
+            -----------------------------------------------------------------------
+                CLK             => CLK                 , -- In  :
+                RST             => RST                 , -- In  :
+                CLR             => CLR                 , -- In  :
+            -----------------------------------------------------------------------
+            -- 入力側 I/F
+            -----------------------------------------------------------------------
+                I_DATA          => i_chan_data         , -- In  :
+                I_VALID         => i_chan_valid        , -- In  :
+                I_READY         => i_chan_ready        , -- Out :
+            -----------------------------------------------------------------------
+            -- 出力側 Window I/F
+            -----------------------------------------------------------------------
+                O_ENABLE        => i_line_enable       , -- Out :
+                O_LINE_START    => i_line_start        , -- Out :
+                O_LINE_DONE     => i_line_done         , -- Out :
+                O_DATA          => i_line_data         , -- Out :
+                O_VALID         => i_line_valid        , -- Out :
+                O_READY         => i_line_ready        , -- In  :
+            -----------------------------------------------------------------------
+            -- ライン制御 I/F
+            -----------------------------------------------------------------------
+                LINE_VALID      => line_valid          , -- Out :
+                LINE_ATRB       => line_atrb           , -- Out :
+                LINE_FEED       => line_feed           , -- In  :
+                LINE_RETURN     => line_return           -- In  :
+            );                                           -- 
+    end generate;                                        -- 
+    -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    INTAKE: IMAGE_WINDOW_BUFFER_INTAKE           -- 
-        generic map(                             -- 
-            I_PARAM         => I_PARAM         , -- 
-            ELEMENT_SIZE    => ELEMENT_SIZE    , -- 
-            CHANNEL_SIZE    => CHANNEL_SIZE    , -- 
-            BANK_SIZE       => BANK_SIZE       , -- 
-            LINE_SIZE       => LINE_SIZE       , -- 
-            BUF_ADDR_BITS   => BUF_ADDR_BITS   , --
-            BUF_DATA_BITS   => BUF_DATA_BITS     -- 
-        )                                        -- 
-        port map(                                -- 
-            CLK             => CLK             , -- In  :
-            RST             => RST             , -- In  :
-            CLR             => CLR             , -- In  :
-            I_DATA          => I_DATA          , -- In  :
-            I_VALID         => I_VALID         , -- In  :
-            I_READY         => I_READY         , -- Out :
-            O_LINE_VALID    => line_valid      , -- Out :
-            O_X_SIZE        => x_size          , -- Out :
-            O_C_SIZE        => c_size          , -- Out :
-            O_C_OFFSET      => c_offset        , -- Out :
-            O_LINE_ATRB     => line_atrb       , -- Out :
-            O_LINE_FEED     => line_feed       , -- In  :
-            O_LINE_RETURN   => line_return     , -- In  :
-            BUF_DATA        => buf_wdata       , -- Out :
-            BUF_ADDR        => buf_waddr       , -- Out :
-            BUF_WE          => buf_we            -- Out :
-        );                                       -- 
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    BUF_L:  for line in 0 to LINE_SIZE-1 generate
-        B:  for bank in 0 to BANK_SIZE-1 generate
-                constant  RAM_ID :  integer := ID + (line*BANK_SIZE)+bank;
-                signal    wdata  :  std_logic_vector(BUF_DATA_BITS-1 downto 0);
-                signal    waddr  :  std_logic_vector(BUF_ADDR_BITS-1 downto 0);
-                signal    we     :  std_logic_vector(BUF_WENA_BITS-1 downto 0);
-                signal    rdata  :  std_logic_vector(BUF_DATA_BITS-1 downto 0);
-                signal    raddr  :  std_logic_vector(BUF_ADDR_BITS-1 downto 0);
-            begin
+    BANK: if (PARAM.USE_BANK = TRUE) generate
+    begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        MEM: IMAGE_WINDOW_BUFFER_BANK_MEMORY             -- 
+            generic map (                                -- 
+                I_PARAM         => PARAM.I_LINE_PARAM  , -- 
+                O_PARAM         => PARAM.O_LINE_PARAM  , --   
+                ELEMENT_SIZE    => ELEMENT_SIZE        , --   
+                CHANNEL_SIZE    => CHANNEL_SIZE        , --   
+                BANK_SIZE       => PARAM.BANK_SIZE     , --   
+                LINE_SIZE       => PARAM.LINE_SIZE     , --   
+                MAX_D_SIZE      => MAX_D_SIZE          , --   
+                D_STRIDE        => D_STRIDE            , --   
+                D_UNROLL        => D_UNROLL            , --   
+                ID              => ID                    --   
+            )                                            -- 
+            port map (                                   -- 
             -----------------------------------------------------------------------
-            --
+            -- クロック&リセット信号
             -----------------------------------------------------------------------
-            wdata <= buf_wdata((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS);
-            waddr <= buf_waddr((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS);
-            we    <= buf_we   ((line*BANK_SIZE+bank+1)*BUF_WENA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_WENA_BITS);
-            raddr <= buf_raddr((line*BANK_SIZE+bank+1)*BUF_ADDR_BITS-1 downto (line*BANK_SIZE+bank)*BUF_ADDR_BITS);
-            buf_rdata((line*BANK_SIZE+bank+1)*BUF_DATA_BITS-1 downto (line*BANK_SIZE+bank)*BUF_DATA_BITS) <= rdata;
+                CLK             => CLK                 , -- In  :
+                RST             => RST                 , -- In  :
+                CLR             => CLR                 , -- In  :
             -----------------------------------------------------------------------
-            --
+            -- 入力側 制御 I/F
             -----------------------------------------------------------------------
-            RAM: SDPRAM                   -- 
-                generic map (             -- 
-                    DEPTH   => BUF_DEPTH, -- メモリの深さ(ビット単位)を2のべき乗値で指定する.
-                    RWIDTH  => BUF_WIDTH, -- リードデータ(RDATA)の幅(ビット数)を2のべき乗値で指定する.
-                    WWIDTH  => BUF_WIDTH, -- ライトデータ(WDATA)の幅(ビット数)を2のべき乗値で指定する.
-                    WEBIT   => 0        , -- ライトイネーブル信号(WE)の幅(ビット数)を2のべき乗値で指定する.
-                    ID      => RAM_ID     -- どのモジュールで使われているかを示す識別番号.
-                )                         -- 
-                port map (                -- 
-                    WCLK    => CLK      , -- In  :
-                    WE      => we       , -- In  : 
-                    WADDR   => waddr    , -- In  : 
-                    WDATA   => wdata    , -- In  : 
-                    RCLK    => CLK      , -- In  :
-                    RADDR   => raddr    , -- In  :
-                    RDATA   => rdata      -- Out :
-                );                        -- 
-        end generate;
+                I_ENABLE        => i_line_enable       , -- In  :
+                I_LINE_START    => i_line_start        , -- In  :
+                I_LINE_DONE     => i_line_done         , -- Out :
+            -----------------------------------------------------------------------
+            -- 入力側 ウィンドウ I/F
+            -----------------------------------------------------------------------
+                I_DATA          => i_line_data         , -- In  :
+                I_VALID         => i_line_valid        , -- In  :
+                I_READY         => i_line_ready        , -- Out :
+            -----------------------------------------------------------------------
+            -- 出力側 制御 I/F
+            -----------------------------------------------------------------------
+                O_LINE_START    => o_line_start        , -- In  :
+                O_LINE_ATRB     => line_atrb           , -- In  :
+                D_SIZE          => D_SIZE              , -- In  :
+            -----------------------------------------------------------------------
+            -- 出力側 ウィンドウ I/F
+            -----------------------------------------------------------------------
+                O_DATA          => o_line_data         , -- Out :
+                O_VALID         => o_line_valid        , -- Out :
+                O_READY         => o_line_ready          -- In  :
+            );
     end generate;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    OUTLET: IMAGE_WINDOW_BUFFER_OUTLET           -- 
-        generic map (                            -- 
-            O_PARAM         => O_PARAM         , -- 
-            ELEMENT_SIZE    => ELEMENT_SIZE    , --   
-            CHANNEL_SIZE    => CHANNEL_SIZE    , --   
-            BANK_SIZE       => BANK_SIZE       , --   
-            LINE_SIZE       => LINE_SIZE       , --
-            MAX_D_SIZE      => MAX_D_SIZE      , --
-            D_STRIDE        => D_STRIDE        , --
-            D_UNROLL        => D_UNROLL        , --
-            BUF_ADDR_BITS   => BUF_ADDR_BITS   , --   
-            BUF_DATA_BITS   => BUF_DATA_BITS     --
-        )                                        -- 
-        port map (                               -- 
+    O_LINE: if (PARAM.O_LINE_ENABLE = TRUE) generate
+    begin
         ---------------------------------------------------------------------------
-        -- クロック&リセット信号
+        --
         ---------------------------------------------------------------------------
-            CLK             => CLK             , -- In  :
-            RST             => RST             , -- In  :
-            CLR             => CLR             , -- In  :
-        ---------------------------------------------------------------------------
-        -- 各種サイズ
-        ---------------------------------------------------------------------------
-            X_SIZE          => x_size          , -- In  :
-            D_SIZE          => d_size          , -- In  :
-            C_SIZE          => c_size          , -- In  :
-            C_OFFSET        => c_offset        , -- Out :
-        ---------------------------------------------------------------------------
-        -- 入力側 I/F
-        ---------------------------------------------------------------------------
-            I_LINE_VALID    => line_valid      , -- In  :
-            I_LINE_ATRB     => line_atrb       , -- In  :
-            I_LINE_FEED     => line_feed       , -- Out :
-            I_LINE_RETURN   => line_return     , -- Out :
-        ---------------------------------------------------------------------------
-        -- 出力側 I/F
-        ---------------------------------------------------------------------------
-            O_DATA          => outlet_data     , -- Out :
-            O_D_ATRB        => outlet_d_atrb   , -- Out :
-            O_VALID         => outlet_valid    , -- Out :
-            O_READY         => outlet_ready    , -- In  :
-            O_LAST          => outlet_last     , -- In  :
-            O_FEED          => outlet_feed     , -- In  :
-            O_RETURN        => outlet_return   , -- In  :
-        ---------------------------------------------------------------------------
-        -- バッファメモリ I/F
-        ---------------------------------------------------------------------------
-            BUF_DATA        => buf_rdata       , -- In  :
-            BUF_ADDR        => buf_raddr         -- Out :
-        );
+        SELECTOR: IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR
+            generic map (                                --
+                I_PARAM         => PARAM.O_LINE_PARAM  , -- 
+                O_PARAM         => PARAM.O_CHAN_PARAM  , -- 
+                LINE_SIZE       => PARAM.LINE_SIZE     , -- 
+                QUEUE_SIZE      => PARAM.O_LINE_QUEUE    -- 
+            )                                            -- 
+            port map (                                   -- 
+            -----------------------------------------------------------------------
+            -- クロック&リセット信号
+            -----------------------------------------------------------------------
+                CLK             => CLK                 , -- In  :
+                RST             => RST                 , -- In  :
+                CLR             => CLR                 , -- In  :
+            -----------------------------------------------------------------------
+            -- 入力側 I/F
+            -----------------------------------------------------------------------
+                I_LINE_START    => o_line_start        , -- Out :
+                I_DATA          => o_line_data         , -- In  :
+                I_VALID         => o_line_valid        , -- In  :
+                I_READY         => o_line_ready        , -- Out :
+            -----------------------------------------------------------------------
+            -- 出力側 I/F
+            -----------------------------------------------------------------------
+                O_DATA          => o_chan_data         , -- Out :
+                O_VALID         => o_chan_valid        , -- Out :
+                O_READY         => o_chan_ready        , -- In  :
+                O_LAST          => o_exit_frame_last   , -- In  :
+                O_FEED          => o_exit_feed         , -- In  :
+                O_RETURN        => o_exit_return       , -- In  :
+            -----------------------------------------------------------------------
+            -- ライン制御 I/F
+            -----------------------------------------------------------------------
+                LINE_VALID      => line_valid          , -- In  :
+                LINE_ATRB       => line_atrb           , -- In  :
+                LINE_FEED       => line_feed           , -- Out :
+                LINE_RETURN     => line_return           -- Out :
+         );                                              --
+    end generate;
+    -------------------------------------------------------------------------------
+    -- OUTLET_CHANNEL_REDUCER
+    -------------------------------------------------------------------------------
+    O_CHAN: if (PARAM.O_CHAN_ENABLE = TRUE) generate
+        REDUCER: IMAGE_WINDOW_CHANNEL_REDUCER
+            generic map (                                -- 
+                I_PARAM         => PARAM.O_CHAN_PARAM  , -- 
+                O_PARAM         => PARAM.O_EXIT_PARAM  , -- 
+                C_SIZE          => PARAM.O_CHAN_SIZE   , --   
+                C_DONE          => PARAM.O_CHAN_DONE     --   
+            )                                            -- 
+            port map (                                   -- 
+            -----------------------------------------------------------------------
+            -- クロック&リセット信号
+            -----------------------------------------------------------------------
+                CLK             => CLK                 , -- In  :
+                RST             => RST                 , -- In  :
+                CLR             => CLR                 , -- In  :
+            -----------------------------------------------------------------------
+            -- 入力側 Window I/F
+            -----------------------------------------------------------------------
+                I_DATA          => o_chan_data         , -- In  :
+                I_VALID         => o_chan_valid        , -- In  :
+                I_READY         => o_chan_ready        , -- Out :
+            -----------------------------------------------------------------------
+            -- 出力側 Window I/F
+            -----------------------------------------------------------------------
+                O_DATA          => o_exit_data         , -- Out :
+                O_VALID         => o_exit_valid        , -- Out :
+                O_READY         => o_exit_ready          -- In  :
+            );                                           -- 
+    end generate;
+    O_CHAN_NONE: if (PARAM.O_CHAN_ENABLE = FALSE) generate
+        o_exit_data  <= o_chan_data ;
+        o_exit_valid <= o_chan_valid;
+        o_chan_ready <= o_exit_ready;
+    end generate;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    O_DATA   <= outlet_data;
-    O_D_ATRB <= outlet_d_atrb;
-    O_VALID  <= outlet_valid;
-    outlet_ready  <= O_READY;
-    outlet_line_last <= '1' when (IMAGE_WINDOW_DATA_IS_LAST_C(O_PARAM, outlet_data) and
-                                  IMAGE_WINDOW_DATA_IS_LAST_X(O_PARAM, outlet_data) and
-                                  outlet_d_atrb(outlet_d_atrb'high).LAST            and
-                                  outlet_valid = '1' and outlet_ready = '1'        ) else '0';
-    outlet_last      <= '1' when (outlet_line_last = '1' and
-                                  IMAGE_WINDOW_DATA_IS_LAST_Y(O_PARAM, outlet_data)) else '0';
-    outlet_feed      <= '1' when (outlet_line_last = '1' and O_FEED   = '1') else '0';
-    outlet_return    <= '1' when (outlet_line_last = '1' and O_RETURN = '1') else '0';
+    process (o_exit_data)
+        alias info :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.INFO_FIELD.SIZE-1 downto 0) is o_exit_data(PARAM.O_EXIT_PARAM.DATA.INFO_FIELD.HI downto PARAM.O_EXIT_PARAM.DATA.INFO_FIELD.LO);
+        alias elem :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.ELEM_FIELD.SIZE-1 downto 0) is o_exit_data(PARAM.O_EXIT_PARAM.DATA.ELEM_FIELD.HI downto PARAM.O_EXIT_PARAM.DATA.ELEM_FIELD.LO);
+        alias atrb :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.ATRB_FIELD.SIZE-1 downto 0) is o_exit_data(PARAM.O_EXIT_PARAM.DATA.ATRB_FIELD.HI downto PARAM.O_EXIT_PARAM.DATA.ATRB_FIELD.LO);
+    begin
+        O_DATA(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) <= elem;
+        O_DATA(O_PARAM.DATA.ATRB_FIELD.HI downto O_PARAM.DATA.ATRB_FIELD.LO) <= atrb;
+        for d_pos in 0 to D_UNROLL-1 loop
+            o_exit_d_atrb(d_pos).VALID <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_VALID_POS) = '1');
+            o_exit_d_atrb(d_pos).START <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_START_POS) = '1');
+            o_exit_d_atrb(d_pos).LAST  <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_LAST_POS ) = '1');
+        end loop;
+    end process;
+    O_D_ATRB <= o_exit_d_atrb;
+    O_VALID  <= o_exit_valid;
+    o_exit_ready  <= O_READY;
+    o_exit_line_last  <= '1' when (IMAGE_WINDOW_DATA_IS_LAST_C(PARAM.O_EXIT_PARAM, o_exit_data)) and
+                                  (IMAGE_WINDOW_DATA_IS_LAST_X(PARAM.O_EXIT_PARAM, o_exit_data)) and
+                                  (o_exit_d_atrb(o_exit_d_atrb'high).LAST                      ) and
+                                  (o_exit_valid = '1' and o_exit_ready = '1'                   ) else '0';
+    o_exit_frame_last <= '1' when (o_exit_line_last = '1'                                      ) and
+                                  (IMAGE_WINDOW_DATA_IS_LAST_Y(PARAM.O_EXIT_PARAM, o_exit_data)) else '0';
+    o_exit_feed       <= '1' when (o_exit_line_last = '1' and O_FEED   = '1') else '0';
+    o_exit_return     <= '1' when (o_exit_line_last = '1' and O_RETURN = '1') else '0';
 
 end RTL;
