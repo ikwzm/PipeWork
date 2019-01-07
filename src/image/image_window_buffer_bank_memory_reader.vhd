@@ -265,7 +265,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     signal    x_loop_done           :  std_logic;
     signal    x_loop_first          :  std_logic;
     signal    x_loop_last           :  std_logic;
-    signal    x_atrb_vector         :  IMAGE_ATRB_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
+    signal    x_atrb_vector         :  IMAGE_ATRB_VECTOR(0 to O_PARAM.SHAPE.X.SIZE-1);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

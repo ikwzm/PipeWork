@@ -326,7 +326,7 @@ begin
                                         PARAM   => I_PARAM ,
                                         C       => c_pos,
                                         X       => x_pos,
-                                        Y       => line+I_PARAM.SHAPE.X.LO,
+                                        Y       => line+I_PARAM.SHAPE.Y.LO,
                                         DATA    => I_DATA
                                     );
                 end if;
