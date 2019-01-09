@@ -217,7 +217,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
                   CURR_BANK_ADDR    :  BANK_ADDR_TYPE;
                   BANK_SELECT       :  BANK_SELECT_VECTOR;
                   BASE_ADDR         :  integer;
-                  CHANNEL_OFFSET    :  integer;
+                  NEXT_ADDR         :  integer;
                   START_CHANNEL     :  std_logic;
                   NEXT_CHANNEL      :  std_logic
               )   return               BANK_ADDR_TYPE
@@ -228,8 +228,8 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
         variable  select_next_addr  :  boolean;
     begin
         if (START_CHANNEL = '1') then
-            base_curr_addr := std_logic_vector(to_unsigned(BASE_ADDR                 , RAM_ADDR_TYPE'length));
-            base_next_addr := std_logic_vector(to_unsigned(BASE_ADDR + CHANNEL_OFFSET, RAM_ADDR_TYPE'length));
+            base_curr_addr := std_logic_vector(to_unsigned(BASE_ADDR, RAM_ADDR_TYPE'length));
+            base_next_addr := std_logic_vector(to_unsigned(NEXT_ADDR, RAM_ADDR_TYPE'length));
             select_next_addr      := TRUE;
             for bank in 0 to BANK_SIZE-1 loop
                 if (select_next_addr = TRUE and BANK_SELECT(BANK_SELECT'low)(bank) = '1') then
@@ -458,28 +458,34 @@ begin
         --
         ---------------------------------------------------------------------------
         signal    base_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
-        signal    channel_offset    :  integer range 0 to 2**BUF_ADDR_BITS;
+        signal    next_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
         signal    curr_bank_addr    :  BANK_ADDR_TYPE;
         signal    next_bank_addr    :  BANK_ADDR_TYPE;
+        signal    next_bank_select  :  BANK_SELECT_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
     begin
         ---------------------------------------------------------------------------
-        -- base_addr      :
-        -- channel_offset : 
+        --
+        ---------------------------------------------------------------------------
+        next_bank_select <= STRIDE_BANK_SELECT(bank_select, O_PARAM.STRIDE.X) when (x_loop_next = '1') else bank_select;
+        ---------------------------------------------------------------------------
+        -- base_addr :
+        -- next_addr : 
         ---------------------------------------------------------------------------
         process(CLK, RST) begin
             if (RST = '1') then
-                    base_addr      <= 0;
-                    channel_offset <= 0;
+                    base_addr <= 0;
+                    next_addr <= 0;
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
-                    base_addr      <= 0;
-                    channel_offset <= 0;
+                    base_addr <= 0;
+                    next_addr <= 0;
                 elsif (x_loop_start = '1') then
-                    base_addr      <= 0;
-                    channel_offset <= C_OFFSET;
+                    base_addr <= 0;
+                    next_addr <= C_OFFSET;
                 elsif (c_loop_last_start = '1') and
                       (IS_LAST_BANK(bank_select, O_PARAM.STRIDE.X) = TRUE) then
-                    base_addr <= base_addr + channel_offset;
+                    base_addr <= next_addr;
+                    next_addr <= next_addr + C_OFFSET;
                 end if;
             end if;
         end process;
@@ -488,9 +494,9 @@ begin
         ---------------------------------------------------------------------------
         next_bank_addr <= CALC_NEXT_BANK_ADDR(
                               CURR_BANK_ADDR => curr_bank_addr,
-                              BANK_SELECT    => bank_select   ,
+                              BANK_SELECT    => next_bank_select,
                               BASE_ADDR      => base_addr     ,
-                              CHANNEL_OFFSET => channel_offset,
+                              NEXT_ADDR      => next_addr     ,
                               START_CHANNEL  => c_loop_start  ,
                               NEXT_CHANNEL   => c_loop_next   
                           );
