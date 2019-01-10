@@ -252,7 +252,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER is
                   return        integer
     is
         alias     i_atrb_vec :  IMAGE_ATRB_VECTOR(0 to ATRB_VEC'length-1) is ATRB_VEC;
-        variable  count      :  integer range 0 to PARAM.SHAPE.X.SIZE;
+        variable  count      :  integer range 0 to ATRB_VEC'length;
     begin
         if (i_atrb_vec'length = 1) then
             if (i_atrb_vec(0).VALID = TRUE) then
