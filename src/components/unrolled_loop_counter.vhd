@@ -352,12 +352,14 @@ begin
     -- next_loop_valid : 次のクロックでの LOOP_VALID の値
     -------------------------------------------------------------------------------
     process (next_last_pos, next_first_pos, next_loop_term)
-        variable next_last_pos_hi      :  unsigned(next_last_pos'high-1 downto VALID_POS_BITS);
-        variable next_last_pos_lo      :  unsigned(VALID_POS_BITS    -1 downto 0);
-        constant NEXT_LAST_POS_HI_ZERO :  unsigned(next_last_pos_hi'range) := (others => '0');
+        variable next_last_pos_sv      :  std_logic_vector(next_last_pos'range);
+        variable next_last_pos_hi      :  std_logic_vector(next_last_pos'high-1 downto VALID_POS_BITS);
+        variable next_last_pos_lo      :  unsigned        (VALID_POS_BITS    -1 downto 0);
+        constant NEXT_LAST_POS_HI_ZERO :  std_logic_vector(next_last_pos_hi'range) := (others => '0');
     begin
-        next_last_pos_hi := to_01(unsigned(next_last_pos(next_last_pos_hi'range)));
-        next_last_pos_lo := to_01(unsigned(next_last_pos(next_last_pos_lo'range)));
+        next_last_pos_sv := std_logic_vector(to_01(next_last_pos));
+        next_last_pos_hi := std_logic_vector(next_last_pos_sv(next_last_pos_hi'range));
+        next_last_pos_lo := unsigned(        next_last_pos_sv(next_last_pos_lo'range));
         if    (next_loop_term = '1') then
             next_loop_valid <= (others => '0');
         elsif (next_last_pos_hi /= NEXT_LAST_POS_HI_ZERO) then
