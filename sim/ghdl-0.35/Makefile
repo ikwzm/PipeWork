@@ -4,6 +4,7 @@ WORK=PIPEWORK
 
 SRC_PATH  = ../../src
 
+all: analyze
 
 pipework-obj93.cf : pipework.vhd
 	$(GHDL) -a $(GHDLFLAGS) --work=$(WORK) pipework.vhd
