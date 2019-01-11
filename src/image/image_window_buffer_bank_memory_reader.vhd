@@ -161,7 +161,8 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     -------------------------------------------------------------------------------
     subtype   BANK_SELECT_TYPE      is std_logic_vector(0 to BANK_SIZE-1);
     type      BANK_SELECT_VECTOR    is array(integer range <>) of BANK_SELECT_TYPE;
-    signal    bank_select           :  BANK_SELECT_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
+    signal    curr_bank_select      :  BANK_SELECT_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
+    signal    next_bank_select      :  BANK_SELECT_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -213,9 +214,38 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    subtype   ADDR_SELECT_TYPE      is std_logic_vector(0 to BANK_SIZE-1);
+    type      ADDR_SELECT_VECTOR    is array(integer range <>) of ADDR_SELECT_TYPE;
+    signal    curr_addr_select      :  ADDR_SELECT_VECTOR(0 to LINE_SIZE-1);
+    signal    next_addr_select      :  ADDR_SELECT_VECTOR(0 to LINE_SIZE-1);
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  CALC_ADDR_SELECT(BANK_SELECT: BANK_SELECT_TYPE) return ADDR_SELECT_VECTOR is
+        variable select_next_addr   :  boolean;
+        variable addr_select        :  ADDR_SELECT_VECTOR(0 to LINE_SIZE-1);
+    begin 
+        select_next_addr := TRUE;
+        for bank in 0 to BANK_SIZE-1 loop
+            if (select_next_addr = TRUE and BANK_SELECT(bank) = '1') then
+                select_next_addr := FALSE;
+            end if;
+            for line in 0 to LINE_SIZE-1 loop
+                if (select_next_addr = TRUE) then
+                    addr_select(line)(bank) := '1';
+                else
+                    addr_select(line)(bank) := '0';
+                end if;
+            end loop;
+        end loop;
+        return addr_select;
+    end function;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     function  CALC_NEXT_BANK_ADDR(
                   CURR_BANK_ADDR    :  BANK_ADDR_TYPE;
-                  BANK_SELECT       :  BANK_SELECT_VECTOR;
+                  ADDR_SELECT       :  ADDR_SELECT_TYPE;
                   BASE_ADDR         :  integer;
                   NEXT_ADDR         :  integer;
                   START_CHANNEL     :  std_logic;
@@ -230,12 +260,8 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
         if (START_CHANNEL = '1') then
             base_curr_addr := std_logic_vector(to_unsigned(BASE_ADDR, RAM_ADDR_TYPE'length));
             base_next_addr := std_logic_vector(to_unsigned(NEXT_ADDR, RAM_ADDR_TYPE'length));
-            select_next_addr      := TRUE;
             for bank in 0 to BANK_SIZE-1 loop
-                if (select_next_addr = TRUE and BANK_SELECT(BANK_SELECT'low)(bank) = '1') then
-                    select_next_addr := FALSE;
-                end if;
-                if (select_next_addr = TRUE) then
+                if (ADDR_SELECT(bank) = '1') then
                     next_bank_addr(bank) := base_next_addr;
                 else
                     next_bank_addr(bank) := base_curr_addr;
@@ -351,16 +377,35 @@ begin
             end if;
         end process;
         ---------------------------------------------------------------------------
-        -- bank_select  :
+        -- curr_bank_select  :
+        -- next_bank_select  :
+        -- curr_addr_select  :
+        -- next_addr_select  :
         ---------------------------------------------------------------------------
-        process(CLK, RST) begin 
+        process(CLK, RST)
+            variable temp_bank_select :  BANK_SELECT_VECTOR(curr_bank_select'range);
+        begin 
             if (RST = '1') then
-                    bank_select <= INIT_BANK_SELECT(O_PARAM.SHAPE.X.LO, O_PARAM.SHAPE.X.HI);
+                    temp_bank_select := INIT_BANK_SELECT(O_PARAM.SHAPE.X.LO, O_PARAM.SHAPE.X.HI);
+                    curr_bank_select <= temp_bank_select;
+                    curr_addr_select <= CALC_ADDR_SELECT(temp_bank_select(temp_bank_select'low));
+                    temp_bank_select := STRIDE_BANK_SELECT(temp_bank_select, O_PARAM.STRIDE.X);
+                    next_bank_select <= temp_bank_select;
+                    next_addr_select <= CALC_ADDR_SELECT(temp_bank_select(temp_bank_select'low));
             elsif (CLK'event and CLK = '1') then
                 if    (CLR = '1' or x_loop_start = '1') then
-                    bank_select <= INIT_BANK_SELECT(O_PARAM.SHAPE.X.LO, O_PARAM.SHAPE.X.HI);
+                    temp_bank_select := INIT_BANK_SELECT(O_PARAM.SHAPE.X.LO, O_PARAM.SHAPE.X.HI);
+                    curr_bank_select <= temp_bank_select;
+                    curr_addr_select <= CALC_ADDR_SELECT(temp_bank_select(temp_bank_select'low));
+                    temp_bank_select := STRIDE_BANK_SELECT(temp_bank_select, O_PARAM.STRIDE.X);
+                    next_bank_select <= temp_bank_select;
+                    next_addr_select <= CALC_ADDR_SELECT(temp_bank_select(temp_bank_select'low));
                 elsif (x_loop_next = '1') then
-                    bank_select <= STRIDE_BANK_SELECT(bank_select, O_PARAM.STRIDE.X);
+                    curr_bank_select <= next_bank_select;
+                    curr_addr_select <= CALC_ADDR_SELECT(next_bank_select(next_bank_select'low));
+                    temp_bank_select := STRIDE_BANK_SELECT(next_bank_select, O_PARAM.STRIDE.X);
+                    next_bank_select <= temp_bank_select;
+                    next_addr_select <= CALC_ADDR_SELECT(temp_bank_select(temp_bank_select'low));
                 end if;
             end if;
         end process;
@@ -455,14 +500,19 @@ begin
         ---------------------------------------------------------------------------
         signal    base_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
         signal    next_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
+        signal    addr_select       :  ADDR_SELECT_TYPE;
+        signal    bank_select       :  BANK_SELECT_VECTOR(curr_bank_select'range);
         signal    curr_bank_addr    :  BANK_ADDR_TYPE;
         signal    next_bank_addr    :  BANK_ADDR_TYPE;
-        signal    next_bank_select  :  BANK_SELECT_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
     begin
         ---------------------------------------------------------------------------
-        --
+        -- addr_select :
+        -- bank_select :
         ---------------------------------------------------------------------------
-        next_bank_select <= STRIDE_BANK_SELECT(bank_select, O_PARAM.STRIDE.X) when (x_loop_next = '1') else bank_select;
+        addr_select <= next_addr_select(LINE) when (x_loop_next = '1') else
+                       curr_addr_select(LINE);
+        bank_select <= next_bank_select       when (x_loop_next = '1') else
+                       curr_bank_select      ;
         ---------------------------------------------------------------------------
         -- base_addr :
         -- next_addr : 
@@ -479,7 +529,7 @@ begin
                     base_addr <= 0;
                     next_addr <= C_OFFSET;
                 elsif (c_loop_last_start = '1') and
-                      (IS_LAST_BANK(next_bank_select, O_PARAM.STRIDE.X) = TRUE) then
+                      (IS_LAST_BANK(bank_select, O_PARAM.STRIDE.X) = TRUE) then
                     base_addr <= next_addr;
                     next_addr <= next_addr + C_OFFSET;
                 end if;
@@ -490,7 +540,7 @@ begin
         ---------------------------------------------------------------------------
         next_bank_addr <= CALC_NEXT_BANK_ADDR(
                               CURR_BANK_ADDR => curr_bank_addr,
-                              BANK_SELECT    => next_bank_select,
+                              ADDR_SELECT    => addr_select   ,
                               BASE_ADDR      => base_addr     ,
                               NEXT_ADDR      => next_addr     ,
                               START_CHANNEL  => c_loop_start  ,
@@ -550,7 +600,7 @@ begin
     -------------------------------------------------------------------------------
     process (x_loop_first, x_loop_last, x_atrb_vector,
              d_loop_first, d_loop_last, d_loop_valid ,
-             c_loop_first, c_loop_last, c_loop_valid , bank_select, BUF_DATA, line_atrb_vector)
+             c_loop_first, c_loop_last, c_loop_valid , curr_bank_select, BUF_DATA, line_atrb_vector)
         variable bank_data  :  std_logic_vector (BUF_DATA_BITS    -1 downto 0);
         variable o_data     :  std_logic_vector (O_PARAM.DATA.SIZE-1 downto 0);
         variable d_atrb     :  IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
@@ -590,10 +640,10 @@ begin
         --
         ---------------------------------------------------------------------------
         for line in 0 to LINE_SIZE-1 loop
-            for x_pos in bank_select'range loop
+            for x_pos in curr_bank_select'range loop
                 bank_data := (others => '0');
                 for bank in 0 to BANK_SIZE-1 loop
-                    if (bank_select(x_pos)(bank) = '1') then
+                    if (curr_bank_select(x_pos)(bank) = '1') then
                         bank_data := bank_data or BUF_DATA((line*BANK_SIZE*BUF_DATA_BITS)+(bank+1)*BUF_DATA_BITS-1 downto
                                                            (line*BANK_SIZE*BUF_DATA_BITS)+(bank  )*BUF_DATA_BITS);
                     end if;
