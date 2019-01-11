@@ -3,7 +3,7 @@
 --!     @brief   Image Window Buffer Module :
 --!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/7
+--!     @date    2019/1/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -228,7 +228,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
     function  INIT_PARAM return PARAM_TYPE is
         variable  param             :  PARAM_TYPE;
         variable  lcm_shape_c_size  :  integer;
-        variable  lcm_shape_x_size  :  integer;
+        variable  max_shape_x_size  :  integer;
     begin
         ---------------------------------------------------------------------------
         --
@@ -239,9 +239,9 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         --
         ---------------------------------------------------------------------------
         if (BANK_SIZE = 0) then
-            lcm_shape_x_size := lcm(I_PARAM.SHAPE.X.SIZE, O_PARAM.SHAPE.X.SIZE);
+            max_shape_x_size := maximum(I_PARAM.SHAPE.X.SIZE, O_PARAM.SHAPE.X.SIZE);
             param.BANK_SIZE  := 1;
-            while (param.BANK_SIZE < lcm_shape_x_size) loop
+            while (param.BANK_SIZE < max_shape_x_size) loop
                 param.BANK_SIZE := 2*param.BANK_SIZE;
             end loop;
         else
