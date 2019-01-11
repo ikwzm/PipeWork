@@ -479,7 +479,7 @@ begin
                     base_addr <= 0;
                     next_addr <= C_OFFSET;
                 elsif (c_loop_last_start = '1') and
-                      (IS_LAST_BANK(bank_select, O_PARAM.STRIDE.X) = TRUE) then
+                      (IS_LAST_BANK(next_bank_select, O_PARAM.STRIDE.X) = TRUE) then
                     base_addr <= next_addr;
                     next_addr <= next_addr + C_OFFSET;
                 end if;
