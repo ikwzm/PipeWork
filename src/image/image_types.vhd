@@ -330,6 +330,78 @@ package IMAGE_TYPES is
                   ATRB              :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が Channel の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_C_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_C            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が Channel の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_C_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_C            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が列(X方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_X_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    function  IMAGE_ATRB_X_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が列(X方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_X_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    function  IMAGE_ATRB_X_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が行(Y方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_Y_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    function  IMAGE_ATRB_Y_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が行(Y方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_Y_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    function  IMAGE_ATRB_Y_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
     --! @brief Image Window が Channel の最初であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_WINDOW_DATA_IS_START_C(
@@ -352,12 +424,12 @@ package IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     function  IMAGE_WINDOW_DATA_IS_START_X(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     -------------------------------------------------------------------------------
     --! @brief Image Window が行(Y方向)の最初であることを示す関数
@@ -366,12 +438,12 @@ package IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     function  IMAGE_WINDOW_DATA_IS_START_Y(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     -------------------------------------------------------------------------------
     --! @brief Image Window が列(X方向)の最後であることを示す関数
@@ -380,12 +452,12 @@ package IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     function  IMAGE_WINDOW_DATA_IS_LAST_X(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     -------------------------------------------------------------------------------
     --! @brief Image Window が行(Y方向)の最後であることを示す関数
@@ -394,12 +466,12 @@ package IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
     function  IMAGE_WINDOW_DATA_IS_LAST_Y(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean;
 end IMAGE_TYPES;
 -----------------------------------------------------------------------------------
@@ -1148,6 +1220,194 @@ package body IMAGE_TYPES is
     end function;
         
     -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が Channel の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_C_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_C            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean
+    is
+    begin
+        return CHECK_IMAGE_ATRB(
+                  ATRB_VEC => ATRB_C(PARAM.SHAPE.C.LO to PARAM.SHAPE.C.LO),
+                  VALID    => VALID,
+                  START    => TRUE,
+                  LAST     => FALSE
+               );
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が Channel の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_C_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_C            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean
+    is
+    begin
+        return CHECK_IMAGE_ATRB(
+                  ATRB_VEC => ATRB_C(PARAM.SHAPE.C.LO to PARAM.SHAPE.C.HI),
+                  VALID    => VALID,
+                  START    => FALSE,
+                  LAST     => TRUE
+               );
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が列(X方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_X_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        if (BORDER = IMAGE_WINDOW_BORDER_NONE) then
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_X(PARAM.SHAPE.X.LO to PARAM.SHAPE.X.LO+(PARAM.STRIDE.X-1)),
+                       VALID    => VALID,
+                       START    => TRUE,
+                       LAST     => FALSE
+                   );
+        else
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_X(PARAM.SHAPE.X.LO to 0+(PARAM.STRIDE.X-1)),
+                       VALID    => VALID,
+                       START    => TRUE,
+                       LAST     => FALSE
+                   );
+        end if;
+    end function;
+
+    function  IMAGE_ATRB_X_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        return IMAGE_ATRB_X_VECTOR_IS_START(PARAM, PARAM.BORDER_TYPE, ATRB_X, VALID);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が列(X方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_X_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        if (BORDER = IMAGE_WINDOW_BORDER_NONE) then
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_X(PARAM.SHAPE.X.HI-(PARAM.STRIDE.X-1) to PARAM.SHAPE.X.HI),
+                       VALID    => VALID,
+                       START    => FALSE,
+                       LAST     => TRUE
+                   );
+        else
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_X(0-(PARAM.STRIDE.X-1) to PARAM.SHAPE.X.HI),
+                       VALID    => VALID,
+                       START    => FALSE,
+                       LAST     => TRUE
+                   );
+        end if;
+    end function;
+    
+    function  IMAGE_ATRB_X_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_X            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        return IMAGE_ATRB_X_VECTOR_IS_LAST(PARAM, PARAM.BORDER_TYPE, ATRB_X, VALID);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が行(Y方向)の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_Y_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        if (BORDER = IMAGE_WINDOW_BORDER_NONE) then
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_Y(PARAM.SHAPE.Y.LO to PARAM.SHAPE.Y.LO+(PARAM.STRIDE.Y-1)),
+                       VALID    => VALID,
+                       START    => TRUE,
+                       LAST     => FALSE
+                   );
+        else
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_Y(PARAM.SHAPE.Y.LO to 0+(PARAM.STRIDE.Y-1)),
+                       VALID    => VALID,
+                       START    => TRUE,
+                       LAST     => FALSE
+                   );
+        end if;
+    end function;
+    
+    function  IMAGE_ATRB_Y_VECTOR_IS_START(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        return IMAGE_ATRB_Y_VECTOR_IS_START(PARAM, PARAM.BORDER_TYPE, ATRB_Y, VALID);
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Window Attribute が行(Y方向)の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_ATRB_Y_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        if (PARAM.BORDER_TYPE = IMAGE_WINDOW_BORDER_NONE) then
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_Y(PARAM.SHAPE.Y.HI-(PARAM.STRIDE.Y-1) to PARAM.SHAPE.Y.HI),
+                       VALID    => VALID,
+                       START    => FALSE,
+                       LAST     => TRUE
+                   );
+        else
+            return CHECK_IMAGE_ATRB(
+                       ATRB_VEC => ATRB_Y(0-(PARAM.STRIDE.Y-1) to PARAM.SHAPE.Y.HI),
+                       VALID    => VALID,
+                       START    => FALSE,
+                       LAST     => TRUE
+                   );
+        end if;
+    end function;
+
+    function  IMAGE_ATRB_Y_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
+                  ATRB_Y            :  IMAGE_ATRB_VECTOR;
+                  VALID             :  boolean := FALSE)
+                  return               boolean
+    is
+    begin
+        return IMAGE_ATRB_Y_VECTOR_IS_LAST(PARAM, PARAM.BORDER_TYPE, ATRB_Y, VALID);
+    end function;
+
+    -------------------------------------------------------------------------------
     --! @brief Image Window が Channel の最初であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_WINDOW_DATA_IS_START_C(
@@ -1158,15 +1418,13 @@ package body IMAGE_TYPES is
     is
         variable  atrb_c            :  IMAGE_ATRB_TYPE;
     begin 
-        return CHECK_IMAGE_ATRB(
-                      ATRB  => GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
-                                   PARAM => PARAM,
-                                   C     => PARAM.SHAPE.C.LO,
-                                   DATA  => DATA
-                               ),
-                      VALID => VALID,
-                      START => TRUE,
-                      LAST  => FALSE
+        return IMAGE_ATRB_C_VECTOR_IS_START(
+                  PARAM   => PARAM, 
+                  ATRB_C  => GET_ATRB_C_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
                );
     end function;
 
@@ -1180,16 +1438,13 @@ package body IMAGE_TYPES is
                   return               boolean
     is
     begin
-        return CHECK_IMAGE_ATRB(
-                      ATRB_VEC  => GET_ATRB_C_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       C_LO  => PARAM.SHAPE.C.LO,
-                                       C_HI  => PARAM.SHAPE.C.HI,
-                                       DATA  => DATA
-                                   ),
-                      VALID     => VALID,
-                      START     => FALSE,
-                      LAST      => TRUE
+        return IMAGE_ATRB_C_VECTOR_IS_LAST(
+                  PARAM   => PARAM, 
+                  ATRB_C  => GET_ATRB_C_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
                );
     end function;
 
@@ -1200,45 +1455,36 @@ package body IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (BORDER = IMAGE_WINDOW_BORDER_NONE) then
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       X_LO  => PARAM.SHAPE.X.LO,
-                                       X_HI  => PARAM.SHAPE.X.LO+(PARAM.STRIDE.X-1),
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => TRUE,
-                       LAST     => FALSE
-                   );
-        else
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       X_LO  => PARAM.SHAPE.X.LO,
-                                       X_HI  => 0+(PARAM.STRIDE.X-1),
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => TRUE,
-                       LAST     => FALSE
-                   );
-        end if;
+        return IMAGE_ATRB_X_VECTOR_IS_START(
+                  PARAM   => PARAM ,
+                  BORDER  => BORDER,
+                  ATRB_X  => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
 
     function  IMAGE_WINDOW_DATA_IS_START_X(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin 
-        return IMAGE_WINDOW_DATA_IS_START_X(PARAM, PARAM.BORDER_TYPE, DATA, VALID);
+        return IMAGE_ATRB_X_VECTOR_IS_START(
+                  PARAM   => PARAM ,
+                  ATRB_X  => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
             
     -------------------------------------------------------------------------------
@@ -1248,45 +1494,36 @@ package body IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (BORDER = IMAGE_WINDOW_BORDER_NONE) then
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       Y_LO  => PARAM.SHAPE.Y.LO,
-                                       Y_HI  => PARAM.SHAPE.Y.LO+(PARAM.STRIDE.Y-1),
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => TRUE,
-                       LAST     => FALSE
-                   );
-        else
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       Y_LO  => PARAM.SHAPE.Y.LO,
-                                       Y_HI  => 0+(PARAM.STRIDE.Y-1),
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => TRUE,
-                       LAST     => FALSE
-                   );
-        end if;
+        return IMAGE_ATRB_Y_VECTOR_IS_START(
+                  PARAM   => PARAM ,
+                  BORDER  => BORDER,
+                  ATRB_Y  => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
 
     function  IMAGE_WINDOW_DATA_IS_START_Y(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        return IMAGE_WINDOW_DATA_IS_START_Y(PARAM, PARAM.BORDER_TYPE, DATA, VALID);
+        return IMAGE_ATRB_Y_VECTOR_IS_START(
+                  PARAM   => PARAM ,
+                  ATRB_Y  => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
 
     -------------------------------------------------------------------------------
@@ -1296,45 +1533,36 @@ package body IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (BORDER = IMAGE_WINDOW_BORDER_NONE) then
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       X_LO  => PARAM.SHAPE.X.HI-(PARAM.STRIDE.X-1),
-                                       X_HI  => PARAM.SHAPE.X.HI,
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => FALSE,
-                       LAST     => TRUE
-                   );
-        else
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       X_LO  => 0-(PARAM.STRIDE.X-1),
-                                       X_HI  => PARAM.SHAPE.X.HI,
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => FALSE,
-                       LAST     => TRUE
-                   );
-        end if;
+        return IMAGE_ATRB_X_VECTOR_IS_LAST(
+                  PARAM   => PARAM ,
+                  BORDER  => BORDER,
+                  ATRB_X  => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
 
     function  IMAGE_WINDOW_DATA_IS_LAST_X(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        return IMAGE_WINDOW_DATA_IS_LAST_X(PARAM, PARAM.BORDER_TYPE, DATA, VALID);
+        return IMAGE_ATRB_X_VECTOR_IS_LAST(
+                  PARAM   => PARAM ,
+                  ATRB_X  => GET_ATRB_X_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
     
     -------------------------------------------------------------------------------
@@ -1344,45 +1572,36 @@ package body IMAGE_TYPES is
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   BORDER            :  IMAGE_WINDOW_BORDER_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (PARAM.BORDER_TYPE = IMAGE_WINDOW_BORDER_NONE) then
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       Y_LO  => PARAM.SHAPE.Y.HI-(PARAM.STRIDE.Y-1),
-                                       Y_HI  => PARAM.SHAPE.Y.HI,
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => FALSE,
-                       LAST     => TRUE
-                   );
-        else
-            return CHECK_IMAGE_ATRB(
-                       ATRB_VEC => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
-                                       PARAM => PARAM,
-                                       Y_LO  => 0-(PARAM.STRIDE.Y-1),
-                                       Y_HI  => PARAM.SHAPE.Y.HI,
-                                       DATA  => DATA
-                                   ),
-                       VALID    => VALID,
-                       START    => FALSE,
-                       LAST     => TRUE
-                   );
-        end if;
+        return IMAGE_ATRB_Y_VECTOR_IS_LAST(
+                  PARAM   => PARAM ,
+                  BORDER  => BORDER,
+                  ATRB_Y  => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
 
     function  IMAGE_WINDOW_DATA_IS_LAST_Y(
                   PARAM             :  IMAGE_WINDOW_PARAM_TYPE;
                   DATA              :  std_logic_vector;
-                  VALID             :  boolean := TRUE)
+                  VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        return IMAGE_WINDOW_DATA_IS_LAST_Y(PARAM, PARAM.BORDER_TYPE, DATA, VALID);
+        return IMAGE_ATRB_Y_VECTOR_IS_LAST(
+                  PARAM   => PARAM ,
+                  ATRB_Y  => GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
     end function;
     
 end IMAGE_TYPES;

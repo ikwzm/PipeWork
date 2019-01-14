@@ -158,6 +158,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR is
     signal    curr_line_active      :  LINE_SELECT_TYPE;
     signal    next_line_active      :  LINE_SELECT_TYPE;
     signal    line_outlet_start     :  boolean;
+    signal    atrb_y_vector         :  IMAGE_ATRB_VECTOR (O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -255,21 +256,68 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- next_line_active :
+    -- atrb_y_vector :
     -------------------------------------------------------------------------------
-    process(line_select)
+    process(line_select, LINE_VALID, LINE_ATRB)
+        variable  i_atrb :  std_logic_vector(IMAGE_ATRB_BITS-1 downto 0);
+        variable  y_atrb :  std_logic_vector(IMAGE_ATRB_BITS-1 downto 0);
+        variable  y_last :  boolean;
+    begin
+        y_last := FALSE;
+        for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
+            y_atrb := (others => '0');
+            for line in 0 to LINE_SIZE-1 loop
+                if (line_select(y_pos)(line) = '1' and LINE_VALID(line) = '1') then
+                    if (LINE_ATRB(line).VALID) then
+                        i_atrb(IMAGE_ATRB_VALID_POS) := '1';
+                    else
+                        i_atrb(IMAGE_ATRB_VALID_POS) := '0';
+                    end if;
+                    if (LINE_ATRB(line).START) then
+                        i_atrb(IMAGE_ATRB_START_POS) := '1';
+                    else
+                        i_atrb(IMAGE_ATRB_START_POS) := '0';
+                    end if;
+                    if (LINE_ATRB(line).LAST ) then
+                        i_atrb(IMAGE_ATRB_LAST_POS ) := '1';
+                    else
+                        i_atrb(IMAGE_ATRB_LAST_POS ) := '0';
+                    end if;
+                    y_atrb := y_atrb or i_atrb;
+                end if;
+            end loop;
+            atrb_y_vector(y_pos).VALID <= (y_atrb(IMAGE_ATRB_VALID_POS) = '1');
+            atrb_y_vector(y_pos).START <= (y_atrb(IMAGE_ATRB_START_POS) = '1');
+            atrb_y_vector(y_pos).LAST  <= (y_atrb(IMAGE_ATRB_LAST_POS ) = '1' or y_last = TRUE);
+            if (y_atrb(IMAGE_ATRB_VALID_POS) = '1' and y_atrb(IMAGE_ATRB_LAST_POS) = '1') then
+                y_last := TRUE;
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- next_line_active  :
+    -- line_outlet_start :
+    -------------------------------------------------------------------------------
+    process(line_select, LINE_VALID, atrb_y_vector)
         variable line_active :  LINE_SELECT_TYPE;
+        variable line_start  :  boolean;
+        variable line_last   :  boolean;
     begin
         line_active := (others => '0');
         for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
             line_active := line_active or line_select(y_pos);
         end loop;
-        next_line_active <= line_active;
+        if    (IMAGE_ATRB_Y_VECTOR_IS_LAST(O_PARAM, atrb_y_vector) = TRUE) then
+            line_outlet_start <= TRUE;
+            next_line_active  <= line_active;
+        elsif ((line_active and LINE_VALID) = line_active) then
+            line_outlet_start <= TRUE;
+            next_line_active  <= line_active;
+        else
+            line_outlet_start <= FALSE;
+            next_line_active  <= (others => '0');
+        end if;
     end process;
-    -------------------------------------------------------------------------------
-    -- line_outlet_start :
-    -------------------------------------------------------------------------------
-    line_outlet_start <= ((next_line_active and LINE_VALID) = next_line_active);
     -------------------------------------------------------------------------------
     -- I_LINE_START :
     -------------------------------------------------------------------------------
@@ -309,38 +357,15 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    process (I_DATA, LINE_ATRB, line_select)
+    process (I_DATA, line_select, atrb_y_vector)
         variable  data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
         variable  elem   :  std_logic_vector(O_PARAM.ELEM_BITS-1 downto 0);
-        variable  atrb_y :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
-        variable  i_atrb :  std_logic_vector(IMAGE_ATRB_BITS       -1 downto 0);
     begin
         data(O_PARAM.DATA.INFO_FIELD  .HI downto O_PARAM.DATA.INFO_FIELD  .LO) := I_DATA(I_PARAM.DATA.INFO_FIELD  .HI downto I_PARAM.DATA.INFO_FIELD  .LO);
         data(O_PARAM.DATA.ATRB_C_FIELD.HI downto O_PARAM.DATA.ATRB_C_FIELD.LO) := I_DATA(I_PARAM.DATA.ATRB_C_FIELD.HI downto I_PARAM.DATA.ATRB_C_FIELD.LO);
         data(O_PARAM.DATA.ATRB_X_FIELD.HI downto O_PARAM.DATA.ATRB_X_FIELD.LO) := I_DATA(I_PARAM.DATA.ATRB_X_FIELD.HI downto I_PARAM.DATA.ATRB_X_FIELD.LO);
         for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
-            atrb_y := (others => '0');
-            for line in 0 to LINE_SIZE-1 loop
-                if (line_select(y_pos)(line) = '1') then
-                    if (LINE_ATRB(line).VALID) then
-                        i_atrb(IMAGE_ATRB_VALID_POS) := '1';
-                    else
-                        i_atrb(IMAGE_ATRB_VALID_POS) := '0';
-                    end if;
-                    if (LINE_ATRB(line).START) then
-                        i_atrb(IMAGE_ATRB_START_POS) := '1';
-                    else
-                        i_atrb(IMAGE_ATRB_START_POS) := '0';
-                    end if;
-                    if (LINE_ATRB(line).LAST ) then
-                        i_atrb(IMAGE_ATRB_LAST_POS ) := '1';
-                    else
-                        i_atrb(IMAGE_ATRB_LAST_POS ) := '0';
-                    end if;
-                    atrb_y := atrb_y or i_atrb;
-                end if;
-            end loop;
-            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(O_PARAM, y_pos, atrb_y, data);
+            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(O_PARAM, y_pos, atrb_y_vector(y_pos), data);
         end loop;
         for c_pos in O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI loop
         for x_pos in O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI loop
