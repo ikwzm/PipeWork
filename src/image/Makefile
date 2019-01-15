@@ -1,5 +1,6 @@
 ENTITY_FILES = image_atrb_generator.vhd                     \
                image_window_channel_reducer.vhd             \
+               image_window_from_stream.vhd                 \
                image_window_buffer.vhd                      \
                image_window_buffer_bank_memory.vhd          \
                image_window_buffer_bank_memory_writer.vhd   \

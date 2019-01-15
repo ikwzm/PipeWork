@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/01/11                                                      --
+--!     @date    2019/01/14                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -234,6 +234,82 @@ component IMAGE_WINDOW_CHANNEL_REDUCER
                           --!   いることを示す.
                           --! * O_VALID='1'and O_READY='1'でウィンドウデータがキュー
                           --!   から取り除かれる.
+                          in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_WINDOW_BUFFER_FROM_STREAM                                       --
+-----------------------------------------------------------------------------------
+component IMAGE_WINDOW_BUFFER_FROM_STREAM
+    generic (
+        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
+                          --! 出力側ウィンドウのパラメータを指定する.
+                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(32,1,1,1);
+        I_DATA_BITS     : --! @brief INPUT STREAM DATA BIT SIZE :
+                          --! 入力側ストリームのデータのビット幅を指定する.
+                          --! * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなけれ
+                          --!   ばならない.
+                          integer := 32;
+        MAX_C_SIZE      : --! @brief MAX CHANNEL SIZE :
+                          integer := 1;
+        MAX_X_SIZE      : --! @brief MAX X SIZE :
+                          integer := 1;
+        MAX_Y_SIZE      : --! @brief MAX Y SIZE :
+                          integer := 1
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- SHAPE SIZE I/F
+    -------------------------------------------------------------------------------
+        START           : --! @brief STREAM START :
+                          in  std_logic;
+        BUSY            : --! @brief STREAM BUSY :
+                          out std_logic;
+        DONE            : --! @brief STREAM DONE :
+                          out std_logic;
+        C_SIZE          : --! @brief INPUT CHANNEL SIZE :
+                          in  integer range 0 to MAX_C_SIZE := 1;
+        X_SIZE          : --! @brief INPUT X SIZE :
+                          in  integer range 0 to MAX_X_SIZE := 1;
+        Y_SIZE          : --! @brief INPUT Y SIZE :
+                          in  integer range 0 to MAX_Y_SIZE := 1;
+    -------------------------------------------------------------------------------
+    -- STREAM 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_DATA          : --! @brief INPUT STREAM DATA :
+                          --! ストリームデータ入力.
+                          in  std_logic_vector(I_DATA_BITS    -1 downto 0);
+        I_VALID         : --! @brief INPUT STREAM VALID :
+                          --! 入力ストリムーデータ有効信号.
+                          --! I_DATA/I_STRB/I_LAST が有効であることを示す.
+                          in  std_logic;
+        I_READY         : --! @brief INPUT STREAM READY :
+                          --! 入力ストリムーデータレディ信号.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- IMAGE_WINDOW 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_DATA          : --! @brief OUTPUT WINDOW DATA :
+                          --! ウィンドウデータ出力.
+                          out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
+                          --! 出力ウィンドウデータ有効信号.
+                          --! * O_DATAが有効であることを示す.
+                          out std_logic;
+        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
+                          --! 出力ウィンドウデータレディ信号.
                           in  std_logic
     );
 end component;
