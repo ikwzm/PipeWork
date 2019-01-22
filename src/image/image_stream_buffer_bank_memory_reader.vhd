@@ -1,9 +1,10 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_bank_memory_reader.vhd
---!     @brief   Image Window Buffer Bank Memory Reader Module :
---!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--!     @file    image_stream_buffer_bank_memory_reader.vhd
+--!     @brief   Image Stream Buffer Bank Memory Reader Module :
+--!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
+--!              リ読み出し側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/7
+--!     @date    2019/1/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -40,14 +41,15 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER_BANK_READER :
---!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--! @brief   Image Stream Buffer Bank Memory Reader Module :
+--!          異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモリ
+--!          読み出し側モジュール
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
+entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
     generic (
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
+                          --! 出力側のストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
@@ -98,7 +100,7 @@ entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
                           in  std_logic_vector(LINE_SIZE-1 downto 0);
         I_LINE_ATRB     : --! @brief INPUT LINE ATTRIBUTE :
                           --! ライン属性入力.
-                          in  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+                          in  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
         X_SIZE          : --! @brief INPUT X SIZE :
                           in  integer range 0 to ELEMENT_SIZE;
         D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
@@ -110,15 +112,15 @@ entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
+        O_DATA          : --! @brief OUTPUT STREAM DATA :
+                          --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
+        O_VALID         : --! @brief OUTPUT STREAM DATA VALID :
+                          --! 出力ストリームデータ有効信号.
                           --! * O_DATAが有効であることを示す.
                           out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
+        O_READY         : --! @brief OUTPUT STREAM DATA READY :
+                          --! 出力ストリームデータレディ信号.
                           in  std_logic;
     -------------------------------------------------------------------------------
     -- バッファメモリ I/F
@@ -128,7 +130,7 @@ entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
         BUF_ADDR        : --! @brief BUFFER WRITE ADDRESS :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE*BUF_ADDR_BITS-1 downto 0)
     );
-end IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER;
+end IMAGE_STREAM_BUFFER_BANK_MEMORY_READER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -137,10 +139,10 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_ATRB_GENERATOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_ATRB_GENERATOR;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
 use     PIPEWORK.COMPONENTS.PIPELINE_REGISTER;
-architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
+architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -281,7 +283,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal    line_atrb_vector      :  IMAGE_ATRB_VECTOR(0 to LINE_SIZE-1);
+    signal    line_atrb_vector      :  IMAGE_STREAM_ATRB_VECTOR(0 to LINE_SIZE-1);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -291,7 +293,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER is
     signal    x_loop_done           :  std_logic;
     signal    x_loop_first          :  std_logic;
     signal    x_loop_last           :  std_logic;
-    signal    x_atrb_vector         :  IMAGE_ATRB_VECTOR(0 to O_PARAM.SHAPE.X.SIZE-1);
+    signal    x_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.X.SIZE-1);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -331,7 +333,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        ATRB_GEN: IMAGE_ATRB_GENERATOR
+        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR
             generic map (
                 ATRB_SIZE       => O_PARAM.SHAPE.X.SIZE, -- 
                 STRIDE          => O_PARAM.STRIDE.X    , --   
@@ -603,10 +605,10 @@ begin
              c_loop_first, c_loop_last, c_loop_valid , curr_bank_select, BUF_DATA, line_atrb_vector)
         variable bank_data  :  std_logic_vector (BUF_DATA_BITS    -1 downto 0);
         variable o_data     :  std_logic_vector (O_PARAM.DATA.SIZE-1 downto 0);
-        variable d_atrb     :  IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
-        variable c_atrb     :  IMAGE_ATRB_VECTOR(0 to O_PARAM.SHAPE.C.SIZE-1);
-        function GEN_ATRB_VECTOR(LOOP_VALID: std_logic_vector; LOOP_FIRST, LOOP_LAST: std_logic) return IMAGE_ATRB_VECTOR is
-            variable  atrb_vector  :  IMAGE_ATRB_VECTOR(0 to LOOP_VALID'length-1);
+        variable d_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
+        variable c_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.C.SIZE-1);
+        function GEN_ATRB_VECTOR(LOOP_VALID: std_logic_vector; LOOP_FIRST, LOOP_LAST: std_logic) return IMAGE_STREAM_ATRB_VECTOR is
+            variable  atrb_vector  :  IMAGE_STREAM_ATRB_VECTOR(0 to LOOP_VALID'length-1);
             variable  first        :  std_logic;
             variable  last         :  std_logic;
         begin
@@ -649,7 +651,7 @@ begin
                     end if;
                 end loop;
                 for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
-                    SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
+                    SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                         PARAM   => O_PARAM,
                         C       => c_pos + O_PARAM.SHAPE.C.LO,
                         X       => x_pos,
@@ -664,7 +666,7 @@ begin
         --
         ---------------------------------------------------------------------------
         for line in 0 to LINE_SIZE-1 loop
-            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
                 PARAM   => O_PARAM,
                 Y       => line + O_PARAM.SHAPE.Y.LO,
                 ATRB    => line_atrb_vector(line),
@@ -675,7 +677,7 @@ begin
         --
         ---------------------------------------------------------------------------
         for x_pos in 0 to O_PARAM.SHAPE.X.SIZE-1 loop
-            SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+            SET_ATRB_X_TO_IMAGE_STREAM_DATA(
                 PARAM   => O_PARAM,
                 X       => x_pos + O_PARAM.SHAPE.X.LO,
                 ATRB    => x_atrb_vector(x_pos),
@@ -688,19 +690,19 @@ begin
         d_atrb := GEN_ATRB_VECTOR(d_loop_valid, d_loop_first, d_loop_last);
         for d_pos in 0 to D_UNROLL-1 loop
             if d_atrb(d_pos).VALID then
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_ATRB_BITS)+IMAGE_ATRB_VALID_POS) := '1';
+                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_VALID_POS) := '1';
             else
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_ATRB_BITS)+IMAGE_ATRB_VALID_POS) := '0';
+                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_VALID_POS) := '0';
             end if;
             if d_atrb(d_pos).START then
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_ATRB_BITS)+IMAGE_ATRB_START_POS) := '1';
+                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_START_POS) := '1';
             else
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_ATRB_BITS)+IMAGE_ATRB_START_POS) := '0';
+                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_START_POS) := '0';
             end if;
             if d_atrb(d_pos).LAST  then
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_ATRB_BITS)+IMAGE_ATRB_LAST_POS ) := '1';
+                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_LAST_POS ) := '1';
             else
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_ATRB_BITS)+IMAGE_ATRB_LAST_POS ) := '0';
+                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_LAST_POS ) := '0';
             end if;
         end loop;
         ---------------------------------------------------------------------------
@@ -708,7 +710,7 @@ begin
         ---------------------------------------------------------------------------
         c_atrb := GEN_ATRB_VECTOR(c_loop_valid, c_loop_first, c_loop_last);
         for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
-            SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+            SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                 PARAM => O_PARAM,
                 C     => c_pos + O_PARAM.SHAPE.C.LO,
                 ATRB  => c_atrb(c_pos),

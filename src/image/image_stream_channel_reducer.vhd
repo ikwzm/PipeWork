@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_channel_reducer.vhd
---!     @brief   Image Window Channel Reducer MODULE :
---!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--!     @file    image_stream_channel_reducer.vhd
+--!     @brief   Image Stream Channel Reducer MODULE :
+--!              異なるチャネル数のイメージストリームを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/6
+--!     @date    2019/1/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -40,17 +40,17 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_CHANNEL_REDUCER :
---!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--! @brief   IMAGE_STREAM_CHANNEL_REDUCER :
+--!          異なるチャネル数のイメージストリームを継ぐためのアダプタ
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_CHANNEL_REDUCER is
+entity  IMAGE_STREAM_CHANNEL_REDUCER is
     generic (
-        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
-                          --! 入力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
+                          --! 入力側のイメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
+                          --! 出力側のイメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         C_SIZE          : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
                           --! * C_SIZE に 0 を指定すると I_PARAM.SHAPE.C.SIZE と
@@ -110,27 +110,27 @@ entity  IMAGE_WINDOW_CHANNEL_REDUCER is
                           --! * この信号がアサートされている場合、キューの入力を許可する.
                           --! * この信号がネゲートされている場合、I_READY はアサートされない.
                           in  std_logic := '1';
-        I_DATA          : --! @brief INPUT WINDOW DATA :
-                          --! ウィンドウデータ入力.
+        I_DATA          : --! @brief INPUT IMAGE STREAM DATA :
+                          --! ストリームデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_DONE          : --! @brief INPUT WINDOW DONE :
-                          --! 最終ウィンドウ信号入力.
-                          --! * 最後のウィンドウデータ入力であることを示すフラグ.
+        I_DONE          : --! @brief INPUT IMAGE STREAM DONE :
+                          --! 最終ストリーム信号入力.
+                          --! * 最後のストリームデータ入力であることを示すフラグ.
                           --! * 基本的にはDONE信号と同じ働きをするが、I_DONE信号は
-                          --!   最後のウィンドウデータを入力する際に同時にアサートする.
-                          --! * 最後のウィンドウデータ入力は必ず最後のチャネルを含んで
+                          --!   最後のストリームデータを入力する際に同時にアサートする.
+                          --! * 最後のストリームデータ入力は必ず最後のチャネルを含んで
                           --!   いなければならない.
                           in  std_logic := '0';
-        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
-                          --! 入力ウィンドウデータ有効信号.
+        I_VALID         : --! @brief INPUT IMAGE STREAM DATA VALID :
+                          --! 入力ストリームデータ有効信号.
                           --! * I_DATAが有効であることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           in  std_logic;
-        I_READY         : --! @brief INPUT WINDOW DATA READY :
-                          --! 入力ウィンドウデータレディ信号.
-                          --! * キューが次のウィンドウデータを入力出来ることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+        I_READY         : --! @brief INPUT IMAGE STREAM DATA READY :
+                          --! 入力ストリームデータレディ信号.
+                          --! * キューが次のストリームデータを入力出来ることを示す.
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           out std_logic;
     -------------------------------------------------------------------------------
@@ -141,28 +141,28 @@ entity  IMAGE_WINDOW_CHANNEL_REDUCER is
                           --! * この信号がアサートされている場合、キューの出力を許可する.
                           --! * この信号がネゲートされている場合、O_VALID はアサートされない.
                           in  std_logic := '1';
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
+        O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
+                          --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_DONE          : --! @brief OUTPUT WORD DONE :
-                          --! 最終ウィンドウ信号出力.
-                          --! * 最後のウィンドウ出力であることを示すフラグ.
+        O_DONE          : --! @brief OUTPUT IMAGE STREAM DONE :
+                          --! 最終ストリーム信号出力.
+                          --! * 最後のストリーム出力であることを示すフラグ.
                           out std_logic;
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
+        O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
+                          --! 出力ストリームデータ有効信号.
                           --! * O_DATA が有効であることを示す.
-                          --! * O_VALID='1'and O_READY='1'でウィンドウデータがキュー
+                          --! * O_VALID='1'and O_READY='1'でストリームデータがキュー
                           --!   から取り除かれる.
                           out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
-                          --! * キューから次のウィンドウデータを取り除く準備が出来て
+        O_READY         : --! @brief OUTPUT IMAGE STREAM DATA READY :
+                          --! 出力ストリームデータレディ信号.
+                          --! * キューから次のストリームデータを取り除く準備が出来て
                           --!   いることを示す.
-                          --! * O_VALID='1'and O_READY='1'でウィンドウデータがキュー
+                          --! * O_VALID='1'and O_READY='1'でストリームデータがキュー
                           --!   から取り除かれる.
                           in  std_logic
     );
-end IMAGE_WINDOW_CHANNEL_REDUCER;
+end IMAGE_STREAM_CHANNEL_REDUCER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ library ieee;
 use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
+architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
     --! @brief 各種内部パラメータ
     -------------------------------------------------------------------------------
@@ -220,10 +220,10 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
         end if;
     end function;
     -------------------------------------------------------------------------------
-    -- 内部で一単位として扱うウィンドウパラメータ
+    -- 内部で一単位として扱うストリームパラメータ
     -------------------------------------------------------------------------------
-    constant  U_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
-                            := NEW_IMAGE_WINDOW_PARAM(
+    constant  U_PARAM       :  IMAGE_STREAM_PARAM_TYPE
+                            := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS => I_PARAM.ELEM_BITS,
                                    INFO_BITS => I_PARAM.INFO_BITS,
                                    C         => NEW_IMAGE_VECTOR_RANGE(CHANNEL_SIZE),
@@ -575,7 +575,7 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
     --! @brief 出力側の Channel Attribute.
     -------------------------------------------------------------------------------
-    type      C_ATRB_VECTOR is array (integer range <>,integer range <>) of IMAGE_ATRB_TYPE;
+    type      C_ATRB_VECTOR is array (integer range <>,integer range <>) of IMAGE_STREAM_ATRB_TYPE;
     signal    o_c_atrb      :  C_ATRB_VECTOR(0 to O_WIDTH-1, 0 to U_PARAM.SHAPE.C.SIZE-1);
     -------------------------------------------------------------------------------
     --! @brief FLUSH 出力フラグ.
@@ -611,9 +611,9 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
     function  i_data_to_words(I_DATA: std_logic_vector) return WORD_VECTOR is
         variable  words             :  WORD_VECTOR(0 to I_WIDTH-1);
         variable  t_data            :  std_logic_vector(U_PARAM.DATA.SIZE-1 downto 0);
-        variable  x_atrb            :  IMAGE_ATRB_TYPE;
-        variable  y_atrb            :  IMAGE_ATRB_TYPE;
-        variable  c_atrb            :  IMAGE_ATRB_TYPE;
+        variable  x_atrb            :  IMAGE_STREAM_ATRB_TYPE;
+        variable  y_atrb            :  IMAGE_STREAM_ATRB_TYPE;
+        variable  c_atrb            :  IMAGE_STREAM_ATRB_TYPE;
         variable  t_valid           :  boolean;
         variable  t_last            :  boolean;
     begin 
@@ -621,12 +621,12 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
                     for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                        SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
+                        SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                             PARAM   => U_PARAM,
                             C       => c_pos,
                             X       => x_pos,
                             Y       => y_pos,
-                            ELEMENT => GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
+                            ELEMENT => GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                            PARAM  => I_PARAM,
                                            C      => c_pos+i*U_PARAM.SHAPE.C.SIZE,
                                            X      => x_pos,
@@ -638,12 +638,12 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
                 end loop;
             end loop;
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                c_atrb := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
+                c_atrb := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
                               PARAM => I_PARAM,
                               C     => c_pos+i*U_PARAM.SHAPE.C.SIZE,
                               DATA  => I_DATA
                           );
-                SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+                SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                               PARAM => U_PARAM,
                               C     => c_pos,
                               ATRB  => c_atrb,
@@ -651,12 +651,12 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
                 );
             end loop;
             for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
-                x_atrb := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                x_atrb := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(
                               PARAM => I_PARAM,
                               X     => x_pos,
                               DATA  => I_DATA
                           );
-                SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+                SET_ATRB_X_TO_IMAGE_STREAM_DATA(
                               PARAM => U_PARAM,
                               X     => x_pos,
                               ATRB  => x_atrb,
@@ -664,12 +664,12 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
                 );
             end loop;
             for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                y_atrb := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                y_atrb := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(
                               PARAM => I_PARAM,
                               Y     => y_pos,
                               DATA  => I_DATA
                           );
-                SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+                SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
                               PARAM => U_PARAM,
                               Y     => y_pos,
                               ATRB  => y_atrb,
@@ -682,7 +682,7 @@ architecture RTL of IMAGE_WINDOW_CHANNEL_REDUCER is
             t_valid := FALSE;
             t_last  := FALSE;
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                c_atrb := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(
+                c_atrb := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
                               PARAM => I_PARAM,
                               C     => c_pos+i*U_PARAM.SHAPE.C.SIZE,
                               DATA  => I_DATA
@@ -829,7 +829,7 @@ begin
                         pending_flag      := next_queue(o).VAL;
                     else
                         for c_pos in 0 to U_PARAM.SHAPE.C.SIZE-1 loop
-                            o_c_atrb(o,c_pos) <= GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(U_PARAM, c_pos, next_queue(o).DATA);
+                            o_c_atrb(o,c_pos) <= GET_ATRB_C_FROM_IMAGE_STREAM_DATA(U_PARAM, c_pos, next_queue(o).DATA);
                         end loop;
                         o_shift(o)        <= '1';
                         next_valid_output := next_queue(o).VAL;
@@ -905,7 +905,7 @@ begin
                 elsif (done_pending = '1') or
                       (DONE         = '1') or
                       (I_VALID = '1' and intake_ready = '1' and I_DONE = '1') or
-                      (I_VALID = '1' and intake_ready = '1' and C_DONE /= 0 and IMAGE_WINDOW_DATA_IS_LAST_C(I_PARAM, I_DATA, TRUE)) then
+                      (I_VALID = '1' and intake_ready = '1' and C_DONE /= 0 and IMAGE_STREAM_DATA_IS_LAST_C(I_PARAM, I_DATA, TRUE)) then
                     if (pending_flag) then
                         next_done_output   := '0';
                         next_done_pending  := '1';
@@ -979,20 +979,20 @@ begin
     -------------------------------------------------------------------------------
     process(curr_queue, o_c_atrb)
         variable  outlet_data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        variable  c_atrb        :  IMAGE_ATRB_TYPE;
-        variable  x_atrb        :  IMAGE_ATRB_TYPE;
-        variable  y_atrb        :  IMAGE_ATRB_TYPE;
+        variable  c_atrb        :  IMAGE_STREAM_ATRB_TYPE;
+        variable  x_atrb        :  IMAGE_STREAM_ATRB_TYPE;
+        variable  y_atrb        :  IMAGE_STREAM_ATRB_TYPE;
     begin
         for o in 0 to O_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
                     for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                        SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
+                        SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                             PARAM   => O_PARAM,
                             C       => c_pos+o*U_PARAM.SHAPE.C.SIZE,
                             X       => x_pos,
                             Y       => y_pos,
-                            ELEMENT => GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
+                            ELEMENT => GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                            PARAM  => U_PARAM,
                                            C      => c_pos,
                                            X      => x_pos,
@@ -1008,7 +1008,7 @@ begin
         for o in 0 to O_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 c_atrb := o_c_atrb(o,c_pos);
-                SET_ATRB_C_TO_IMAGE_WINDOW_DATA(
+                SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                     PARAM => O_PARAM,
                     C     => c_pos+o*U_PARAM.SHAPE.C.SIZE,
                     ATRB  => c_atrb,
@@ -1017,12 +1017,12 @@ begin
             end loop;
         end loop;
         for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
-                x_atrb := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(
+                x_atrb := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(
                               PARAM => U_PARAM,
                               X     => x_pos,
                               DATA  => curr_queue(curr_queue'low).DATA
                           );
-                SET_ATRB_X_TO_IMAGE_WINDOW_DATA(
+                SET_ATRB_X_TO_IMAGE_STREAM_DATA(
                     PARAM => O_PARAM,
                     X     => x_pos,
                     ATRB  => x_atrb,
@@ -1030,12 +1030,12 @@ begin
                 );
         end loop;
         for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                y_atrb := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(
+                y_atrb := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(
                               PARAM => U_PARAM,
                               Y     => y_pos,
                               DATA  => curr_queue(curr_queue'low).DATA
                           );
-                SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(
+                SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
                     PARAM => O_PARAM,
                     Y     => y_pos,
                     ATRB  => y_atrb,

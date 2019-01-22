@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_from_stream.vhd
---!     @brief   Image Widnow From Stream Module
+--!     @file    image_stream_generator.vhd
+--!     @brief   Image Stream Generator Module
 --!     @version 1.8.0
---!     @date    2019/1/14
+--!     @date    2019/1/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -39,16 +39,16 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER_FROM_STREAM :
---!          入力ストリームデータにイメージウィンドウの属性を付加して出力する.
+--! @brief   IMAGE_STREAM_GENERATOR :
+--!          入力データに対してイメージストリームの属性を付加して出力する.
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_FROM_STREAM is
+entity  IMAGE_STREAM_GENERATOR is
     generic (
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側ウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(32,1,1,1);
-        I_DATA_BITS     : --! @brief INPUT STREAM DATA BIT SIZE :
-                          --! 入力側ストリームのデータのビット幅を指定する.
+        O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
+                          --! 出力側イメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(32,1,1,1);
+        I_DATA_BITS     : --! @brief INPUT  STREAM DATA BIT SIZE :
+                          --! 入力側のデータのビット幅を指定する.
                           --! * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなけれ
                           --!   ばならない.
                           integer := 32;
@@ -101,20 +101,20 @@ entity  IMAGE_WINDOW_BUFFER_FROM_STREAM is
                           --! 入力ストリムーデータレディ信号.
                           out std_logic;
     -------------------------------------------------------------------------------
-    -- IMAGE_WINDOW 出力側 I/F
+    -- IMAGE STREAM 出力側 I/F
     -------------------------------------------------------------------------------
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
+        O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
+                          --! イメージストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
+        O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
+                          --! 出力イメージストリームデータ有効信号.
                           --! * O_DATAが有効であることを示す.
                           out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
+        O_READY         : --! @brief OUTPUT IMAGE STREAM DATA READY :
+                          --! 出力イメージストリームデータレディ信号.
                           in  std_logic
     );
-end IMAGE_WINDOW_BUFFER_FROM_STREAM;
+end IMAGE_STREAM_GENERATOR;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -123,8 +123,8 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_ATRB_GENERATOR;
-architecture RTL of IMAGE_WINDOW_BUFFER_FROM_STREAM is
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_ATRB_GENERATOR;
+architecture RTL of IMAGE_STREAM_GENERATOR is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -135,7 +135,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_FROM_STREAM is
     signal    y_loop_done           :  std_logic;
     signal    y_loop_first          :  std_logic;
     signal    y_loop_last           :  std_logic;
-    signal    y_atrb_vector         :  IMAGE_ATRB_VECTOR(O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
+    signal    y_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_FROM_STREAM is
     signal    x_loop_done           :  std_logic;
     signal    x_loop_first          :  std_logic;
     signal    x_loop_last           :  std_logic;
-    signal    x_atrb_vector         :  IMAGE_ATRB_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
+    signal    x_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ architecture RTL of IMAGE_WINDOW_BUFFER_FROM_STREAM is
     signal    c_loop_done           :  std_logic;
     signal    c_loop_first          :  std_logic;
     signal    c_loop_last           :  std_logic;
-    signal    c_atrb_vector         :  IMAGE_ATRB_VECTOR(O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI);
+    signal    c_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -179,7 +179,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        ATRB_GEN: IMAGE_ATRB_GENERATOR
+        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR
             generic map (
                 ATRB_SIZE       => O_PARAM.SHAPE.Y.SIZE, -- 
                 STRIDE          => O_PARAM.STRIDE.Y    , --   
@@ -251,7 +251,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        ATRB_GEN: IMAGE_ATRB_GENERATOR
+        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR
             generic map (
                 ATRB_SIZE       => O_PARAM.SHAPE.X.SIZE, -- 
                 STRIDE          => O_PARAM.STRIDE.X    , --   
@@ -323,8 +323,8 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        ATRB_GEN: IMAGE_ATRB_GENERATOR
-            generic map (
+        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR            -- 
+            generic map (                                -- 
                 ATRB_SIZE       => O_PARAM.SHAPE.C.SIZE, -- 
                 STRIDE          => O_PARAM.SHAPE.C.SIZE, --   
                 MAX_SIZE        => MAX_C_SIZE            --   
@@ -404,13 +404,13 @@ begin
     begin
         data(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) := I_DATA;
         for c_pos in O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI loop
-            SET_ATRB_C_TO_IMAGE_WINDOW_DATA(O_PARAM, c_pos, c_atrb_vector(c_pos), data);
+            SET_ATRB_C_TO_IMAGE_STREAM_DATA(O_PARAM, c_pos, c_atrb_vector(c_pos), data);
         end loop;
         for x_pos in O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI loop
-            SET_ATRB_X_TO_IMAGE_WINDOW_DATA(O_PARAM, x_pos, x_atrb_vector(x_pos), data);
+            SET_ATRB_X_TO_IMAGE_STREAM_DATA(O_PARAM, x_pos, x_atrb_vector(x_pos), data);
         end loop;
         for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
-            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(O_PARAM, y_pos, y_atrb_vector(y_pos), data);
+            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(O_PARAM, y_pos, y_atrb_vector(y_pos), data);
         end loop;
         O_DATA <= data;
     end process;

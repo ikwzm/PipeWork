@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer.vhd
---!     @brief   Image Window Buffer Module :
---!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--!     @file    image_stream_buffer.vhd
+--!     @brief   Image Stream Buffer Module :
+--!              異なる形のイメージストリームを継ぐためのバッファ
 --!     @version 1.8.0
---!     @date    2019/1/11
+--!     @date    2019/1/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -40,21 +40,21 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER :
---!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--! @brief   Image Stream Buffer :
+--!          異なる形のイメージストリームを継ぐためのバッファ
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER is
+entity  IMAGE_STREAM_BUFFER is
     generic (
-        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
-                          --! 入力側のウィンドウのパラメータを指定する.
+        I_PARAM         : --! @brief INPUT  IMAGE STREAM PARAMETER :
+                          --! 入力側のイメージストリームのパラメータを指定する.
                           --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
+                          --! 出力側のイメージストリームのパラメータを指定する.
                           --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
-                          --! 列方向のエレメント数を指定する.
+                          --! 列方向の要素数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
@@ -97,19 +97,19 @@ entity  IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
-        I_DATA          : --! @brief INPUT WINDOW DATA :
-                          --! ウィンドウデータ入力.
+        I_DATA          : --! @brief INPUT IMAGE STREAM DATA :
+                          --! ストリームデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
-                          --! 入力ウィンドウデータ有効信号.
+        I_VALID         : --! @brief INPUT IMAGE STREAM DATA VALID :
+                          --! 入力ストリームデータ有効信号.
                           --! * I_DATAが有効であることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           in  std_logic;
-        I_READY         : --! @brief INPUT WINDOW DATA READY :
-                          --! 入力ウィンドウデータレディ信号.
-                          --! * キューが次のウィンドウデータを入力出来ることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+        I_READY         : --! @brief INPUT IMAGE STREAM DATA READY :
+                          --! 入力ストリームデータレディ信号.
+                          --! * キューが次のストリームデータを入力出来ることを示す.
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           out std_logic;
     -------------------------------------------------------------------------------
@@ -125,26 +125,26 @@ entity  IMAGE_WINDOW_BUFFER is
                           --! * この信号をアサートすることでバッファの内容を再度
                           --!   出力する.
                           in  std_logic := '1';
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
+        O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
+                          --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
         O_D_ATRB        : --! @brief OUTPUT CHANNEL ATTRIBUTE :
-                          out IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
+                          out IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
+        O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
+                          --! 出力ストリームデータ有効信号.
                           --! * O_DATA が有効であることを示す.
-                          --! * O_VALID='1'and O_READY='1'でウィンドウデータがキュー
+                          --! * O_VALID='1'and O_READY='1'でストリームデータがキュー
                           --!   から取り除かれる.
                           out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
-                          --! * キューから次のウィンドウデータを取り除く準備が出来て
+        O_READY         : --! @brief OUTPUT IMAGE STREAM DATA READY :
+                          --! 出力ストリームデータレディ信号.
+                          --! * キューから次のストリームデータを取り除く準備が出来て
                           --!   いることを示す.
-                          --! * O_VALID='1'and O_READY='1'でウィンドウデータがキュー
+                          --! * O_VALID='1'and O_READY='1'でストリームデータがキュー
                           --!   から取り除かれる.
                           in  std_logic
     );
-end IMAGE_WINDOW_BUFFER;
+end IMAGE_STREAM_BUFFER;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -153,11 +153,11 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_CHANNEL_REDUCER;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY;
-architecture RTL of IMAGE_WINDOW_BUFFER is
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_CHANNEL_REDUCER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_BANK_MEMORY;
+architecture RTL of IMAGE_STREAM_BUFFER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -167,20 +167,20 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
                   CHAN_SIZE         :  integer;
                   USE_BANK          :  boolean;
                   I_CHAN_ENABLE     :  boolean;
-                  I_CHAN_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  I_CHAN_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
                   I_CHAN_SIZE       :  integer;
                   I_CHAN_DONE       :  integer;
                   I_LINE_ENABLE     :  boolean;
-                  I_LINE_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  I_LINE_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
                   I_LINE_QUEUE      :  integer;
                   O_LINE_ENABLE     :  boolean;
-                  O_LINE_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  O_LINE_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
                   O_LINE_QUEUE      :  integer;
                   O_CHAN_ENABLE     :  boolean;
-                  O_CHAN_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  O_CHAN_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
                   O_CHAN_SIZE       :  integer;
                   O_CHAN_DONE       :  integer;
-                  O_EXIT_PARAM      :  IMAGE_WINDOW_PARAM_TYPE;
+                  O_EXIT_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
     end record;
     -------------------------------------------------------------------------------
     --! 最大公約数(Greatest Common Divisor)を求める関数
@@ -262,9 +262,9 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         --
         ---------------------------------------------------------------------------
         param.I_CHAN_ENABLE:= (I_PARAM.SHAPE.C.SIZE /= lcm_shape_c_size);
-        param.I_CHAN_PARAM := NEW_IMAGE_WINDOW_PARAM(
+        param.I_CHAN_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => I_PARAM.ELEM_BITS,
-                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
                                                      C => NEW_IMAGE_VECTOR_RANGE(lcm_shape_c_size),
                                                      X => I_PARAM.SHAPE.X,
                                                      Y => I_PARAM.SHAPE.Y
@@ -278,9 +278,9 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         --
         ---------------------------------------------------------------------------
         param.I_LINE_ENABLE:= TRUE;
-        param.I_LINE_PARAM := NEW_IMAGE_WINDOW_PARAM(
+        param.I_LINE_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => param.I_CHAN_PARAM.ELEM_BITS,
-                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
                                                      C => param.I_CHAN_PARAM.SHAPE.C,
                                                      X => param.I_CHAN_PARAM.SHAPE.X,
                                                      Y => NEW_IMAGE_VECTOR_RANGE(param.LINE_SIZE)
@@ -292,9 +292,9 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        param.O_EXIT_PARAM := NEW_IMAGE_WINDOW_PARAM(
+        param.O_EXIT_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => O_PARAM.ELEM_BITS,
-                                  INFO_BITS   => D_UNROLL*IMAGE_ATRB_BITS,
+                                  INFO_BITS   => D_UNROLL*IMAGE_STREAM_ATRB_BITS,
                                   SHAPE       => O_PARAM.SHAPE,
                                   STRIDE      => O_PARAM.STRIDE,
                                   BORDER_TYPE => O_PARAM.BORDER_TYPE
@@ -303,10 +303,10 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         --
         ---------------------------------------------------------------------------
         param.O_CHAN_ENABLE:= (O_PARAM.SHAPE.C.SIZE /= lcm_shape_c_size);
-        param.O_CHAN_PARAM := NEW_IMAGE_WINDOW_PARAM(
+        param.O_CHAN_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => param.O_EXIT_PARAM.ELEM_BITS,
                                   INFO_BITS   => param.O_EXIT_PARAM.INFO_BITS,
-                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
                                                      C => NEW_IMAGE_VECTOR_RANGE(lcm_shape_c_size),
                                                      X => param.O_EXIT_PARAM.SHAPE.X,
                                                      Y => param.O_EXIT_PARAM.SHAPE.Y
@@ -320,10 +320,10 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
         --
         ---------------------------------------------------------------------------
         param.O_LINE_ENABLE:= TRUE;
-        param.O_LINE_PARAM := NEW_IMAGE_WINDOW_PARAM(
+        param.O_LINE_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => param.O_CHAN_PARAM.ELEM_BITS,
                                   INFO_BITS   => param.O_CHAN_PARAM.INFO_BITS,
-                                  SHAPE       => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
                                                      C => param.O_CHAN_PARAM.SHAPE.C,
                                                      X => param.O_CHAN_PARAM.SHAPE.X,
                                                      Y => NEW_IMAGE_VECTOR_RANGE(param.LINE_SIZE)
@@ -341,43 +341,43 @@ architecture RTL of IMAGE_WINDOW_BUFFER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    line_atrb             :  IMAGE_ATRB_VECTOR(PARAM.LINE_SIZE-1 downto 0);
-    signal    line_valid            :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
-    signal    line_feed             :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
-    signal    line_return           :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    signal    line_atrb             :  IMAGE_STREAM_ATRB_VECTOR(PARAM.LINE_SIZE-1 downto 0);
+    signal    line_valid            :  std_logic_vector        (PARAM.LINE_SIZE-1 downto 0);
+    signal    line_feed             :  std_logic_vector        (PARAM.LINE_SIZE-1 downto 0);
+    signal    line_return           :  std_logic_vector        (PARAM.LINE_SIZE-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    i_chan_data           :  std_logic_vector (PARAM.I_CHAN_PARAM.DATA.SIZE-1 downto 0);
+    signal    i_chan_data           :  std_logic_vector(PARAM.I_CHAN_PARAM.DATA.SIZE-1 downto 0);
     signal    i_chan_valid          :  std_logic;
     signal    i_chan_ready          :  std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    i_line_data           :  std_logic_vector (PARAM.I_LINE_PARAM.DATA.SIZE-1 downto 0);
+    signal    i_line_data           :  std_logic_vector(PARAM.I_LINE_PARAM.DATA.SIZE-1 downto 0);
     signal    i_line_valid          :  std_logic;
     signal    i_line_ready          :  std_logic;
     signal    i_line_enable         :  std_logic;
-    signal    i_line_start          :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
-    signal    i_line_done           :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    signal    i_line_start          :  std_logic_vector(PARAM.LINE_SIZE-1 downto 0);
+    signal    i_line_done           :  std_logic_vector(PARAM.LINE_SIZE-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    o_line_data           :  std_logic_vector (PARAM.O_LINE_PARAM.DATA.SIZE-1 downto 0);
+    signal    o_line_data           :  std_logic_vector(PARAM.O_LINE_PARAM.DATA.SIZE-1 downto 0);
     signal    o_line_valid          :  std_logic;
     signal    o_line_ready          :  std_logic;
-    signal    o_line_start          :  std_logic_vector (PARAM.LINE_SIZE-1 downto 0);
+    signal    o_line_start          :  std_logic_vector(PARAM.LINE_SIZE-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    o_chan_data           :  std_logic_vector (PARAM.O_CHAN_PARAM.DATA.SIZE-1 downto 0);
+    signal    o_chan_data           :  std_logic_vector(PARAM.O_CHAN_PARAM.DATA.SIZE-1 downto 0);
     signal    o_chan_valid          :  std_logic;
     signal    o_chan_ready          :  std_logic;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    o_exit_data           :  std_logic_vector (PARAM.O_EXIT_PARAM.DATA.SIZE-1 downto 0);
-    signal    o_exit_d_atrb         :  IMAGE_ATRB_VECTOR(0 to D_UNROLL-1);
+    signal    o_exit_data           :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.SIZE-1 downto 0);
+    signal    o_exit_d_atrb         :  IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
     signal    o_exit_valid          :  std_logic;
     signal    o_exit_ready          :  std_logic;
     signal    o_exit_line_last      :  std_logic;
@@ -388,8 +388,8 @@ begin
     -------------------------------------------------------------------------------
     -- INTAKE_CHANNEL_REDUCER
     -------------------------------------------------------------------------------
-    I_CHAN: if (PARAM.I_CHAN_ENABLE = TRUE) generate
-        REDUCER: IMAGE_WINDOW_CHANNEL_REDUCER
+    I_CHAN: if (PARAM.I_CHAN_ENABLE = TRUE) generate     -- 
+        REDUCER: IMAGE_STREAM_CHANNEL_REDUCER            -- 
             generic map (                                -- 
                 I_PARAM         => I_PARAM             , -- 
                 O_PARAM         => PARAM.I_CHAN_PARAM  , -- 
@@ -404,13 +404,13 @@ begin
                 RST             => RST                 , -- In  :
                 CLR             => CLR                 , -- In  :
             -----------------------------------------------------------------------
-            -- 入力側 Window I/F
+            -- 入力側 Stream I/F
             -----------------------------------------------------------------------
                 I_DATA          => I_DATA              , -- In  :
                 I_VALID         => I_VALID             , -- In  :
                 I_READY         => I_READY             , -- Out :
             -----------------------------------------------------------------------
-            -- 出力側 Window I/F
+            -- 出力側 Stream I/F
             -----------------------------------------------------------------------
                 O_DATA          => i_chan_data         , -- Out :
                 O_VALID         => i_chan_valid        , -- Out :
@@ -427,7 +427,7 @@ begin
     -------------------------------------------------------------------------------
     I_LINE: if (PARAM.I_LINE_ENABLE = TRUE) generate
     begin 
-        SELECTOR: IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR
+        SELECTOR: IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR
             generic map (                                -- 
                 I_PARAM         => PARAM.I_CHAN_PARAM  , -- 
                 O_PARAM         => PARAM.I_LINE_PARAM  , -- 
@@ -448,7 +448,7 @@ begin
                 I_VALID         => i_chan_valid        , -- In  :
                 I_READY         => i_chan_ready        , -- Out :
             -----------------------------------------------------------------------
-            -- 出力側 Window I/F
+            -- 出力側 Stream I/F
             -----------------------------------------------------------------------
                 O_ENABLE        => i_line_enable       , -- Out :
                 O_LINE_START    => i_line_start        , -- Out :
@@ -473,7 +473,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        MEM: IMAGE_WINDOW_BUFFER_BANK_MEMORY             -- 
+        MEM: IMAGE_STREAM_BUFFER_BANK_MEMORY             -- 
             generic map (                                -- 
                 I_PARAM         => PARAM.I_LINE_PARAM  , -- 
                 O_PARAM         => PARAM.O_LINE_PARAM  , --   
@@ -500,7 +500,7 @@ begin
                 I_LINE_START    => i_line_start        , -- In  :
                 I_LINE_DONE     => i_line_done         , -- Out :
             -----------------------------------------------------------------------
-            -- 入力側 ウィンドウ I/F
+            -- 入力側 ストリーム I/F
             -----------------------------------------------------------------------
                 I_DATA          => i_line_data         , -- In  :
                 I_VALID         => i_line_valid        , -- In  :
@@ -512,7 +512,7 @@ begin
                 O_LINE_ATRB     => line_atrb           , -- In  :
                 D_SIZE          => D_SIZE              , -- In  :
             -----------------------------------------------------------------------
-            -- 出力側 ウィンドウ I/F
+            -- 出力側 ストリーム I/F
             -----------------------------------------------------------------------
                 O_DATA          => o_line_data         , -- Out :
                 O_VALID         => o_line_valid        , -- Out :
@@ -527,7 +527,7 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        SELECTOR: IMAGE_WINDOW_BUFFER_OUTLET_LINE_SELECTOR
+        SELECTOR: IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR
             generic map (                                --
                 I_PARAM         => PARAM.O_LINE_PARAM  , -- 
                 O_PARAM         => PARAM.O_CHAN_PARAM  , -- 
@@ -570,7 +570,7 @@ begin
     -- OUTLET_CHANNEL_REDUCER
     -------------------------------------------------------------------------------
     O_CHAN: if (PARAM.O_CHAN_ENABLE = TRUE) generate
-        REDUCER: IMAGE_WINDOW_CHANNEL_REDUCER
+        REDUCER: IMAGE_STREAM_CHANNEL_REDUCER
             generic map (                                -- 
                 I_PARAM         => PARAM.O_CHAN_PARAM  , -- 
                 O_PARAM         => PARAM.O_EXIT_PARAM  , -- 
@@ -585,13 +585,13 @@ begin
                 RST             => RST                 , -- In  :
                 CLR             => CLR                 , -- In  :
             -----------------------------------------------------------------------
-            -- 入力側 Window I/F
+            -- 入力側 Stream I/F
             -----------------------------------------------------------------------
                 I_DATA          => o_chan_data         , -- In  :
                 I_VALID         => o_chan_valid        , -- In  :
                 I_READY         => o_chan_ready        , -- Out :
             -----------------------------------------------------------------------
-            -- 出力側 Window I/F
+            -- 出力側 Stream I/F
             -----------------------------------------------------------------------
                 O_DATA          => o_exit_data         , -- Out :
                 O_VALID         => o_exit_valid        , -- Out :
@@ -614,20 +614,20 @@ begin
         O_DATA(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) <= elem;
         O_DATA(O_PARAM.DATA.ATRB_FIELD.HI downto O_PARAM.DATA.ATRB_FIELD.LO) <= atrb;
         for d_pos in 0 to D_UNROLL-1 loop
-            o_exit_d_atrb(d_pos).VALID <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_VALID_POS) = '1');
-            o_exit_d_atrb(d_pos).START <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_START_POS) = '1');
-            o_exit_d_atrb(d_pos).LAST  <= (info(d_pos*IMAGE_ATRB_BITS + IMAGE_ATRB_LAST_POS ) = '1');
+            o_exit_d_atrb(d_pos).VALID <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_VALID_POS) = '1');
+            o_exit_d_atrb(d_pos).START <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_START_POS) = '1');
+            o_exit_d_atrb(d_pos).LAST  <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_LAST_POS ) = '1');
         end loop;
     end process;
     O_D_ATRB <= o_exit_d_atrb;
     O_VALID  <= o_exit_valid;
     o_exit_ready  <= O_READY;
-    o_exit_line_last  <= '1' when (IMAGE_WINDOW_DATA_IS_LAST_C(PARAM.O_EXIT_PARAM, o_exit_data)) and
-                                  (IMAGE_WINDOW_DATA_IS_LAST_X(PARAM.O_EXIT_PARAM, o_exit_data)) and
+    o_exit_line_last  <= '1' when (IMAGE_STREAM_DATA_IS_LAST_C(PARAM.O_EXIT_PARAM, o_exit_data)) and
+                                  (IMAGE_STREAM_DATA_IS_LAST_X(PARAM.O_EXIT_PARAM, o_exit_data)) and
                                   (o_exit_d_atrb(o_exit_d_atrb'high).LAST                      ) and
                                   (o_exit_valid = '1' and o_exit_ready = '1'                   ) else '0';
     o_exit_frame_last <= '1' when (o_exit_line_last = '1'                                      ) and
-                                  (IMAGE_WINDOW_DATA_IS_LAST_Y(PARAM.O_EXIT_PARAM, o_exit_data)) else '0';
+                                  (IMAGE_STREAM_DATA_IS_LAST_Y(PARAM.O_EXIT_PARAM, o_exit_data)) else '0';
     o_exit_feed       <= '1' when (o_exit_line_last = '1' and O_FEED   = '1') else '0';
     o_exit_return     <= '1' when (o_exit_line_last = '1' and O_RETURN = '1') else '0';
 

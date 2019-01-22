@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
---!     @file    image_atrb_generator.vhd
---!     @brief   Image Attribute Generator
+--!     @file    image_stream_atrb_generator.vhd
+--!     @brief   Image Stream Attribute Generator
 --!     @version 1.8.0
---!     @date    2018/12/16
+--!     @date    2019/1/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -39,9 +39,9 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_ATRB_GENERATOR :
+--! @brief   IMAGE_STREAM_ATRB_GENERATOR :
 -----------------------------------------------------------------------------------
-entity  IMAGE_ATRB_GENERATOR is
+entity  IMAGE_STREAM_ATRB_GENERATOR is
     generic (
         ATRB_SIZE       : --! @brief ATTRIBUTE VECTOR SIZE :
                           integer := 1;
@@ -85,7 +85,7 @@ entity  IMAGE_ATRB_GENERATOR is
     -------------------------------------------------------------------------------
         ATRB            : --! @brief OUTPUT ATTRIBUTE VECTOR:
                           --! 属性出力.
-                          out IMAGE_ATRB_VECTOR(0 to ATRB_SIZE-1);
+                          out IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_SIZE-1);
         START           : --! @brief OUTPUT START :
                           --! 現在の出力が最初の出力であることを示す.
                           out std_logic;
@@ -97,7 +97,7 @@ entity  IMAGE_ATRB_GENERATOR is
                           out std_logic;
         NEXT_ATRB       : --! @brief OUTPUT ATTRIBUTE VECTOR(NEXT CYCLE) :
                           --! 次のクロックでの属性出力.
-                          out IMAGE_ATRB_VECTOR(0 to ATRB_SIZE-1);
+                          out IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_SIZE-1);
         NEXT_START      : --! @brief OUTPUT START(NEXT CYCLE) :
                           --! 次のクロックでの出力が最初の出力であることを示す.
                           out std_logic;
@@ -108,7 +108,7 @@ entity  IMAGE_ATRB_GENERATOR is
                           --! 次のクロックでの最終位置が負になっていることを示す.
                           out std_logic
     );
-end IMAGE_ATRB_GENERATOR;
+end IMAGE_STREAM_ATRB_GENERATOR;
 -----------------------------------------------------------------------------------
 --
 -----------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-architecture RTL of IMAGE_ATRB_GENERATOR is
+architecture RTL of IMAGE_STREAM_ATRB_GENERATOR is
     -------------------------------------------------------------------------------
     -- CALC_BITS : 引数で指定された数を表現出来るビット数を計算する関数
     -------------------------------------------------------------------------------

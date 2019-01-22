@@ -1,14 +1,14 @@
-ENTITY_FILES = image_atrb_generator.vhd                     \
-               image_window_channel_reducer.vhd             \
-               image_window_from_stream.vhd                 \
-               image_window_buffer.vhd                      \
-               image_window_buffer_bank_memory.vhd          \
-               image_window_buffer_bank_memory_writer.vhd   \
-               image_window_buffer_bank_memory_reader.vhd   \
-               image_window_buffer_intake.vhd               \
-               image_window_buffer_intake_line_selector.vhd \
-               image_window_buffer_outlet.vhd               \
-               image_window_buffer_outlet_line_selector.vhd \
+ENTITY_FILES = image_stream_atrb_generator.vhd              \
+               image_stream_generator.vhd                   \
+               image_stream_channel_reducer.vhd             \
+               image_stream_buffer.vhd                      \
+               image_stream_buffer_bank_memory.vhd          \
+               image_stream_buffer_bank_memory_writer.vhd   \
+               image_stream_buffer_bank_memory_reader.vhd   \
+               image_stream_buffer_intake.vhd               \
+               image_stream_buffer_intake_line_selector.vhd \
+               image_stream_buffer_outlet.vhd               \
+               image_stream_buffer_outlet_line_selector.vhd \
                ${ENDLIST}
 
 pump_components.vhd : ${ENTITY_FILES}

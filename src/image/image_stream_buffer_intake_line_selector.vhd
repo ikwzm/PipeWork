@@ -1,9 +1,10 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_intake_line_selector.vhd
---!     @brief   Image Window Buffer Intake Line Selector Module :
---!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--!     @file    image_stream_buffer_intake_line_selector.vhd
+--!     @brief   Image Stream Buffer Intake Line Selector Module :
+--!              異なる形のイメージストリームを継ぐためのバッファの入力側ライン選択
+--!              モジュール
 --!     @version 1.8.0
---!     @date    2019/1/7
+--!     @date    2019/1/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -40,23 +41,25 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   Image Window Buffer Intake Line Selector :
+--! @brief   Image Stream Buffer Intake Line Selector Module :
+--!          異なる形のイメージストリームを継ぐためのバッファの入力側ライン選択
+--!          モジュール
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
+entity  IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR is
     generic (
-        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
-                          --! 入力側のウィンドウのパラメータを指定する.
+        I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
+                          --! 入力側のストリームのパラメータを指定する.
                           --! * I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
                           --! * I_PARAM.SHAPE.C.SIZE = O_PARAM.SHAPE.C.SIZE でなければならない.
                           --! * I_PARAM.SHAPE.X.SIZE = O_PARAM.SHAPE.X.SIZE でなければならない.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
+                          --! 出力側のストリームのパラメータを指定する.
                           --! * O_PARAM.ELEM_SIZE    = I_PARAM.ELEM_SIZE    でなければならない.
                           --! * O_PARAM.SHAPE.C.SIZE = I_PARAM.SHAPE.C.SIZE でなければならない.
                           --! * O_PARAM.SHAPE.X.SIZE = I_PARAM.SHAPE.X.SIZE でなければならない.
                           --! * O_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
                           integer := 1;
@@ -82,23 +85,23 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
-        I_DATA          : --! @brief INPUT WINDOW DATA :
-                          --! ウィンドウデータ入力.
+        I_DATA          : --! @brief INPUT STREAM DATA :
+                          --! ストリームデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
-                          --! 入力ウィンドウデータ有効信号.
+        I_VALID         : --! @brief INPUT STREAM DATA VALID :
+                          --! 入力ストリームデータ有効信号.
                           --! * I_DATAが有効であることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           in  std_logic;
-        I_READY         : --! @brief INPUT WINDOW DATA READY :
-                          --! 入力ウィンドウデータレディ信号.
-                          --! * キューが次のウィンドウデータを入力出来ることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+        I_READY         : --! @brief INPUT STREAM DATA READY :
+                          --! 入力ストリームデータレディ信号.
+                          --! * キューが次のストリームデータを入力出来ることを示す.
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           out std_logic;
     -------------------------------------------------------------------------------
-    -- 出力側 Window I/F
+    -- 出力側 Stream I/F
     -------------------------------------------------------------------------------
         O_ENABLE        : --! @brief OUTPUT ENABLE :
                           --! 出力許可信号.
@@ -109,15 +112,15 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
         O_LINE_DONE     : --! @brief OUTPUT LINE DONE :
                           --! ライン有効信号.
                           in  std_logic_vector(LINE_SIZE-1 downto 0);
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
+        O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
+                          --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
+        O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
+                          --! 出力ストリームデータ有効信号.
                           --! * O_DATAが有効であることを示す.
                           out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
+        O_READY         : --! @brief OUTPUT IMAGE STREAM DATA READY :
+                          --! 出力ストリームデータレディ信号.
                           in  std_logic;
     -------------------------------------------------------------------------------
     -- ライン制御 I/F
@@ -127,7 +130,7 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
                           out std_logic_vector(LINE_SIZE-1 downto 0);
         LINE_ATRB       : --! @brief OUTPUT LINE ATTRIBUTE :
                           --! ライン属性出力.
-                          out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+                          out IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
         LINE_FEED       : --! @brief OUTPUT LINE FEED :
                           --! 出力終了信号.
                           --! * この信号をアサートすることでバッファをクリアして
@@ -139,7 +142,7 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
                           --!   出力する.
                           in  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0')
     );
-end IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR;
+end IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -149,7 +152,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.COMPONENTS.PIPELINE_REGISTER;
-architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
+architecture RTL of IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -210,10 +213,10 @@ architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    line_start            :  std_logic_vector (LINE_SIZE-1 downto 0);
-    signal    line_ready            :  std_logic_vector (LINE_SIZE-1 downto 0);
-    signal    line_intake_valid     :  std_logic_vector (LINE_SIZE-1 downto 0);
-    signal    line_intake_atrb      :  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+    signal    line_start            :  std_logic_vector        (LINE_SIZE-1 downto 0);
+    signal    line_ready            :  std_logic_vector        (LINE_SIZE-1 downto 0);
+    signal    line_intake_valid     :  std_logic_vector        (LINE_SIZE-1 downto 0);
+    signal    line_intake_atrb      :  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -233,32 +236,32 @@ begin
     -- intake_y_last     : 
     -------------------------------------------------------------------------------
     process (I_DATA) begin
-        if (IMAGE_WINDOW_DATA_IS_START_C(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+        if (IMAGE_STREAM_DATA_IS_START_C(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
             intake_c_start <= '1';
         else
             intake_c_start <= '0';
         end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_C( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+        if (IMAGE_STREAM_DATA_IS_LAST_C( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
             intake_c_last  <= '1';
         else
             intake_c_last  <= '0';
         end if;
-        if (IMAGE_WINDOW_DATA_IS_START_X(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+        if (IMAGE_STREAM_DATA_IS_START_X(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
             intake_x_start <= '1';
         else
             intake_x_start <= '0';
         end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_X( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+        if (IMAGE_STREAM_DATA_IS_LAST_X( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
             intake_x_last  <= '1';
         else
             intake_x_last  <= '0';
         end if;
-        if (IMAGE_WINDOW_DATA_IS_START_Y(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+        if (IMAGE_STREAM_DATA_IS_START_Y(PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
             intake_y_start <= '1';
         else
             intake_y_start <= '0';
         end if;
-        if (IMAGE_WINDOW_DATA_IS_LAST_Y( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
+        if (IMAGE_STREAM_DATA_IS_LAST_Y( PARAM => I_PARAM, DATA => I_DATA, VALID => TRUE)) then
             intake_y_last  <= '1';
         else
             intake_y_last  <= '0';
@@ -317,10 +320,10 @@ begin
     -- line_intake_valid :
     -------------------------------------------------------------------------------
     process (I_DATA, line_select)
-        variable  atrb_y_vector  :  IMAGE_ATRB_VECTOR(I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI);
+        variable  atrb_y_vector  :  IMAGE_STREAM_ATRB_VECTOR(I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI);
         variable  line_in_valid  :  std_logic_vector(LINE_SIZE-1 downto 0);
     begin
-        atrb_y_vector := GET_ATRB_Y_VECTOR_FROM_IMAGE_WINDOW_DATA(I_PARAM, I_DATA);
+        atrb_y_vector := GET_ATRB_Y_VECTOR_FROM_IMAGE_STREAM_DATA(I_PARAM, I_DATA);
         line_in_valid := (others => '0');
         for line in 0 to LINE_SIZE-1 loop
             for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
@@ -386,7 +389,7 @@ begin
         --
         ---------------------------------------------------------------------------
         signal    line_state        :  LINE_STATE_TYPE;
-        signal    atrb              :  IMAGE_ATRB_TYPE;
+        signal    atrb              :  IMAGE_STREAM_ATRB_TYPE;
     begin
         ---------------------------------------------------------------------------
         -- line_state :
@@ -448,37 +451,37 @@ begin
     -- line_intake_atrb : 
     -------------------------------------------------------------------------------
     process (I_DATA, line_select)
-        variable  data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        variable  elem   :  std_logic_vector(O_PARAM.ELEM_BITS-1 downto 0);
-        variable  atrb_x :  std_logic_vector(IMAGE_ATRB_BITS  -1 downto 0);
-        variable  atrb_y :  std_logic_vector(IMAGE_ATRB_BITS  -1 downto 0);
-        variable  atrb_c :  std_logic_vector(IMAGE_ATRB_BITS  -1 downto 0);
-        variable  i_atrb :  std_logic_vector(IMAGE_ATRB_BITS  -1 downto 0);
+        variable  data   :  std_logic_vector(O_PARAM.DATA.SIZE     -1 downto 0);
+        variable  elem   :  std_logic_vector(O_PARAM.ELEM_BITS     -1 downto 0);
+        variable  atrb_x :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
+        variable  atrb_y :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
+        variable  atrb_c :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
+        variable  i_atrb :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
     begin
         for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
-            atrb_c := GET_ATRB_C_FROM_IMAGE_WINDOW_DATA(I_PARAM, c_pos+I_PARAM.SHAPE.C.LO, I_DATA);
-            SET_ATRB_C_TO_IMAGE_WINDOW_DATA(O_PARAM, c_pos+O_PARAM.SHAPE.C.LO, atrb_c, data);
+            atrb_c := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(I_PARAM, c_pos+I_PARAM.SHAPE.C.LO, I_DATA);
+            SET_ATRB_C_TO_IMAGE_STREAM_DATA(O_PARAM, c_pos+O_PARAM.SHAPE.C.LO, atrb_c, data);
         end loop;
         for x_pos in 0 to O_PARAM.SHAPE.X.SIZE-1 loop
-            atrb_x := GET_ATRB_X_FROM_IMAGE_WINDOW_DATA(I_PARAM, x_pos+I_PARAM.SHAPE.X.LO, I_DATA);
-            SET_ATRB_X_TO_IMAGE_WINDOW_DATA(O_PARAM, x_pos+O_PARAM.SHAPE.X.LO, atrb_x, data);
+            atrb_x := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(I_PARAM, x_pos+I_PARAM.SHAPE.X.LO, I_DATA);
+            SET_ATRB_X_TO_IMAGE_STREAM_DATA(O_PARAM, x_pos+O_PARAM.SHAPE.X.LO, atrb_x, data);
         end loop;
         for line in 0 to LINE_SIZE-1 loop
             if (LINE_SIZE > 1) then
                 atrb_y := (others => '0');
                 for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
                     if (line_select(y_pos)(line) = '1') then
-                        i_atrb := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(I_PARAM, y_pos, I_DATA);
+                        i_atrb := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(I_PARAM, y_pos, I_DATA);
                         atrb_y := atrb_y or i_atrb;
                     end if;
                 end loop;
             else
-                atrb_y := GET_ATRB_Y_FROM_IMAGE_WINDOW_DATA(I_PARAM, line+I_PARAM.SHAPE.Y.LO, I_DATA);
+                atrb_y := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(I_PARAM, line+I_PARAM.SHAPE.Y.LO, I_DATA);
             end if;
-            SET_ATRB_Y_TO_IMAGE_WINDOW_DATA(O_PARAM, line+O_PARAM.SHAPE.Y.LO, atrb_y, data);
-            line_intake_atrb(line).VALID <= (atrb_y(IMAGE_ATRB_VALID_POS) = '1');
-            line_intake_atrb(line).START <= (atrb_y(IMAGE_ATRB_START_POS) = '1');
-            line_intake_atrb(line).LAST  <= (atrb_y(IMAGE_ATRB_LAST_POS ) = '1');
+            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(O_PARAM, line+O_PARAM.SHAPE.Y.LO, atrb_y, data);
+            line_intake_atrb(line).VALID <= (atrb_y(IMAGE_STREAM_ATRB_VALID_POS) = '1');
+            line_intake_atrb(line).START <= (atrb_y(IMAGE_STREAM_ATRB_START_POS) = '1');
+            line_intake_atrb(line).LAST  <= (atrb_y(IMAGE_STREAM_ATRB_LAST_POS ) = '1');
         end loop;
         for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
             for x_pos in 0 to O_PARAM.SHAPE.X.SIZE-1 loop
@@ -487,7 +490,7 @@ begin
                         elem := (others => '0');
                         for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
                             if (line_select(y_pos)(line) = '1') then
-                                elem := elem or GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
+                                elem := elem or GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                                     PARAM   => I_PARAM ,
                                                     C       => c_pos+I_PARAM.SHAPE.C.LO,
                                                     X       => x_pos+I_PARAM.SHAPE.X.LO,
@@ -497,7 +500,7 @@ begin
                             end if;
                         end loop;
                     else
-                        elem := GET_ELEMENT_FROM_IMAGE_WINDOW_DATA(
+                        elem := GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                                     PARAM   => I_PARAM ,
                                                     C       => c_pos+I_PARAM.SHAPE.C.LO,
                                                     X       => x_pos+I_PARAM.SHAPE.X.LO,
@@ -505,7 +508,7 @@ begin
                                                     DATA    => I_DATA
                                                 );
                     end if;
-                    SET_ELEMENT_TO_IMAGE_WINDOW_DATA(
+                    SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                         PARAM   => O_PARAM ,
                         C       => c_pos+O_PARAM.SHAPE.C.LO,
                         X       => x_pos+O_PARAM.SHAPE.X.LO,

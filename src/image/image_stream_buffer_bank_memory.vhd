@@ -1,9 +1,10 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_bank_memory.vhd
---!     @brief   Image Window Buffer Bank Memory Module :
---!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--!     @file    image_stream_buffer_bank_memory.vhd
+--!     @brief   Image Stream Buffer Bank Memory Module :
+--!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
+--!              リモジュール
 --!     @version 1.8.0
---!     @date    2019/1/7
+--!     @date    2019/1/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -40,17 +41,18 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER :
---!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--! @brief   Image Stream Buffer Bank Memory Module :
+--!          異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
+--!          リモジュール
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY is
+entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
     generic (
-        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
-                          --! 入力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
-        O_PARAM         : --! @brief OUTPUT WINDOW PARAMETER :
-                          --! 出力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
+                          --! 入力側のストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
+                          --! 出力側のストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
@@ -90,27 +92,27 @@ entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY is
     -------------------------------------------------------------------------------
     -- 入力側 制御 I/F
     -------------------------------------------------------------------------------
-        I_ENABLE        : --! @brief INPUT WINDOW ENABLE :
+        I_ENABLE        : --! @brief INPUT STREAM ENABLE :
                           in  std_logic;
-        I_LINE_START    : --! @brief INPUT WINDOW LINE START :
+        I_LINE_START    : --! @brief INPUT STREAM LINE START :
                           --  ラインの入力を開始することを示す.
                           in  std_logic_vector(LINE_SIZE-1 downto 0);
-        I_LINE_DONE     : --! @brief INPUT WINDOW LINE DONE :
+        I_LINE_DONE     : --! @brief INPUT STREAM LINE DONE :
                           --  ラインの入力が終了したことを示す.
                           out std_logic_vector(LINE_SIZE-1 downto 0);
     -------------------------------------------------------------------------------
-    -- 入力側 ウィンドウ I/F
+    -- 入力側 ストリーム I/F
     -------------------------------------------------------------------------------
-        I_DATA          : --! @brief INPUT WINDOW DATA :
-                          --! ウィンドウデータ入力.
+        I_DATA          : --! @brief INPUT STREAM DATA :
+                          --! ストリームデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
-                          --! 入力ウィンドウデータ有効信号.
+        I_VALID         : --! @brief INPUT STREAM DATA VALID :
+                          --! 入力ストリームデータ有効信号.
                           --! * I_DATAが有効であることを示す.
                           in  std_logic;
-        I_READY         : --! @brief INPUT WINDOW DATA READY :
-                          --! 入力ウィンドウデータレディ信号.
-                          --! * キューが次のウィンドウデータを入力出来ることを示す.
+        I_READY         : --! @brief INPUT STREAM DATA READY :
+                          --! 入力ストリームデータレディ信号.
+                          --! * キューが次のストリームデータを入力出来ることを示す.
                           out std_logic;
     -------------------------------------------------------------------------------
     -- 出力側 制御 I/F
@@ -120,24 +122,24 @@ entity  IMAGE_WINDOW_BUFFER_BANK_MEMORY is
                           in  std_logic_vector(LINE_SIZE-1 downto 0);
         O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
                           --! ライン属性入力.
-                          in  IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+                          in  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
         D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
                           in  integer range 0 to MAX_D_SIZE := 1;
     -------------------------------------------------------------------------------
-    -- 出力側 ウィンドウ I/F
+    -- 出力側 ストリーム I/F
     -------------------------------------------------------------------------------
-        O_DATA          : --! @brief OUTPUT WINDOW DATA :
-                          --! ウィンドウデータ出力.
+        O_DATA          : --! @brief OUTPUT STREAM DATA :
+                          --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_VALID         : --! @brief OUTPUT WINDOW DATA VALID :
-                          --! 出力ウィンドウデータ有効信号.
+        O_VALID         : --! @brief OUTPUT STREAM DATA VALID :
+                          --! 出力ストリームデータ有効信号.
                           --! * O_DATAが有効であることを示す.
                           out std_logic;
-        O_READY         : --! @brief OUTPUT WINDOW DATA READY :
-                          --! 出力ウィンドウデータレディ信号.
+        O_READY         : --! @brief OUTPUT STREAM DATA READY :
+                          --! 出力ストリームデータレディ信号.
                           in  std_logic
     );
-end IMAGE_WINDOW_BUFFER_BANK_MEMORY;
+end IMAGE_STREAM_BUFFER_BANK_MEMORY;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -146,10 +148,10 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_BANK_MEMORY_READER;
 use     PIPEWORK.COMPONENTS.SDPRAM;
-architecture RTL of IMAGE_WINDOW_BUFFER_BANK_MEMORY is
+architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY is
     -------------------------------------------------------------------------------
     -- BUF_WIDTH : メモリのビット幅を２のべき乗値で示す
     -------------------------------------------------------------------------------
@@ -200,7 +202,7 @@ begin
     -------------------------------------------------------------------------------
     -- WRITER :
     -------------------------------------------------------------------------------
-    WRITER: IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER   -- 
+    WRITER: IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER   -- 
         generic map (                                -- 
             I_PARAM         => I_PARAM             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
@@ -284,7 +286,7 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    READER: IMAGE_WINDOW_BUFFER_BANK_MEMORY_READER   -- 
+    READER: IMAGE_STREAM_BUFFER_BANK_MEMORY_READER   -- 
         generic map (                                -- 
             O_PARAM         => O_PARAM             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , --   

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------------
---!     @file    image_window_buffer_intake.vhd
---!     @brief   Image Window Buffer Intake Module :
---!              異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--!     @file    image_stream_buffer_intake.vhd
+--!     @brief   Image Stream Buffer Intake Module :
+--!              異なる形のイメージストリームを継ぐためのバッファの入力側モジュール
 --!     @version 1.8.0
 --!     @date    2019/1/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
@@ -40,14 +40,14 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_WINDOW_BUFFER :
---!          異なるチャネル数のイメージウィンドウのデータを継ぐためのアダプタ
+--! @brief   Image Stream Buffer Intake Module :
+--!          異なる形のイメージストリームを継ぐためのバッファの入力側モジュール
 -----------------------------------------------------------------------------------
-entity  IMAGE_WINDOW_BUFFER_INTAKE is
+entity  IMAGE_STREAM_BUFFER_INTAKE is
     generic (
-        I_PARAM         : --! @brief INPUT  WINDOW PARAMETER :
-                          --! 入力側のウィンドウのパラメータを指定する.
-                          IMAGE_WINDOW_PARAM_TYPE := NEW_IMAGE_WINDOW_PARAM(8,1,1,1);
+        I_PARAM         : --! @brief INPUT  IMAGE STREAM PARAMETER :
+                          --! 入力側のイメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
@@ -82,19 +82,19 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
-        I_DATA          : --! @brief INPUT WINDOW DATA :
-                          --! ウィンドウデータ入力.
+        I_DATA          : --! @brief INPUT IMAGE STREAM DATA :
+                          --! ストリームデータ入力.
                           in  std_logic_vector(I_PARAM.DATA.SIZE-1 downto 0);
-        I_VALID         : --! @brief INPUT WINDOW DATA VALID :
-                          --! 入力ウィンドウデータ有効信号.
+        I_VALID         : --! @brief INPUT IMAGE STREAM DATA VALID :
+                          --! 入力ストリームデータ有効信号.
                           --! * I_DATAが有効であることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           in  std_logic;
-        I_READY         : --! @brief INPUT WINDOW DATA READY :
-                          --! 入力ウィンドウデータレディ信号.
-                          --! * キューが次のウィンドウデータを入力出来ることを示す.
-                          --! * I_VALID='1'and I_READY='1'でウィンドウデータがキュー
+        I_READY         : --! @brief INPUT IMAGE STREAM DATA READY :
+                          --! 入力ストリームデータレディ信号.
+                          --! * キューが次のストリームデータを入力出来ることを示す.
+                          --! * I_VALID='1'and I_READY='1'でストリームデータがキュー
                           --!   に取り込まれる.
                           out std_logic;
     -------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE is
                           out integer range 0 to 2**BUF_ADDR_BITS;
         O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
                           --! ライン属性出力.
-                          out IMAGE_ATRB_VECTOR(LINE_SIZE-1 downto 0);
+                          out IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
         O_LINE_FEED     : --! @brief OUTPUT LINE FEED :
                           --! 出力終了信号.
                           --! * この信号をアサートすることでバッファをクリアして
@@ -132,7 +132,7 @@ entity  IMAGE_WINDOW_BUFFER_INTAKE is
         BUF_WE          : --! @brief BUFFER WRITE ENABLE :
                           out std_logic_vector(LINE_SIZE*BANK_SIZE              -1 downto 0)
     );
-end IMAGE_WINDOW_BUFFER_INTAKE;
+end IMAGE_STREAM_BUFFER_INTAKE;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -141,16 +141,16 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR;
-use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER;
-architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE is
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR;
+use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER;
+architecture RTL of IMAGE_STREAM_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  C_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
-                            := NEW_IMAGE_WINDOW_PARAM(
+    constant  C_PARAM       :  IMAGE_STREAM_PARAM_TYPE
+                            := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => I_PARAM.ELEM_BITS,
-                                   SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                   SHAPE        => NEW_IMAGE_STREAM_SHAPE_PARAM(
                                                        C => I_PARAM.SHAPE.C,
                                                        X => I_PARAM.SHAPE.X,
                                                        Y => I_PARAM.SHAPE.Y
@@ -164,10 +164,10 @@ architecture RTL of IMAGE_WINDOW_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  L_PARAM       :  IMAGE_WINDOW_PARAM_TYPE
-                            := NEW_IMAGE_WINDOW_PARAM(
+    constant  L_PARAM       :  IMAGE_STREAM_PARAM_TYPE
+                            := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => C_PARAM.ELEM_BITS,
-                                   SHAPE        => NEW_IMAGE_WINDOW_SHAPE_PARAM(
+                                   SHAPE        => NEW_IMAGE_STREAM_SHAPE_PARAM(
                                                        C => C_PARAM.SHAPE.C,
                                                        X => C_PARAM.SHAPE.X,
                                                        Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
@@ -191,7 +191,7 @@ begin
     -------------------------------------------------------------------------------
     -- LINE_SELECTOR :
     -------------------------------------------------------------------------------
-    LINE_SELECTOR: IMAGE_WINDOW_BUFFER_INTAKE_LINE_SELECTOR
+    LINE_SELECTOR: IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR
         generic map (                                -- 
             I_PARAM         => C_PARAM             , -- 
             O_PARAM         => L_PARAM             , -- 
@@ -212,7 +212,7 @@ begin
             I_VALID         => c_valid             , -- In  :
             I_READY         => c_ready             , -- Out :
         ---------------------------------------------------------------------------
-        -- 出力側 Window I/F
+        -- 出力側 Stream I/F
         ---------------------------------------------------------------------------
             O_ENABLE        => l_enable            , -- Out :
             O_LINE_START    => l_start             , -- Out :
@@ -231,7 +231,7 @@ begin
     -------------------------------------------------------------------------------
     -- BANK_WRITER :
     -------------------------------------------------------------------------------
-    BANK_WRITER: IMAGE_WINDOW_BUFFER_BANK_MEMORY_WRITER
+    BANK_WRITER: IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER
         generic map (                                -- 
             I_PARAM         => L_PARAM             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
