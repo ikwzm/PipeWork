@@ -22,12 +22,13 @@ ENTITY_FILES = chopper.vhd                             \
                register_access_decoder.vhd             \
                register_access_syncronizer.vhd         \
                register_access_adapter.vhd             \
+               unrolled_loop_counter.vhd               \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK COMPONENT LIBRARY DESCRIPTION' \
-            --version 1.7.0 \
+            --version 1.7.1 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package COMPONENTS \
