@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/01/22                                                      --
+--!     @date    2019/01/25                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -448,6 +448,11 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
                           integer := 1;
         D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
+        QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * O_QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
+                          --!   レクトに出力される.
+                          integer := 0;
         ID              : --! @brief SDPRAM IDENTIFIER :
                           --! どのモジュールで使われているかを示す識別番号.
                           integer := 0 

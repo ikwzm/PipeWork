@@ -173,6 +173,7 @@ architecture RTL of IMAGE_STREAM_BUFFER is
                   I_LINE_ENABLE     :  boolean;
                   I_LINE_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
                   I_LINE_QUEUE      :  integer;
+                  O_BANK_QUEUE      :  integer;
                   O_LINE_ENABLE     :  boolean;
                   O_LINE_PARAM      :  IMAGE_STREAM_PARAM_TYPE;
                   O_LINE_QUEUE      :  integer;
@@ -332,6 +333,10 @@ architecture RTL of IMAGE_STREAM_BUFFER is
                                   BORDER_TYPE => param.O_CHAN_PARAM.BORDER_TYPE
                               );
         param.O_LINE_QUEUE := 2;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        param.O_BANK_QUEUE := 2;
         return param;
     end function;
     -------------------------------------------------------------------------------
@@ -483,7 +488,8 @@ begin
                 LINE_SIZE       => PARAM.LINE_SIZE     , --   
                 MAX_D_SIZE      => MAX_D_SIZE          , --   
                 D_STRIDE        => D_STRIDE            , --   
-                D_UNROLL        => D_UNROLL            , --   
+                D_UNROLL        => D_UNROLL            , --
+                QUEUE_SIZE      => PARAM.O_BANK_QUEUE  , -- 
                 ID              => ID                    --   
             )                                            -- 
             port map (                                   -- 

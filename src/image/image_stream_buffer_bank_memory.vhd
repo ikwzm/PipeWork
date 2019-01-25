@@ -72,6 +72,11 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
                           integer := 1;
         D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
+        QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * O_QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
+                          --!   レクトに出力される.
+                          integer := 0;
         ID              : --! @brief SDPRAM IDENTIFIER :
                           --! どのモジュールで使われているかを示す識別番号.
                           integer := 0 
@@ -297,7 +302,8 @@ begin
             D_STRIDE        => D_STRIDE            , --
             D_UNROLL        => D_UNROLL            , --
             BUF_ADDR_BITS   => BUF_ADDR_BITS       , --   
-            BUF_DATA_BITS   => BUF_DATA_BITS         --
+            BUF_DATA_BITS   => BUF_DATA_BITS       , --
+            QUEUE_SIZE      => QUEUE_SIZE            -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------
