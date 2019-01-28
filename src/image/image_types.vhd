@@ -46,9 +46,10 @@ package IMAGE_TYPES is
     --! @brief Image の形(各辺の大きさ)の各辺をどのように算出するかを決めるタイプの定義
     -------------------------------------------------------------------------------
     type      IMAGE_SHAPE_SIDE_DICIDE_TYPE is (
-                  IMAGE_SHAPE_SIDE_DICIDE_AUTO     , -- 各モジュール内部で自動計算する.
+                  IMAGE_SHAPE_SIDE_DICIDE_NONE     , -- 辺が存在しない.
+                  IMAGE_SHAPE_SIDE_DICIDE_CONSTANT , -- 指定された値で常に静的に決める.
                   IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL , -- 外部からの信号で動的に決める.
-                  IMAGE_SHAPE_SIDE_DICIDE_CONSTANT   -- 指定された値で常に静的に決める.
+                  IMAGE_SHAPE_SIDE_DICIDE_AUTO       -- 各モジュール内部で自動計算する.
     );
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺の値を定義.
@@ -61,8 +62,9 @@ package IMAGE_TYPES is
                   MAX_SIZE                 :  integer;  -- 辺の最大値  (DICIDE_AUTOおよびDICIDE_EXTERNALのみ有効)
     end record;
     -------------------------------------------------------------------------------
-    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_NONE                        return IMAGE_SHAPE_SIDE_TYPE;
     function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
     function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
     function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer) return IMAGE_SHAPE_SIDE_TYPE;
@@ -529,6 +531,7 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_SHAPE_SIDE(
                  LO          :  integer;
                  HI          :  integer;
+                 SIZE        :  integer;
                  MAX_SIZE    :  integer;
                  DICIDE_TYPE :  IMAGE_SHAPE_SIDE_DICIDE_TYPE)
                  return         IMAGE_SHAPE_SIDE_TYPE
@@ -537,10 +540,23 @@ package body IMAGE_TYPES is
     begin
         param.LO          := LO;
         param.HI          := HI;
-        param.SIZE        := HI - LO + 1;
+        param.SIZE        := SIZE;
         param.MAX_SIZE    := MAX_SIZE;
         param.DICIDE_TYPE := DICIDE_TYPE;
         return param;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_NONE return IMAGE_SHAPE_SIDE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE_SIDE(
+                   LO          => 0,
+                   HI          => 0,
+                   SIZE        => 0,
+                   MAX_SIZE    => 0,
+                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_NONE);
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
@@ -551,6 +567,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE_SIDE(
                    LO          => 0,
                    HI          => MAX_SIZE-1,
+                   SIZE        => MAX_SIZE,
                    MAX_SIZE    => MAX_SIZE,
                    DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_AUTO);
     end function;
@@ -563,6 +580,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE_SIDE(
                    LO          => 0,
                    HI          => MAX_SIZE-1,
+                   SIZE        => MAX_SIZE,
                    MAX_SIZE    => MAX_SIZE,
                    DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL);
     end function;
@@ -575,6 +593,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE_SIDE(
                    LO          => 0,
                    HI          => SIZE-1,
+                   SIZE        => SIZE,
                    MAX_SIZE    => SIZE,
                    DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
     end function;
@@ -587,6 +606,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE_SIDE(
                    LO          => LO,
                    HI          => HI,
+                   SIZE        => HI-LO+1,
                    MAX_SIZE    => HI-LO+1,
                    DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
     end function;
@@ -614,7 +634,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => C,
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => X,
                    Y         => Y);
     end function;
@@ -626,8 +646,8 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   C         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => X,
                    Y         => Y);
     end function;
@@ -653,7 +673,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => NEW_IMAGE_SHAPE_SIDE_AUTO(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => NEW_IMAGE_SHAPE_SIDE_AUTO(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_AUTO(Y));
     end function;
@@ -665,8 +685,8 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   C         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => NEW_IMAGE_SHAPE_SIDE_AUTO(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_AUTO(Y));
     end function;
@@ -692,7 +712,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
     end function;
@@ -704,8 +724,8 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   C         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
     end function;
@@ -731,7 +751,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
     end function;
@@ -743,8 +763,8 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   C         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
                    X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
     end function;
