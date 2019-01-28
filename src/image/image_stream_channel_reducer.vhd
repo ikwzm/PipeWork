@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Channel Reducer MODULE :
 --!              異なるチャネル数のイメージストリームを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/22
+--!     @date    2019/1/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -226,7 +226,7 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS => I_PARAM.ELEM_BITS,
                                    INFO_BITS => I_PARAM.INFO_BITS,
-                                   C         => NEW_IMAGE_VECTOR_RANGE(CHANNEL_SIZE),
+                                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(CHANNEL_SIZE),
                                    X         => I_PARAM.SHAPE.X,
                                    Y         => I_PARAM.SHAPE.Y
                                );

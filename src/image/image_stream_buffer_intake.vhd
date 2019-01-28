@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Intake Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの入力側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/7
+--!     @date    2019/1/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -150,10 +150,11 @@ architecture RTL of IMAGE_STREAM_BUFFER_INTAKE is
     constant  C_PARAM       :  IMAGE_STREAM_PARAM_TYPE
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => I_PARAM.ELEM_BITS,
-                                   SHAPE        => NEW_IMAGE_STREAM_SHAPE_PARAM(
-                                                       C => I_PARAM.SHAPE.C,
-                                                       X => I_PARAM.SHAPE.X,
-                                                       Y => I_PARAM.SHAPE.Y
+                                   SHAPE        => NEW_IMAGE_SHAPE(
+                                                       ELEM_BITS => I_PARAM.ELEM_BITS,
+                                                       C         => I_PARAM.SHAPE.C  ,
+                                                       X         => I_PARAM.SHAPE.X  ,
+                                                       Y         => I_PARAM.SHAPE.Y
                                                    ),
                                    STRIDE       => I_PARAM.STRIDE,
                                    BORDER_TYPE  => I_PARAM.BORDER_TYPE
@@ -167,10 +168,11 @@ architecture RTL of IMAGE_STREAM_BUFFER_INTAKE is
     constant  L_PARAM       :  IMAGE_STREAM_PARAM_TYPE
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => C_PARAM.ELEM_BITS,
-                                   SHAPE        => NEW_IMAGE_STREAM_SHAPE_PARAM(
-                                                       C => C_PARAM.SHAPE.C,
-                                                       X => C_PARAM.SHAPE.X,
-                                                       Y => NEW_IMAGE_VECTOR_RANGE(LINE_SIZE)
+                                   SHAPE        => NEW_IMAGE_SHAPE(
+                                                       ELEM_BITS => C_PARAM.ELEM_BITS,
+                                                       C         => C_PARAM.SHAPE.C,
+                                                       X         => C_PARAM.SHAPE.X,
+                                                       Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE)
                                                    ),
                                    STRIDE       => C_PARAM.STRIDE,
                                    BORDER_TYPE  => C_PARAM.BORDER_TYPE

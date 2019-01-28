@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ書込み側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/1/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -545,8 +545,8 @@ begin
                                  := NEW_IMAGE_STREAM_PARAM(
                                         ELEM_BITS => I_PARAM.ELEM_BITS,
                                         C         => I_PARAM.SHAPE.C,
-                                        X         => NEW_IMAGE_VECTOR_RANGE(1),
-                                        Y         => NEW_IMAGE_VECTOR_RANGE(1)
+                                        X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                                        Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1)
                                     );
             variable  temp_data  :  std_logic_vector(TEMP_PARAM.DATA.SIZE-1 downto 0);
             variable  elem_data  :  std_logic_vector(TEMP_PARAM.ELEM_BITS-1 downto 0);

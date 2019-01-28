@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Module :
 --!              異なる形のイメージストリームを継ぐためのバッファ
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/1/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -265,10 +265,11 @@ architecture RTL of IMAGE_STREAM_BUFFER is
         param.I_CHAN_ENABLE:= (I_PARAM.SHAPE.C.SIZE /= lcm_shape_c_size);
         param.I_CHAN_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => I_PARAM.ELEM_BITS,
-                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
-                                                     C => NEW_IMAGE_VECTOR_RANGE(lcm_shape_c_size),
-                                                     X => I_PARAM.SHAPE.X,
-                                                     Y => I_PARAM.SHAPE.Y
+                                  SHAPE       => NEW_IMAGE_SHAPE(
+                                                     ELEM_BITS => I_PARAM.ELEM_BITS,
+                                                     C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(lcm_shape_c_size),
+                                                     X         => I_PARAM.SHAPE.X,
+                                                     Y         => I_PARAM.SHAPE.Y
                                                  ),
                                   STRIDE      => I_PARAM.STRIDE,
                                   BORDER_TYPE => I_PARAM.BORDER_TYPE
@@ -281,10 +282,11 @@ architecture RTL of IMAGE_STREAM_BUFFER is
         param.I_LINE_ENABLE:= TRUE;
         param.I_LINE_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => param.I_CHAN_PARAM.ELEM_BITS,
-                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
-                                                     C => param.I_CHAN_PARAM.SHAPE.C,
-                                                     X => param.I_CHAN_PARAM.SHAPE.X,
-                                                     Y => NEW_IMAGE_VECTOR_RANGE(param.LINE_SIZE)
+                                  SHAPE       => NEW_IMAGE_SHAPE(
+                                                     ELEM_BITS => param.I_CHAN_PARAM.ELEM_BITS,
+                                                     C         => param.I_CHAN_PARAM.SHAPE.C,
+                                                     X         => param.I_CHAN_PARAM.SHAPE.X,
+                                                     Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(param.LINE_SIZE)
                                                  ),
                                   STRIDE      => param.I_CHAN_PARAM.STRIDE,
                                   BORDER_TYPE => param.I_CHAN_PARAM.BORDER_TYPE
@@ -307,10 +309,11 @@ architecture RTL of IMAGE_STREAM_BUFFER is
         param.O_CHAN_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => param.O_EXIT_PARAM.ELEM_BITS,
                                   INFO_BITS   => param.O_EXIT_PARAM.INFO_BITS,
-                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
-                                                     C => NEW_IMAGE_VECTOR_RANGE(lcm_shape_c_size),
-                                                     X => param.O_EXIT_PARAM.SHAPE.X,
-                                                     Y => param.O_EXIT_PARAM.SHAPE.Y
+                                  SHAPE       => NEW_IMAGE_SHAPE(
+                                                     ELEM_BITS => param.O_EXIT_PARAM.ELEM_BITS,
+                                                     C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(lcm_shape_c_size),
+                                                     X         => param.O_EXIT_PARAM.SHAPE.X  ,
+                                                     Y         => param.O_EXIT_PARAM.SHAPE.Y
                                                  ),
                                   STRIDE      => param.O_EXIT_PARAM.STRIDE,
                                   BORDER_TYPE => param.O_EXIT_PARAM.BORDER_TYPE
@@ -324,10 +327,11 @@ architecture RTL of IMAGE_STREAM_BUFFER is
         param.O_LINE_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => param.O_CHAN_PARAM.ELEM_BITS,
                                   INFO_BITS   => param.O_CHAN_PARAM.INFO_BITS,
-                                  SHAPE       => NEW_IMAGE_STREAM_SHAPE_PARAM(
-                                                     C => param.O_CHAN_PARAM.SHAPE.C,
-                                                     X => param.O_CHAN_PARAM.SHAPE.X,
-                                                     Y => NEW_IMAGE_VECTOR_RANGE(param.LINE_SIZE)
+                                  SHAPE       => NEW_IMAGE_SHAPE(
+                                                     ELEM_BITS => param.O_CHAN_PARAM.ELEM_BITS,
+                                                     C         => param.O_CHAN_PARAM.SHAPE.C  ,
+                                                     X         => param.O_CHAN_PARAM.SHAPE.X  ,
+                                                     Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(param.LINE_SIZE)
                                                  ),
                                   STRIDE      => param.O_CHAN_PARAM.STRIDE,
                                   BORDER_TYPE => param.O_CHAN_PARAM.BORDER_TYPE

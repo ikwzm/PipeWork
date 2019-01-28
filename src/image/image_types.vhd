@@ -2,7 +2,7 @@
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
 --!     @version 1.8.0
---!     @date    2019/1/22
+--!     @date    2019/1/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -41,6 +41,62 @@ use     ieee.numeric_std.all;
 --! @brief Image の各種タイプ/定数を定義しているパッケージ.
 -----------------------------------------------------------------------------------
 package IMAGE_TYPES is
+
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺をどのように算出するかを決めるタイプの定義
+    -------------------------------------------------------------------------------
+    type      IMAGE_SHAPE_SIDE_DICIDE_TYPE is (
+                  IMAGE_SHAPE_SIDE_DICIDE_AUTO     , -- 各モジュール内部で自動計算する.
+                  IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL , -- 外部からの信号で動的に決める.
+                  IMAGE_SHAPE_SIDE_DICIDE_CONSTANT   -- 指定された値で常に静的に決める.
+    );
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺の値を定義.
+    -------------------------------------------------------------------------------
+    type      IMAGE_SHAPE_SIDE_TYPE        is record
+                  DICIDE_TYPE              :  IMAGE_SHAPE_SIDE_DICIDE_TYPE;
+                  LO                       :  integer;  -- 範囲の最小値(DICIDE_CONSTANTのみ設定可)
+                  HI                       :  integer;  -- 範囲の最大値(DICIDE_CONSTANTのみ設定可)
+                  SIZE                     :  integer;  -- 辺の大きさ  (DICIDE_CONSTANTのみ有効)
+                  MAX_SIZE                 :  integer;  -- 辺の最大値  (DICIDE_AUTOおよびDICIDE_EXTERNALのみ有効)
+    end record;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer) return IMAGE_SHAPE_SIDE_TYPE;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を定義するレコードタイプ.
+    -------------------------------------------------------------------------------
+    type      IMAGE_SHAPE_TYPE             is record
+                  ELEM_BITS                :  integer;
+                  C                        :  IMAGE_SHAPE_SIDE_TYPE;
+                  D                        :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                        :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                        :  IMAGE_SHAPE_SIDE_TYPE;
+    end record;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE         (ELEM_BITS: integer;
+                                       C,D,X,Y  : IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE         (ELEM_BITS: integer;
+                                       C,  X,Y  : IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE         (ELEM_BITS: integer;
+                                           X,Y  : IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_AUTO    (ELEM_BITS,C,D,X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_AUTO    (ELEM_BITS,C,  X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_AUTO    (ELEM_BITS,    X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_EXTERNAL(ELEM_BITS,C,D,X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_EXTERNAL(ELEM_BITS,C,  X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_EXTERNAL(ELEM_BITS,    X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,C,D,X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,C,  X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+    function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,    X,Y: integer      ) return IMAGE_SHAPE_TYPE;
+
     -------------------------------------------------------------------------------
     --! @brief Image Stream の ボーダー処理タイプの定義
     -------------------------------------------------------------------------------
@@ -91,22 +147,7 @@ package IMAGE_TYPES is
                   ATRB_X_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
                   ATRB_Y_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
     end record;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の形(各辺の大きさ)を定義するレコードタイプ.
-    -------------------------------------------------------------------------------
-    type      IMAGE_STREAM_SHAPE_PARAM_TYPE is record
-                  C                 :  IMAGE_VECTOR_RANGE_TYPE;  -- Channel 配列の範囲
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;  -- X 方向の配列の範囲
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE;  -- Y 方向の配列の範囲
-                  SIZE              :  integer;                  -- C.SIZE * X.SIZE * Y.SIZE
-    end record;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の形(各辺の大きさ)を設定する関数群
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y:IMAGE_VECTOR_RANGE_TYPE) return IMAGE_STREAM_SHAPE_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(  X,Y:IMAGE_VECTOR_RANGE_TYPE) return IMAGE_STREAM_SHAPE_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y:integer                ) return IMAGE_STREAM_SHAPE_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(  X,Y:integer                ) return IMAGE_STREAM_SHAPE_PARAM_TYPE;
+
     -------------------------------------------------------------------------------
     --! @brief Image Stream のストライド(移動距離)を定義するレコードタイプ.
     -------------------------------------------------------------------------------
@@ -118,6 +159,7 @@ package IMAGE_TYPES is
     --! @brief Image Stream のストライド(移動距離)を設定する関数群
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_STRIDE_PARAM(X,Y:integer) return IMAGE_STREAM_STRIDE_PARAM_TYPE;
+
     -------------------------------------------------------------------------------
     --! @brief Image Stream の各種パラメータを定義するレコードタイプ.
     -------------------------------------------------------------------------------
@@ -125,7 +167,7 @@ package IMAGE_TYPES is
                   ELEM_BITS         :  integer;  -- 1要素(Element  )のビット数
                   ATRB_BITS         :  integer;  -- 1属性(Attribute)のビット数
                   INFO_BITS         :  integer;  -- その他情報のビット数
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
                   DATA              :  IMAGE_STREAM_DATA_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE;
@@ -136,59 +178,59 @@ package IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE)
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  return               IMAGE_STREAM_PARAM_TYPE;
+    function  NEW_IMAGE_STREAM_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  return               IMAGE_STREAM_PARAM_TYPE;
+    function  NEW_IMAGE_STREAM_PARAM(
+                  ELEM_BITS         :  integer;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -482,6 +524,232 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE(
+                 LO          :  integer;
+                 HI          :  integer;
+                 MAX_SIZE    :  integer;
+                 DICIDE_TYPE :  IMAGE_SHAPE_SIDE_DICIDE_TYPE)
+                 return         IMAGE_SHAPE_SIDE_TYPE
+    is 
+        variable param       :  IMAGE_SHAPE_SIDE_TYPE;
+    begin
+        param.LO          := LO;
+        param.HI          := HI;
+        param.SIZE        := HI - LO + 1;
+        param.MAX_SIZE    := MAX_SIZE;
+        param.DICIDE_TYPE := DICIDE_TYPE;
+        return param;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE_SIDE(
+                   LO          => 0,
+                   HI          => MAX_SIZE-1,
+                   MAX_SIZE    => MAX_SIZE,
+                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_AUTO);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE_SIDE(
+                   LO          => 0,
+                   HI          => MAX_SIZE-1,
+                   MAX_SIZE    => MAX_SIZE,
+                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer) return IMAGE_SHAPE_SIDE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE_SIDE(
+                   LO          => 0,
+                   HI          => SIZE-1,
+                   MAX_SIZE    => SIZE,
+                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer) return IMAGE_SHAPE_SIDE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE_SIDE(
+                   LO          => LO,
+                   HI          => HI,
+                   MAX_SIZE    => HI-LO+1,
+                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE(ELEM_BITS: integer;C,D,X,Y: IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE
+    is
+        variable param :  IMAGE_SHAPE_TYPE;
+    begin
+        param.ELEM_BITS := ELEM_BITS;
+        param.C         := C;
+        param.D         := D;
+        param.X         := X;
+        param.Y         := Y;
+        return param;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE(ELEM_BITS: integer;C,  X,Y: IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => C,
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => X,
+                   Y         => Y);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE(ELEM_BITS:integer;    X,Y: IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => X,
+                   Y         => Y);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_AUTO    (ELEM_BITS,C,D,X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_AUTO(C),
+                   D         => NEW_IMAGE_SHAPE_SIDE_AUTO(D),
+                   X         => NEW_IMAGE_SHAPE_SIDE_AUTO(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_AUTO(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_AUTO    (ELEM_BITS,C,  X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_AUTO(C),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => NEW_IMAGE_SHAPE_SIDE_AUTO(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_AUTO(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_AUTO    (ELEM_BITS,    X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => NEW_IMAGE_SHAPE_SIDE_AUTO(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_AUTO(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_EXTERNAL(ELEM_BITS,C,D,X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(C),
+                   D         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(D),
+                   X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_EXTERNAL(ELEM_BITS,C,  X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(C),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_EXTERNAL(ELEM_BITS,    X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,C,D,X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(D),
+                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,C,  X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image の形(各辺の大きさ)を設定する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,    X,Y: integer) return IMAGE_SHAPE_TYPE
+    is
+    begin
+        return NEW_IMAGE_SHAPE(
+                   ELEM_BITS => ELEM_BITS,
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
+                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
+    end function;
+
+    -------------------------------------------------------------------------------
     --! @brief Image Vector の各種パラメータを設定する関数
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_VECTOR_RANGE(LO,HI:integer) return IMAGE_VECTOR_RANGE_TYPE
@@ -520,49 +788,7 @@ package body IMAGE_TYPES is
         end if;
         return param;
     end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の形(各辺の大きさ)を設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y:IMAGE_VECTOR_RANGE_TYPE) return IMAGE_STREAM_SHAPE_PARAM_TYPE
-    is
-        variable param :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
-    begin
-        param.C    := C;
-        param.X    := X;
-        param.Y    := Y;
-        param.SIZE := C.SIZE * X.SIZE * Y.SIZE;
-        return param;
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の形(各辺の大きさ)を設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(  X,Y:IMAGE_VECTOR_RANGE_TYPE) return IMAGE_STREAM_SHAPE_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_SHAPE_PARAM(C => NEW_IMAGE_VECTOR_RANGE(1),
-                                            X => X,
-                                            Y => Y);
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の形(各辺の大きさ)を設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y:integer                ) return IMAGE_STREAM_SHAPE_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_SHAPE_PARAM(C => NEW_IMAGE_VECTOR_RANGE(C),
-                                            X => NEW_IMAGE_VECTOR_RANGE(X),
-                                            Y => NEW_IMAGE_VECTOR_RANGE(Y));
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の形(各辺の大きさ)を設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_SHAPE_PARAM(  X,Y:integer                ) return IMAGE_STREAM_SHAPE_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_SHAPE_PARAM(C => NEW_IMAGE_VECTOR_RANGE(1),
-                                            X => NEW_IMAGE_VECTOR_RANGE(X),
-                                            Y => NEW_IMAGE_VECTOR_RANGE(Y));
-    end function;
+
     -------------------------------------------------------------------------------
     --! @brief Image Stream のストライド(移動距離)を設定する関数
     -------------------------------------------------------------------------------
@@ -580,7 +806,7 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
@@ -614,7 +840,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
                   BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
@@ -634,7 +860,7 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
@@ -652,7 +878,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE;
+                  SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
@@ -671,7 +897,7 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE)
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -687,7 +913,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_STREAM_SHAPE_PARAM_TYPE)
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -704,16 +930,16 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => INFO_BITS,
-                  SHAPE             => NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -721,16 +947,16 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => 0        ,
-                  SHAPE             => NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -739,15 +965,15 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => INFO_BITS,
-                  SHAPE             => NEW_IMAGE_STREAM_SHAPE_PARAM(X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -755,15 +981,15 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
-                  Y                 :  IMAGE_VECTOR_RANGE_TYPE)
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => 0        ,
-                  SHAPE             => NEW_IMAGE_STREAM_SHAPE_PARAM(X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -780,7 +1006,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => 0        ,
-                  SHAPE             => NEW_IMAGE_STREAM_SHAPE_PARAM(C,X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,C,X,Y)
                );
     end function;
     -------------------------------------------------------------------------------
@@ -796,7 +1022,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => 0        ,
-                  SHAPE             => NEW_IMAGE_STREAM_SHAPE_PARAM(X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,X,Y)
                );
     end function; 
 
