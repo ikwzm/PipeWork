@@ -133,21 +133,30 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_VECTOR_RANGE(LO,HI:integer) return IMAGE_VECTOR_RANGE_TYPE;
     function  NEW_IMAGE_VECTOR_RANGE(SIZE :integer) return IMAGE_VECTOR_RANGE_TYPE;
-    function  NEW_IMAGE_VECTOR_RANGE(PREV :IMAGE_VECTOR_RANGE_TYPE;
-                                     SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Data(一回の転送単位) の属性フィールドを定義するレコードタイプ.
+    -------------------------------------------------------------------------------
+    type      IMAGE_STREAM_DATA_ATRB_FIELD_TYPE is record
+                  LO                :  integer;
+                  HI                :  integer;
+                  SIZE              :  integer;
+                  C                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  D                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  X                 :  IMAGE_VECTOR_RANGE_TYPE;
+                  Y                 :  IMAGE_VECTOR_RANGE_TYPE;
+    end record;
+    
     -------------------------------------------------------------------------------
     --! @brief Image Data(一回の転送単位) の各種パラメータを定義するレコードタイプ.
     -------------------------------------------------------------------------------
-    type      IMAGE_STREAM_DATA_PARAM_TYPE is record
+    type      IMAGE_STREAM_DATA_FIELD_TYPE is record
                   LO                :  integer;
                   HI                :  integer;
                   SIZE              :  integer;
                   ELEM_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
                   INFO_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
-                  ATRB_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
-                  ATRB_C_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
-                  ATRB_X_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
-                  ATRB_Y_FIELD      :  IMAGE_VECTOR_RANGE_TYPE;
+                  ATRB_FIELD        :  IMAGE_STREAM_DATA_ATRB_FIELD_TYPE;
     end record;
 
     -------------------------------------------------------------------------------
@@ -171,7 +180,7 @@ package IMAGE_TYPES is
                   INFO_BITS         :  integer;  -- その他情報のビット数
                   SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  DATA              :  IMAGE_STREAM_DATA_PARAM_TYPE;
+                  DATA              :  IMAGE_STREAM_DATA_FIELD_TYPE;
                   BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE;
     end record;
     -------------------------------------------------------------------------------
@@ -590,12 +599,16 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
-        return NEW_IMAGE_SHAPE_SIDE(
-                   LO          => 0,
-                   HI          => SIZE-1,
-                   SIZE        => SIZE,
-                   MAX_SIZE    => SIZE,
-                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+        if (SIZE > 0) then
+            return NEW_IMAGE_SHAPE_SIDE(
+                       LO          => 0,
+                       HI          => SIZE-1,
+                       SIZE        => SIZE,
+                       MAX_SIZE    => SIZE,
+                       DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+        else
+            return NEW_IMAGE_SHAPE_SIDE_NONE;
+        end if;
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
@@ -792,20 +805,14 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     --! @brief Image Vector の各種パラメータを設定する関数
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_VECTOR_RANGE(PREV :IMAGE_VECTOR_RANGE_TYPE;
-                                     SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE
+    function  NEW_IMAGE_VECTOR_RANGE(LO,HI:integer;
+                                     SIZE :integer) return IMAGE_VECTOR_RANGE_TYPE
     is
         variable param :  IMAGE_VECTOR_RANGE_TYPE;
     begin
-        if (SIZE > 0) then
-            param.LO   := PREV.HI+1;
-            param.HI   := PREV.HI+1 + SIZE-1;
-            param.SIZE := SIZE;
-        else
-            param.LO   := PREV.HI+1;
-            param.HI   := PREV.HI+1;
-            param.SIZE := SIZE;
-        end if;
+        param.LO   := LO;
+        param.HI   := HI;
+        param.SIZE := SIZE;
         return param;
     end function;
 
@@ -820,6 +827,143 @@ package body IMAGE_TYPES is
         param.Y := Y;
         return param;
     end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の DATA の要素(Element)フィールドを設定する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_DATA_ELEM_FIELD(
+                  ELEM_BITS         :  integer;
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
+                  return               IMAGE_VECTOR_RANGE_TYPE
+    is
+        variable  elem_size         :  integer;
+    begin
+        elem_size     := 1;
+        if (SHAPE.C.SIZE > 0) then
+            elem_size := elem_size * SHAPE.C.SIZE;
+        end if;
+        if (SHAPE.D.SIZE > 0) then
+            elem_size := elem_size * SHAPE.D.SIZE;
+        end if;
+        if (SHAPE.X.SIZE > 0) then
+            elem_size := elem_size * SHAPE.X.SIZE;
+        end if;
+        if (SHAPE.Y.SIZE > 0) then
+            elem_size := elem_size * SHAPE.Y.SIZE;
+        end if;
+        return NEW_IMAGE_VECTOR_RANGE(ELEM_BITS * elem_size);
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の DATA の属性フィールドを設定する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_DATA_ATRB_FIELD(
+                  LO                :  integer;
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
+                  return               IMAGE_STREAM_DATA_ATRB_FIELD_TYPE
+    is
+        variable  atrb_field        :  IMAGE_STREAM_DATA_ATRB_FIELD_TYPE;
+        variable  next_field_lo     :  integer;
+        variable  atrb_field_size   :  integer;
+        function  NEW_IMAGE_STREAM_DATA_ATRB_RANGE(LO, SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE is
+        begin
+            if (SIZE > 0) then
+                return NEW_IMAGE_VECTOR_RANGE(LO => LO, HI => LO + IMAGE_STREAM_ATRB_BITS*SIZE - 1);
+            else
+                return NEW_IMAGE_VECTOR_RANGE(LO => LO, HI => LO, SIZE => 0);
+            end if;
+        end function;
+    begin
+        atrb_field.LO   := LO;
+        next_field_lo   := LO;
+        atrb_field_size := 0;
+        if (SHAPE.C.SIZE > 0) then
+            atrb_field.C    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.C.SIZE);
+            next_field_lo   := atrb_field.C.HI + 1;
+            atrb_field_size := atrb_field_size + atrb_field.C.SIZE;
+        end if;
+        if (SHAPE.D.SIZE > 0) then
+            atrb_field.D    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.D.SIZE);
+            next_field_lo   := atrb_field.D.HI + 1;
+            atrb_field_size := atrb_field_size + atrb_field.D.SIZE;
+        end if;
+        if (SHAPE.X.SIZE > 0) then
+            atrb_field.X    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.X.SIZE);
+            next_field_lo   := atrb_field.X.HI + 1;
+            atrb_field_size := atrb_field_size + atrb_field.X.SIZE;
+        end if;
+        if (SHAPE.Y.SIZE > 0) then
+            atrb_field.Y    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.Y.SIZE);
+            next_field_lo   := atrb_field.Y.HI + 1;
+            atrb_field_size := atrb_field_size + atrb_field.Y.SIZE;
+        end if;
+        if (SHAPE.C.SIZE <= 0) then
+            atrb_field.C    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.C.SIZE);
+        end if;
+        if (SHAPE.D.SIZE <= 0) then
+            atrb_field.D    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.D.SIZE);
+        end if;
+        if (SHAPE.X.SIZE <= 0) then
+            atrb_field.X    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.X.SIZE);
+        end if;
+        if (SHAPE.Y.SIZE <= 0) then
+            atrb_field.Y    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.Y.SIZE);
+        end if;
+        if (atrb_field_size > 0) then
+            atrb_field.SIZE := atrb_field_size;
+            atrb_field.HI   := atrb_field.LO + atrb_field_size - 1;
+        else
+            atrb_field.SIZE := 0;
+            atrb_field.HI   := atrb_field.LO;
+        end if;
+        return atrb_field;
+    end function;
+        
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の DATA の情報フィールドを設定する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_DATA_INFO_FIELD(LO, BITS: integer) return IMAGE_VECTOR_RANGE_TYPE
+    is
+    begin
+        if (BITS > 0) then
+            return NEW_IMAGE_VECTOR_RANGE(LO => LO, HI => LO + BITS - 1);
+        else
+            return NEW_IMAGE_VECTOR_RANGE(LO => LO, HI => LO, SIZE => 0);
+        end if;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の DATAフィールドを設定する関数.
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_DATA_FIELD(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer;
+                  SHAPE             :  IMAGE_SHAPE_TYPE)
+                  return               IMAGE_STREAM_DATA_FIELD_TYPE
+    is
+        variable  data_field        :  IMAGE_STREAM_DATA_FIELD_TYPE;
+        variable  data_field_size   :  integer;
+        variable  next_field_lo     :  integer;
+    begin
+        data_field.LO         := 0;
+        data_field_size       := 0;
+
+        data_field.ELEM_FIELD := NEW_IMAGE_STREAM_DATA_ELEM_FIELD(ELEM_BITS    , SHAPE);
+        next_field_lo         := data_field.ELEM_FIELD.HI + 1;
+        data_field_size       := data_field_size + data_field.ELEM_FIELD.SIZE;
+
+        data_field.ATRB_FIELD := NEW_IMAGE_STREAM_DATA_ATRB_FIELD(next_field_lo, SHAPE);
+        next_field_lo         := data_field.ATRB_FIELD.HI + 1;
+        data_field_size       := data_field_size + data_field.ATRB_FIELD.SIZE;
+
+        data_field.INFO_FIELD := NEW_IMAGE_STREAM_DATA_INFO_FIELD(next_field_lo, INFO_BITS);
+        data_field_size       := data_field_size + data_field.INFO_FIELD.SIZE;
+
+        data_field.SIZE       := data_field_size;
+        data_field.HI         := data_field.LO + data_field_size - 1;
+        return data_field; 
+    end function;
+
     -------------------------------------------------------------------------------
     --! @brief Image Stream の各種パラメータをを設定する関数
     -------------------------------------------------------------------------------
@@ -833,26 +977,27 @@ package body IMAGE_TYPES is
     is
         variable  param             :  IMAGE_STREAM_PARAM_TYPE;
     begin
-        param.ELEM_BITS         := ELEM_BITS;
-        param.ATRB_BITS         := IMAGE_STREAM_ATRB_BITS;
-        param.INFO_BITS         := INFO_BITS;
-        param.SHAPE             := SHAPE;
-        param.STRIDE            := STRIDE;
-        param.BORDER_TYPE       := BORDER_TYPE;
-        param.DATA.ELEM_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.ELEM_BITS * param.SHAPE.C.SIZE * param.SHAPE.X.SIZE * param.SHAPE.Y.SIZE);
-        param.DATA.ATRB_C_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ELEM_FIELD  , param.ATRB_BITS * param.SHAPE.C.SIZE);
-        param.DATA.ATRB_X_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD, param.ATRB_BITS * param.SHAPE.X.SIZE);
-        param.DATA.ATRB_Y_FIELD := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_X_FIELD, param.ATRB_BITS * param.SHAPE.Y.SIZE);
-        param.DATA.ATRB_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_C_FIELD.LO,
-                                                          param.DATA.ATRB_Y_FIELD.HI);
-        param.DATA.LO           := param.DATA.ELEM_FIELD.LO;
-        param.DATA.INFO_FIELD   := NEW_IMAGE_VECTOR_RANGE(param.DATA.ATRB_FIELD, INFO_BITS);
-        if (INFO_BITS > 0) then
-            param.DATA.HI       := param.DATA.INFO_FIELD.HI;
-        else
-            param.DATA.HI       := param.DATA.ATRB_FIELD.HI;
-        end if;
-        param.DATA.SIZE         := param.DATA.HI - param.DATA.LO + 1;
+        assert (ELEM_BITS > 0)
+            report "NEW_IMAGE_STREAM_PARAM: Error ELEM_BITS=0." severity FAILURE;
+        assert (SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
+                SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+            report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.C.DICIDE_TYPE." severity FAILURE;
+        assert (SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
+                SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+            report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.D.DICIDE_TYPE." severity FAILURE;
+        assert (SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
+                SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+            report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.X.DICIDE_TYPE." severity FAILURE;
+        assert (SHAPE.Y.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
+                SHAPE.Y.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+            report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.Y.DICIDE_TYPE." severity FAILURE;
+        param.ELEM_BITS   := ELEM_BITS;
+        param.ATRB_BITS   := IMAGE_STREAM_ATRB_BITS;
+        param.INFO_BITS   := INFO_BITS;
+        param.SHAPE       := SHAPE;
+        param.STRIDE      := STRIDE;
+        param.BORDER_TYPE := BORDER_TYPE;
+        param.DATA        := NEW_IMAGE_STREAM_DATA_FIELD(ELEM_BITS, INFO_BITS, SHAPE);
         return param;
     end function;
     -------------------------------------------------------------------------------
@@ -1160,8 +1305,8 @@ package body IMAGE_TYPES is
         alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
         variable  atrb_c_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_c_data  := input_data((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_C_FIELD.LO downto
-                                   (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_C_FIELD.LO);
+        atrb_c_data  := input_data((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_FIELD.C.LO downto
+                                   (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_FIELD.C.LO);
         return atrb_c_data;
     end function;
     
@@ -1226,8 +1371,8 @@ package body IMAGE_TYPES is
         alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
         variable  atrb_x_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_x_data  := input_data((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_X_FIELD.LO downto
-                                   (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_X_FIELD.LO);
+        atrb_x_data  := input_data((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_FIELD.X.LO downto
+                                   (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_FIELD.X.LO);
         return atrb_x_data;
     end function;
     
@@ -1292,8 +1437,8 @@ package body IMAGE_TYPES is
         alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
         variable  atrb_y_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_y_data  := input_data((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_Y_FIELD.LO downto
-                                   (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_Y_FIELD.LO);
+        atrb_y_data  := input_data((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_FIELD.Y.LO downto
+                                   (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_FIELD.Y.LO);
         return atrb_y_data;
     end function;
     
@@ -1342,8 +1487,8 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_C_FIELD.LO downto
-             (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_C_FIELD.LO) := ATRB;
+        DATA((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_FIELD.C.LO downto
+             (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_FIELD.C.LO) := ATRB;
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1374,8 +1519,8 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_X_FIELD.LO downto
-             (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_X_FIELD.LO) := ATRB;
+        DATA((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_FIELD.X.LO downto
+             (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_FIELD.X.LO) := ATRB;
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1406,8 +1551,8 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_Y_FIELD.LO downto
-             (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_Y_FIELD.LO) := ATRB;
+        DATA((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_FIELD.Y.LO downto
+             (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_FIELD.Y.LO) := ATRB;
     end procedure;
 
     -------------------------------------------------------------------------------
