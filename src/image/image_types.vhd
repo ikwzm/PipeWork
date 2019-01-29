@@ -46,7 +46,6 @@ package IMAGE_TYPES is
     --! @brief Image の形(各辺の大きさ)の各辺をどのように算出するかを決めるタイプの定義
     -------------------------------------------------------------------------------
     type      IMAGE_SHAPE_SIDE_DICIDE_TYPE is (
-                  IMAGE_SHAPE_SIDE_DICIDE_NONE     , -- 辺が存在しない.
                   IMAGE_SHAPE_SIDE_DICIDE_CONSTANT , -- 指定された値で常に静的に決める.
                   IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL , -- 外部からの信号で動的に決める.
                   IMAGE_SHAPE_SIDE_DICIDE_AUTO       -- 各モジュール内部で自動計算する.
@@ -56,6 +55,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     type      IMAGE_SHAPE_SIDE_TYPE        is record
                   DICIDE_TYPE              :  IMAGE_SHAPE_SIDE_DICIDE_TYPE;
+                  DATA_ATRB                :  boolean;  -- DATA ATRB FIELD を持っているか否か
                   LO                       :  integer;  -- 範囲の最小値(DICIDE_CONSTANTのみ設定可)
                   HI                       :  integer;  -- 範囲の最大値(DICIDE_CONSTANTのみ設定可)
                   SIZE                     :  integer;  -- 辺の大きさ  (DICIDE_CONSTANTのみ有効)
@@ -64,11 +64,10 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_NONE                        return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer) return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
 
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)を定義するレコードタイプ.
@@ -265,7 +264,7 @@ package IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               std_logic_vector;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data から Channel の属性を取り出す関数
+    --! @brief Image Stream Data から C Channel の属性を取り出す関数
     -------------------------------------------------------------------------------
     function  GET_ATRB_C_VECTOR_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -285,6 +284,29 @@ package IMAGE_TYPES is
     function  GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
                   C                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector;
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から D Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_D_VECTOR_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  D_LO              :  integer;
+                  D_HI              :  integer;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_VECTOR;
+    function  GET_ATRB_D_VECTOR_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_VECTOR;
+    function  GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_TYPE;
+    function  GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  integer;
                   DATA              :  std_logic_vector)
                   return               std_logic_vector;
     -------------------------------------------------------------------------------
@@ -344,7 +366,7 @@ package IMAGE_TYPES is
                   ELEMENT           :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data に Channel の属性を追加するプロシージャ
+    --! @brief Image Stream Data に C Channel の属性を追加するプロシージャ
     -------------------------------------------------------------------------------
     procedure SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                   PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
@@ -354,6 +376,19 @@ package IMAGE_TYPES is
     procedure SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                   PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
                   C                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector);
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data に D Channel の属性を追加するプロシージャ
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  in    integer;
+                  ATRB              :  in    IMAGE_STREAM_ATRB_TYPE;
+        variable  DATA              :  inout std_logic_vector);
+    procedure SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  in    integer;
                   ATRB              :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
@@ -383,7 +418,7 @@ package IMAGE_TYPES is
                   ATRB              :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Attribute が Channel の最初であることを示す関数
+    --! @brief Image Stream Attribute が C Channel の最初であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_C_VECTOR_IS_START(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -391,11 +426,27 @@ package IMAGE_TYPES is
                   VALID             :  boolean := TRUE)
                   return               boolean;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Attribute が Channel の最後であることを示す関数
+    --! @brief Image Stream Attribute が C Channel の最後であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_C_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
                   ATRB_C            :  IMAGE_STREAM_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Attribute が D Channel の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_ATRB_D_VECTOR_IS_START(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  ATRB_D            :  IMAGE_STREAM_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Attribute が C Channel の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_ATRB_D_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  ATRB_D            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := TRUE)
                   return               boolean;
     -------------------------------------------------------------------------------
@@ -455,7 +506,7 @@ package IMAGE_TYPES is
                   VALID             :  boolean := FALSE)
                   return               boolean;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream が Channel の最初であることを示す関数
+    --! @brief Image Stream が C Channel の最初であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_START_C(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -463,9 +514,25 @@ package IMAGE_TYPES is
                   VALID             :  boolean := TRUE)
                   return               boolean;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream が Channel の最後であることを示す関数
+    --! @brief Image Stream が C Channel の最後であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_C(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  DATA              :  std_logic_vector;
+                  VALID             :  boolean := TRUE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream が D Channel の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_DATA_IS_START_D(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  DATA              :  std_logic_vector;
+                  VALID             :  boolean := TRUE)
+                  return               boolean;
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream が C Channel の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_DATA_IS_LAST_D(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := TRUE)
@@ -542,6 +609,7 @@ package body IMAGE_TYPES is
                  HI          :  integer;
                  SIZE        :  integer;
                  MAX_SIZE    :  integer;
+                 DATA_ATRB   :  boolean;
                  DICIDE_TYPE :  IMAGE_SHAPE_SIDE_DICIDE_TYPE)
                  return         IMAGE_SHAPE_SIDE_TYPE
     is 
@@ -551,6 +619,7 @@ package body IMAGE_TYPES is
         param.HI          := HI;
         param.SIZE        := SIZE;
         param.MAX_SIZE    := MAX_SIZE;
+        param.DATA_ATRB   := DATA_ATRB;
         param.DICIDE_TYPE := DICIDE_TYPE;
         return param;
     end function;
@@ -563,14 +632,15 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE_SIDE(
                    LO          => 0,
                    HI          => 0,
-                   SIZE        => 0,
-                   MAX_SIZE    => 0,
-                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_NONE);
+                   SIZE        => 1,
+                   MAX_SIZE    => 1,
+                   DATA_ATRB   => FALSE,
+                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
         return NEW_IMAGE_SHAPE_SIDE(
@@ -578,12 +648,13 @@ package body IMAGE_TYPES is
                    HI          => MAX_SIZE-1,
                    SIZE        => MAX_SIZE,
                    MAX_SIZE    => MAX_SIZE,
+                   DATA_ATRB   => DATA_ATRB,
                    DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_AUTO);
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
         return NEW_IMAGE_SHAPE_SIDE(
@@ -591,12 +662,13 @@ package body IMAGE_TYPES is
                    HI          => MAX_SIZE-1,
                    SIZE        => MAX_SIZE,
                    MAX_SIZE    => MAX_SIZE,
+                   DATA_ATRB   => DATA_ATRB,
                    DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL);
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
         if (SIZE > 0) then
@@ -605,6 +677,7 @@ package body IMAGE_TYPES is
                        HI          => SIZE-1,
                        SIZE        => SIZE,
                        MAX_SIZE    => SIZE,
+                       DATA_ATRB   => DATA_ATRB,
                        DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
         else
             return NEW_IMAGE_SHAPE_SIDE_NONE;
@@ -613,15 +686,20 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
-        return NEW_IMAGE_SHAPE_SIDE(
-                   LO          => LO,
-                   HI          => HI,
-                   SIZE        => HI-LO+1,
-                   MAX_SIZE    => HI-LO+1,
-                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+        if (HI >= LO) then
+            return NEW_IMAGE_SHAPE_SIDE(
+                       LO          => LO,
+                       HI          => HI,
+                       SIZE        => HI-LO+1,
+                       MAX_SIZE    => HI-LO+1,
+                       DATA_ATRB   => DATA_ATRB,
+                       DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+        else
+            return NEW_IMAGE_SHAPE_SIDE_NONE;
+        end if;
     end function;
 
     -------------------------------------------------------------------------------
@@ -686,7 +764,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => NEW_IMAGE_SHAPE_SIDE_AUTO(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE   ,
                    X         => NEW_IMAGE_SHAPE_SIDE_AUTO(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_AUTO(Y));
     end function;
@@ -725,7 +803,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
                    X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
     end function;
@@ -737,8 +815,8 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_NONE,
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   C         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
                    X         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_EXTERNAL(Y));
     end function;
@@ -764,7 +842,7 @@ package body IMAGE_TYPES is
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
                    C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
                    X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
     end function;
@@ -776,8 +854,8 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_NONE,
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE,
+                   C         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
                    X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
                    Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
     end function;
@@ -865,49 +943,41 @@ package body IMAGE_TYPES is
         variable  atrb_field        :  IMAGE_STREAM_DATA_ATRB_FIELD_TYPE;
         variable  next_field_lo     :  integer;
         variable  atrb_field_size   :  integer;
-        function  NEW_IMAGE_STREAM_DATA_ATRB_RANGE(LO, SIZE: integer) return IMAGE_VECTOR_RANGE_TYPE is
-        begin
-            if (SIZE > 0) then
-                return NEW_IMAGE_VECTOR_RANGE(LO => LO, HI => LO + IMAGE_STREAM_ATRB_BITS*SIZE - 1);
-            else
-                return NEW_IMAGE_VECTOR_RANGE(LO => LO, HI => LO, SIZE => 0);
-            end if;
-        end function;
     begin
         atrb_field.LO   := LO;
         next_field_lo   := LO;
         atrb_field_size := 0;
-        if (SHAPE.C.SIZE > 0) then
-            atrb_field.C    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.C.SIZE);
+        if (SHAPE.C.DATA_ATRB = TRUE) then
+            atrb_field.C    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.C.SIZE - 1);
             next_field_lo   := atrb_field.C.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.C.SIZE;
         end if;
-        if (SHAPE.D.SIZE > 0) then
-            atrb_field.D    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.D.SIZE);
+        if (SHAPE.D.DATA_ATRB = TRUE) then
+            atrb_field.D    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.D.SIZE - 1);
             next_field_lo   := atrb_field.D.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.D.SIZE;
         end if;
-        if (SHAPE.X.SIZE > 0) then
-            atrb_field.X    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.X.SIZE);
+        if (SHAPE.X.DATA_ATRB = TRUE) then
+            atrb_field.X    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.X.SIZE - 1);
             next_field_lo   := atrb_field.X.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.X.SIZE;
         end if;
-        if (SHAPE.Y.SIZE > 0) then
-            atrb_field.Y    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.Y.SIZE);
+        if (SHAPE.Y.DATA_ATRB = TRUE) then
+            atrb_field.Y    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.Y.SIZE - 1);
             next_field_lo   := atrb_field.Y.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.Y.SIZE;
         end if;
-        if (SHAPE.C.SIZE <= 0) then
-            atrb_field.C    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.C.SIZE);
+        if (SHAPE.C.DATA_ATRB = FALSE) then
+            atrb_field.C    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
-        if (SHAPE.D.SIZE <= 0) then
-            atrb_field.D    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.D.SIZE);
+        if (SHAPE.D.DATA_ATRB = FALSE) then
+            atrb_field.D    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
-        if (SHAPE.X.SIZE <= 0) then
-            atrb_field.X    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.X.SIZE);
+        if (SHAPE.X.DATA_ATRB = FALSE) then
+            atrb_field.X    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
-        if (SHAPE.Y.SIZE <= 0) then
-            atrb_field.Y    := NEW_IMAGE_STREAM_DATA_ATRB_RANGE(next_field_lo, SHAPE.Y.SIZE);
+        if (SHAPE.Y.DATA_ATRB = FALSE) then
+            atrb_field.Y    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
         if (atrb_field_size > 0) then
             atrb_field.SIZE := atrb_field_size;
@@ -979,17 +1049,13 @@ package body IMAGE_TYPES is
     begin
         assert (ELEM_BITS > 0)
             report "NEW_IMAGE_STREAM_PARAM: Error ELEM_BITS=0." severity FAILURE;
-        assert (SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
-                SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+        assert (SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT)
             report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.C.DICIDE_TYPE." severity FAILURE;
-        assert (SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
-                SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+        assert (SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT)
             report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.D.DICIDE_TYPE." severity FAILURE;
-        assert (SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
-                SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+        assert (SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT)
             report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.X.DICIDE_TYPE." severity FAILURE;
-        assert (SHAPE.Y.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT or
-                SHAPE.Y.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_NONE    )
+        assert (SHAPE.Y.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT)
             report "NEW_IMAGE_STREAM_PARAM: Error SHAPE.Y.DICIDE_TYPE." severity FAILURE;
         param.ELEM_BITS   := ELEM_BITS;
         param.ATRB_BITS   := IMAGE_STREAM_ATRB_BITS;
@@ -1235,6 +1301,76 @@ package body IMAGE_TYPES is
     end function;
 
     -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から 指定された辺(C,D,X,Y)の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    --  * Image Stream Data に 対応する辺の属性フィールドが存在するならば、DATA から
+    --    対応するフィールドのベクタを取り出す.
+    --  * Image Stream Data に 対応する辺の属性フィールドが存在しないならば、ダミー
+    --    データとして .VALID=TRUE,START=TRUE,LAST=TRUE の属性を返す.
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  SHAPE_SIDE        :  IMAGE_SHAPE_SIDE_TYPE;
+                  ATRB_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
+                  POS               :  integer;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_TYPE
+    is
+        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
+        variable  atrb              :  IMAGE_STREAM_ATRB_TYPE;
+    begin
+        if (ATRB_FIELD.SIZE > 0) then
+            assert (POS >= SHAPE_SIDE.LO and POS <= SHAPE_SIDE.HI)
+                report "GET_ATRB_FROM_IMAGE_STREAM_DATA: Out of range." severity FAILURE;
+            atrb := to_atrb_type(input_data((POS-SHAPE_SIDE.LO+1)*PARAM.ATRB_BITS-1+ATRB_FIELD.LO downto
+                                            (POS-SHAPE_SIDE.LO  )*PARAM.ATRB_BITS  +ATRB_FIELD.LO));
+        else
+            atrb.VALID := TRUE;
+            atrb.START := (POS <= SHAPE_SIDE.LO);
+            atrb.LAST  := (POS >= SHAPE_SIDE.HI);
+        end if;
+        return atrb;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から 指定された辺(C,D,X,Y)の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  SHAPE_SIDE        :  IMAGE_SHAPE_SIDE_TYPE;
+                  ATRB_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
+                  LO                :  integer;
+                  HI                :  integer;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_VECTOR
+    is
+        variable  atrb_vector       :  IMAGE_STREAM_ATRB_VECTOR(LO to HI);
+    begin
+        for i in atrb_vector'range loop
+            atrb_vector(i) := GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, SHAPE_SIDE, ATRB_FIELD, i, DATA);
+        end loop;
+        return atrb_vector;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から 指定された辺(C,D,X,Y)の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  SHAPE_SIDE        :  IMAGE_SHAPE_SIDE_TYPE;
+                  ATRB_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_VECTOR
+    is
+        variable  atrb_vector       :  IMAGE_STREAM_ATRB_VECTOR(SHAPE_SIDE.LO to SHAPE_SIDE.HI);
+    begin
+        for i in atrb_vector'range loop
+            atrb_vector(i) := GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, SHAPE_SIDE, ATRB_FIELD, i, DATA);
+        end loop;
+        return atrb_vector;
+    end function;
+
+    -------------------------------------------------------------------------------
     --! @brief Image Stream Data から要素を取り出す関数
     -------------------------------------------------------------------------------
     function  GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
@@ -1260,7 +1396,7 @@ package body IMAGE_TYPES is
     end function;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data から Channel の属性を取り出す関数
+    --! @brief Image Stream Data から C Channel の属性を取り出す関数
     -------------------------------------------------------------------------------
     function  GET_ATRB_C_VECTOR_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1269,49 +1405,24 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_VECTOR
     is
-        variable  atrb_c_vector     :  IMAGE_STREAM_ATRB_VECTOR(C_LO to C_HI);
     begin
-        for i in atrb_c_vector'range loop
-            atrb_c_vector(i) := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(PARAM, i, DATA);
-        end loop;
-        return atrb_c_vector;
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.C, PARAM.DATA.ATRB_FIELD.C, C_LO, C_HI, DATA);
     end function;
     
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data から Channel の属性を取り出す関数
+    --! @brief Image Stream Data から C Channel の属性を取り出す関数
     -------------------------------------------------------------------------------
     function  GET_ATRB_C_VECTOR_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_VECTOR
     is
-        variable  atrb_c_vector     :  IMAGE_STREAM_ATRB_VECTOR(PARAM.SHAPE.C.LO to PARAM.SHAPE.C.HI);
     begin
-        for i in atrb_c_vector'range loop
-            atrb_c_vector(i) := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(PARAM, i, DATA);
-        end loop;
-        return atrb_c_vector;
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.C, PARAM.DATA.ATRB_FIELD.C, DATA);
     end function;
     
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data から Channel の属性を取り出す関数
-    -------------------------------------------------------------------------------
-    function  GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
-                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  C                 :  integer;
-                  DATA              :  std_logic_vector)
-                  return               std_logic_vector
-    is
-        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
-        variable  atrb_c_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
-    begin
-        atrb_c_data  := input_data((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_FIELD.C.LO downto
-                                   (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_FIELD.C.LO);
-        return atrb_c_data;
-    end function;
-    
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream Data から Channel の属性を取り出す関数
+    --! @brief Image Stream Data から C Channel の属性を取り出す関数
     -------------------------------------------------------------------------------
     function  GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1319,10 +1430,73 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_TYPE
     is
-        variable  atrb_c_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_c_data := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(PARAM, C, DATA);
-        return to_atrb_type(atrb_c_data);
+        return GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.C, PARAM.DATA.ATRB_FIELD.C, C, DATA);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から C Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  C                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector
+    is
+    begin
+        return to_std_logic_vector(GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.C, PARAM.DATA.ATRB_FIELD.C, C, DATA));
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から D Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_D_VECTOR_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  D_LO              :  integer;
+                  D_HI              :  integer;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_VECTOR
+    is
+    begin
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.D, PARAM.DATA.ATRB_FIELD.D, D_LO, D_HI, DATA);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から D Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_D_VECTOR_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_VECTOR
+    is
+    begin
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.D, PARAM.DATA.ATRB_FIELD.D, DATA);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から D Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               IMAGE_STREAM_ATRB_TYPE
+    is
+    begin
+        return GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.D, PARAM.DATA.ATRB_FIELD.D, D, DATA);
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data から D Channel の属性を取り出す関数
+    -------------------------------------------------------------------------------
+    function  GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  integer;
+                  DATA              :  std_logic_vector)
+                  return               std_logic_vector
+    is
+    begin
+        return to_std_logic_vector(GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.D, PARAM.DATA.ATRB_FIELD.D, D, DATA));
     end function;
     
     -------------------------------------------------------------------------------
@@ -1335,12 +1509,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_VECTOR
     is
-        variable  atrb_x_vector     :  IMAGE_STREAM_ATRB_VECTOR(X_LO to X_HI);
     begin
-        for i in atrb_x_vector'range loop
-            atrb_x_vector(i) := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(PARAM, i, DATA);
-        end loop;
-        return atrb_x_vector;
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.X, PARAM.DATA.ATRB_FIELD.X, X_LO, X_HI, DATA);
     end function;
     
     -------------------------------------------------------------------------------
@@ -1351,12 +1521,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_VECTOR
     is
-        variable  atrb_x_vector     :  IMAGE_STREAM_ATRB_VECTOR(PARAM.SHAPE.X.LO to PARAM.SHAPE.X.HI);
     begin
-        for i in atrb_x_vector'range loop
-            atrb_x_vector(i) := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(PARAM, i, DATA);
-        end loop;
-        return atrb_x_vector;
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.X, PARAM.DATA.ATRB_FIELD.X, DATA);
     end function;
     
     -------------------------------------------------------------------------------
@@ -1368,12 +1534,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               std_logic_vector
     is
-        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
-        variable  atrb_x_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_x_data  := input_data((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_FIELD.X.LO downto
-                                   (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_FIELD.X.LO);
-        return atrb_x_data;
+        return to_std_logic_vector(GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.X, PARAM.DATA.ATRB_FIELD.X, X, DATA));
     end function;
     
     -------------------------------------------------------------------------------
@@ -1385,10 +1547,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_TYPE
     is
-        variable  atrb_x_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_x_data := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(PARAM, X, DATA);
-        return to_atrb_type(atrb_x_data);
+        return GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.X, PARAM.DATA.ATRB_FIELD.X, X, DATA);
     end function;
     
     -------------------------------------------------------------------------------
@@ -1401,12 +1561,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_VECTOR
     is
-        variable  atrb_y_vector     :  IMAGE_STREAM_ATRB_VECTOR(Y_LO to Y_HI);
     begin
-        for i in atrb_y_vector'range loop
-            atrb_y_vector(i) := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(PARAM, i, DATA);
-        end loop;
-        return atrb_y_vector;
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.Y, PARAM.DATA.ATRB_FIELD.Y, Y_LO, Y_HI, DATA);
     end function;
     
     -------------------------------------------------------------------------------
@@ -1417,12 +1573,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_VECTOR
     is
-        variable  atrb_y_vector     :  IMAGE_STREAM_ATRB_VECTOR(PARAM.SHAPE.Y.LO to PARAM.SHAPE.Y.HI);
     begin
-        for i in atrb_y_vector'range loop
-            atrb_y_vector(i) := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(PARAM, i, DATA);
-        end loop;
-        return atrb_y_vector;
+        return GET_ATRB_VECTOR_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.Y, PARAM.DATA.ATRB_FIELD.Y, DATA);
     end function;
     
     -------------------------------------------------------------------------------
@@ -1434,12 +1586,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               std_logic_vector
     is
-        alias     input_data        :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0) is DATA;
-        variable  atrb_y_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_y_data  := input_data((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1+PARAM.DATA.ATRB_FIELD.Y.LO downto
-                                   (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS  +PARAM.DATA.ATRB_FIELD.Y.LO);
-        return atrb_y_data;
+        return to_std_logic_vector(GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.Y, PARAM.DATA.ATRB_FIELD.Y, Y, DATA));
     end function;
     
     -------------------------------------------------------------------------------
@@ -1451,10 +1599,8 @@ package body IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               IMAGE_STREAM_ATRB_TYPE
     is
-        variable  atrb_y_data       :  std_logic_vector(PARAM.ATRB_BITS-1 downto 0);
     begin
-        atrb_y_data := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(PARAM, Y, DATA);
-        return to_atrb_type(atrb_y_data);
+        return GET_ATRB_FROM_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.Y, PARAM.DATA.ATRB_FIELD.Y, Y, DATA);
     end function;
     
     -------------------------------------------------------------------------------
@@ -1478,7 +1624,31 @@ package body IMAGE_TYPES is
     end procedure;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data に Column の属性を追加するプロシージャ
+    --! @brief Image Stream Data に 辺(C,D,X,Y) の属性を追加するプロシージャ
+    --  * Image Stream Data に 対応する辺の属性フィールドが存在するならば、DATA の
+    --    対応するフィールドにデータを上書きする.
+    --  * Image Stream Data に 対応する辺の属性フィールドが存在しないならば、なにも
+    --    しない.
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
+                  SHAPE_SIDE        :  in    IMAGE_SHAPE_SIDE_TYPE;
+                  ATRB_FIELD        :  in    IMAGE_VECTOR_RANGE_TYPE;
+                  POS               :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector)
+    is
+    begin
+        if (ATRB_FIELD.SIZE > 0) then
+            assert (POS >= SHAPE_SIDE.LO and POS <= SHAPE_SIDE.HI)
+                report "SET_ATRB_TO_IMAGE_STREAM_DATA: Out of range." severity FAILURE;
+            DATA((POS-SHAPE_SIDE.LO+1)*PARAM.ATRB_BITS-1 + ATRB_FIELD.LO downto
+                 (POS-SHAPE_SIDE.LO  )*PARAM.ATRB_BITS   + ATRB_FIELD.LO) := ATRB;
+        end if;
+    end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data に C Channel の属性を追加するプロシージャ
     -------------------------------------------------------------------------------
     procedure SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                   PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
@@ -1487,12 +1657,11 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((C-PARAM.SHAPE.C.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_FIELD.C.LO downto
-             (C-PARAM.SHAPE.C.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_FIELD.C.LO) := ATRB;
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.C, PARAM.DATA.ATRB_FIELD.C, C, ATRB, DATA);
     end procedure;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data に Column の属性を追加するプロシージャ
+    --! @brief Image Stream Data に C Channel の属性を追加するプロシージャ
     -------------------------------------------------------------------------------
     procedure SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                   PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
@@ -1501,12 +1670,33 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        SET_ATRB_C_TO_IMAGE_STREAM_DATA(
-            PARAM => PARAM,
-            C     => C,
-            ATRB  => to_std_logic_vector(ATRB),
-            DATA  => DATA
-        );
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.C, PARAM.DATA.ATRB_FIELD.C, C, to_std_logic_vector(ATRB), DATA);
+    end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data に D Channel の属性を追加するプロシージャ
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  in    integer;
+                  ATRB              :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector)
+    is
+    begin
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.D, PARAM.DATA.ATRB_FIELD.D, D, ATRB, DATA);
+    end procedure;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Data に D Channel の属性を追加するプロシージャ
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
+                  D                 :  in    integer;
+                  ATRB              :  in    IMAGE_STREAM_ATRB_TYPE;
+        variable  DATA              :  inout std_logic_vector)
+    is
+    begin
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.D, PARAM.DATA.ATRB_FIELD.D, D, to_std_logic_vector(ATRB), DATA);
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1519,8 +1709,7 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((X-PARAM.SHAPE.X.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_FIELD.X.LO downto
-             (X-PARAM.SHAPE.X.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_FIELD.X.LO) := ATRB;
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.X, PARAM.DATA.ATRB_FIELD.X, X, ATRB, DATA);
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1533,12 +1722,7 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        SET_ATRB_X_TO_IMAGE_STREAM_DATA(
-            PARAM => PARAM,
-            X     => X,
-            ATRB  => to_std_logic_vector(ATRB),
-            DATA  => DATA
-        );
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.X, PARAM.DATA.ATRB_FIELD.X, X, to_std_logic_vector(ATRB), DATA);
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1551,8 +1735,7 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA((Y-PARAM.SHAPE.Y.LO+1)*PARAM.ATRB_BITS-1 + PARAM.DATA.ATRB_FIELD.Y.LO downto
-             (Y-PARAM.SHAPE.Y.LO  )*PARAM.ATRB_BITS   + PARAM.DATA.ATRB_FIELD.Y.LO) := ATRB;
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.Y, PARAM.DATA.ATRB_FIELD.Y, Y, ATRB, DATA);
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1565,12 +1748,7 @@ package body IMAGE_TYPES is
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
-            PARAM => PARAM,
-            Y     => Y,
-            ATRB  => to_std_logic_vector(ATRB),
-            DATA  => DATA
-        );
+        SET_ATRB_TO_IMAGE_STREAM_DATA(PARAM, PARAM.SHAPE.Y, PARAM.DATA.ATRB_FIELD.Y, Y, to_std_logic_vector(ATRB), DATA);
     end procedure;
 
     -------------------------------------------------------------------------------
@@ -1611,7 +1789,7 @@ package body IMAGE_TYPES is
     end function;
         
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Attribute が Channel の最初であることを示す関数
+    --! @brief Image Stream Attribute が C Channel の最初であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_C_VECTOR_IS_START(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1629,7 +1807,7 @@ package body IMAGE_TYPES is
     end function;
     
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Attribute が Channel の最後であることを示す関数
+    --! @brief Image Stream Attribute が C Channel の最後であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_C_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1640,6 +1818,42 @@ package body IMAGE_TYPES is
     begin
         return CHECK_IMAGE_STREAM_ATRB(
                   ATRB_VEC => ATRB_C(PARAM.SHAPE.C.LO to PARAM.SHAPE.C.HI),
+                  VALID    => VALID,
+                  START    => FALSE,
+                  LAST     => TRUE
+               );
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Attribute が D Channel の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_ATRB_D_VECTOR_IS_START(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  ATRB_D            :  IMAGE_STREAM_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean
+    is
+    begin
+        return CHECK_IMAGE_STREAM_ATRB(
+                  ATRB_VEC => ATRB_D(PARAM.SHAPE.D.LO to PARAM.SHAPE.D.LO),
+                  VALID    => VALID,
+                  START    => TRUE,
+                  LAST     => FALSE
+               );
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream Attribute が C Channel の最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_ATRB_D_VECTOR_IS_LAST(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  ATRB_D            :  IMAGE_STREAM_ATRB_VECTOR;
+                  VALID             :  boolean := TRUE)
+                  return               boolean
+    is
+    begin
+        return CHECK_IMAGE_STREAM_ATRB(
+                  ATRB_VEC => ATRB_D(PARAM.SHAPE.D.LO to PARAM.SHAPE.D.HI),
                   VALID    => VALID,
                   START    => FALSE,
                   LAST     => TRUE
@@ -1799,7 +2013,7 @@ package body IMAGE_TYPES is
     end function;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Stream が Channel の最初であることを示す関数
+    --! @brief Image Stream が C Channel の最初であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_START_C(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1807,7 +2021,6 @@ package body IMAGE_TYPES is
                   VALID             :  boolean := TRUE)
                   return               boolean
     is
-        variable  atrb_c            :  IMAGE_STREAM_ATRB_TYPE;
     begin 
         return IMAGE_STREAM_ATRB_C_VECTOR_IS_START(
                   PARAM   => PARAM, 
@@ -1820,7 +2033,7 @@ package body IMAGE_TYPES is
     end function;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Stream が Channel の有効な最後であることを示す関数
+    --! @brief Image Stream が C Channel の有効な最後であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_C(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1832,6 +2045,46 @@ package body IMAGE_TYPES is
         return IMAGE_STREAM_ATRB_C_VECTOR_IS_LAST(
                   PARAM   => PARAM, 
                   ATRB_C  => GET_ATRB_C_VECTOR_FROM_IMAGE_STREAM_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream が D Channel の最初であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_DATA_IS_START_D(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  DATA              :  std_logic_vector;
+                  VALID             :  boolean := TRUE)
+                  return               boolean
+    is
+    begin 
+        return IMAGE_STREAM_ATRB_D_VECTOR_IS_START(
+                  PARAM   => PARAM, 
+                  ATRB_D  => GET_ATRB_D_VECTOR_FROM_IMAGE_STREAM_DATA(
+                                 PARAM => PARAM,
+                                 DATA  => DATA
+                             ),
+                  VALID   => VALID
+               );
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream が C Channel の有効な最後であることを示す関数
+    -------------------------------------------------------------------------------
+    function  IMAGE_STREAM_DATA_IS_LAST_D(
+                  PARAM             :  IMAGE_STREAM_PARAM_TYPE;
+                  DATA              :  std_logic_vector;
+                  VALID             :  boolean := TRUE)
+                  return               boolean
+    is
+    begin
+        return IMAGE_STREAM_ATRB_D_VECTOR_IS_LAST(
+                  PARAM   => PARAM, 
+                  ATRB_D  => GET_ATRB_D_VECTOR_FROM_IMAGE_STREAM_DATA(
                                  PARAM => PARAM,
                                  DATA  => DATA
                              ),
