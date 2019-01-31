@@ -195,13 +195,13 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
     --! @brief 内部で一単位として扱うチャネルの数を算出する関数
     -------------------------------------------------------------------------------
-    function  CALC_CHANNEL_SIZE return integer is
+    function  CALC_CHANNEL_SIZE(SIZE) return integer is
     begin
-        if    (C_SIZE = 0) then
+        if    (SIZE = 0) then
             return gcd(I_PARAM.SHAPE.C.SIZE, O_PARAM.SHAPE.C.SIZE);
-        elsif (I_PARAM.SHAPE.C.SIZE mod C_SIZE = 0) and
-              (O_PARAM.SHAPE.C.SIZE mod C_SIZE = 0) then
-            return C_SIZE;
+        elsif (I_PARAM.SHAPE.C.SIZE mod SIZE = 0) and
+              (O_PARAM.SHAPE.C.SIZE mod SIZE = 0) then
+            return SIZE;
         else
             return 1;
         end if;
@@ -209,7 +209,7 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
     --! @brief 内部で一単位として扱うチャネルの数
     -------------------------------------------------------------------------------
-    constant  CHANNEL_SIZE  :  integer := CALC_CHANNEL_SIZE;
+    constant  CHANNEL_SIZE  :  integer := CALC_CHANNEL_SIZE(C_SIZE);
     -------------------------------------------------------------------------------
     --! @brief 整数の最小値を求める関数.
     -------------------------------------------------------------------------------
