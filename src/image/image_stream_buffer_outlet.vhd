@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Outlet Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの出力側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/28
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -47,6 +47,7 @@ entity  IMAGE_STREAM_BUFFER_OUTLET is
     generic (
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
@@ -62,10 +63,6 @@ entity  IMAGE_STREAM_BUFFER_OUTLET is
                           --! メモリのライン数を指定する.
                           integer := 1;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -121,8 +118,6 @@ entity  IMAGE_STREAM_BUFFER_OUTLET is
         O_DATA          : --! @brief OUTPUT STREAM DATA :
                           --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_D_ATRB        : --! @brief OUTPUT CHANNEL ATTRIBUTE :
-                          out IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
         O_VALID         : --! @brief OUTPUT STREAM DATA VALID :
                           --! 出力ストリームデータ有効信号.
                           --! * O_DATAが有効であることを示す.
@@ -162,56 +157,36 @@ architecture RTL of IMAGE_STREAM_BUFFER_OUTLET is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  C_PARAM       :  IMAGE_STREAM_PARAM_TYPE
+    constant  T_PARAM       :  IMAGE_STREAM_PARAM_TYPE
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => O_PARAM.ELEM_BITS,
-                                   INFO_BITS    => D_UNROLL*IMAGE_STREAM_ATRB_BITS,
+                                   INFO_BITS    => O_PARAM.INFO_BITS,
                                    SHAPE        => NEW_IMAGE_SHAPE(
                                                        ELEM_BITS => O_PARAM.ELEM_BITS,
-                                                       C         => O_PARAM.SHAPE.C  ,
-                                                       X         => O_PARAM.SHAPE.X  ,
-                                                       Y         => O_PARAM.SHAPE.Y
+                                                       C         => O_PARAM.SHAPE.C,
+                                                       D         => O_PARAM.SHAPE.D,
+                                                       X         => O_PARAM.SHAPE.X,
+                                                       Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE)
                                                    ),
                                    STRIDE       => O_PARAM.STRIDE,
                                    BORDER_TYPE  => O_PARAM.BORDER_TYPE
                                );
-    signal    c_data        :  std_logic_vector(C_PARAM.DATA.SIZE-1 downto 0);
-    signal    c_valid       :  std_logic;
-    signal    c_ready       :  std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    constant  L_PARAM       :  IMAGE_STREAM_PARAM_TYPE
-                            := NEW_IMAGE_STREAM_PARAM(
-                                   ELEM_BITS    => C_PARAM.ELEM_BITS,
-                                   INFO_BITS    => C_PARAM.INFO_BITS,
-                                   SHAPE        => NEW_IMAGE_SHAPE(
-                                                       ELEM_BITS => C_PARAM.ELEM_BITS,
-                                                       C         => C_PARAM.SHAPE.C,
-                                                       X         => C_PARAM.SHAPE.X,
-                                                       Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE)
-                                                   ),
-                                   STRIDE       => C_PARAM.STRIDE,
-                                   BORDER_TYPE  => C_PARAM.BORDER_TYPE
-                               );
-    signal    l_data        :  std_logic_vector(L_PARAM.DATA.SIZE-1 downto 0);
-    signal    l_valid       :  std_logic;
-    signal    l_ready       :  std_logic;
-    signal    l_start       :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    t_data        :  std_logic_vector(T_PARAM.DATA.SIZE-1 downto 0);
+    signal    t_valid       :  std_logic;
+    signal    t_ready       :  std_logic;
+    signal    t_start       :  std_logic_vector(LINE_SIZE-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
     BANK_READER: IMAGE_STREAM_BUFFER_BANK_MEMORY_READER
         generic map (                            -- 
-            O_PARAM         => L_PARAM         , -- 
+            O_PARAM         => T_PARAM         , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE    , --   
             CHANNEL_SIZE    => CHANNEL_SIZE    , --   
             BANK_SIZE       => BANK_SIZE       , --   
             LINE_SIZE       => LINE_SIZE       , --   
             MAX_D_SIZE      => MAX_D_SIZE      , --
-            D_STRIDE        => D_STRIDE        , --
-            D_UNROLL        => D_UNROLL        , --
             BUF_ADDR_BITS   => BUF_ADDR_BITS   , --   
             BUF_DATA_BITS   => BUF_DATA_BITS     --
         )                                        -- 
@@ -225,7 +200,7 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_LINE_START    => l_start         , -- In  :
+            I_LINE_START    => t_start         , -- In  :
             I_LINE_ATRB     => I_LINE_ATRB     , -- In  :
             X_SIZE          => X_SIZE          , -- In  :
             D_SIZE          => D_SIZE          , -- In  :
@@ -234,9 +209,9 @@ begin
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_DATA          => l_data          , -- Out :
-            O_VALID         => l_valid         , -- Out :
-            O_READY         => l_ready         , -- Out :
+            O_DATA          => t_data          , -- Out :
+            O_VALID         => t_valid         , -- Out :
+            O_READY         => t_ready         , -- Out :
         ---------------------------------------------------------------------------
         -- バッファメモリ I/F
         ---------------------------------------------------------------------------
@@ -248,8 +223,8 @@ begin
     -------------------------------------------------------------------------------
     LINE_SELECTOR: IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR
         generic map (                            -- 
-            I_PARAM         => L_PARAM         , -- 
-            O_PARAM         => C_PARAM         , -- 
+            I_PARAM         => T_PARAM         , -- 
+            O_PARAM         => O_PARAM         , -- 
             LINE_SIZE       => LINE_SIZE       , --   
             QUEUE_SIZE      => 1                 --   
         )                                        -- 
@@ -263,16 +238,16 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_LINE_START    => l_start         , -- Out :
-            I_DATA          => l_data          , -- In  :
-            I_VALID         => l_valid         , -- In  :
-            I_READY         => l_ready         , -- Out :
+            I_LINE_START    => t_start         , -- Out :
+            I_DATA          => t_data          , -- In  :
+            I_VALID         => t_valid         , -- In  :
+            I_READY         => t_ready         , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_DATA          => c_data          , -- Out :
-            O_VALID         => c_valid         , -- Out :
-            O_READY         => c_ready         , -- In  :
+            O_DATA          => O_DATA          , -- Out :
+            O_VALID         => O_VALID         , -- Out :
+            O_READY         => O_READY         , -- In  :
             O_LAST          => O_LAST          , -- In  :
             O_FEED          => O_FEED          , -- In  :
             O_RETURN        => O_RETURN        , -- In  :
@@ -284,23 +259,4 @@ begin
             LINE_FEED       => I_LINE_FEED     , -- Out :
             LINE_RETURN     => I_LINE_RETURN     -- Out :
     );
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    process (c_data)
-        alias info :  std_logic_vector(C_PARAM.INFO_BITS-1 downto 0) is c_data(C_PARAM.DATA.INFO_FIELD.HI downto C_PARAM.DATA.INFO_FIELD.LO);
-    begin
-        for d_pos in 0 to D_UNROLL-1 loop
-            O_D_ATRB(d_pos).VALID <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_VALID_POS) = '1');
-            O_D_ATRB(d_pos).START <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_START_POS) = '1');
-            O_D_ATRB(d_pos).LAST  <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_LAST_POS ) = '1');
-        end loop;
-    end process;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    O_DATA(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) <= c_data(C_PARAM.DATA.ELEM_FIELD.HI downto C_PARAM.DATA.ELEM_FIELD.LO);
-    O_DATA(O_PARAM.DATA.ATRB_FIELD.HI downto O_PARAM.DATA.ATRB_FIELD.LO) <= c_data(C_PARAM.DATA.ATRB_FIELD.HI downto C_PARAM.DATA.ATRB_FIELD.LO);
-    O_VALID <= c_valid;
-    c_ready <= O_READY;
 end RTL;

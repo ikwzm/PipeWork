@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ書込み側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/28
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -49,14 +49,15 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER is
     generic (
         I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
-                          --! I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
+                          --! * I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
+                          --! * チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
@@ -567,6 +568,7 @@ begin
                                     elem_data := GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                                      PARAM   => I_PARAM,
                                                      C       => c_pos,
+                                                     D       => I_PARAM.SHAPE.D.LO,
                                                      X       => x_pos,
                                                      Y       => line+I_PARAM.SHAPE.Y.LO,
                                                      DATA    => I_DATA
@@ -574,6 +576,7 @@ begin
                                     SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                                                      PARAM   => TEMP_PARAM,
                                                      C       => c_pos,
+                                                     D       => I_PARAM.SHAPE.D.LO,
                                                      X       => 0,
                                                      Y       => 0,
                                                      ELEMENT => elem_data,

@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ読み出し側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -49,6 +49,8 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
     generic (
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
+                          --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
@@ -64,10 +66,6 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
                           --! メモリのライン数を指定する.
                           integer := 1;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -303,7 +301,7 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
     signal    d_loop_done           :  std_logic;
     signal    d_loop_first          :  std_logic;
     signal    d_loop_last           :  std_logic;
-    signal    d_loop_valid          :  std_logic_vector(D_UNROLL-1 downto 0);
+    signal    d_loop_valid          :  std_logic_vector(O_PARAM.SHAPE.D.SIZE-1 downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -423,8 +421,8 @@ begin
         ---------------------------------------------------------------------------
         COUNT: UNROLLED_LOOP_COUNTER                     -- 
             generic map (                                -- 
-                STRIDE          => D_STRIDE            , --
-                UNROLL          => D_UNROLL            , --
+                STRIDE          => 1                   , --
+                UNROLL          => O_PARAM.SHAPE.D.SIZE, --
                 MAX_LOOP_SIZE   => MAX_D_SIZE          , --
                 MAX_LOOP_INIT   => 0                     --
             )                                            -- 
@@ -605,7 +603,7 @@ begin
              c_loop_first, c_loop_last, c_loop_valid , curr_bank_select, BUF_DATA, line_atrb_vector)
         variable bank_data  :  std_logic_vector (BUF_DATA_BITS    -1 downto 0);
         variable o_data     :  std_logic_vector (O_PARAM.DATA.SIZE-1 downto 0);
-        variable d_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
+        variable d_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.D.SIZE-1);
         variable c_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.C.SIZE-1);
         function GEN_ATRB_VECTOR(LOOP_VALID: std_logic_vector; LOOP_FIRST, LOOP_LAST: std_logic) return IMAGE_STREAM_ATRB_VECTOR is
             variable  atrb_vector  :  IMAGE_STREAM_ATRB_VECTOR(0 to LOOP_VALID'length-1);
@@ -654,6 +652,7 @@ begin
                     SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                         PARAM   => O_PARAM,
                         C       => c_pos + O_PARAM.SHAPE.C.LO,
+                        D       =>         O_PARAM.SHAPE.D.LO,
                         X       => x_pos,
                         Y       => line  + O_PARAM.SHAPE.Y.LO,
                         ELEMENT => bank_data((c_pos+1)*O_PARAM.ELEM_BITS-1 downto (c_pos)*O_PARAM.ELEM_BITS),
@@ -688,22 +687,13 @@ begin
         --
         ---------------------------------------------------------------------------
         d_atrb := GEN_ATRB_VECTOR(d_loop_valid, d_loop_first, d_loop_last);
-        for d_pos in 0 to D_UNROLL-1 loop
-            if d_atrb(d_pos).VALID then
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_VALID_POS) := '1';
-            else
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_VALID_POS) := '0';
-            end if;
-            if d_atrb(d_pos).START then
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_START_POS) := '1';
-            else
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_START_POS) := '0';
-            end if;
-            if d_atrb(d_pos).LAST  then
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_LAST_POS ) := '1';
-            else
-                o_data(O_PARAM.DATA.INFO_FIELD.LO+(d_pos*IMAGE_STREAM_ATRB_BITS)+IMAGE_STREAM_ATRB_LAST_POS ) := '0';
-            end if;
+        for d_pos in 0 to O_PARAM.SHAPE.D.SIZE-1 loop
+            SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                PARAM => O_PARAM,
+                D     => d_pos + O_PARAM.SHAPE.D.LO,
+                ATRB  => d_atrb(d_pos),
+                DATA  => o_data
+            );
         end loop;
         ---------------------------------------------------------------------------
         --

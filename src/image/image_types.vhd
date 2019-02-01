@@ -2,7 +2,7 @@
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
 --!     @version 1.8.0
---!     @date    2019/1/28
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -134,6 +134,19 @@ package IMAGE_TYPES is
     function  NEW_IMAGE_VECTOR_RANGE(SIZE :integer) return IMAGE_VECTOR_RANGE_TYPE;
 
     -------------------------------------------------------------------------------
+    --! @brief Image Data(一回の転送単位) の要素フィールドを定義するレコードタイプ.
+    -------------------------------------------------------------------------------
+    type      IMAGE_STREAM_DATA_ELEM_FIELD_TYPE is record
+                  LO                :  integer;
+                  HI                :  integer;
+                  SIZE              :  integer;
+                  C_SIZE            :  integer;
+                  D_SIZE            :  integer;
+                  X_SIZE            :  integer;
+                  Y_SIZE            :  integer;
+    end record;
+
+    -------------------------------------------------------------------------------
     --! @brief Image Data(一回の転送単位) の属性フィールドを定義するレコードタイプ.
     -------------------------------------------------------------------------------
     type      IMAGE_STREAM_DATA_ATRB_FIELD_TYPE is record
@@ -153,7 +166,7 @@ package IMAGE_TYPES is
                   LO                :  integer;
                   HI                :  integer;
                   SIZE              :  integer;
-                  ELEM_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
+                  ELEM_FIELD        :  IMAGE_STREAM_DATA_ELEM_FIELD_TYPE;
                   INFO_FIELD        :  IMAGE_VECTOR_RANGE_TYPE;
                   ATRB_FIELD        :  IMAGE_STREAM_DATA_ATRB_FIELD_TYPE;
     end record;
@@ -259,6 +272,7 @@ package IMAGE_TYPES is
     function  GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
                   C                 :  integer;
+                  D                 :  integer;
                   X                 :  integer;
                   Y                 :  integer;
                   DATA              :  std_logic_vector)
@@ -361,6 +375,7 @@ package IMAGE_TYPES is
     procedure SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                   PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
                   C                 :  in    integer;
+                  D                 :  in    integer;
                   X                 :  in    integer;
                   Y                 :  in    integer;
                   ELEMENT           :  in    std_logic_vector;
@@ -912,24 +927,23 @@ package body IMAGE_TYPES is
     function  NEW_IMAGE_STREAM_DATA_ELEM_FIELD(
                   ELEM_BITS         :  integer;
                   SHAPE             :  IMAGE_SHAPE_TYPE)
-                  return               IMAGE_VECTOR_RANGE_TYPE
+                  return               IMAGE_STREAM_DATA_ELEM_FIELD_TYPE
     is
+        variable  elem_field        :  IMAGE_STREAM_DATA_ELEM_FIELD_TYPE;
         variable  elem_size         :  integer;
     begin
-        elem_size     := 1;
-        if (SHAPE.C.SIZE > 0) then
-            elem_size := elem_size * SHAPE.C.SIZE;
-        end if;
-        if (SHAPE.D.SIZE > 0) then
-            elem_size := elem_size * SHAPE.D.SIZE;
-        end if;
-        if (SHAPE.X.SIZE > 0) then
-            elem_size := elem_size * SHAPE.X.SIZE;
-        end if;
-        if (SHAPE.Y.SIZE > 0) then
-            elem_size := elem_size * SHAPE.Y.SIZE;
-        end if;
-        return NEW_IMAGE_VECTOR_RANGE(ELEM_BITS * elem_size);
+        elem_size         := 1;
+        elem_field.C_SIZE := 1;
+        elem_size         := elem_size * SHAPE.C.SIZE;
+        elem_field.D_SIZE := 0;
+        elem_field.X_SIZE := elem_size;
+        elem_size         := elem_size * SHAPE.X.SIZE;
+        elem_field.Y_SIZE := elem_size;
+        elem_size         := elem_size * SHAPE.Y.SIZE;
+        elem_field.SIZE   := ELEM_BITS * elem_size;
+        elem_field.LO     := 0;
+        elem_field.HI     := elem_field.SIZE-1;
+        return elem_field;
     end function;
 
     -------------------------------------------------------------------------------
@@ -1376,6 +1390,7 @@ package body IMAGE_TYPES is
     function  GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
                   C                 :  integer;
+                  D                 :  integer;
                   X                 :  integer;
                   Y                 :  integer;
                   DATA              :  std_logic_vector)
@@ -1386,12 +1401,14 @@ package body IMAGE_TYPES is
         variable  element           :  std_logic_vector(PARAM.ELEM_BITS           -1 downto 0);
     begin
         elem_data := input_data(PARAM.DATA.ELEM_FIELD.HI downto PARAM.DATA.ELEM_FIELD.LO);
-        element   := elem_data(((Y-PARAM.SHAPE.Y.LO)*PARAM.SHAPE.X.SIZE*PARAM.SHAPE.C.SIZE +
-                                (X-PARAM.SHAPE.X.LO)*PARAM.SHAPE.C.SIZE                    +
-                                (C-PARAM.SHAPE.C.LO)                                       + 1)*PARAM.ELEM_BITS-1 downto
-                               ((Y-PARAM.SHAPE.Y.LO)*PARAM.SHAPE.X.SIZE*PARAM.SHAPE.C.SIZE +
-                                (X-PARAM.SHAPE.X.LO)*PARAM.SHAPE.C.SIZE                    +
-                                (C-PARAM.SHAPE.C.LO)                                          )*PARAM.ELEM_BITS);
+        element   := elem_data(((Y-PARAM.SHAPE.Y.LO)*PARAM.DATA.ELEM_FIELD.Y_SIZE +
+                                (X-PARAM.SHAPE.X.LO)*PARAM.DATA.ELEM_FIELD.X_SIZE +
+                                (D-PARAM.SHAPE.D.LO)*PARAM.DATA.ELEM_FIELD.D_SIZE +
+                                (C-PARAM.SHAPE.C.LO)*PARAM.DATA.ELEM_FIELD.C_SIZE + 1)*PARAM.ELEM_BITS-1 downto
+                               ((Y-PARAM.SHAPE.Y.LO)*PARAM.DATA.ELEM_FIELD.Y_SIZE +
+                                (X-PARAM.SHAPE.X.LO)*PARAM.DATA.ELEM_FIELD.X_SIZE +
+                                (D-PARAM.SHAPE.D.LO)*PARAM.DATA.ELEM_FIELD.D_SIZE +
+                                (C-PARAM.SHAPE.C.LO)*PARAM.DATA.ELEM_FIELD.C_SIZE    )*PARAM.ELEM_BITS);
         return element;
     end function;
 
@@ -1609,18 +1626,21 @@ package body IMAGE_TYPES is
     procedure SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                   PARAM             :  in    IMAGE_STREAM_PARAM_TYPE;
                   C                 :  in    integer;
+                  D                 :  in    integer;
                   X                 :  in    integer;
                   Y                 :  in    integer;
                   ELEMENT           :  in    std_logic_vector;
         variable  DATA              :  inout std_logic_vector)
     is
     begin
-        DATA(((Y-PARAM.SHAPE.Y.LO)*PARAM.SHAPE.X.SIZE*PARAM.SHAPE.C.SIZE +
-              (X-PARAM.SHAPE.X.LO)*PARAM.SHAPE.C.SIZE                    +
-              (C-PARAM.SHAPE.C.LO)                                       +1)*PARAM.ELEM_BITS -1 + PARAM.DATA.ELEM_FIELD.LO downto
-             ((Y-PARAM.SHAPE.Y.LO)*PARAM.SHAPE.X.SIZE*PARAM.SHAPE.C.SIZE +
-              (X-PARAM.SHAPE.X.LO)*PARAM.SHAPE.C.SIZE                    +
-              (C-PARAM.SHAPE.C.LO)                                         )*PARAM.ELEM_BITS    + PARAM.DATA.ELEM_FIELD.LO) := ELEMENT;
+        DATA(((Y-PARAM.SHAPE.Y.LO)*PARAM.DATA.ELEM_FIELD.Y_SIZE +
+              (X-PARAM.SHAPE.X.LO)*PARAM.DATA.ELEM_FIELD.X_SIZE +
+              (D-PARAM.SHAPE.D.LO)*PARAM.DATA.ELEM_FIELD.D_SIZE +
+              (C-PARAM.SHAPE.C.LO)*PARAM.DATA.ELEM_FIELD.C_SIZE +1)*PARAM.ELEM_BITS -1 + PARAM.DATA.ELEM_FIELD.LO downto
+             ((Y-PARAM.SHAPE.Y.LO)*PARAM.DATA.ELEM_FIELD.Y_SIZE +
+              (X-PARAM.SHAPE.X.LO)*PARAM.DATA.ELEM_FIELD.X_SIZE +
+              (D-PARAM.SHAPE.D.LO)*PARAM.DATA.ELEM_FIELD.D_SIZE +
+              (C-PARAM.SHAPE.C.LO)*PARAM.DATA.ELEM_FIELD.C_SIZE   )*PARAM.ELEM_BITS    + PARAM.DATA.ELEM_FIELD.LO) := ELEMENT;
     end procedure;
 
     -------------------------------------------------------------------------------

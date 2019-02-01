@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Intake Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの入力側モジュール
 --!     @version 1.8.0
---!     @date    2019/1/28
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -47,6 +47,8 @@ entity  IMAGE_STREAM_BUFFER_INTAKE is
     generic (
         I_PARAM         : --! @brief INPUT  IMAGE STREAM PARAMETER :
                           --! 入力側のイメージストリームのパラメータを指定する.
+                          --! * I_PARAM.INFO_BITS = 0 でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
@@ -147,56 +149,33 @@ architecture RTL of IMAGE_STREAM_BUFFER_INTAKE is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  C_PARAM       :  IMAGE_STREAM_PARAM_TYPE
+    constant  T_PARAM       :  IMAGE_STREAM_PARAM_TYPE
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => I_PARAM.ELEM_BITS,
                                    SHAPE        => NEW_IMAGE_SHAPE(
                                                        ELEM_BITS => I_PARAM.ELEM_BITS,
-                                                       C         => I_PARAM.SHAPE.C  ,
-                                                       X         => I_PARAM.SHAPE.X  ,
-                                                       Y         => I_PARAM.SHAPE.Y
+                                                       C         => I_PARAM.SHAPE.C,
+                                                       D         => I_PARAM.SHAPE.D,
+                                                       X         => I_PARAM.SHAPE.X,
+                                                       Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE)
                                                    ),
                                    STRIDE       => I_PARAM.STRIDE,
                                    BORDER_TYPE  => I_PARAM.BORDER_TYPE
                                );
-    signal    c_data        :  std_logic_vector(C_PARAM.DATA.SIZE-1 downto 0);
-    signal    c_valid       :  std_logic;
-    signal    c_ready       :  std_logic;
-    -------------------------------------------------------------------------------
-    --
-    -------------------------------------------------------------------------------
-    constant  L_PARAM       :  IMAGE_STREAM_PARAM_TYPE
-                            := NEW_IMAGE_STREAM_PARAM(
-                                   ELEM_BITS    => C_PARAM.ELEM_BITS,
-                                   SHAPE        => NEW_IMAGE_SHAPE(
-                                                       ELEM_BITS => C_PARAM.ELEM_BITS,
-                                                       C         => C_PARAM.SHAPE.C,
-                                                       X         => C_PARAM.SHAPE.X,
-                                                       Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE)
-                                                   ),
-                                   STRIDE       => C_PARAM.STRIDE,
-                                   BORDER_TYPE  => C_PARAM.BORDER_TYPE
-                               );
-    signal    l_data        :  std_logic_vector(L_PARAM.DATA.SIZE-1 downto 0);
-    signal    l_valid       :  std_logic;
-    signal    l_ready       :  std_logic;
-    signal    l_enable      :  std_logic;
-    signal    l_start       :  std_logic_vector(LINE_SIZE-1 downto 0);
-    signal    l_done        :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    t_data        :  std_logic_vector(T_PARAM.DATA.SIZE-1 downto 0);
+    signal    t_valid       :  std_logic;
+    signal    t_ready       :  std_logic;
+    signal    t_enable      :  std_logic;
+    signal    t_start       :  std_logic_vector(LINE_SIZE-1 downto 0);
+    signal    t_done        :  std_logic_vector(LINE_SIZE-1 downto 0);
 begin
-    -------------------------------------------------------------------------------
-    -- 
-    -------------------------------------------------------------------------------
-    c_data  <= I_DATA;
-    c_valid <= I_VALID;
-    I_READY <= c_ready;
     -------------------------------------------------------------------------------
     -- LINE_SELECTOR :
     -------------------------------------------------------------------------------
     LINE_SELECTOR: IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR
         generic map (                                -- 
-            I_PARAM         => C_PARAM             , -- 
-            O_PARAM         => L_PARAM             , -- 
+            I_PARAM         => I_PARAM             , -- 
+            O_PARAM         => T_PARAM             , -- 
             LINE_SIZE       => LINE_SIZE           , --   
             QUEUE_SIZE      => 1                     --   
         )                                            -- 
@@ -210,18 +189,18 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_DATA          => c_data              , -- In  :
-            I_VALID         => c_valid             , -- In  :
-            I_READY         => c_ready             , -- Out :
+            I_DATA          => I_DATA              , -- In  :
+            I_VALID         => I_VALID             , -- In  :
+            I_READY         => I_READY             , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 Stream I/F
         ---------------------------------------------------------------------------
-            O_ENABLE        => l_enable            , -- Out :
-            O_LINE_START    => l_start             , -- Out :
-            O_LINE_DONE     => l_done              , -- Out :
-            O_DATA          => l_data              , -- Out :
-            O_VALID         => l_valid             , -- Out :
-            O_READY         => l_ready             , -- In  :
+            O_ENABLE        => t_enable            , -- Out :
+            O_LINE_START    => t_start             , -- Out :
+            O_LINE_DONE     => t_done              , -- Out :
+            O_DATA          => t_data              , -- Out :
+            O_VALID         => t_valid             , -- Out :
+            O_READY         => t_ready             , -- In  :
         ---------------------------------------------------------------------------
         -- ライン制御 I/F
         ---------------------------------------------------------------------------
@@ -235,7 +214,7 @@ begin
     -------------------------------------------------------------------------------
     BANK_WRITER: IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER
         generic map (                                -- 
-            I_PARAM         => L_PARAM             , -- 
+            I_PARAM         => T_PARAM             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
             CHANNEL_SIZE    => CHANNEL_SIZE        , --   
             BANK_SIZE       => BANK_SIZE           , --   
@@ -253,12 +232,12 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_ENABLE        => l_enable            , -- In  :
-            I_LINE_START    => l_start             , -- In  :
-            I_LINE_DONE     => l_done              , -- Out :
-            I_DATA          => l_data              , -- In  :
-            I_VALID         => l_valid             , -- In  :
-            I_READY         => l_ready             , -- Out :
+            I_ENABLE        => t_enable            , -- In  :
+            I_LINE_START    => t_start             , -- In  :
+            I_LINE_DONE     => t_done              , -- Out :
+            I_DATA          => t_data              , -- In  :
+            I_VALID         => t_valid             , -- In  :
+            I_READY         => t_ready             , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------

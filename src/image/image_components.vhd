@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/01/29                                                      --
+--!     @date    2019/02/01                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -320,24 +320,23 @@ component IMAGE_STREAM_BUFFER
     generic (
         I_PARAM         : --! @brief INPUT  IMAGE STREAM PARAMETER :
                           --! 入力側のイメージストリームのパラメータを指定する.
-                          --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.ELEM_BITS = O_PARAM.ELEM_BITS でなければならない.
+                          --! * I_PARAM.INFO_BITS = 0 でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
                           --! 出力側のイメージストリームのパラメータを指定する.
-                          --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向の要素数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
+                          --! * チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
@@ -401,8 +400,6 @@ component IMAGE_STREAM_BUFFER
         O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
                           --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_D_ATRB        : --! @brief OUTPUT CHANNEL ATTRIBUTE :
-                          out IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
         O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
                           --! 出力ストリームデータ有効信号.
                           --! * O_DATA が有効であることを示す.
@@ -425,16 +422,21 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
     generic (
         I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
+                          --! * I_PARAM.ELEM_BITS = O_PARAM.ELEM_BITS でなければならない.
+                          --! * I_PARAM.INFO_BITS = 0 でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
+                          --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
+                          --! * チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
@@ -443,10 +445,6 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
                           --! メモリのライン数を指定する.
                           integer := 1;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
@@ -528,14 +526,15 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER
     generic (
         I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
-                          --! I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
+                          --! * I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
+                          --! * チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
@@ -610,6 +609,8 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_READER
     generic (
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
+                          --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
@@ -625,10 +626,6 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_READER
                           --! メモリのライン数を指定する.
                           integer := 1;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -699,6 +696,8 @@ component IMAGE_STREAM_BUFFER_INTAKE
     generic (
         I_PARAM         : --! @brief INPUT  IMAGE STREAM PARAMETER :
                           --! 入力側のイメージストリームのパラメータを指定する.
+                          --! * I_PARAM.INFO_BITS = 0 でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
@@ -793,13 +792,17 @@ component IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR
         I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
                           --! * I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.INFO_BITS    = 0                    でなければならない.
                           --! * I_PARAM.SHAPE.C.SIZE = O_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = O_PARAM.SHAPE.D.SIZE でなければならない.
                           --! * I_PARAM.SHAPE.X.SIZE = O_PARAM.SHAPE.X.SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
                           --! * O_PARAM.ELEM_SIZE    = I_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.INFO_BITS    = 0                    でなければならない.
                           --! * O_PARAM.SHAPE.C.SIZE = I_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.D.SIZE = I_PARAM.SHAPE.D.SIZE でなければならない.
                           --! * O_PARAM.SHAPE.X.SIZE = I_PARAM.SHAPE.X.SIZE でなければならない.
                           --! * O_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
@@ -893,6 +896,7 @@ component IMAGE_STREAM_BUFFER_OUTLET
     generic (
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
@@ -908,10 +912,6 @@ component IMAGE_STREAM_BUFFER_OUTLET
                           --! メモリのライン数を指定する.
                           integer := 1;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -967,8 +967,6 @@ component IMAGE_STREAM_BUFFER_OUTLET
         O_DATA          : --! @brief OUTPUT STREAM DATA :
                           --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_D_ATRB        : --! @brief OUTPUT CHANNEL ATTRIBUTE :
-                          out IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
         O_VALID         : --! @brief OUTPUT STREAM DATA VALID :
                           --! 出力ストリームデータ有効信号.
                           --! * O_DATAが有効であることを示す.
@@ -1001,8 +999,19 @@ component IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR
     generic (
         I_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
+                          --! * I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.INFO_BITS    = 0                    でなければならない.
+                          --! * I_PARAM.SHAPE.C.SIZE = O_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = O_PARAM.SHAPE.D.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.X.SIZE = O_PARAM.SHAPE.X.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
+                          --! * O_PARAM.ELEM_SIZE    = I_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.INFO_BITS    = 0                    でなければならない.
+                          --! * O_PARAM.SHAPE.C.SIZE = I_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.D.SIZE = I_PARAM.SHAPE.D.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.X.SIZE = I_PARAM.SHAPE.X.SIZE でなければならない.
                           --! 出力側のストリームのパラメータを指定する.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :

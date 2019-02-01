@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Module :
 --!              異なる形のイメージストリームを継ぐためのバッファ
 --!     @version 1.8.0
---!     @date    2019/1/28
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -47,24 +47,23 @@ entity  IMAGE_STREAM_BUFFER is
     generic (
         I_PARAM         : --! @brief INPUT  IMAGE STREAM PARAMETER :
                           --! 入力側のイメージストリームのパラメータを指定する.
-                          --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.ELEM_BITS = O_PARAM.ELEM_BITS でなければならない.
+                          --! * I_PARAM.INFO_BITS = 0 でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
                           --! 出力側のイメージストリームのパラメータを指定する.
-                          --! I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向の要素数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
+                          --! * チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
@@ -128,8 +127,6 @@ entity  IMAGE_STREAM_BUFFER is
         O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
                           --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        O_D_ATRB        : --! @brief OUTPUT CHANNEL ATTRIBUTE :
-                          out IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
         O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
                           --! 出力ストリームデータ有効信号.
                           --! * O_DATA が有効であることを示す.
@@ -268,6 +265,7 @@ architecture RTL of IMAGE_STREAM_BUFFER is
                                   SHAPE       => NEW_IMAGE_SHAPE(
                                                      ELEM_BITS => I_PARAM.ELEM_BITS,
                                                      C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(lcm_shape_c_size),
+                                                     D         => I_PARAM.SHAPE.D,
                                                      X         => I_PARAM.SHAPE.X,
                                                      Y         => I_PARAM.SHAPE.Y
                                                  ),
@@ -285,6 +283,7 @@ architecture RTL of IMAGE_STREAM_BUFFER is
                                   SHAPE       => NEW_IMAGE_SHAPE(
                                                      ELEM_BITS => param.I_CHAN_PARAM.ELEM_BITS,
                                                      C         => param.I_CHAN_PARAM.SHAPE.C,
+                                                     D         => param.I_CHAN_PARAM.SHAPE.D,
                                                      X         => param.I_CHAN_PARAM.SHAPE.X,
                                                      Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(param.LINE_SIZE)
                                                  ),
@@ -297,7 +296,6 @@ architecture RTL of IMAGE_STREAM_BUFFER is
         ---------------------------------------------------------------------------
         param.O_EXIT_PARAM := NEW_IMAGE_STREAM_PARAM(
                                   ELEM_BITS   => O_PARAM.ELEM_BITS,
-                                  INFO_BITS   => D_UNROLL*IMAGE_STREAM_ATRB_BITS,
                                   SHAPE       => O_PARAM.SHAPE,
                                   STRIDE      => O_PARAM.STRIDE,
                                   BORDER_TYPE => O_PARAM.BORDER_TYPE
@@ -312,6 +310,7 @@ architecture RTL of IMAGE_STREAM_BUFFER is
                                   SHAPE       => NEW_IMAGE_SHAPE(
                                                      ELEM_BITS => param.O_EXIT_PARAM.ELEM_BITS,
                                                      C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(lcm_shape_c_size),
+                                                     D         => param.O_EXIT_PARAM.SHAPE.D  ,
                                                      X         => param.O_EXIT_PARAM.SHAPE.X  ,
                                                      Y         => param.O_EXIT_PARAM.SHAPE.Y
                                                  ),
@@ -330,6 +329,7 @@ architecture RTL of IMAGE_STREAM_BUFFER is
                                   SHAPE       => NEW_IMAGE_SHAPE(
                                                      ELEM_BITS => param.O_CHAN_PARAM.ELEM_BITS,
                                                      C         => param.O_CHAN_PARAM.SHAPE.C  ,
+                                                     D         => param.O_CHAN_PARAM.SHAPE.D  ,
                                                      X         => param.O_CHAN_PARAM.SHAPE.X  ,
                                                      Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(param.LINE_SIZE)
                                                  ),
@@ -386,7 +386,6 @@ architecture RTL of IMAGE_STREAM_BUFFER is
     --
     -------------------------------------------------------------------------------
     signal    o_exit_data           :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.SIZE-1 downto 0);
-    signal    o_exit_d_atrb         :  IMAGE_STREAM_ATRB_VECTOR(0 to D_UNROLL-1);
     signal    o_exit_valid          :  std_logic;
     signal    o_exit_ready          :  std_logic;
     signal    o_exit_line_last      :  std_logic;
@@ -491,8 +490,6 @@ begin
                 BANK_SIZE       => PARAM.BANK_SIZE     , --   
                 LINE_SIZE       => PARAM.LINE_SIZE     , --   
                 MAX_D_SIZE      => MAX_D_SIZE          , --   
-                D_STRIDE        => D_STRIDE            , --   
-                D_UNROLL        => D_UNROLL            , --
                 QUEUE_SIZE      => PARAM.O_BANK_QUEUE  , -- 
                 ID              => ID                    --   
             )                                            -- 
@@ -616,25 +613,12 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    process (o_exit_data)
-        alias info :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.INFO_FIELD.SIZE-1 downto 0) is o_exit_data(PARAM.O_EXIT_PARAM.DATA.INFO_FIELD.HI downto PARAM.O_EXIT_PARAM.DATA.INFO_FIELD.LO);
-        alias elem :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.ELEM_FIELD.SIZE-1 downto 0) is o_exit_data(PARAM.O_EXIT_PARAM.DATA.ELEM_FIELD.HI downto PARAM.O_EXIT_PARAM.DATA.ELEM_FIELD.LO);
-        alias atrb :  std_logic_vector(PARAM.O_EXIT_PARAM.DATA.ATRB_FIELD.SIZE-1 downto 0) is o_exit_data(PARAM.O_EXIT_PARAM.DATA.ATRB_FIELD.HI downto PARAM.O_EXIT_PARAM.DATA.ATRB_FIELD.LO);
-    begin
-        O_DATA(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) <= elem;
-        O_DATA(O_PARAM.DATA.ATRB_FIELD.HI downto O_PARAM.DATA.ATRB_FIELD.LO) <= atrb;
-        for d_pos in 0 to D_UNROLL-1 loop
-            o_exit_d_atrb(d_pos).VALID <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_VALID_POS) = '1');
-            o_exit_d_atrb(d_pos).START <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_START_POS) = '1');
-            o_exit_d_atrb(d_pos).LAST  <= (info(d_pos*IMAGE_STREAM_ATRB_BITS + IMAGE_STREAM_ATRB_LAST_POS ) = '1');
-        end loop;
-    end process;
-    O_D_ATRB <= o_exit_d_atrb;
-    O_VALID  <= o_exit_valid;
-    o_exit_ready  <= O_READY;
+    O_DATA            <= o_exit_data;
+    O_VALID           <= o_exit_valid;
+    o_exit_ready      <= O_READY;
     o_exit_line_last  <= '1' when (IMAGE_STREAM_DATA_IS_LAST_C(PARAM.O_EXIT_PARAM, o_exit_data)) and
+                                  (IMAGE_STREAM_DATA_IS_LAST_D(PARAM.O_EXIT_PARAM, o_exit_data)) and
                                   (IMAGE_STREAM_DATA_IS_LAST_X(PARAM.O_EXIT_PARAM, o_exit_data)) and
-                                  (o_exit_d_atrb(o_exit_d_atrb'high).LAST                      ) and
                                   (o_exit_valid = '1' and o_exit_ready = '1'                   ) else '0';
     o_exit_frame_last <= '1' when (o_exit_line_last = '1'                                      ) and
                                   (IMAGE_STREAM_DATA_IS_LAST_Y(PARAM.O_EXIT_PARAM, o_exit_data)) else '0';

@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リモジュール
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -49,16 +49,21 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
     generic (
         I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
+                          --! * I_PARAM.ELEM_BITS = O_PARAM.ELEM_BITS でなければならない.
+                          --! * I_PARAM.INFO_BITS = 0 でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
+                          --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
+                          --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
         CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
                           --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
+                          --! * チャネル数が可変の場合は 0 を指定する.
                           integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
@@ -67,10 +72,6 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
                           --! メモリのライン数を指定する.
                           integer := 1;
         MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
-        D_STRIDE        : --! @brief OUTPUT CHANNEL STRIDE SIZE :
-                          integer := 1;
-        D_UNROLL        : --! @brief OUTPUT CHANNEL UNROLL SIZE :
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
@@ -299,8 +300,6 @@ begin
             BANK_SIZE       => BANK_SIZE           , --   
             LINE_SIZE       => LINE_SIZE           , --   
             MAX_D_SIZE      => MAX_D_SIZE          , --
-            D_STRIDE        => D_STRIDE            , --
-            D_UNROLL        => D_UNROLL            , --
             BUF_ADDR_BITS   => BUF_ADDR_BITS       , --   
             BUF_DATA_BITS   => BUF_DATA_BITS       , --
             QUEUE_SIZE      => QUEUE_SIZE            -- 

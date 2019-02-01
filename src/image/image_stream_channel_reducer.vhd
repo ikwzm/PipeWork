@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Channel Reducer MODULE :
 --!              異なるチャネル数のイメージストリームを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/28
+--!     @date    2019/1/30
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -195,7 +195,7 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
     -------------------------------------------------------------------------------
     --! @brief 内部で一単位として扱うチャネルの数を算出する関数
     -------------------------------------------------------------------------------
-    function  CALC_CHANNEL_SIZE(SIZE) return integer is
+    function  CALC_CHANNEL_SIZE(SIZE: integer) return integer is
     begin
         if    (SIZE = 0) then
             return gcd(I_PARAM.SHAPE.C.SIZE, O_PARAM.SHAPE.C.SIZE);
@@ -226,9 +226,13 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS => I_PARAM.ELEM_BITS,
                                    INFO_BITS => I_PARAM.INFO_BITS,
-                                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(CHANNEL_SIZE),
-                                   X         => I_PARAM.SHAPE.X,
-                                   Y         => I_PARAM.SHAPE.Y
+                                   SHAPE     => NEW_IMAGE_SHAPE(
+                                                    ELEM_BITS => I_PARAM.ELEM_BITS,
+                                                    C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(CHANNEL_SIZE),
+                                                    D         => I_PARAM.SHAPE.D,
+                                                    X         => I_PARAM.SHAPE.X,
+                                                    Y         => I_PARAM.SHAPE.Y
+                                                )
                                );
     constant  WORD_BITS     :  integer := U_PARAM.DATA.SIZE;
     -------------------------------------------------------------------------------
@@ -611,31 +615,36 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
     function  i_data_to_words(I_DATA: std_logic_vector) return WORD_VECTOR is
         variable  words             :  WORD_VECTOR(0 to I_WIDTH-1);
         variable  t_data            :  std_logic_vector(U_PARAM.DATA.SIZE-1 downto 0);
+        variable  c_atrb            :  IMAGE_STREAM_ATRB_TYPE;
+        variable  d_atrb            :  IMAGE_STREAM_ATRB_TYPE;
         variable  x_atrb            :  IMAGE_STREAM_ATRB_TYPE;
         variable  y_atrb            :  IMAGE_STREAM_ATRB_TYPE;
-        variable  c_atrb            :  IMAGE_STREAM_ATRB_TYPE;
         variable  t_valid           :  boolean;
         variable  t_last            :  boolean;
     begin 
         for i in 0 to I_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
-                    for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                        SET_ELEMENT_TO_IMAGE_STREAM_DATA(
-                            PARAM   => U_PARAM,
-                            C       => c_pos,
-                            X       => x_pos,
-                            Y       => y_pos,
-                            ELEMENT => GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
-                                           PARAM  => I_PARAM,
-                                           C      => c_pos+i*U_PARAM.SHAPE.C.SIZE,
-                                           X      => x_pos,
-                                           Y      => y_pos,
-                                           DATA   => I_DATA),
-                            DATA    => t_data
-                        );
-                    end loop;
-                end loop;
+            for d_pos in U_PARAM.SHAPE.D.LO to U_PARAM.SHAPE.D.HI loop
+            for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
+            for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
+                SET_ELEMENT_TO_IMAGE_STREAM_DATA(
+                    PARAM   => U_PARAM,
+                    C       => c_pos,
+                    D       => d_pos,
+                    X       => x_pos,
+                    Y       => y_pos,
+                    ELEMENT => GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
+                                   PARAM  => I_PARAM,
+                                   C      => c_pos+i*U_PARAM.SHAPE.C.SIZE,
+                                   D      => d_pos,
+                                   X      => x_pos,
+                                   Y      => y_pos,
+                                   DATA   => I_DATA),
+                    DATA    => t_data
+                );
+            end loop;
+            end loop;
+            end loop;
             end loop;
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
                 c_atrb := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(
@@ -647,6 +656,19 @@ architecture RTL of IMAGE_STREAM_CHANNEL_REDUCER is
                               PARAM => U_PARAM,
                               C     => c_pos,
                               ATRB  => c_atrb,
+                              DATA  => t_data
+                );
+            end loop;
+            for d_pos in U_PARAM.SHAPE.D.LO to U_PARAM.SHAPE.D.HI loop
+                d_atrb := GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
+                              PARAM => I_PARAM,
+                              D     => d_pos,
+                              DATA  => I_DATA
+                          );
+                SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                              PARAM => U_PARAM,
+                              D     => d_pos,
+                              ATRB  => d_atrb,
                               DATA  => t_data
                 );
             end loop;
@@ -980,29 +1002,34 @@ begin
     process(curr_queue, o_c_atrb)
         variable  outlet_data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
         variable  c_atrb        :  IMAGE_STREAM_ATRB_TYPE;
+        variable  d_atrb        :  IMAGE_STREAM_ATRB_TYPE;
         variable  x_atrb        :  IMAGE_STREAM_ATRB_TYPE;
         variable  y_atrb        :  IMAGE_STREAM_ATRB_TYPE;
     begin
         for o in 0 to O_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
-                    for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                        SET_ELEMENT_TO_IMAGE_STREAM_DATA(
-                            PARAM   => O_PARAM,
-                            C       => c_pos+o*U_PARAM.SHAPE.C.SIZE,
-                            X       => x_pos,
-                            Y       => y_pos,
-                            ELEMENT => GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
-                                           PARAM  => U_PARAM,
-                                           C      => c_pos,
-                                           X      => x_pos,
-                                           Y      => y_pos,
-                                           DATA   => curr_queue(o).DATA
-                                       ),
-                            DATA    => outlet_data
-                        );
-                    end loop;
-                end loop;
+            for d_pos in U_PARAM.SHAPE.D.LO to U_PARAM.SHAPE.D.HI loop
+            for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
+            for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
+                SET_ELEMENT_TO_IMAGE_STREAM_DATA(
+                    PARAM   => O_PARAM,
+                    C       => c_pos+o*U_PARAM.SHAPE.C.SIZE,
+                    D       => d_pos,
+                    X       => x_pos,
+                    Y       => y_pos,
+                    ELEMENT => GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
+                                   PARAM  => U_PARAM,
+                                   C      => c_pos,
+                                   D      => d_pos,
+                                   X      => x_pos,
+                                   Y      => y_pos,
+                                   DATA   => curr_queue(o).DATA
+                               ),
+                    DATA    => outlet_data
+                );
+            end loop;
+            end loop;
+            end loop;
             end loop;
         end loop;
         for o in 0 to O_WIDTH-1 loop
@@ -1015,6 +1042,19 @@ begin
                     DATA  => outlet_data
                 );
             end loop;
+        end loop;
+        for d_pos in U_PARAM.SHAPE.D.LO to U_PARAM.SHAPE.D.HI loop
+                d_atrb := GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
+                              PARAM => U_PARAM,
+                              D     => d_pos,
+                              DATA  => curr_queue(curr_queue'low).DATA
+                          );
+                SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                    PARAM => O_PARAM,
+                    D     => d_pos,
+                    ATRB  => d_atrb,
+                    DATA  => outlet_data
+                );
         end loop;
         for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
                 x_atrb := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(

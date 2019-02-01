@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファの出力側ライン選択
 --!              モジュール
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -49,8 +49,19 @@ entity  IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR is
     generic (
         I_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
+                          --! * I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.INFO_BITS    = 0                    でなければならない.
+                          --! * I_PARAM.SHAPE.C.SIZE = O_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = O_PARAM.SHAPE.D.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.X.SIZE = O_PARAM.SHAPE.X.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
+                          --! * O_PARAM.ELEM_SIZE    = I_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.INFO_BITS    = 0                    でなければならない.
+                          --! * O_PARAM.SHAPE.C.SIZE = I_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.D.SIZE = I_PARAM.SHAPE.D.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.X.SIZE = I_PARAM.SHAPE.X.SIZE でなければならない.
                           --! 出力側のストリームのパラメータを指定する.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
@@ -363,9 +374,15 @@ begin
         variable  data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
         variable  elem   :  std_logic_vector(O_PARAM.ELEM_BITS-1 downto 0);
     begin
-        data(O_PARAM.DATA.INFO_FIELD  .HI downto O_PARAM.DATA.INFO_FIELD  .LO) := I_DATA(I_PARAM.DATA.INFO_FIELD  .HI downto I_PARAM.DATA.INFO_FIELD  .LO);
-        data(O_PARAM.DATA.ATRB_FIELD.C.HI downto O_PARAM.DATA.ATRB_FIELD.C.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.C.HI downto I_PARAM.DATA.ATRB_FIELD.C.LO);
-        data(O_PARAM.DATA.ATRB_FIELD.X.HI downto O_PARAM.DATA.ATRB_FIELD.X.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.X.HI downto I_PARAM.DATA.ATRB_FIELD.X.LO);
+        if (O_PARAM.SHAPE.C.DATA_ATRB = TRUE) then 
+            data(O_PARAM.DATA.ATRB_FIELD.C.HI downto O_PARAM.DATA.ATRB_FIELD.C.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.C.HI downto I_PARAM.DATA.ATRB_FIELD.C.LO);
+        end if;
+        if (O_PARAM.SHAPE.D.DATA_ATRB = TRUE) then 
+            data(O_PARAM.DATA.ATRB_FIELD.D.HI downto O_PARAM.DATA.ATRB_FIELD.D.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.D.HI downto I_PARAM.DATA.ATRB_FIELD.D.LO);
+        end if;
+        if (O_PARAM.SHAPE.X.DATA_ATRB = TRUE) then 
+            data(O_PARAM.DATA.ATRB_FIELD.X.HI downto O_PARAM.DATA.ATRB_FIELD.X.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.X.HI downto I_PARAM.DATA.ATRB_FIELD.X.LO);
+        end if;
         for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
             SET_ATRB_Y_TO_IMAGE_STREAM_DATA(O_PARAM, y_pos, atrb_y_vector(y_pos), data);
         end loop;
@@ -378,6 +395,7 @@ begin
                     elem := elem or GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                         PARAM   => I_PARAM ,
                                         C       => c_pos,
+                                        D       => I_PARAM.SHAPE.D.LO,
                                         X       => x_pos,
                                         Y       => line+I_PARAM.SHAPE.Y.LO,
                                         DATA    => I_DATA
@@ -387,6 +405,7 @@ begin
             SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                     PARAM   => O_PARAM ,
                     C       => c_pos,
+                    D       => O_PARAM.SHAPE.D.LO,
                     X       => x_pos,
                     Y       => y_pos,
                     ELEMENT => elem ,

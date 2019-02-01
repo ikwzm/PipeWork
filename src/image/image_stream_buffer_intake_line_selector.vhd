@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファの入力側ライン選択
 --!              モジュール
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/2/1
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -50,13 +50,17 @@ entity  IMAGE_STREAM_BUFFER_INTAKE_LINE_SELECTOR is
         I_PARAM         : --! @brief INPUT  STREAM PARAMETER :
                           --! 入力側のストリームのパラメータを指定する.
                           --! * I_PARAM.ELEM_SIZE    = O_PARAM.ELEM_SIZE    でなければならない.
+                          --! * I_PARAM.INFO_BITS    = 0                    でなければならない.
                           --! * I_PARAM.SHAPE.C.SIZE = O_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * I_PARAM.SHAPE.D.SIZE = O_PARAM.SHAPE.D.SIZE でなければならない.
                           --! * I_PARAM.SHAPE.X.SIZE = O_PARAM.SHAPE.X.SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
         O_PARAM         : --! @brief OUTPUT STREAM PARAMETER :
                           --! 出力側のストリームのパラメータを指定する.
                           --! * O_PARAM.ELEM_SIZE    = I_PARAM.ELEM_SIZE    でなければならない.
+                          --! * O_PARAM.INFO_BITS    = 0                    でなければならない.
                           --! * O_PARAM.SHAPE.C.SIZE = I_PARAM.SHAPE.C.SIZE でなければならない.
+                          --! * O_PARAM.SHAPE.D.SIZE = I_PARAM.SHAPE.D.SIZE でなければならない.
                           --! * O_PARAM.SHAPE.X.SIZE = I_PARAM.SHAPE.X.SIZE でなければならない.
                           --! * O_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
@@ -493,6 +497,7 @@ begin
                                 elem := elem or GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                                     PARAM   => I_PARAM ,
                                                     C       => c_pos+I_PARAM.SHAPE.C.LO,
+                                                    D       =>       I_PARAM.SHAPE.D.LO,
                                                     X       => x_pos+I_PARAM.SHAPE.X.LO,
                                                     Y       => y_pos,
                                                     DATA    => I_DATA
@@ -503,6 +508,7 @@ begin
                         elem := GET_ELEMENT_FROM_IMAGE_STREAM_DATA(
                                                     PARAM   => I_PARAM ,
                                                     C       => c_pos+I_PARAM.SHAPE.C.LO,
+                                                    D       =>       I_PARAM.SHAPE.D.LO,
                                                     X       => x_pos+I_PARAM.SHAPE.X.LO,
                                                     Y       => line +I_PARAM.SHAPE.Y.LO,
                                                     DATA    => I_DATA
@@ -511,6 +517,7 @@ begin
                     SET_ELEMENT_TO_IMAGE_STREAM_DATA(
                         PARAM   => O_PARAM ,
                         C       => c_pos+O_PARAM.SHAPE.C.LO,
+                        D       =>       O_PARAM.SHAPE.D.LO,
                         X       => x_pos+O_PARAM.SHAPE.X.LO,
                         Y       => line +O_PARAM.SHAPE.Y.LO,
                         ELEMENT => elem    ,
