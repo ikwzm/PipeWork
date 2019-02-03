@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Module :
 --!              異なる形のイメージストリームを継ぐためのバッファ
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -56,15 +56,12 @@ entity  IMAGE_STREAM_BUFFER is
                           --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向の要素数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! * チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 0;
@@ -91,8 +88,14 @@ entity  IMAGE_STREAM_BUFFER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+        C_SIZE          : --! @brief OUTPUT C CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief OUTPUT D CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief OUTPUT X SIZE :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
+        Y_SIZE          : --! @brief OUTPUT Y SIZE :
+                          in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
@@ -485,11 +488,10 @@ begin
             generic map (                                -- 
                 I_PARAM         => PARAM.I_LINE_PARAM  , -- 
                 O_PARAM         => PARAM.O_LINE_PARAM  , --   
+                O_SHAPE         => O_SHAPE             , --   
                 ELEMENT_SIZE    => ELEMENT_SIZE        , --   
-                CHANNEL_SIZE    => CHANNEL_SIZE        , --   
                 BANK_SIZE       => PARAM.BANK_SIZE     , --   
                 LINE_SIZE       => PARAM.LINE_SIZE     , --   
-                MAX_D_SIZE      => MAX_D_SIZE          , --   
                 QUEUE_SIZE      => PARAM.O_BANK_QUEUE  , -- 
                 ID              => ID                    --   
             )                                            -- 
@@ -517,7 +519,9 @@ begin
             -----------------------------------------------------------------------
                 O_LINE_START    => o_line_start        , -- In  :
                 O_LINE_ATRB     => line_atrb           , -- In  :
+                C_SIZE          => C_SIZE              , -- In  :
                 D_SIZE          => D_SIZE              , -- In  :
+                X_SIZE          => X_SIZE              , -- In  :
             -----------------------------------------------------------------------
             -- 出力側 ストリーム I/F
             -----------------------------------------------------------------------

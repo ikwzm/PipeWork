@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Outlet Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの出力側モジュール
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -49,20 +49,17 @@ entity  IMAGE_STREAM_BUFFER_OUTLET is
                           --! 出力側のストリームのパラメータを指定する.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -86,11 +83,11 @@ entity  IMAGE_STREAM_BUFFER_OUTLET is
     -- 各種サイズ
     -------------------------------------------------------------------------------
         X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
         D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
         C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
         C_OFFSET        : --! @brief OUTPUT CHANNEL BUFFER ADDRESS OFFSET :
                           in  integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
@@ -182,11 +179,10 @@ begin
     BANK_READER: IMAGE_STREAM_BUFFER_BANK_MEMORY_READER
         generic map (                            -- 
             O_PARAM         => T_PARAM         , -- 
+            O_SHAPE         => O_SHAPE         , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE    , --   
-            CHANNEL_SIZE    => CHANNEL_SIZE    , --   
             BANK_SIZE       => BANK_SIZE       , --   
             LINE_SIZE       => LINE_SIZE       , --   
-            MAX_D_SIZE      => MAX_D_SIZE      , --
             BUF_ADDR_BITS   => BUF_ADDR_BITS   , --   
             BUF_DATA_BITS   => BUF_DATA_BITS     --
         )                                        -- 

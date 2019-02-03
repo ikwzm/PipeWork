@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ読み出し側モジュール
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -52,20 +52,17 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
                           --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -100,11 +97,11 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
                           --! ライン属性入力.
                           in  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
         X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
         D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
         C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
         C_OFFSET        : --! @brief OUTPUT CHANNEL BUFFER ADDRESS OFFSET :
                           in  integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
@@ -327,7 +324,12 @@ begin
     X_LOOP: block
         constant  LINE_ALL_0    :  std_logic_vector(LINE_SIZE-1 downto 0) := (others => '0');
         signal    start_delay   :  std_logic;
+        signal    x_loop_size   :  integer range 0 to O_SHAPE.X.MAX_SIZE;
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        x_loop_size <= O_SHAPE.X.SIZE when (O_SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else X_SIZE;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -335,7 +337,7 @@ begin
             generic map (
                 ATRB_SIZE       => O_PARAM.SHAPE.X.SIZE, -- 
                 STRIDE          => O_PARAM.STRIDE.X    , --   
-                MAX_SIZE        => ELEMENT_SIZE          --   
+                MAX_SIZE        => O_SHAPE.X.MAX_SIZE    --   
             )                                            -- 
             port map (                                   -- 
                 CLK             => CLK                 , -- : In  :
@@ -343,7 +345,7 @@ begin
                 CLR             => CLR                 , -- : In  :
                 LOAD            => x_loop_start        , -- : In  :
                 CHOP            => x_loop_next         , -- : In  :
-                SIZE            => X_SIZE              , -- : In  :
+                SIZE            => x_loop_size         , -- : In  :
                 ATRB            => x_atrb_vector       , -- : Out :
                 START           => x_loop_first        , -- : Out :
                 LAST            => x_loop_last         , -- : Out :
@@ -415,7 +417,12 @@ begin
     -------------------------------------------------------------------------------
     D_LOOP: block
         signal    next_last     :  std_logic;
+        signal    d_loop_size   :  integer range 0 to O_SHAPE.D.MAX_SIZE;
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        d_loop_size <= O_SHAPE.D.SIZE when (O_SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else D_SIZE;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -423,7 +430,7 @@ begin
             generic map (                                -- 
                 STRIDE          => 1                   , --
                 UNROLL          => O_PARAM.SHAPE.D.SIZE, --
-                MAX_LOOP_SIZE   => MAX_D_SIZE          , --
+                MAX_LOOP_SIZE   => O_SHAPE.D.MAX_SIZE  , --
                 MAX_LOOP_INIT   => 0                     --
             )                                            -- 
             port map (                                   -- 
@@ -432,7 +439,7 @@ begin
                 CLR             => CLR                 , -- In  :
                 LOOP_START      => d_loop_start        , -- In  :
                 LOOP_NEXT       => d_loop_next         , -- In  :
-                LOOP_SIZE       => D_SIZE              , -- In  :
+                LOOP_SIZE       => d_loop_size         , -- In  :
                 LOOP_DONE       => d_loop_done         , -- Out :
                 LOOP_BUSY       => d_loop_busy         , -- Out :
                 LOOP_VALID      => d_loop_valid        , -- Out :
@@ -458,7 +465,12 @@ begin
     -- C LOOP
     -------------------------------------------------------------------------------
     C_LOOP: block
+        signal    c_loop_size   :  integer range 0 to O_SHAPE.C.MAX_SIZE;
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        c_loop_size <= O_SHAPE.C.SIZE when (O_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else C_SIZE;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -466,7 +478,7 @@ begin
             generic map (                                -- 
                 STRIDE          => 1                   , --
                 UNROLL          => O_PARAM.SHAPE.C.SIZE, --
-                MAX_LOOP_SIZE   => ELEMENT_SIZE        , --
+                MAX_LOOP_SIZE   => O_SHAPE.C.MAX_SIZE  , --
                 MAX_LOOP_INIT   => 0                     --
             )                                            -- 
             port map (                                   -- 
@@ -475,7 +487,7 @@ begin
                 CLR             => CLR                 , -- In  :
                 LOOP_START      => c_loop_start        , -- In  :
                 LOOP_NEXT       => c_loop_next         , -- In  :
-                LOOP_SIZE       => C_SIZE              , -- In  :
+                LOOP_SIZE       => c_loop_size         , -- In  :
                 LOOP_DONE       => c_loop_done         , -- Out :
                 LOOP_BUSY       => c_loop_busy         , -- Out :
                 LOOP_VALID      => c_loop_valid        , -- Out :

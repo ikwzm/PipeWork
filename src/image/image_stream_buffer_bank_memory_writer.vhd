@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ書込み側モジュール
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -52,13 +52,13 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER is
                           --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           --! * I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        I_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 入力側のイメージの形(SHAPE)を指定する.
+                          --! * このモジュールでは I_SHAPE.C のみを使用する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! * チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
@@ -108,11 +108,11 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        X_SIZE          : --! @brief OUTPUT X SIZE :
+        O_X_SIZE        : --! @brief OUTPUT X SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        C_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
+        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        C_OFFSET        : --! @brief OUTPUT CHANNEL SIZE :
+        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
     -- バッファ I/F
@@ -386,13 +386,13 @@ begin
     end process;
     I_READY <= intake_ready;
     -------------------------------------------------------------------------------
-    -- CHANNEL_SIZE が可変長の場合
+    -- I_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT でない場合
     -------------------------------------------------------------------------------
     -- channel_offset : 
-    -- C_OFFSET       : 
-    -- C_SIZE         : 
+    -- O_C_OFFSET     : 
+    -- O_C_SIZE       : 
     -------------------------------------------------------------------------------
-    CHANNEL_SIZE_EQ_0: if (CHANNEL_SIZE = 0) generate
+    I_SHAPE_C_AUTO: if (I_SHAPE.C.DICIDE_TYPE /= IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) generate
         signal    curr_channel_offset :  integer range 0 to 2**BUF_ADDR_BITS;
         signal    curr_channel_count  :  integer range 0 to ELEMENT_SIZE;
     begin
@@ -416,24 +416,24 @@ begin
                 end if;
             end if;
         end process;
-        C_OFFSET <= curr_channel_offset;
-        C_SIZE   <= curr_channel_count;
+        O_C_OFFSET <= curr_channel_offset;
+        O_C_SIZE   <= curr_channel_count;
     end generate;
     -------------------------------------------------------------------------------
-    -- CHANNEL_SIZE が固定値の場合
+    -- I_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT の場合
     -------------------------------------------------------------------------------
     -- channel_offset :
     -- O_C_SIZE       : 
     -------------------------------------------------------------------------------
-    CHANNEL_SIZE_GT_0: if (CHANNEL_SIZE > 0) generate
+    I_SHAPE_C_CONSTANT: if (I_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) generate
     begin
-        channel_offset <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
-        C_OFFSET       <= (CHANNEL_SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
-        C_SIZE         <=  CHANNEL_SIZE;
+        channel_offset <= (I_SHAPE.C.SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
+        O_C_OFFSET     <= (I_SHAPE.C.SIZE + I_PARAM.SHAPE.C.SIZE - 1) / I_PARAM.SHAPE.C.SIZE;
+        O_C_SIZE       <=  I_SHAPE.C.SIZE;
     end generate;
     -------------------------------------------------------------------------------
     -- intake_x_count :
-    -- X_SIZE         : 
+    -- O_X_SIZE       : 
     -------------------------------------------------------------------------------
     process(CLK, RST)
         variable  atrb_x_vector  :  IMAGE_STREAM_ATRB_VECTOR(I_PARAM.SHAPE.X.LO to I_PARAM.SHAPE.X.HI);
@@ -449,7 +449,7 @@ begin
             end if;
         end if;
     end process;
-    X_SIZE <= intake_x_count;
+    O_X_SIZE <= intake_x_count;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

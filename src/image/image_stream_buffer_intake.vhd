@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Intake Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの入力側モジュール
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -50,13 +50,13 @@ entity  IMAGE_STREAM_BUFFER_INTAKE is
                           --! * I_PARAM.INFO_BITS = 0 でなければならない.
                           --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        I_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 入力側のイメージの形(SHAPE)を指定する.
+                          --! * このモジュールでは I_SHAPE.C のみを使用する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
@@ -214,9 +214,9 @@ begin
     -------------------------------------------------------------------------------
     BANK_WRITER: IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER
         generic map (                                -- 
-            I_PARAM         => T_PARAM             , -- 
+            I_PARAM         => T_PARAM             , --
+            I_SHAPE         => I_SHAPE             , --
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
-            CHANNEL_SIZE    => CHANNEL_SIZE        , --   
             BANK_SIZE       => BANK_SIZE           , --   
             LINE_SIZE       => LINE_SIZE           , --   
             BUF_ADDR_BITS   => BUF_ADDR_BITS       , --   
@@ -241,9 +241,9 @@ begin
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            X_SIZE          => O_X_SIZE            , -- Out :
-            C_SIZE          => O_C_SIZE            , -- Out :
-            C_OFFSET        => O_C_OFFSET          , -- Out :
+            O_X_SIZE        => O_X_SIZE            , -- Out :
+            O_C_SIZE        => O_C_SIZE            , -- Out :
+            O_C_OFFSET      => O_C_OFFSET          , -- Out :
         ---------------------------------------------------------------------------
         -- バッファ I/F
         ---------------------------------------------------------------------------

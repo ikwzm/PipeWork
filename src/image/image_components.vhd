@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/02/01                                                      --
+--!     @date    2019/02/03                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -329,15 +329,12 @@ component IMAGE_STREAM_BUFFER
                           --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向の要素数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! * チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
-                          integer := 1;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 0;
@@ -364,8 +361,14 @@ component IMAGE_STREAM_BUFFER
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+        C_SIZE          : --! @brief OUTPUT C CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief OUTPUT D CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief OUTPUT X SIZE :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
+        Y_SIZE          : --! @brief OUTPUT Y SIZE :
+                          in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
     -------------------------------------------------------------------------------
     -- 入力側 I/F
     -------------------------------------------------------------------------------
@@ -431,20 +434,17 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
                           --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! * チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
@@ -502,8 +502,12 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
         O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
                           --! ライン属性入力.
                           in  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+        C_SIZE          : --! @brief OUTPUT C CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief OUTPUT D CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief OUTPUT X SIZE :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
     -------------------------------------------------------------------------------
     -- 出力側 ストリーム I/F
     -------------------------------------------------------------------------------
@@ -529,13 +533,13 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER
                           --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           --! * I_PARAM.SHAPE.Y.SIZE = LINE_SIZE でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        I_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 入力側のイメージの形(SHAPE)を指定する.
+                          --! * このモジュールでは I_SHAPE.C のみを使用する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! * チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
@@ -585,11 +589,11 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        X_SIZE          : --! @brief OUTPUT X SIZE :
+        O_X_SIZE        : --! @brief OUTPUT X SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        C_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
+        O_C_SIZE        : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to ELEMENT_SIZE;
-        C_OFFSET        : --! @brief OUTPUT CHANNEL SIZE :
+        O_C_OFFSET      : --! @brief OUTPUT CHANNEL SIZE :
                           out integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
     -- バッファ I/F
@@ -612,20 +616,17 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_READER
                           --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -660,11 +661,11 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY_READER
                           --! ライン属性入力.
                           in  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
         X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
         D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
         C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
         C_OFFSET        : --! @brief OUTPUT CHANNEL BUFFER ADDRESS OFFSET :
                           in  integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
@@ -699,13 +700,13 @@ component IMAGE_STREAM_BUFFER_INTAKE
                           --! * I_PARAM.INFO_BITS = 0 でなければならない.
                           --! * I_PARAM.SHAPE.D.SIZE = 1 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        I_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 入力側のイメージの形(SHAPE)を指定する.
+                          --! * このモジュールでは I_SHAPE.C のみを使用する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
@@ -898,20 +899,17 @@ component IMAGE_STREAM_BUFFER_OUTLET
                           --! 出力側のストリームのパラメータを指定する.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
                           integer := 1;
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
@@ -935,11 +933,11 @@ component IMAGE_STREAM_BUFFER_OUTLET
     -- 各種サイズ
     -------------------------------------------------------------------------------
         X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
         D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
         C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to ELEMENT_SIZE;
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
         C_OFFSET        : --! @brief OUTPUT CHANNEL BUFFER ADDRESS OFFSET :
                           in  integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------

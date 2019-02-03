@@ -140,6 +140,13 @@ architecture RTL of IMAGE_STREAM_ATRB_GENERATOR is
         end if;
     end function;
     -------------------------------------------------------------------------------
+    -- MAX : 三つの引数を比較して大きい方を選択する関数
+    -------------------------------------------------------------------------------
+    function  MAX(A,B,C:integer) return integer is
+    begin
+        return MAX(MAX(A,B),C);
+    end function;
+    -------------------------------------------------------------------------------
     -- MAX_LAST_POS  : 最後の位置の取り得る値の最大値
     -------------------------------------------------------------------------------
     constant  MAX_LAST_POS          :  integer := MAX_SIZE+MAX_START_BORDER+MAX_LAST_BORDER-1;
@@ -148,6 +155,10 @@ architecture RTL of IMAGE_STREAM_ATRB_GENERATOR is
     -------------------------------------------------------------------------------
     constant  MAX_LAST_POS_BITS     :  integer := MAX(1, CALC_BITS(MAX_SIZE+MAX_START_BORDER+MAX_LAST_BORDER-1));
     -------------------------------------------------------------------------------
+    -- STRIDE_BITS        : STRIDE を表現するのに必要なビット数
+    -------------------------------------------------------------------------------
+    constant  STRIDE_BITS           :  integer := MAX(1, CALC_BITS(STRIDE));
+    -------------------------------------------------------------------------------
     -- ATRB_POS_BITS : ATRB 配列の位置を表現するのに必要なビット数
     -------------------------------------------------------------------------------
     constant  ATRB_POS_BITS         :  integer := MAX(1, CALC_BITS(ATRB_SIZE-1));
@@ -155,7 +166,9 @@ architecture RTL of IMAGE_STREAM_ATRB_GENERATOR is
     -- LAST_POS_BITS : curr_last_pos/next_last_pos を表現するのに必要なビット数
     --                 curr_last_pos/next_last_pos は signed 型なので１ビット多い
     -------------------------------------------------------------------------------
-    constant  LAST_POS_BITS         :  integer := MAX(MAX_LAST_POS_BITS,ATRB_POS_BITS)+1;
+    constant  LAST_POS_BITS         :  integer := MAX(MAX_LAST_POS_BITS,
+                                                      STRIDE_BITS      ,
+                                                      ATRB_POS_BITS    )+1;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

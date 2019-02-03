@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リモジュール
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/3
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -58,20 +58,17 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
                           --! * O_PARAM.ELEM_BITS = I_PARAM.ELEM_BITS でなければならない.
                           --! * O_PARAM.INFO_BITS = 0 でなければならない.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(8,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE :
+                          --! 出力側のイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
         ELEMENT_SIZE    : --! @brief ELEMENT SIZE :
                           --! 列方向のエレメント数を指定する.
                           integer := 256;
-        CHANNEL_SIZE    : --! @brief CHANNEL SIZE :
-                          --! チャネル数を指定する.
-                          --! * チャネル数が可変の場合は 0 を指定する.
-                          integer := 0;
         BANK_SIZE       : --! @brief MEMORY BANK SIZE :
                           --! メモリのバンク数を指定する.
                           integer := 1;
         LINE_SIZE       : --! @brief MEMORY LINE SIZE :
                           --! メモリのライン数を指定する.
-                          integer := 1;
-        MAX_D_SIZE      : --! @brief MAX OUTPUT CHANNEL SIZE :
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
@@ -129,8 +126,12 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
         O_LINE_ATRB     : --! @brief OUTPUT LINE ATTRIBUTE :
                           --! ライン属性入力.
                           in  IMAGE_STREAM_ATRB_VECTOR(LINE_SIZE-1 downto 0);
-        D_SIZE          : --! @brief OUTPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_D_SIZE := 1;
+        C_SIZE          : --! @brief OUTPUT C CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief OUTPUT D CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief OUTPUT X SIZE :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
     -------------------------------------------------------------------------------
     -- 出力側 ストリーム I/F
     -------------------------------------------------------------------------------
@@ -201,9 +202,56 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    x_size                :  integer range 0 to ELEMENT_SIZE;
-    signal    c_size                :  integer range 0 to ELEMENT_SIZE;
-    signal    c_offset              :  integer range 0 to 2**BUF_ADDR_BITS;
+    signal    i_x_size              :  integer range 0 to ELEMENT_SIZE;
+    signal    i_c_size              :  integer range 0 to ELEMENT_SIZE;
+    signal    i_c_offset            :  integer range 0 to 2**BUF_ADDR_BITS;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  CALC_T_SHAPE return IMAGE_SHAPE_TYPE is
+        variable  c_side : IMAGE_SHAPE_SIDE_TYPE;
+        variable  d_side : IMAGE_SHAPE_SIDE_TYPE;
+        variable  x_side : IMAGE_SHAPE_SIDE_TYPE;
+        variable  y_side : IMAGE_SHAPE_SIDE_TYPE;
+    begin
+        case O_SHAPE.C.DICIDE_TYPE is
+            when IMAGE_SHAPE_SIDE_DICIDE_AUTO     => 
+               c_side := NEW_IMAGE_SHAPE_SIDE_AUTO    (ELEMENT_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL => 
+               c_side := NEW_IMAGE_SHAPE_SIDE_EXTERNAL(O_SHAPE.C.MAX_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_CONSTANT => 
+               c_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(O_SHAPE.C.SIZE);
+        end case;
+        case O_SHAPE.D.DICIDE_TYPE is
+            when IMAGE_SHAPE_SIDE_DICIDE_AUTO     => 
+               d_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(1,FALSE);
+            when IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL => 
+               d_side := NEW_IMAGE_SHAPE_SIDE_EXTERNAL(O_SHAPE.D.MAX_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_CONSTANT => 
+               d_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(O_SHAPE.D.SIZE);
+        end case;
+        case O_SHAPE.X.DICIDE_TYPE is
+            when IMAGE_SHAPE_SIDE_DICIDE_AUTO     => 
+               x_side := NEW_IMAGE_SHAPE_SIDE_AUTO    (ELEMENT_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL => 
+               x_side := NEW_IMAGE_SHAPE_SIDE_EXTERNAL(O_SHAPE.X.MAX_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_CONSTANT => 
+               x_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(O_SHAPE.X.SIZE);
+        end case;
+        case O_SHAPE.Y.DICIDE_TYPE is
+            when IMAGE_SHAPE_SIDE_DICIDE_AUTO     => 
+               y_side := NEW_IMAGE_SHAPE_SIDE_AUTO    (O_SHAPE.Y.MAX_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL => 
+               y_side := NEW_IMAGE_SHAPE_SIDE_EXTERNAL(O_SHAPE.Y.MAX_SIZE);
+            when IMAGE_SHAPE_SIDE_DICIDE_CONSTANT => 
+               y_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(O_SHAPE.Y.SIZE);
+        end case;
+        return NEW_IMAGE_SHAPE(O_SHAPE.ELEM_BITS, c_side, d_side, x_side, y_side);
+    end function;
+    constant  T_SHAPE               :  IMAGE_SHAPE_TYPE := CALC_T_SHAPE;
+    signal    t_c_size              :  integer range 0 to T_SHAPE.C.MAX_SIZE;
+    signal    t_d_size              :  integer range 0 to T_SHAPE.D.MAX_SIZE;
+    signal    t_x_size              :  integer range 0 to T_SHAPE.X.MAX_SIZE;
 begin
     -------------------------------------------------------------------------------
     -- WRITER :
@@ -211,8 +259,8 @@ begin
     WRITER: IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER   -- 
         generic map (                                -- 
             I_PARAM         => I_PARAM             , -- 
+            I_SHAPE         => T_SHAPE             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , -- 
-            CHANNEL_SIZE    => CHANNEL_SIZE        , --   
             BANK_SIZE       => BANK_SIZE           , --   
             LINE_SIZE       => LINE_SIZE           , --   
             BUF_ADDR_BITS   => BUF_ADDR_BITS       , --   
@@ -237,9 +285,9 @@ begin
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            X_SIZE          => x_size              , -- Out :
-            C_SIZE          => c_size              , -- Out :
-            C_OFFSET        => c_offset            , -- Out :
+            O_X_SIZE        => i_x_size            , -- Out :
+            O_C_SIZE        => i_c_size            , -- Out :
+            O_C_OFFSET      => i_c_offset          , -- Out :
         ---------------------------------------------------------------------------
         -- バッファ I/F
         ---------------------------------------------------------------------------
@@ -292,14 +340,21 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    t_c_size <= T_SHAPE.C.SIZE when (T_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else 
+                i_c_size       when (T_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_AUTO    ) else C_SIZE;
+    t_d_size <= T_SHAPE.D.SIZE when (T_SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else D_SIZE;
+    t_x_size <= T_SHAPE.X.SIZE when (T_SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else 
+                i_x_size       when (T_SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_AUTO    ) else X_SIZE;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     READER: IMAGE_STREAM_BUFFER_BANK_MEMORY_READER   -- 
         generic map (                                -- 
             O_PARAM         => O_PARAM             , -- 
+            O_SHAPE         => T_SHAPE             , -- 
             ELEMENT_SIZE    => ELEMENT_SIZE        , --   
-            CHANNEL_SIZE    => CHANNEL_SIZE        , --   
             BANK_SIZE       => BANK_SIZE           , --   
             LINE_SIZE       => LINE_SIZE           , --   
-            MAX_D_SIZE      => MAX_D_SIZE          , --
             BUF_ADDR_BITS   => BUF_ADDR_BITS       , --   
             BUF_DATA_BITS   => BUF_DATA_BITS       , --
             QUEUE_SIZE      => QUEUE_SIZE            -- 
@@ -316,10 +371,10 @@ begin
         ---------------------------------------------------------------------------
             I_LINE_START    => O_LINE_START        , -- In  :
             I_LINE_ATRB     => O_LINE_ATRB         , -- In  :
-            X_SIZE          => x_size              , -- In  :
-            D_SIZE          => D_SIZE              , -- In  :
-            C_SIZE          => c_size              , -- In  :
-            C_OFFSET        => c_offset            , -- In  :
+            X_SIZE          => t_x_size            , -- In  :
+            D_SIZE          => t_d_size            , -- In  :
+            C_SIZE          => t_c_size            , -- In  :
+            C_OFFSET        => i_c_offset          , -- In  :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
