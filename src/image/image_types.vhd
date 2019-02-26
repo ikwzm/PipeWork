@@ -135,7 +135,7 @@ package IMAGE_TYPES is
     function  NEW_IMAGE_VECTOR_RANGE(SIZE :integer) return IMAGE_VECTOR_RANGE_TYPE;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Data(一回の転送単位) の要素フィールドを定義するレコードタイプ.
+    --! @brief Image Stream Data(一回の転送単位) の要素フィールドを定義するレコードタイプ.
     -------------------------------------------------------------------------------
     type      IMAGE_STREAM_DATA_ELEM_FIELD_TYPE is record
                   LO                :  integer;
@@ -148,7 +148,7 @@ package IMAGE_TYPES is
     end record;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Data(一回の転送単位) の属性フィールドを定義するレコードタイプ.
+    --! @brief Image Stream Data(一回の転送単位) の属性フィールドを定義するレコードタイプ.
     -------------------------------------------------------------------------------
     type      IMAGE_STREAM_DATA_ATRB_FIELD_TYPE is record
                   LO                :  integer;
@@ -161,7 +161,7 @@ package IMAGE_TYPES is
     end record;
     
     -------------------------------------------------------------------------------
-    --! @brief Image Data(一回の転送単位) の各種パラメータを定義するレコードタイプ.
+    --! @brief Image Stream Data(一回の転送単位) の各種パラメータを定義するレコードタイプ.
     -------------------------------------------------------------------------------
     type      IMAGE_STREAM_DATA_FIELD_TYPE is record
                   LO                :  integer;
@@ -348,7 +348,7 @@ package IMAGE_TYPES is
                   DATA              :  std_logic_vector)
                   return               std_logic_vector;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Data から  Y方向の属性を取り出す関数
+    --! @brief Image Stream Data から Y 方向の属性を取り出す関数
     -------------------------------------------------------------------------------
     function  GET_ATRB_Y_VECTOR_FROM_IMAGE_STREAM_DATA(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -458,7 +458,7 @@ package IMAGE_TYPES is
                   VALID             :  boolean := TRUE)
                   return               boolean;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream Attribute が C Channel の最後であることを示す関数
+    --! @brief Image Stream Attribute が D Channel の最後であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_D_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
@@ -546,7 +546,7 @@ package IMAGE_TYPES is
                   VALID             :  boolean := TRUE)
                   return               boolean;
     -------------------------------------------------------------------------------
-    --! @brief Image Stream が C Channel の最後であることを示す関数
+    --! @brief Image Stream が D Channel の最後であることを示す関数
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_D(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
