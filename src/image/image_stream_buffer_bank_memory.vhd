@@ -224,7 +224,7 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY is
         end case;
         case O_SHAPE.D.DICIDE_TYPE is
             when IMAGE_SHAPE_SIDE_DICIDE_AUTO     => 
-               d_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(1,FALSE);
+               d_side := NEW_IMAGE_SHAPE_SIDE_CONSTANT(1,FALSE,FALSE);
             when IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL => 
                d_side := NEW_IMAGE_SHAPE_SIDE_EXTERNAL(O_SHAPE.D.MAX_SIZE);
             when IMAGE_SHAPE_SIDE_DICIDE_CONSTANT => 

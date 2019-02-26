@@ -2,7 +2,7 @@
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
 --!     @version 1.8.0
---!     @date    2019/2/25
+--!     @date    2019/2/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -55,8 +55,8 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     type      IMAGE_SHAPE_SIDE_TYPE        is record
                   DICIDE_TYPE              :  IMAGE_SHAPE_SIDE_DICIDE_TYPE;
-                  DATA_ELEM                :  boolean;  -- DATA ELEM FIELD を持っているか否か
-                  DATA_ATRB                :  boolean;  -- DATA ATRB FIELD を持っているか否か
+                  ELEM_IN_DATA             :  boolean;  -- DATA ELEM FIELD を持っているか否か(DICIDE_CONSTANTのみ有効)
+                  ATRB_IN_DATA             :  boolean;  -- DATA ATRB FIELD を持っているか否か(DICIDE_CONSTANTのみ有効)
                   LO                       :  integer;  -- 範囲の最小値(DICIDE_CONSTANTのみ設定可)
                   HI                       :  integer;  -- 範囲の最大値(DICIDE_CONSTANTのみ設定可)
                   SIZE                     :  integer;  -- 辺の大きさ  (DICIDE_CONSTANTのみ有効)
@@ -65,10 +65,10 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer; ELEM_IN_DATA: boolean := TRUE; ATRB_IN_DATA: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer; ELEM_IN_DATA: boolean := TRUE; ATRB_IN_DATA: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE;
 
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)を定義するレコードタイプ.
@@ -618,27 +618,27 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
-    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_SHAPE_SIDE(
                  LO          :  integer;
                  HI          :  integer;
                  SIZE        :  integer;
                  MAX_SIZE    :  integer;
-                 DATA_ELEM   :  boolean;
-                 DATA_ATRB   :  boolean;
+                 ELEM_IN_DATA:  boolean;
+                 ATRB_IN_DATA:  boolean;
                  DICIDE_TYPE :  IMAGE_SHAPE_SIDE_DICIDE_TYPE)
                  return         IMAGE_SHAPE_SIDE_TYPE
     is 
         variable param       :  IMAGE_SHAPE_SIDE_TYPE;
     begin
-        param.LO          := LO;
-        param.HI          := HI;
-        param.SIZE        := SIZE;
-        param.MAX_SIZE    := MAX_SIZE;
-        param.DATA_ELEM   := DATA_ELEM;
-        param.DATA_ATRB   := DATA_ATRB;
-        param.DICIDE_TYPE := DICIDE_TYPE;
+        param.LO             := LO;
+        param.HI             := HI;
+        param.SIZE           := SIZE;
+        param.MAX_SIZE       := MAX_SIZE;
+        param.ELEM_IN_DATA   := ELEM_IN_DATA;
+        param.ATRB_IN_DATA   := ATRB_IN_DATA;
+        param.DICIDE_TYPE    := DICIDE_TYPE;
         return param;
     end function;
     -------------------------------------------------------------------------------
@@ -648,59 +648,61 @@ package body IMAGE_TYPES is
     is
     begin
         return NEW_IMAGE_SHAPE_SIDE(
-                   LO          => 0,
-                   HI          => 0,
-                   SIZE        => 1,
-                   MAX_SIZE    => 1,
-                   DATA_ELEM   => FALSE,
-                   DATA_ATRB   => FALSE,
-                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+                   LO           => 0,
+                   HI           => 0,
+                   SIZE         => 1,
+                   MAX_SIZE     => 1,
+                   ELEM_IN_DATA => FALSE,
+                   ATRB_IN_DATA => FALSE,
+                   DICIDE_TYPE  => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
     end function;
     -------------------------------------------------------------------------------
-    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_AUTO    (MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
+        assert (MAX_SIZE > 0) report "NEW_IMAGE_SHAPE_SIDE_AUTO: Error MAX_SIZE=0." severity FAILURE;
         return NEW_IMAGE_SHAPE_SIDE(
-                   LO          => 0,
-                   HI          => MAX_SIZE-1,
-                   SIZE        => MAX_SIZE,
-                   MAX_SIZE    => MAX_SIZE,
-                   DATA_ELEM   => DATA_ELEM,
-                   DATA_ATRB   => DATA_ATRB,
-                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_AUTO);
+                   LO           => 0,
+                   HI           => MAX_SIZE-1,
+                   SIZE         => MAX_SIZE,
+                   MAX_SIZE     => MAX_SIZE,
+                   ELEM_IN_DATA => FALSE,
+                   ATRB_IN_DATA => FALSE,
+                   DICIDE_TYPE  => IMAGE_SHAPE_SIDE_DICIDE_AUTO);
     end function;
     -------------------------------------------------------------------------------
-    --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
+    --! @brief Image の形(各辺の大きさ)の各辺(C,D,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_EXTERNAL(MAX_SIZE: integer) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
+        assert (MAX_SIZE > 0) report "NEW_IMAGE_SHAPE_SIDE_EXTERNAL: Error MAX_SIZE=0." severity FAILURE;
         return NEW_IMAGE_SHAPE_SIDE(
-                   LO          => 0,
-                   HI          => MAX_SIZE-1,
-                   SIZE        => MAX_SIZE,
-                   MAX_SIZE    => MAX_SIZE,
-                   DATA_ELEM   => DATA_ELEM,
-                   DATA_ATRB   => DATA_ATRB,
-                   DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL);
+                   LO           => 0,
+                   HI           => MAX_SIZE-1,
+                   SIZE         => MAX_SIZE,
+                   MAX_SIZE     => MAX_SIZE,
+                   ELEM_IN_DATA => FALSE,
+                   ATRB_IN_DATA => FALSE,
+                   DICIDE_TYPE  => IMAGE_SHAPE_SIDE_DICIDE_EXTERNAL);
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(SIZE    : integer; ELEM_IN_DATA: boolean := TRUE; ATRB_IN_DATA: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
         if (SIZE > 0) then
             return NEW_IMAGE_SHAPE_SIDE(
-                       LO          => 0,
-                       HI          => SIZE-1,
-                       SIZE        => SIZE,
-                       MAX_SIZE    => SIZE,
-                       DATA_ELEM   => DATA_ELEM,
-                       DATA_ATRB   => DATA_ATRB,
-                       DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+                       LO           => 0,
+                       HI           => SIZE-1,
+                       SIZE         => SIZE,
+                       MAX_SIZE     => SIZE,
+                       ELEM_IN_DATA => ELEM_IN_DATA,
+                       ATRB_IN_DATA => ATRB_IN_DATA,
+                       DICIDE_TYPE  => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
         else
             return NEW_IMAGE_SHAPE_SIDE_NONE;
         end if;
@@ -708,18 +710,18 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)の各辺(C,X,Y) の値を生成する関数.
     -------------------------------------------------------------------------------
-    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer; DATA_ELEM: boolean := TRUE; DATA_ATRB: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
+    function  NEW_IMAGE_SHAPE_SIDE_CONSTANT(LO,HI   : integer; ELEM_IN_DATA: boolean := TRUE; ATRB_IN_DATA: boolean := TRUE) return IMAGE_SHAPE_SIDE_TYPE
     is
     begin
         if (HI >= LO) then
             return NEW_IMAGE_SHAPE_SIDE(
-                       LO          => LO,
-                       HI          => HI,
-                       SIZE        => HI-LO+1,
-                       MAX_SIZE    => HI-LO+1,
-                       DATA_ELEM   => DATA_ELEM,
-                       DATA_ATRB   => DATA_ATRB,
-                       DICIDE_TYPE => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
+                       LO           => LO,
+                       HI           => HI,
+                       SIZE         => HI-LO+1,
+                       MAX_SIZE     => HI-LO+1,
+                       ELEM_IN_DATA => ELEM_IN_DATA,
+                       ATRB_IN_DATA => ATRB_IN_DATA,
+                       DICIDE_TYPE  => IMAGE_SHAPE_SIDE_DICIDE_CONSTANT);
         else
             return NEW_IMAGE_SHAPE_SIDE_NONE;
         end if;
@@ -730,7 +732,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_SHAPE(ELEM_BITS: integer;C,D,X,Y: IMAGE_SHAPE_SIDE_TYPE) return IMAGE_SHAPE_TYPE
     is
-        variable param :  IMAGE_SHAPE_TYPE;
+        variable param  :  IMAGE_SHAPE_TYPE;
     begin
         param.ELEM_BITS := ELEM_BITS;
         param.C         := C;
@@ -851,10 +853,10 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(D),
-                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
-                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C, TRUE,  TRUE),
+                   D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(D, FALSE, TRUE),
+                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X, TRUE , TRUE),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y, TRUE , TRUE));
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)を設定する関数群
@@ -864,10 +866,10 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C),
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
-                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
-                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(C, TRUE, TRUE),
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE                   ,
+                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X, TRUE, TRUE),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y, TRUE, TRUE));
     end function;
     -------------------------------------------------------------------------------
     --! @brief Image の形(各辺の大きさ)を設定する関数群
@@ -877,10 +879,10 @@ package body IMAGE_TYPES is
     begin
         return NEW_IMAGE_SHAPE(
                    ELEM_BITS => ELEM_BITS,
-                   C         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
-                   D         => NEW_IMAGE_SHAPE_SIDE_NONE       ,
-                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X),
-                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y));
+                   C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1, TRUE, FALSE),
+                   D         => NEW_IMAGE_SHAPE_SIDE_NONE                    ,
+                   X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(X, TRUE, TRUE ),
+                   Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(Y, TRUE, TRUE ));
     end function;
 
     -------------------------------------------------------------------------------
@@ -940,26 +942,26 @@ package body IMAGE_TYPES is
         variable  elem_field        :  IMAGE_STREAM_DATA_ELEM_FIELD_TYPE;
         variable  elem_size         :  integer;
     begin
-        elem_size         := 1;
-        if (SHAPE.C.DATA_ELEM = TRUE) then
-            elem_field.C_SIZE := 1;
+        elem_size := 1;
+        if (SHAPE.C.ELEM_IN_DATA = TRUE) then
+            elem_field.C_SIZE := elem_size;
             elem_size         := elem_size * SHAPE.C.SIZE;
         else
             elem_field.C_SIZE := 0;
         end if;
-        if (SHAPE.D.DATA_ELEM = TRUE) then
+        if (SHAPE.D.ELEM_IN_DATA = TRUE) then
             elem_field.D_SIZE := elem_size;
             elem_size         := elem_size * SHAPE.D.SIZE;
         else
             elem_field.D_SIZE := 0;
         end if;
-        if (SHAPE.X.DATA_ELEM = TRUE) then
+        if (SHAPE.X.ELEM_IN_DATA = TRUE) then
             elem_field.X_SIZE := elem_size;
             elem_size         := elem_size * SHAPE.X.SIZE;
         else
             elem_field.X_SIZE := 0;
         end if;
-        if (SHAPE.Y.DATA_ELEM = TRUE) then
+        if (SHAPE.Y.ELEM_IN_DATA = TRUE) then
             elem_field.Y_SIZE := elem_size;
             elem_size         := elem_size * SHAPE.Y.SIZE;
         else
@@ -986,36 +988,36 @@ package body IMAGE_TYPES is
         atrb_field.LO   := LO;
         next_field_lo   := LO;
         atrb_field_size := 0;
-        if (SHAPE.C.DATA_ATRB = TRUE) then
+        if (SHAPE.C.ATRB_IN_DATA = TRUE) then
             atrb_field.C    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.C.SIZE - 1);
             next_field_lo   := atrb_field.C.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.C.SIZE;
         end if;
-        if (SHAPE.D.DATA_ATRB = TRUE) then
+        if (SHAPE.D.ATRB_IN_DATA = TRUE) then
             atrb_field.D    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.D.SIZE - 1);
             next_field_lo   := atrb_field.D.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.D.SIZE;
         end if;
-        if (SHAPE.X.DATA_ATRB = TRUE) then
+        if (SHAPE.X.ATRB_IN_DATA = TRUE) then
             atrb_field.X    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.X.SIZE - 1);
             next_field_lo   := atrb_field.X.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.X.SIZE;
         end if;
-        if (SHAPE.Y.DATA_ATRB = TRUE) then
+        if (SHAPE.Y.ATRB_IN_DATA = TRUE) then
             atrb_field.Y    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo + IMAGE_STREAM_ATRB_BITS*SHAPE.Y.SIZE - 1);
             next_field_lo   := atrb_field.Y.HI + 1;
             atrb_field_size := atrb_field_size + atrb_field.Y.SIZE;
         end if;
-        if (SHAPE.C.DATA_ATRB = FALSE) then
+        if (SHAPE.C.ATRB_IN_DATA = FALSE) then
             atrb_field.C    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
-        if (SHAPE.D.DATA_ATRB = FALSE) then
+        if (SHAPE.D.ATRB_IN_DATA = FALSE) then
             atrb_field.D    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
-        if (SHAPE.X.DATA_ATRB = FALSE) then
+        if (SHAPE.X.ATRB_IN_DATA = FALSE) then
             atrb_field.X    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
-        if (SHAPE.Y.DATA_ATRB = FALSE) then
+        if (SHAPE.Y.ATRB_IN_DATA = FALSE) then
             atrb_field.Y    := NEW_IMAGE_VECTOR_RANGE(LO => next_field_lo, HI => next_field_lo, SIZE => 0);
         end if;
         if (atrb_field_size > 0) then

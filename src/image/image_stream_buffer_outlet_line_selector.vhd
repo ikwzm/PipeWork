@@ -374,13 +374,13 @@ begin
         variable  data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
         variable  elem   :  std_logic_vector(O_PARAM.ELEM_BITS-1 downto 0);
     begin
-        if (O_PARAM.SHAPE.C.DATA_ATRB = TRUE) then 
+        if (O_PARAM.DATA.ATRB_FIELD.C.SIZE > 0) then 
             data(O_PARAM.DATA.ATRB_FIELD.C.HI downto O_PARAM.DATA.ATRB_FIELD.C.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.C.HI downto I_PARAM.DATA.ATRB_FIELD.C.LO);
         end if;
-        if (O_PARAM.SHAPE.D.DATA_ATRB = TRUE) then 
+        if (O_PARAM.DATA.ATRB_FIELD.D.SIZE > 0) then 
             data(O_PARAM.DATA.ATRB_FIELD.D.HI downto O_PARAM.DATA.ATRB_FIELD.D.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.D.HI downto I_PARAM.DATA.ATRB_FIELD.D.LO);
         end if;
-        if (O_PARAM.SHAPE.X.DATA_ATRB = TRUE) then 
+        if (O_PARAM.DATA.ATRB_FIELD.X.SIZE > 0) then 
             data(O_PARAM.DATA.ATRB_FIELD.X.HI downto O_PARAM.DATA.ATRB_FIELD.X.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.X.HI downto I_PARAM.DATA.ATRB_FIELD.X.LO);
         end if;
         for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
