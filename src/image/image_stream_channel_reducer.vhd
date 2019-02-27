@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Channel Reducer MODULE :
 --!              異なるチャネル数のイメージストリームを継ぐためのアダプタ
 --!     @version 1.8.0
---!     @date    2019/1/30
+--!     @date    2019/2/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -1001,11 +1001,10 @@ begin
     -------------------------------------------------------------------------------
     process(curr_queue, o_c_atrb)
         variable  outlet_data   :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
-        variable  c_atrb        :  IMAGE_STREAM_ATRB_TYPE;
-        variable  d_atrb        :  IMAGE_STREAM_ATRB_TYPE;
-        variable  x_atrb        :  IMAGE_STREAM_ATRB_TYPE;
-        variable  y_atrb        :  IMAGE_STREAM_ATRB_TYPE;
     begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         for o in 0 to O_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
             for d_pos in U_PARAM.SHAPE.D.LO to U_PARAM.SHAPE.D.HI loop
@@ -1032,58 +1031,42 @@ begin
             end loop;
             end loop;
         end loop;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         for o in 0 to O_WIDTH-1 loop
             for c_pos in U_PARAM.SHAPE.C.LO to U_PARAM.SHAPE.C.HI loop
-                c_atrb := o_c_atrb(o,c_pos);
                 SET_ATRB_C_TO_IMAGE_STREAM_DATA(
                     PARAM => O_PARAM,
                     C     => c_pos+o*U_PARAM.SHAPE.C.SIZE,
-                    ATRB  => c_atrb,
+                    ATRB  => o_c_atrb(o,c_pos),
                     DATA  => outlet_data
                 );
             end loop;
         end loop;
-        for d_pos in U_PARAM.SHAPE.D.LO to U_PARAM.SHAPE.D.HI loop
-                d_atrb := GET_ATRB_D_FROM_IMAGE_STREAM_DATA(
-                              PARAM => U_PARAM,
-                              D     => d_pos,
-                              DATA  => curr_queue(curr_queue'low).DATA
-                          );
-                SET_ATRB_D_TO_IMAGE_STREAM_DATA(
-                    PARAM => O_PARAM,
-                    D     => d_pos,
-                    ATRB  => d_atrb,
-                    DATA  => outlet_data
-                );
-        end loop;
-        for x_pos in U_PARAM.SHAPE.X.LO to U_PARAM.SHAPE.X.HI loop
-                x_atrb := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(
-                              PARAM => U_PARAM,
-                              X     => x_pos,
-                              DATA  => curr_queue(curr_queue'low).DATA
-                          );
-                SET_ATRB_X_TO_IMAGE_STREAM_DATA(
-                    PARAM => O_PARAM,
-                    X     => x_pos,
-                    ATRB  => x_atrb,
-                    DATA  => outlet_data
-                );
-        end loop;
-        for y_pos in U_PARAM.SHAPE.Y.LO to U_PARAM.SHAPE.Y.HI loop
-                y_atrb := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(
-                              PARAM => U_PARAM,
-                              Y     => y_pos,
-                              DATA  => curr_queue(curr_queue'low).DATA
-                          );
-                SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
-                    PARAM => O_PARAM,
-                    Y     => y_pos,
-                    ATRB  => y_atrb,
-                    DATA  => outlet_data
-                );
-        end loop;
-        if (U_PARAM.INFO_BITS > 0) then
-            outlet_data(O_PARAM.DATA.INFO_FIELD.HI downto O_PARAM.DATA.INFO_FIELD.LO) := curr_queue(curr_queue'low).DATA(U_PARAM.DATA.INFO_FIELD.HI downto U_PARAM.DATA.INFO_FIELD.LO);
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (O_PARAM.DATA.ATRB_FIELD.D.SIZE > 0) then
+            outlet_data(O_PARAM.DATA.ATRB_FIELD.D.HI downto O_PARAM.DATA.ATRB_FIELD.D.LO) := curr_queue(curr_queue'low).DATA(U_PARAM.DATA.ATRB_FIELD.D.HI downto U_PARAM.DATA.ATRB_FIELD.D.LO);
+        end if;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (O_PARAM.DATA.ATRB_FIELD.X.SIZE > 0) then
+            outlet_data(O_PARAM.DATA.ATRB_FIELD.X.HI downto O_PARAM.DATA.ATRB_FIELD.X.LO) := curr_queue(curr_queue'low).DATA(U_PARAM.DATA.ATRB_FIELD.X.HI downto U_PARAM.DATA.ATRB_FIELD.X.LO);
+        end if;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (O_PARAM.DATA.ATRB_FIELD.Y.SIZE > 0) then
+            outlet_data(O_PARAM.DATA.ATRB_FIELD.Y.HI downto O_PARAM.DATA.ATRB_FIELD.Y.LO) := curr_queue(curr_queue'low).DATA(U_PARAM.DATA.ATRB_FIELD.Y.HI downto U_PARAM.DATA.ATRB_FIELD.Y.LO);
+        end if;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (O_PARAM.DATA.INFO_FIELD.SIZE > 0) then
+            outlet_data(O_PARAM.DATA.INFO_FIELD.HI   downto O_PARAM.DATA.INFO_FIELD.LO  ) := curr_queue(curr_queue'low).DATA(U_PARAM.DATA.INFO_FIELD.HI   downto U_PARAM.DATA.INFO_FIELD.LO  );
         end if;
         O_DATA <= outlet_data;
     end process;

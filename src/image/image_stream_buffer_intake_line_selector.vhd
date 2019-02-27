@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファの入力側ライン選択
 --!              モジュール
 --!     @version 1.8.0
---!     @date    2019/2/1
+--!     @date    2019/2/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -457,36 +457,44 @@ begin
     process (I_DATA, line_select)
         variable  data   :  std_logic_vector(O_PARAM.DATA.SIZE     -1 downto 0);
         variable  elem   :  std_logic_vector(O_PARAM.ELEM_BITS     -1 downto 0);
-        variable  atrb_x :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
-        variable  atrb_y :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
-        variable  atrb_c :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
         variable  i_atrb :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
+        variable  y_atrb :  std_logic_vector(IMAGE_STREAM_ATRB_BITS-1 downto 0);
     begin
-        for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
-            atrb_c := GET_ATRB_C_FROM_IMAGE_STREAM_DATA(I_PARAM, c_pos+I_PARAM.SHAPE.C.LO, I_DATA);
-            SET_ATRB_C_TO_IMAGE_STREAM_DATA(O_PARAM, c_pos+O_PARAM.SHAPE.C.LO, atrb_c, data);
-        end loop;
-        for x_pos in 0 to O_PARAM.SHAPE.X.SIZE-1 loop
-            atrb_x := GET_ATRB_X_FROM_IMAGE_STREAM_DATA(I_PARAM, x_pos+I_PARAM.SHAPE.X.LO, I_DATA);
-            SET_ATRB_X_TO_IMAGE_STREAM_DATA(O_PARAM, x_pos+O_PARAM.SHAPE.X.LO, atrb_x, data);
-        end loop;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (O_PARAM.DATA.ATRB_FIELD.C.SIZE > 0) then
+            data(O_PARAM.DATA.ATRB_FIELD.C.HI downto O_PARAM.DATA.ATRB_FIELD.C.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.C.HI downto I_PARAM.DATA.ATRB_FIELD.C.LO);
+        end if;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        if (O_PARAM.DATA.ATRB_FIELD.X.SIZE > 0) then
+            data(O_PARAM.DATA.ATRB_FIELD.X.HI downto O_PARAM.DATA.ATRB_FIELD.X.LO) := I_DATA(I_PARAM.DATA.ATRB_FIELD.X.HI downto I_PARAM.DATA.ATRB_FIELD.X.LO);
+        end if;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         for line in 0 to LINE_SIZE-1 loop
             if (LINE_SIZE > 1) then
-                atrb_y := (others => '0');
+                y_atrb := (others => '0');
                 for y_pos in I_PARAM.SHAPE.Y.LO to I_PARAM.SHAPE.Y.HI loop
                     if (line_select(y_pos)(line) = '1') then
                         i_atrb := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(I_PARAM, y_pos, I_DATA);
-                        atrb_y := atrb_y or i_atrb;
+                        y_atrb := y_atrb or i_atrb;
                     end if;
                 end loop;
             else
-                atrb_y := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(I_PARAM, line+I_PARAM.SHAPE.Y.LO, I_DATA);
+                y_atrb := GET_ATRB_Y_FROM_IMAGE_STREAM_DATA(I_PARAM, line+I_PARAM.SHAPE.Y.LO, I_DATA);
             end if;
-            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(O_PARAM, line+O_PARAM.SHAPE.Y.LO, atrb_y, data);
-            line_intake_atrb(line).VALID <= (atrb_y(IMAGE_STREAM_ATRB_VALID_POS) = '1');
-            line_intake_atrb(line).START <= (atrb_y(IMAGE_STREAM_ATRB_START_POS) = '1');
-            line_intake_atrb(line).LAST  <= (atrb_y(IMAGE_STREAM_ATRB_LAST_POS ) = '1');
+            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(O_PARAM, line+O_PARAM.SHAPE.Y.LO, y_atrb, data);
+            line_intake_atrb(line).VALID <= (y_atrb(IMAGE_STREAM_ATRB_VALID_POS) = '1');
+            line_intake_atrb(line).START <= (y_atrb(IMAGE_STREAM_ATRB_START_POS) = '1');
+            line_intake_atrb(line).LAST  <= (y_atrb(IMAGE_STREAM_ATRB_LAST_POS ) = '1');
         end loop;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
             for x_pos in 0 to O_PARAM.SHAPE.X.SIZE-1 loop
                 for line  in 0 to LINE_SIZE-1 loop

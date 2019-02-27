@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ読み出し側モジュール
 --!     @version 1.8.0
---!     @date    2019/2/3
+--!     @date    2019/2/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -613,40 +613,10 @@ begin
     process (x_loop_first, x_loop_last, x_atrb_vector,
              d_loop_first, d_loop_last, d_loop_valid ,
              c_loop_first, c_loop_last, c_loop_valid , curr_bank_select, BUF_DATA, line_atrb_vector)
-        variable bank_data  :  std_logic_vector (BUF_DATA_BITS    -1 downto 0);
-        variable o_data     :  std_logic_vector (O_PARAM.DATA.SIZE-1 downto 0);
-        variable d_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.D.SIZE-1);
-        variable c_atrb     :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.C.SIZE-1);
-        function GEN_ATRB_VECTOR(LOOP_VALID: std_logic_vector; LOOP_FIRST, LOOP_LAST: std_logic) return IMAGE_STREAM_ATRB_VECTOR is
-            variable  atrb_vector  :  IMAGE_STREAM_ATRB_VECTOR(0 to LOOP_VALID'length-1);
-            variable  first        :  std_logic;
-            variable  last         :  std_logic;
-        begin
-            first := LOOP_FIRST;
-            for i in atrb_vector'low to atrb_vector'high loop
-                if (first = '1') then
-                    atrb_vector(i).START := TRUE;
-                    if (LOOP_VALID(i) = '1') then
-                        first := '0';
-                    end if;
-                else
-                    atrb_vector(i).START := FALSE;
-                end if;
-                atrb_vector(i).VALID := (LOOP_VALID(i) = '1');
-            end loop;
-            last := LOOP_LAST;
-            for i in atrb_vector'high downto atrb_vector'low loop
-                if (last = '1') then
-                    atrb_vector(i).LAST := TRUE;
-                    if (LOOP_VALID(i) = '1') then
-                        last := '0';
-                    end if;
-                else
-                    atrb_vector(i).LAST := FALSE;
-                end if;
-            end loop;
-            return atrb_vector;
-        end function;
+        variable bank_data     :  std_logic_vector (BUF_DATA_BITS    -1 downto 0);
+        variable o_data        :  std_logic_vector (O_PARAM.DATA.SIZE-1 downto 0);
+        variable d_atrb_vector :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.D.SIZE-1);
+        variable c_atrb_vector :  IMAGE_STREAM_ATRB_VECTOR(0 to O_PARAM.SHAPE.C.SIZE-1);
     begin
         ---------------------------------------------------------------------------
         --
@@ -676,49 +646,18 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        for line in 0 to LINE_SIZE-1 loop
-            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
-                PARAM   => O_PARAM,
-                Y       => line + O_PARAM.SHAPE.Y.LO,
-                ATRB    => line_atrb_vector(line),
-                DATA    => o_data
-            );
-        end loop;
+        c_atrb_vector := GENERATE_IMAGE_STREAM_ATRB_VECTOR(c_loop_valid, c_loop_first, c_loop_last);
+        d_atrb_vector := GENERATE_IMAGE_STREAM_ATRB_VECTOR(d_loop_valid, d_loop_first, d_loop_last);
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        for x_pos in 0 to O_PARAM.SHAPE.X.SIZE-1 loop
-            SET_ATRB_X_TO_IMAGE_STREAM_DATA(
-                PARAM   => O_PARAM,
-                X       => x_pos + O_PARAM.SHAPE.X.LO,
-                ATRB    => x_atrb_vector(x_pos),
-                DATA    => o_data
-            );
-        end loop;
+        SET_ATRB_C_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, c_atrb_vector   , o_data);
+        SET_ATRB_D_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, d_atrb_vector   , o_data);
+        SET_ATRB_X_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, x_atrb_vector   , o_data);
+        SET_ATRB_Y_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, line_atrb_vector, o_data);
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        d_atrb := GEN_ATRB_VECTOR(d_loop_valid, d_loop_first, d_loop_last);
-        for d_pos in 0 to O_PARAM.SHAPE.D.SIZE-1 loop
-            SET_ATRB_D_TO_IMAGE_STREAM_DATA(
-                PARAM => O_PARAM,
-                D     => d_pos + O_PARAM.SHAPE.D.LO,
-                ATRB  => d_atrb(d_pos),
-                DATA  => o_data
-            );
-        end loop;
-        ---------------------------------------------------------------------------
-        --
-        ---------------------------------------------------------------------------
-        c_atrb := GEN_ATRB_VECTOR(c_loop_valid, c_loop_first, c_loop_last);
-        for c_pos in 0 to O_PARAM.SHAPE.C.SIZE-1 loop
-            SET_ATRB_C_TO_IMAGE_STREAM_DATA(
-                PARAM => O_PARAM,
-                C     => c_pos + O_PARAM.SHAPE.C.LO,
-                ATRB  => c_atrb(c_pos),
-                DATA  => o_data
-            );
-        end loop;
         outlet_data <= o_data;
     end process;
     -------------------------------------------------------------------------------
