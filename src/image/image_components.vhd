@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/02/28                                                      --
+--!     @date    2019/03/04                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -390,16 +390,14 @@ component IMAGE_STREAM_BUFFER
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_FEED          : --! @brief OUTPUT FEED :
-                          --! 出力終了信号.
-                          --! * この信号をアサートすることでバッファをクリアして
-                          --!   入力可能な状態に戻る.
-                          in  std_logic := '1';
         O_RETURN        : --! @brief OUTPUT RETURN :
                           --! 再出力要求信号.
-                          --! * この信号をアサートすることでバッファの内容を再度
-                          --!   出力する.
-                          in  std_logic := '1';
+                          --! * O_RETURN='0'の時、ラインの最後のストリームデータが
+                          --!   出力された後、O_PARAM.STRIDE.Y で指定された値の分だ
+                          --!   けラインを FEED する.
+                          --! * O_RETURN='1'の時、ラインの最後のストリームデータが
+                          --!   出力された後、ラインバッファの内容を再度出力する.
+                          in  std_logic := '0';
         O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
                           --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);

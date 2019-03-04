@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Module :
 --!              異なる形のイメージストリームを継ぐためのバッファ
 --!     @version 1.8.0
---!     @date    2019/2/3
+--!     @date    2019/3/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -117,16 +117,14 @@ entity  IMAGE_STREAM_BUFFER is
     -------------------------------------------------------------------------------
     -- 出力側 I/F
     -------------------------------------------------------------------------------
-        O_FEED          : --! @brief OUTPUT FEED :
-                          --! 出力終了信号.
-                          --! * この信号をアサートすることでバッファをクリアして
-                          --!   入力可能な状態に戻る.
-                          in  std_logic := '1';
         O_RETURN        : --! @brief OUTPUT RETURN :
                           --! 再出力要求信号.
-                          --! * この信号をアサートすることでバッファの内容を再度
-                          --!   出力する.
-                          in  std_logic := '1';
+                          --! * O_RETURN='0'の時、ラインの最後のストリームデータが
+                          --!   出力された後、O_PARAM.STRIDE.Y で指定された値の分だ
+                          --!   けラインを FEED する.
+                          --! * O_RETURN='1'の時、ラインの最後のストリームデータが
+                          --!   出力された後、ラインバッファの内容を再度出力する.
+                          in  std_logic := '0';
         O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
                           --! ストリームデータ出力.
                           out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
@@ -626,7 +624,7 @@ begin
                                   (o_exit_valid = '1' and o_exit_ready = '1'                   ) else '0';
     o_exit_frame_last <= '1' when (o_exit_line_last = '1'                                      ) and
                                   (IMAGE_STREAM_DATA_IS_LAST_Y(PARAM.O_EXIT_PARAM, o_exit_data)) else '0';
-    o_exit_feed       <= '1' when (o_exit_line_last = '1' and O_FEED   = '1') else '0';
+    o_exit_feed       <= '1' when (o_exit_line_last = '1' and O_RETURN = '0') else '0';
     o_exit_return     <= '1' when (o_exit_line_last = '1' and O_RETURN = '1') else '0';
 
 end RTL;
