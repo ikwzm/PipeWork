@@ -2,7 +2,7 @@
 --!     @file    image_stream_generator.vhd
 --!     @brief   Image Stream Generator Module
 --!     @version 1.8.0
---!     @date    2019/1/21
+--!     @date    2019/3/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -47,17 +47,14 @@ entity  IMAGE_STREAM_GENERATOR is
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
                           --! 出力側イメージストリームのパラメータを指定する.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(32,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE PARAMETER :
+                          IMAGE_SHAPE_TYPE        := NEW_IMAGE_SHAPE_CONSTANT(32,1,1,1);
+                          --! 出力側イメージストリームのパラメータを指定する.
         I_DATA_BITS     : --! @brief INPUT  STREAM DATA BIT SIZE :
                           --! 入力側のデータのビット幅を指定する.
                           --! * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなけれ
                           --!   ばならない.
-                          integer := 32;
-        MAX_C_SIZE      : --! @brief MAX CHANNEL SIZE :
-                          integer := 1;
-        MAX_X_SIZE      : --! @brief MAX X SIZE :
-                          integer := 1;
-        MAX_Y_SIZE      : --! @brief MAX Y SIZE :
-                          integer := 1
+                          integer := 32
     );
     port (
     -------------------------------------------------------------------------------
@@ -81,12 +78,14 @@ entity  IMAGE_STREAM_GENERATOR is
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
                           out std_logic;
-        C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_C_SIZE := 1;
-        X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to MAX_X_SIZE := 1;
-        Y_SIZE          : --! @brief INPUT Y SIZE :
-                          in  integer range 0 to MAX_Y_SIZE := 1;
+        C_SIZE          : --! @brief INPUT SHAPE.C SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief INPUT SHAPE.D SIZE :
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief INPUT SHAPE.X SIZE :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
+        Y_SIZE          : --! @brief INPUT SHAPE.Y SIZE :
+                          in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
     -------------------------------------------------------------------------------
     -- STREAM 入力側 I/F
     -------------------------------------------------------------------------------
@@ -135,6 +134,7 @@ architecture RTL of IMAGE_STREAM_GENERATOR is
     signal    y_loop_done           :  std_logic;
     signal    y_loop_first          :  std_logic;
     signal    y_loop_last           :  std_logic;
+    signal    y_loop_size           :  integer range 0 to O_SHAPE.Y.MAX_SIZE;
     signal    y_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
     -------------------------------------------------------------------------------
     -- 
@@ -146,7 +146,20 @@ architecture RTL of IMAGE_STREAM_GENERATOR is
     signal    x_loop_done           :  std_logic;
     signal    x_loop_first          :  std_logic;
     signal    x_loop_last           :  std_logic;
+    signal    x_loop_size           :  integer range 0 to O_SHAPE.X.MAX_SIZE;
     signal    x_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI);
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    signal    d_loop_start          :  std_logic;
+    signal    d_loop_next           :  std_logic;
+    signal    d_loop_busy           :  std_logic;
+    signal    d_loop_term           :  std_logic;
+    signal    d_loop_done           :  std_logic;
+    signal    d_loop_first          :  std_logic;
+    signal    d_loop_last           :  std_logic;
+    signal    d_loop_size           :  integer range 0 to O_SHAPE.D.MAX_SIZE;
+    signal    d_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.D.LO to O_PARAM.SHAPE.D.HI);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -157,6 +170,7 @@ architecture RTL of IMAGE_STREAM_GENERATOR is
     signal    c_loop_done           :  std_logic;
     signal    c_loop_first          :  std_logic;
     signal    c_loop_last           :  std_logic;
+    signal    c_loop_size           :  integer range 0 to O_SHAPE.D.MAX_SIZE;
     signal    c_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI);
     -------------------------------------------------------------------------------
     -- 
@@ -179,11 +193,15 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR
-            generic map (
+        y_loop_size <= O_SHAPE.Y.SIZE when (O_SHAPE.Y.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else Y_SIZE;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR            -- 
+            generic map (                                -- 
                 ATRB_SIZE       => O_PARAM.SHAPE.Y.SIZE, -- 
                 STRIDE          => O_PARAM.STRIDE.Y    , --   
-                MAX_SIZE        => MAX_Y_SIZE            --   
+                MAX_SIZE        => O_SHAPE.Y.MAX_SIZE    --   
             )                                            -- 
             port map (                                   -- 
                 CLK             => CLK                 , -- : In  :
@@ -191,7 +209,7 @@ begin
                 CLR             => CLR                 , -- : In  :
                 LOAD            => y_loop_start        , -- : In  :
                 CHOP            => y_loop_next         , -- : In  :
-                SIZE            => Y_SIZE              , -- : In  :
+                SIZE            => y_loop_size         , -- : In  :
                 ATRB            => y_atrb_vector       , -- : Out :
                 START           => y_loop_first        , -- : Out :
                 LAST            => y_loop_last         , -- : Out :
@@ -200,7 +218,7 @@ begin
         ---------------------------------------------------------------------------
         -- y_loop_next  :
         ---------------------------------------------------------------------------
-        y_loop_next  <= '1' when (x_loop_done  = '1') else '0';
+        y_loop_next  <= '1' when (x_loop_done = '1') else '0';
         ---------------------------------------------------------------------------
         -- y_loop_done  :
         ---------------------------------------------------------------------------
@@ -219,7 +237,7 @@ begin
                     y_loop_busy <= '0';
                     y_loop_term <= '0';
                 elsif (y_loop_start = '1') then
-                    if (Y_SIZE = 0) then
+                    if (y_loop_size = 0) then
                         y_loop_busy <= '1';
                         y_loop_term <= '1';
                     else
@@ -240,8 +258,8 @@ begin
         ---------------------------------------------------------------------------
         -- x_loop_start : 
         ---------------------------------------------------------------------------
-        x_loop_start <= '1' when (y_loop_start = '1' and Y_SIZE     /=  0 ) or
-                                 (y_loop_next  = '1' and y_loop_last = '0') else '0';
+        x_loop_start <= '1' when (y_loop_start = '1' and y_loop_size /=  0 ) or
+                                 (y_loop_next  = '1' and y_loop_last  = '0') else '0';
     end block;
     -------------------------------------------------------------------------------
     -- X LOOP
@@ -251,11 +269,15 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
+        x_loop_size <= O_SHAPE.X.SIZE when (O_SHAPE.X.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else X_SIZE;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR
             generic map (
                 ATRB_SIZE       => O_PARAM.SHAPE.X.SIZE, -- 
                 STRIDE          => O_PARAM.STRIDE.X    , --   
-                MAX_SIZE        => MAX_X_SIZE            --   
+                MAX_SIZE        => O_SHAPE.X.MAX_SIZE    --   
             )                                            -- 
             port map (                                   -- 
                 CLK             => CLK                 , -- : In  :
@@ -263,7 +285,7 @@ begin
                 CLR             => CLR                 , -- : In  :
                 LOAD            => x_loop_start        , -- : In  :
                 CHOP            => x_loop_next         , -- : In  :
-                SIZE            => X_SIZE              , -- : In  :
+                SIZE            => x_loop_size         , -- : In  :
                 ATRB            => x_atrb_vector       , -- : Out :
                 START           => x_loop_first        , -- : Out :
                 LAST            => x_loop_last         , -- : Out :
@@ -272,7 +294,7 @@ begin
         ---------------------------------------------------------------------------
         -- x_loop_next  :
         ---------------------------------------------------------------------------
-        x_loop_next  <= '1' when (c_loop_done  = '1') else '0';
+        x_loop_next  <= '1' when (d_loop_done = '1') else '0';
         ---------------------------------------------------------------------------
         -- x_loop_done  :
         ---------------------------------------------------------------------------
@@ -291,7 +313,7 @@ begin
                     x_loop_busy <= '0';
                     x_loop_term <= '0';
                 elsif (x_loop_start = '1') then
-                    if (X_SIZE = 0) then
+                    if (x_loop_size = 0) then
                         x_loop_busy <= '1';
                         x_loop_term <= '1';
                     else
@@ -310,10 +332,86 @@ begin
             end if;
         end process;
         ---------------------------------------------------------------------------
+        -- d_loop_start : 
+        ---------------------------------------------------------------------------
+        d_loop_start <= '1' when (x_loop_start = '1' and x_loop_size /=  0 ) or
+                                 (x_loop_next  = '1' and x_loop_last  = '0') else '0';
+    end block;
+    -------------------------------------------------------------------------------
+    -- D LOOP
+    -------------------------------------------------------------------------------
+    D_LOOP: block
+    begin
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        d_loop_size <= O_SHAPE.D.SIZE when (O_SHAPE.D.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else D_SIZE;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR
+            generic map (
+                ATRB_SIZE       => O_PARAM.SHAPE.D.SIZE, -- 
+                STRIDE          => O_PARAM.SHAPE.D.SIZE, --   
+                MAX_SIZE        => O_SHAPE.D.MAX_SIZE    --   
+            )                                            -- 
+            port map (                                   -- 
+                CLK             => CLK                 , -- : In  :
+                RST             => RST                 , -- : In  :
+                CLR             => CLR                 , -- : In  :
+                LOAD            => d_loop_start        , -- : In  :
+                CHOP            => d_loop_next         , -- : In  :
+                SIZE            => d_loop_size         , -- : In  :
+                ATRB            => d_atrb_vector       , -- : Out :
+                START           => d_loop_first        , -- : Out :
+                LAST            => d_loop_last         , -- : Out :
+                TERM            => open                  -- : Out :
+            );                                           -- 
+        ---------------------------------------------------------------------------
+        -- d_loop_next  :
+        ---------------------------------------------------------------------------
+        d_loop_next  <= '1' when (c_loop_done = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- d_loop_done  :
+        ---------------------------------------------------------------------------
+        d_loop_done  <= '1' when (d_loop_busy = '1' and d_loop_term = '1') or
+                                 (d_loop_busy = '1' and d_loop_next = '1' and d_loop_last = '1') else '0';
+        ---------------------------------------------------------------------------
+        -- d_loop_busy  :
+        -- d_loop_term  :
+        ---------------------------------------------------------------------------
+        process(CLK, RST) begin 
+            if (RST = '1') then
+                    d_loop_busy <= '0';
+                    d_loop_term <= '0';
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    d_loop_busy <= '0';
+                    d_loop_term <= '0';
+                elsif (d_loop_start = '1') then
+                    if (d_loop_size = 0) then
+                        d_loop_busy <= '1';
+                        d_loop_term <= '1';
+                    else
+                        d_loop_busy <= '1';
+                        d_loop_term <= '0';
+                    end if;
+                elsif (d_loop_busy  = '1') then
+                    if (d_loop_done = '1') then
+                        d_loop_busy <= '0';
+                        d_loop_term <= '0';
+                    else
+                        d_loop_busy <= '1';
+                        d_loop_term <= '0';
+                    end if;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
         -- c_loop_start : 
         ---------------------------------------------------------------------------
-        c_loop_start <= '1' when (x_loop_start = '1' and X_SIZE      /= 0 ) or
-                                 (x_loop_next  = '1' and x_loop_last = '0') else '0';
+        c_loop_start <= '1' when (d_loop_start = '1' and d_loop_size /=  0 ) or
+                                 (d_loop_next  = '1' and d_loop_last  = '0') else '0';
     end block;
     -------------------------------------------------------------------------------
     -- C LOOP
@@ -323,11 +421,15 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
+        c_loop_size <= O_SHAPE.C.SIZE when (O_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT) else C_SIZE;
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
         ATRB_GEN: IMAGE_STREAM_ATRB_GENERATOR            -- 
             generic map (                                -- 
                 ATRB_SIZE       => O_PARAM.SHAPE.C.SIZE, -- 
                 STRIDE          => O_PARAM.SHAPE.C.SIZE, --   
-                MAX_SIZE        => MAX_C_SIZE            --   
+                MAX_SIZE        => O_SHAPE.C.MAX_SIZE    --   
             )                                            -- 
             port map (                                   -- 
                 CLK             => CLK                 , -- : In  :
@@ -335,7 +437,7 @@ begin
                 CLR             => CLR                 , -- : In  :
                 LOAD            => c_loop_start        , -- : In  :
                 CHOP            => c_loop_next         , -- : In  :
-                SIZE            => C_SIZE              , -- : In  :
+                SIZE            => c_loop_size         , -- : In  :
                 ATRB            => c_atrb_vector       , -- : Out :
                 START           => c_loop_first        , -- : Out :
                 LAST            => c_loop_last         , -- : Out :
@@ -365,7 +467,7 @@ begin
                     c_loop_busy <= '0';
                     c_loop_term <= '0';
                 elsif (c_loop_start = '1') then
-                    if (C_SIZE = 0) then
+                    if (c_loop_size = 0) then
                         io_enable   <= '0';
                         c_loop_busy <= '1';
                         c_loop_term <= '1';
@@ -399,19 +501,22 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    process (I_DATA, c_atrb_vector, x_atrb_vector, y_atrb_vector)
+    process (I_DATA, c_atrb_vector, d_atrb_vector, x_atrb_vector, y_atrb_vector)
         variable  data :  std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
     begin
         data(O_PARAM.DATA.ELEM_FIELD.HI downto O_PARAM.DATA.ELEM_FIELD.LO) := I_DATA;
-        for c_pos in O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI loop
-            SET_ATRB_C_TO_IMAGE_STREAM_DATA(O_PARAM, c_pos, c_atrb_vector(c_pos), data);
-        end loop;
-        for x_pos in O_PARAM.SHAPE.X.LO to O_PARAM.SHAPE.X.HI loop
-            SET_ATRB_X_TO_IMAGE_STREAM_DATA(O_PARAM, x_pos, x_atrb_vector(x_pos), data);
-        end loop;
-        for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
-            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(O_PARAM, y_pos, y_atrb_vector(y_pos), data);
-        end loop;
+        if (O_PARAM.DATA.ATRB_FIELD.C.SIZE > 0) then
+            SET_ATRB_C_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, c_atrb_vector, data);
+        end if;
+        if (O_PARAM.DATA.ATRB_FIELD.D.SIZE > 0) then
+            SET_ATRB_D_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, d_atrb_vector, data);
+        end if;
+        if (O_PARAM.DATA.ATRB_FIELD.X.SIZE > 0) then
+            SET_ATRB_X_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, x_atrb_vector, data);
+        end if;
+        if (O_PARAM.DATA.ATRB_FIELD.Y.SIZE > 0) then
+            SET_ATRB_Y_VECTOR_TO_IMAGE_STREAM_DATA(O_PARAM, y_atrb_vector, data);
+        end if;
         O_DATA <= data;
     end process;
 end RTL;

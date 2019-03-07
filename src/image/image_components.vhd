@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/03/04                                                      --
+--!     @date    2019/03/07                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -122,17 +122,14 @@ component IMAGE_STREAM_GENERATOR
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
                           --! 出力側イメージストリームのパラメータを指定する.
                           IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(32,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE PARAMETER :
+                          IMAGE_SHAPE_TYPE        := NEW_IMAGE_SHAPE_CONSTANT(32,1,1,1);
+                          --! 出力側イメージストリームのパラメータを指定する.
         I_DATA_BITS     : --! @brief INPUT  STREAM DATA BIT SIZE :
                           --! 入力側のデータのビット幅を指定する.
                           --! * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなけれ
                           --!   ばならない.
-                          integer := 32;
-        MAX_C_SIZE      : --! @brief MAX CHANNEL SIZE :
-                          integer := 1;
-        MAX_X_SIZE      : --! @brief MAX X SIZE :
-                          integer := 1;
-        MAX_Y_SIZE      : --! @brief MAX Y SIZE :
-                          integer := 1
+                          integer := 32
     );
     port (
     -------------------------------------------------------------------------------
@@ -156,12 +153,14 @@ component IMAGE_STREAM_GENERATOR
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
                           out std_logic;
-        C_SIZE          : --! @brief INPUT CHANNEL SIZE :
-                          in  integer range 0 to MAX_C_SIZE := 1;
-        X_SIZE          : --! @brief INPUT X SIZE :
-                          in  integer range 0 to MAX_X_SIZE := 1;
-        Y_SIZE          : --! @brief INPUT Y SIZE :
-                          in  integer range 0 to MAX_Y_SIZE := 1;
+        C_SIZE          : --! @brief INPUT SHAPE.C SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief INPUT SHAPE.D SIZE :
+                          in  integer range 0 to O_SHAPE.D.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief INPUT SHAPE.X SIZE :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
+        Y_SIZE          : --! @brief INPUT SHAPE.Y SIZE :
+                          in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
     -------------------------------------------------------------------------------
     -- STREAM 入力側 I/F
     -------------------------------------------------------------------------------
