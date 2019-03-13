@@ -173,22 +173,35 @@ architecture RTL of UNROLLED_LOOP_COUNTER is
         end if;
     end function;
     -------------------------------------------------------------------------------
-    -- MAX_LAST_POS  : 最後の位置の取り得る値の最大値
+    -- MAX : 三つの引数を比較して大きい方を選択する関数
+    -------------------------------------------------------------------------------
+    function  MAX(A,B,C:integer) return integer is
+    begin
+        return MAX(MAX(A,B),C);
+    end function;
+    -------------------------------------------------------------------------------
+    -- MAX_LAST_POS      : 最後の位置の取り得る値の最大値
     -------------------------------------------------------------------------------
     constant  MAX_LAST_POS          :  integer := MAX_LOOP_SIZE-1;
     -------------------------------------------------------------------------------
-    -- MAX_LAST_POS_BITS  : MAX_LAST_POS を表現するのに必要なビット数
+    -- MAX_LAST_POS_BITS : MAX_LAST_POS を表現するのに必要なビット数
     -------------------------------------------------------------------------------
     constant  MAX_LAST_POS_BITS     :  integer := MAX(1, CALC_BITS(MAX_LAST_POS));
     -------------------------------------------------------------------------------
-    -- VALID_POS_BITS : VALID 配列の位置を表現するのに必要なビット数
+    -- DECRIMENT_BITS    : STRIDE*UNROLL を表現するのに必要なビット数
+    -------------------------------------------------------------------------------
+    constant  DECRIMENT_BITS        :  integer := MAX(1, CALC_BITS(STRIDE*UNROLL));
+    -------------------------------------------------------------------------------
+    -- VALID_POS_BITS    : VALID 配列の位置を表現するのに必要なビット数
     -------------------------------------------------------------------------------
     constant  VALID_POS_BITS        :  integer := MAX(1, CALC_BITS(UNROLL-1));
     -------------------------------------------------------------------------------
     -- LAST_POS_BITS : curr_last_pos/next_last_pos を表現するのに必要なビット数
     --                 curr_last_pos/next_last_pos は signed 型なので１ビット多い
     -------------------------------------------------------------------------------
-    constant  LAST_POS_BITS         :  integer := MAX(MAX_LAST_POS_BITS,VALID_POS_BITS)+1;
+    constant  LAST_POS_BITS         :  integer := MAX(MAX_LAST_POS_BITS,
+                                                      DECRIMENT_BITS   ,
+                                                      VALID_POS_BITS   )+1;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -352,12 +365,14 @@ begin
     -- next_loop_valid : 次のクロックでの LOOP_VALID の値
     -------------------------------------------------------------------------------
     process (next_last_pos, next_first_pos, next_loop_term)
-        variable next_last_pos_hi      :  unsigned(next_last_pos'high-1 downto VALID_POS_BITS);
-        variable next_last_pos_lo      :  unsigned(VALID_POS_BITS    -1 downto 0);
-        constant NEXT_LAST_POS_HI_ZERO :  unsigned(next_last_pos_hi'range) := (others => '0');
+        variable next_last_pos_sv      :  std_logic_vector(next_last_pos'range);
+        variable next_last_pos_hi      :  std_logic_vector(next_last_pos'high-1 downto VALID_POS_BITS);
+        variable next_last_pos_lo      :  unsigned        (VALID_POS_BITS    -1 downto 0);
+        constant NEXT_LAST_POS_HI_ZERO :  std_logic_vector(next_last_pos_hi'range) := (others => '0');
     begin
-        next_last_pos_hi := to_01(unsigned(next_last_pos(next_last_pos_hi'range)));
-        next_last_pos_lo := to_01(unsigned(next_last_pos(next_last_pos_lo'range)));
+        next_last_pos_sv := std_logic_vector(to_01(next_last_pos));
+        next_last_pos_hi := std_logic_vector(next_last_pos_sv(next_last_pos_hi'range));
+        next_last_pos_lo := unsigned(        next_last_pos_sv(next_last_pos_lo'range));
         if    (next_loop_term = '1') then
             next_loop_valid <= (others => '0');
         elsif (next_last_pos_hi /= NEXT_LAST_POS_HI_ZERO) then
