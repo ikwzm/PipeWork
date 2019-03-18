@@ -2,7 +2,7 @@
 --!     @file    image_stream_generator.vhd
 --!     @brief   Image Stream Generator Module
 --!     @version 1.8.0
---!     @date    2019/3/18
+--!     @date    2019/3/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -170,7 +170,7 @@ architecture RTL of IMAGE_STREAM_GENERATOR is
     signal    c_loop_done           :  std_logic;
     signal    c_loop_first          :  std_logic;
     signal    c_loop_last           :  std_logic;
-    signal    c_loop_size           :  integer range 0 to O_SHAPE.D.MAX_SIZE;
+    signal    c_loop_size           :  integer range 0 to O_SHAPE.C.MAX_SIZE;
     signal    c_atrb_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.C.LO to O_PARAM.SHAPE.C.HI);
     -------------------------------------------------------------------------------
     -- 
