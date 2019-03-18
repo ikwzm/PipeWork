@@ -2,7 +2,7 @@
 --!     @file    image_stream_generator.vhd
 --!     @brief   Image Stream Generator Module
 --!     @version 1.8.0
---!     @date    2019/3/7
+--!     @date    2019/3/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -482,7 +482,7 @@ begin
                         c_loop_busy <= '0';
                         c_loop_term <= '0';
                     else
-                        io_enable   <= '0';
+                        io_enable   <= '1';
                         c_loop_busy <= '1';
                         c_loop_term <= '0';
                     end if;
