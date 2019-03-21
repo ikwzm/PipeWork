@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Outlet Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの出力側モジュール
 --!     @version 1.8.0
---!     @date    2019/2/3
+--!     @date    2019/3/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -158,13 +158,10 @@ architecture RTL of IMAGE_STREAM_BUFFER_OUTLET is
                             := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => O_PARAM.ELEM_BITS,
                                    INFO_BITS    => O_PARAM.INFO_BITS,
-                                   SHAPE        => NEW_IMAGE_SHAPE(
-                                                       ELEM_BITS => O_PARAM.ELEM_BITS,
-                                                       C         => O_PARAM.SHAPE.C,
-                                                       D         => O_PARAM.SHAPE.D,
-                                                       X         => O_PARAM.SHAPE.X,
-                                                       Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE)
-                                                   ),
+                                   C            => O_PARAM.SHAPE.C,
+                                   D            => O_PARAM.SHAPE.D,
+                                   X            => O_PARAM.SHAPE.X,
+                                   Y            => NEW_IMAGE_SHAPE_SIDE_CONSTANT(LINE_SIZE),
                                    STRIDE       => O_PARAM.STRIDE,
                                    BORDER_TYPE  => O_PARAM.BORDER_TYPE
                                );
