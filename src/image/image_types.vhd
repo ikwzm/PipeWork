@@ -208,94 +208,67 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  return               IMAGE_STREAM_PARAM_TYPE;
+    function  NEW_IMAGE_STREAM_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
+                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  D                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  D                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  INFO_BITS         :  integer := 0;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE;
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -1137,10 +1110,10 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
         variable  param             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1169,28 +1142,9 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin 
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0        ,
-                  SHAPE             => SHAPE    ,
-                  STRIDE            => STRIDE   ,
-                  BORDER_TYPE       => IMAGE_STREAM_BORDER_NONE
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1198,8 +1152,8 @@ package body IMAGE_TYPES is
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => SHAPE    ,
-                  STRIDE            => STRIDE   ,
-                  BORDER_TYPE       => IMAGE_STREAM_BORDER_NONE
+                  STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(SHAPE.X.SIZE, SHAPE.Y.SIZE),
+                  BORDER_TYPE       => BORDER_TYPE
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1207,64 +1161,13 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0        ,
-                  SHAPE             => SHAPE    ,
-                  STRIDE            => STRIDE   ,
-                  BORDER_TYPE       => IMAGE_STREAM_BORDER_NONE
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => INFO_BITS,
-                  SHAPE             => SHAPE    ,
-                  STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(1,1)
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  SHAPE             :  IMAGE_SHAPE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0        ,
-                  SHAPE             => SHAPE    ,
-                  STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(1,1)
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1281,19 +1184,41 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE)
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0        ,
+                  INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,D,X,Y),
+                  STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(X.SIZE, Y.SIZE),
+                  BORDER_TYPE       => BORDER_TYPE
+               );
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の各種パラメータをを設定する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_PARAM(
+                  ELEM_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
+                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  return               IMAGE_STREAM_PARAM_TYPE
+    is
+    begin
+        return NEW_IMAGE_STREAM_PARAM(
+                  ELEM_BITS         => ELEM_BITS,
+                  INFO_BITS         => INFO_BITS,
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y),
                   STRIDE            => STRIDE,
                   BORDER_TYPE       => BORDER_TYPE
                );
@@ -1303,18 +1228,20 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
+                  INFO_BITS         :  integer := 0;
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => INFO_BITS,
-                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,D,X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y),
+                  STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(X.SIZE, Y.SIZE),
+                  BORDER_TYPE       => BORDER_TYPE
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1322,35 +1249,20 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  D                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  INFO_BITS         :  integer := 0;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0,
-                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,D,X,Y)
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => INFO_BITS,
-                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y),
+                  STRIDE            => STRIDE,
+                  BORDER_TYPE       => BORDER_TYPE
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1358,49 +1270,19 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
-                  C                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  INFO_BITS         :  integer := 0;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0        ,
-                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y)
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  INFO_BITS         :  integer;
-                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
+                  Y                 :  IMAGE_SHAPE_SIDE_TYPE;
+                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
         return NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         => ELEM_BITS,
                   INFO_BITS         => INFO_BITS,
-                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y)
-               );
-    end function;
-    -------------------------------------------------------------------------------
-    --! @brief Image Stream の各種パラメータをを設定する関数
-    -------------------------------------------------------------------------------
-    function  NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         :  integer;
-                  X                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  Y                 :  IMAGE_SHAPE_SIDE_TYPE)
-                  return               IMAGE_STREAM_PARAM_TYPE
-    is
-    begin
-        return NEW_IMAGE_STREAM_PARAM(
-                  ELEM_BITS         => ELEM_BITS,
-                  INFO_BITS         => 0        ,
-                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y)
+                  SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y),
+                  STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(X.SIZE, Y.SIZE),
+                  BORDER_TYPE       => BORDER_TYPE
                );
     end function;
     -------------------------------------------------------------------------------
