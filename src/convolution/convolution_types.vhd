@@ -2,7 +2,7 @@
 --!     @file    convolution_types.vhd
 --!     @brief   Convolution Engine Types Package.
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/3/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -388,102 +388,6 @@ package body CONVOLUTION_TYPES is
     end function;
 
     -------------------------------------------------------------------------------
-    --! @brief IMAGE_STREAM_ATRB_VECTOR を生成する関数.
-    -------------------------------------------------------------------------------
-    function  GEN_IMAGE_STREAM_ATRB_VECTOR(
-                 VALID          :  std_logic_vector;
-                 START          :  boolean;
-                 LAST           :  boolean)
-                 return            IMAGE_STREAM_ATRB_VECTOR
-    is
-        alias    i_valid        :  std_logic_vector(VALID'length-1 downto 0) is VALID;
-        variable atrb_vec       :  IMAGE_STREAM_ATRB_VECTOR(0 to VALID'length-1);
-        variable atrb_start     :  boolean;
-        variable atrb_last      :  boolean;
-    begin
-        for i in atrb_vec'low to atrb_vec'high loop
-            atrb_vec(i).VALID := (i_valid(i) = '1');
-        end loop;
-        atrb_start := START;
-        for i in atrb_vec'low to atrb_vec'high loop
-            atrb_vec(i).START := atrb_start;
-            if (i_valid(i) = '1') then
-                atrb_start := FALSE;
-            end if;
-        end loop;
-        atrb_last  := LAST;
-        for i in atrb_vec'high to atrb_vec'low loop
-            atrb_vec(i).LAST := atrb_last;
-            if (i_valid(i) = '1') then
-                atrb_last := FALSE;
-            end if;
-        end loop;
-        return atrb_vec;
-    end function;
-
-    -------------------------------------------------------------------------------
-    --! @brief IMAGE_STREAM_ATRB_VECTOR を生成する関数.
-    -------------------------------------------------------------------------------
-    procedure SET_ATRB_VECTOR_TO_IMAGE_STREAM_DATA(
-                  PARAM             :  in   IMAGE_STREAM_PARAM_TYPE;
-                  ATRB_C_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
-                  ATRB_D_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
-                  ATRB_X_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
-                  ATRB_Y_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
-        variable  DATA              :  inout std_logic_vector)
-    is
-        alias     i_atrb_c_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_C_VEC'length-1) is ATRB_C_VEC;
-        alias     i_atrb_d_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_D_VEC'length-1) is ATRB_D_VEC;
-        alias     i_atrb_x_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_X_VEC'length-1) is ATRB_X_VEC;
-        alias     i_atrb_y_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_Y_VEC'length-1) is ATRB_Y_VEC;
-    begin
-        ---------------------------------------------------------------------------
-        -- ATRB_C_VEC を DATA にセット
-        ---------------------------------------------------------------------------
-        for c_pos in i_atrb_c_vec'range loop
-            SET_ATRB_C_TO_IMAGE_STREAM_DATA(
-                PARAM => PARAM,
-                C     => c_pos + PARAM.SHAPE.C.LO,
-                ATRB  => i_atrb_c_vec(c_pos),
-                DATA  => DATA
-            );
-        end loop;
-        ---------------------------------------------------------------------------
-        -- ATRB_D_VEC を DATA にセット
-        ---------------------------------------------------------------------------
-        for d_pos in i_atrb_d_vec'range loop
-            SET_ATRB_D_TO_IMAGE_STREAM_DATA(
-                PARAM => PARAM,
-                D     => d_pos + PARAM.SHAPE.D.LO,
-                ATRB  => i_atrb_d_vec(d_pos),
-                DATA  => DATA
-            );
-        end loop;
-        ---------------------------------------------------------------------------
-        -- ATRB_X_VEC を DATA にセット
-        ---------------------------------------------------------------------------
-        for x_pos in i_atrb_x_vec'range loop
-            SET_ATRB_X_TO_IMAGE_STREAM_DATA(
-                PARAM => PARAM,
-                X     => x_pos + PARAM.SHAPE.X.LO,
-                ATRB  => i_atrb_x_vec(x_pos),
-                DATA  => DATA
-            );
-        end loop;
-        ---------------------------------------------------------------------------
-        -- ATRB_Y_VEC を DATA にセット
-        ---------------------------------------------------------------------------
-        for y_pos in i_atrb_y_vec'range loop
-            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
-                PARAM => PARAM,
-                Y     => y_pos + PARAM.SHAPE.Y.LO,
-                ATRB  => i_atrb_y_vec(y_pos),
-                DATA  => DATA
-            );
-        end loop;
-    end procedure;
-    
-    -------------------------------------------------------------------------------
     --! @brief イメージ入力 Stream を Convolution Pipeline に変換する関数
     -------------------------------------------------------------------------------
     function  CONVOLUTION_PIPELINE_FROM_IMAGE_STREAM(
@@ -592,7 +496,7 @@ package body CONVOLUTION_TYPES is
                 o_d_valid(o_d_pos) := '1';
             end if;
         end loop;
-        o_d_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_d_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_d_valid,
                             START => IMAGE_STREAM_DATA_IS_START_D(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_D (STREAM_PARAM, i_data)
@@ -614,7 +518,7 @@ package body CONVOLUTION_TYPES is
                 end if;
             end loop;
         end loop;
-        o_x_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_x_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_x_valid,
                             START => IMAGE_STREAM_DATA_IS_START_X(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_X (STREAM_PARAM, i_data)
@@ -636,7 +540,7 @@ package body CONVOLUTION_TYPES is
                 end if;
             end loop;
         end loop;
-        o_y_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_y_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_y_valid,
                             START => IMAGE_STREAM_DATA_IS_START_Y(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_Y (STREAM_PARAM, i_data)
@@ -759,7 +663,7 @@ package body CONVOLUTION_TYPES is
                     o_d_valid(o_d_pos) := '1';
                 end if;
         end loop;
-        o_d_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_d_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_d_valid,
                             START => IMAGE_STREAM_DATA_IS_START_D(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_D (STREAM_PARAM, i_data)
@@ -780,7 +684,7 @@ package body CONVOLUTION_TYPES is
                 end if;
             end loop;
         end loop;
-        o_x_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_x_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_x_valid,
                             START => IMAGE_STREAM_DATA_IS_START_X(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_X (STREAM_PARAM, i_data)
@@ -801,7 +705,7 @@ package body CONVOLUTION_TYPES is
                 end if;
             end loop;
         end loop;
-        o_y_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_y_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_y_valid,
                             START => IMAGE_STREAM_DATA_IS_START_Y(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_Y (STREAM_PARAM, i_data)
@@ -888,7 +792,7 @@ package body CONVOLUTION_TYPES is
                     o_d_valid(o_d_pos) := '1';
                 end if;
         end loop;
-        o_d_atrb_vec := GEN_IMAGE_STREAM_ATRB_VECTOR(
+        o_d_atrb_vec := GENERATE_IMAGE_STREAM_ATRB_VECTOR(
                             VALID => o_d_valid,
                             START => IMAGE_STREAM_DATA_IS_START_D(STREAM_PARAM, i_data),
                             LAST  => IMAGE_STREAM_DATA_IS_LAST_D (STREAM_PARAM, i_data)
