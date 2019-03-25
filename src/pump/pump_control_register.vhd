@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.7.0
---!     @date    2018/5/21
+--!     @version 1.8.0
+--!     @date    2019/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2018 Ichiro Kawazome
+--      Copyright (C) 2012-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -69,8 +69,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * RESET_Q は現在のリセット状態を返す.
     -- * RESET_Q='1' で現在リセット中であることを示す.
     -------------------------------------------------------------------------------
-        RESET_L         : in  std_logic;
-        RESET_D         : in  std_logic;
+        RESET_L         : in  std_logic := '0';
+        RESET_D         : in  std_logic := '0';
         RESET_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- START Bit        : 転送を開始を指示する.
@@ -81,8 +81,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * START_Q='1' で転送中であることを示す.
     -- * START_Q='0 'で転送は行われていないことを示す.
     -------------------------------------------------------------------------------
-        START_L         : in  std_logic;
-        START_D         : in  std_logic;
+        START_L         : in  std_logic := '0';
+        START_D         : in  std_logic := '0';
         START_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- STOP Bit         : 現在処理中の転送を中止する.
@@ -93,8 +93,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * STOP_Q='1' で転送中止処理中であることを示す.
     -- * STOP_Q='0' で転送中止処理が完了していることを示す.
     -------------------------------------------------------------------------------
-        STOP_L          : in  std_logic;
-        STOP_D          : in  std_logic;
+        STOP_L          : in  std_logic := '0';
+        STOP_D          : in  std_logic := '0';
         STOP_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- PAUSE Bit        : 転送の中断を指示する.
@@ -105,8 +105,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * PAUSE_Q='1' で現在中断していることを示す.
     -- * PAUSE_Q='0' で現在転送を再開していることを示す.
     -------------------------------------------------------------------------------
-        PAUSE_L         : in  std_logic;
-        PAUSE_D         : in  std_logic;
+        PAUSE_L         : in  std_logic := '0';
+        PAUSE_D         : in  std_logic := '0';
         PAUSE_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- FIRST Bit        : 最初の転送であるか否かを指示する.
@@ -115,8 +115,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * FIRST_L='1' and FIRST_D='0' で最初の転送でないことを指示する.
     -- * FIRST_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        FIRST_L         : in  std_logic;
-        FIRST_D         : in  std_logic;
+        FIRST_L         : in  std_logic := '0';
+        FIRST_D         : in  std_logic := '0';
         FIRST_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- LAST Bit         : 最後の転送であるか否かを指示する.
@@ -125,8 +125,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * LAST_L='1' and LAST_D='0' で最後の転送でないことを指示する.
     -- * LAST_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        LAST_L          : in  std_logic;
-        LAST_D          : in  std_logic;
+        LAST_L          : in  std_logic := '0';
+        LAST_D          : in  std_logic := '0';
         LAST_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- DONE ENable Bit  : 転送終了時に DONE STatus Bit をセットするか否かを指示する.
@@ -137,8 +137,8 @@ entity  PUMP_CONTROL_REGISTER is
     --   ないことを指示する.
     -- * DONE_EN_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        DONE_EN_L       : in  std_logic;
-        DONE_EN_D       : in  std_logic;
+        DONE_EN_L       : in  std_logic := '0';
+        DONE_EN_D       : in  std_logic := '0';
         DONE_EN_Q       : out std_logic;
     -------------------------------------------------------------------------------
     -- DONE STatus Bit  : DONE_EN_Q='1'の時、転送終了時にセットされる.
@@ -147,8 +147,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * DONE_ST_L='1' and DONE_ST_D='1' の場合、このビットに変化は無い.
     -- * DONE_ST_Q='1' は、DONE_EN_Q='1' の時、転送が終了したことを示す.
     -------------------------------------------------------------------------------
-        DONE_ST_L       : in  std_logic;
-        DONE_ST_D       : in  std_logic;
+        DONE_ST_L       : in  std_logic := '0';
+        DONE_ST_D       : in  std_logic := '0';
         DONE_ST_Q       : out std_logic;
     -------------------------------------------------------------------------------
     -- ERRor STatus Bit : 転送中にエラーが発生した時にセットされる.
@@ -157,8 +157,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * ERR_ST_L='1' and ERR_ST_D='1' の場合、このビットに変化は無い.
     -- * ERR_ST_Q='1' は転送中にエラーが発生したことを示す.
     -------------------------------------------------------------------------------
-        ERR_ST_L        : in  std_logic;
-        ERR_ST_D        : in  std_logic;
+        ERR_ST_L        : in  std_logic := '0';
+        ERR_ST_D        : in  std_logic := '0';
         ERR_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- MODE Register    : その他のモードレジスタ.
@@ -166,8 +166,8 @@ entity  PUMP_CONTROL_REGISTER is
     -- * MODE_L(x)='1' and MODE_D(x)='1' で MODE_Q(x) に'1'をセット.
     -- * MODE_L(x)='1' and MODE_D(x)='0' で MODE_Q(x) に'0'をセット.
     -------------------------------------------------------------------------------
-        MODE_L          : in  std_logic_vector(MODE_BITS-1 downto 0);
-        MODE_D          : in  std_logic_vector(MODE_BITS-1 downto 0);
+        MODE_L          : in  std_logic_vector(MODE_BITS-1 downto 0) := (others => '0');
+        MODE_D          : in  std_logic_vector(MODE_BITS-1 downto 0) := (others => '0');
         MODE_Q          : out std_logic_vector(MODE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- STATus Register  : その他のステータスレジスタ.
@@ -177,10 +177,10 @@ entity  PUMP_CONTROL_REGISTER is
     -- * STAT_I(x)='1' で STAT_Q(x) に'1'をセット.
     -- * STAT_I(x)='0' の場合、STAT_Q(x) に変化は無い.
     -------------------------------------------------------------------------------
-        STAT_L          : in  std_logic_vector(STAT_BITS-1 downto 0);
-        STAT_D          : in  std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_L          : in  std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
+        STAT_D          : in  std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
         STAT_Q          : out std_logic_vector(STAT_BITS-1 downto 0);
-        STAT_I          : in  std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_I          : in  std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
