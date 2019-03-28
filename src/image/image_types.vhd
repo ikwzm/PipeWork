@@ -2,7 +2,7 @@
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/3/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -394,6 +394,16 @@ package IMAGE_TYPES is
                   X                 :  in    integer;
                   Y                 :  in    integer;
                   ELEMENT           :  in    std_logic_vector;
+        variable  DATA              :  inout std_logic_vector);
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_ATRB_VECTOR を生成する関数.
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_VECTOR_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in   IMAGE_STREAM_PARAM_TYPE;
+                  ATRB_C_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+                  ATRB_D_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+                  ATRB_X_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+                  ATRB_Y_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
         variable  DATA              :  inout std_logic_vector);
     -------------------------------------------------------------------------------
     --! @brief Image Stream Data に C Channel の属性を追加するプロシージャ
@@ -1691,6 +1701,68 @@ package body IMAGE_TYPES is
               (C-PARAM.SHAPE.C.LO)*PARAM.DATA.ELEM_FIELD.C_SIZE   )*PARAM.ELEM_BITS    + PARAM.DATA.ELEM_FIELD.LO) := ELEMENT;
     end procedure;
 
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_ATRB_VECTOR を生成する関数.
+    -------------------------------------------------------------------------------
+    procedure SET_ATRB_VECTOR_TO_IMAGE_STREAM_DATA(
+                  PARAM             :  in   IMAGE_STREAM_PARAM_TYPE;
+                  ATRB_C_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+                  ATRB_D_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+                  ATRB_X_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+                  ATRB_Y_VEC        :  in   IMAGE_STREAM_ATRB_VECTOR;
+        variable  DATA              :  inout std_logic_vector)
+    is
+        alias     i_atrb_c_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_C_VEC'length-1) is ATRB_C_VEC;
+        alias     i_atrb_d_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_D_VEC'length-1) is ATRB_D_VEC;
+        alias     i_atrb_x_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_X_VEC'length-1) is ATRB_X_VEC;
+        alias     i_atrb_y_vec      :  IMAGE_STREAM_ATRB_VECTOR(0 to ATRB_Y_VEC'length-1) is ATRB_Y_VEC;
+    begin
+        ---------------------------------------------------------------------------
+        -- ATRB_C_VEC を DATA にセット
+        ---------------------------------------------------------------------------
+        for c_pos in i_atrb_c_vec'range loop
+            SET_ATRB_C_TO_IMAGE_STREAM_DATA(
+                PARAM => PARAM,
+                C     => c_pos + PARAM.SHAPE.C.LO,
+                ATRB  => i_atrb_c_vec(c_pos),
+                DATA  => DATA
+            );
+        end loop;
+        ---------------------------------------------------------------------------
+        -- ATRB_D_VEC を DATA にセット
+        ---------------------------------------------------------------------------
+        for d_pos in i_atrb_d_vec'range loop
+            SET_ATRB_D_TO_IMAGE_STREAM_DATA(
+                PARAM => PARAM,
+                D     => d_pos + PARAM.SHAPE.D.LO,
+                ATRB  => i_atrb_d_vec(d_pos),
+                DATA  => DATA
+            );
+        end loop;
+        ---------------------------------------------------------------------------
+        -- ATRB_X_VEC を DATA にセット
+        ---------------------------------------------------------------------------
+        for x_pos in i_atrb_x_vec'range loop
+            SET_ATRB_X_TO_IMAGE_STREAM_DATA(
+                PARAM => PARAM,
+                X     => x_pos + PARAM.SHAPE.X.LO,
+                ATRB  => i_atrb_x_vec(x_pos),
+                DATA  => DATA
+            );
+        end loop;
+        ---------------------------------------------------------------------------
+        -- ATRB_Y_VEC を DATA にセット
+        ---------------------------------------------------------------------------
+        for y_pos in i_atrb_y_vec'range loop
+            SET_ATRB_Y_TO_IMAGE_STREAM_DATA(
+                PARAM => PARAM,
+                Y     => y_pos + PARAM.SHAPE.Y.LO,
+                ATRB  => i_atrb_y_vec(y_pos),
+                DATA  => DATA
+            );
+        end loop;
+    end procedure;
+    
     -------------------------------------------------------------------------------
     --! @brief Image Stream Data に 辺(C,D,X,Y) の属性を追加するプロシージャ
     --  * Image Stream Data に 対応する辺の属性フィールドが存在するならば、DATA の
