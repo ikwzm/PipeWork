@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_responder_interface.vhd
 --!     @brief   PIPE RESPONDER INTERFACE
---!     @version 1.7.0
---!     @date    2018/5/21
+--!     @version 1.8.0
+--!     @date    2019/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2018 Ichiro Kawazome
+--      Copyright (C) 2012-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -237,43 +237,43 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
                               --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals from Requester.
     -------------------------------------------------------------------------------
         T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
                               --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
         T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
                               --! プールバッファに T_PUSH_BUF_LEVEL 以下のデータし
                               --! かないことを示すフラグ.
@@ -286,13 +286,13 @@ entity  PIPE_RESPONDER_INTERFACE is
     --
     -------------------------------------------------------------------------------
         T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
                               --! プールバッファに T_PULL_BUF_LEVEL 以上のデータが
                               --! あることを示すフラグ.
@@ -300,7 +300,7 @@ entity  PIPE_RESPONDER_INTERFACE is
         T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
                               --! T_PULL_BUF_READY 信号をアサートするかしないかを
                               --! 指示するための閾値.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
@@ -418,70 +418,70 @@ entity  PIPE_RESPONDER_INTERFACE is
         M_PUSH_FIN_VALID    : --! @brief Push Final Valid from requester :
                               --! M_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from requester :
                               --! M_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ入力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
                               --! レスポンダ側からの"予定された"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from requester.
     -------------------------------------------------------------------------------
         M_PULL_FIN_VALID    : --! @brief Pull Final Valid from requester :
                               --! M_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from requester :
                               --! M_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが先行(Precede)モードで無い場合は
                               --!   未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
                               --! レスポンダ側からの"予定された"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0')
     );
 end PIPE_RESPONDER_INTERFACE;
 -----------------------------------------------------------------------------------

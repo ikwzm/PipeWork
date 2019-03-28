@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.7.0                                                           --
---!     @date    2018/07/18                                                      --
+--!     @version 1.8.0                                                           --
+--!     @date    2019/03/25                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2018 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2019 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -74,8 +74,8 @@ component PUMP_CONTROL_REGISTER
     -- * RESET_Q は現在のリセット状態を返す.
     -- * RESET_Q='1' で現在リセット中であることを示す.
     -------------------------------------------------------------------------------
-        RESET_L         : in  std_logic;
-        RESET_D         : in  std_logic;
+        RESET_L         : in  std_logic := '0';
+        RESET_D         : in  std_logic := '0';
         RESET_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- START Bit        : 転送を開始を指示する.
@@ -86,8 +86,8 @@ component PUMP_CONTROL_REGISTER
     -- * START_Q='1' で転送中であることを示す.
     -- * START_Q='0 'で転送は行われていないことを示す.
     -------------------------------------------------------------------------------
-        START_L         : in  std_logic;
-        START_D         : in  std_logic;
+        START_L         : in  std_logic := '0';
+        START_D         : in  std_logic := '0';
         START_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- STOP Bit         : 現在処理中の転送を中止する.
@@ -98,8 +98,8 @@ component PUMP_CONTROL_REGISTER
     -- * STOP_Q='1' で転送中止処理中であることを示す.
     -- * STOP_Q='0' で転送中止処理が完了していることを示す.
     -------------------------------------------------------------------------------
-        STOP_L          : in  std_logic;
-        STOP_D          : in  std_logic;
+        STOP_L          : in  std_logic := '0';
+        STOP_D          : in  std_logic := '0';
         STOP_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- PAUSE Bit        : 転送の中断を指示する.
@@ -110,8 +110,8 @@ component PUMP_CONTROL_REGISTER
     -- * PAUSE_Q='1' で現在中断していることを示す.
     -- * PAUSE_Q='0' で現在転送を再開していることを示す.
     -------------------------------------------------------------------------------
-        PAUSE_L         : in  std_logic;
-        PAUSE_D         : in  std_logic;
+        PAUSE_L         : in  std_logic := '0';
+        PAUSE_D         : in  std_logic := '0';
         PAUSE_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- FIRST Bit        : 最初の転送であるか否かを指示する.
@@ -120,8 +120,8 @@ component PUMP_CONTROL_REGISTER
     -- * FIRST_L='1' and FIRST_D='0' で最初の転送でないことを指示する.
     -- * FIRST_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        FIRST_L         : in  std_logic;
-        FIRST_D         : in  std_logic;
+        FIRST_L         : in  std_logic := '0';
+        FIRST_D         : in  std_logic := '0';
         FIRST_Q         : out std_logic;
     -------------------------------------------------------------------------------
     -- LAST Bit         : 最後の転送であるか否かを指示する.
@@ -130,8 +130,8 @@ component PUMP_CONTROL_REGISTER
     -- * LAST_L='1' and LAST_D='0' で最後の転送でないことを指示する.
     -- * LAST_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        LAST_L          : in  std_logic;
-        LAST_D          : in  std_logic;
+        LAST_L          : in  std_logic := '0';
+        LAST_D          : in  std_logic := '0';
         LAST_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- DONE ENable Bit  : 転送終了時に DONE STatus Bit をセットするか否かを指示する.
@@ -142,8 +142,8 @@ component PUMP_CONTROL_REGISTER
     --   ないことを指示する.
     -- * DONE_EN_Q は現在の状態を示す.
     -------------------------------------------------------------------------------
-        DONE_EN_L       : in  std_logic;
-        DONE_EN_D       : in  std_logic;
+        DONE_EN_L       : in  std_logic := '0';
+        DONE_EN_D       : in  std_logic := '0';
         DONE_EN_Q       : out std_logic;
     -------------------------------------------------------------------------------
     -- DONE STatus Bit  : DONE_EN_Q='1'の時、転送終了時にセットされる.
@@ -152,8 +152,8 @@ component PUMP_CONTROL_REGISTER
     -- * DONE_ST_L='1' and DONE_ST_D='1' の場合、このビットに変化は無い.
     -- * DONE_ST_Q='1' は、DONE_EN_Q='1' の時、転送が終了したことを示す.
     -------------------------------------------------------------------------------
-        DONE_ST_L       : in  std_logic;
-        DONE_ST_D       : in  std_logic;
+        DONE_ST_L       : in  std_logic := '0';
+        DONE_ST_D       : in  std_logic := '0';
         DONE_ST_Q       : out std_logic;
     -------------------------------------------------------------------------------
     -- ERRor STatus Bit : 転送中にエラーが発生した時にセットされる.
@@ -162,8 +162,8 @@ component PUMP_CONTROL_REGISTER
     -- * ERR_ST_L='1' and ERR_ST_D='1' の場合、このビットに変化は無い.
     -- * ERR_ST_Q='1' は転送中にエラーが発生したことを示す.
     -------------------------------------------------------------------------------
-        ERR_ST_L        : in  std_logic;
-        ERR_ST_D        : in  std_logic;
+        ERR_ST_L        : in  std_logic := '0';
+        ERR_ST_D        : in  std_logic := '0';
         ERR_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- MODE Register    : その他のモードレジスタ.
@@ -171,8 +171,8 @@ component PUMP_CONTROL_REGISTER
     -- * MODE_L(x)='1' and MODE_D(x)='1' で MODE_Q(x) に'1'をセット.
     -- * MODE_L(x)='1' and MODE_D(x)='0' で MODE_Q(x) に'0'をセット.
     -------------------------------------------------------------------------------
-        MODE_L          : in  std_logic_vector(MODE_BITS-1 downto 0);
-        MODE_D          : in  std_logic_vector(MODE_BITS-1 downto 0);
+        MODE_L          : in  std_logic_vector(MODE_BITS-1 downto 0) := (others => '0');
+        MODE_D          : in  std_logic_vector(MODE_BITS-1 downto 0) := (others => '0');
         MODE_Q          : out std_logic_vector(MODE_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- STATus Register  : その他のステータスレジスタ.
@@ -182,10 +182,10 @@ component PUMP_CONTROL_REGISTER
     -- * STAT_I(x)='1' で STAT_Q(x) に'1'をセット.
     -- * STAT_I(x)='0' の場合、STAT_Q(x) に変化は無い.
     -------------------------------------------------------------------------------
-        STAT_L          : in  std_logic_vector(STAT_BITS-1 downto 0);
-        STAT_D          : in  std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_L          : in  std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
+        STAT_D          : in  std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
         STAT_Q          : out std_logic_vector(STAT_BITS-1 downto 0);
-        STAT_I          : in  std_logic_vector(STAT_BITS-1 downto 0);
+        STAT_I          : in  std_logic_vector(STAT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
@@ -614,50 +614,50 @@ component PUMP_CONTROLLER_INTAKE_SIDE
     -------------------------------------------------------------------------------
     -- Control Status Register Interface.
     -------------------------------------------------------------------------------
-        REG_ADDR_L          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0);
-        REG_ADDR_D          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0);
+        REG_ADDR_L          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0) := (others => '0');
+        REG_ADDR_D          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0) := (others => '0');
         REG_ADDR_Q          : out std_logic_vector(REG_ADDR_BITS-1 downto 0);
-        REG_SIZE_L          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0);
-        REG_SIZE_D          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0);
+        REG_SIZE_L          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0) := (others => '0');
+        REG_SIZE_D          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0) := (others => '0');
         REG_SIZE_Q          : out std_logic_vector(REG_SIZE_BITS-1 downto 0);
-        REG_MODE_L          : in  std_logic_vector(REG_MODE_BITS-1 downto 0);
-        REG_MODE_D          : in  std_logic_vector(REG_MODE_BITS-1 downto 0);
+        REG_MODE_L          : in  std_logic_vector(REG_MODE_BITS-1 downto 0) := (others => '0');
+        REG_MODE_D          : in  std_logic_vector(REG_MODE_BITS-1 downto 0) := (others => '0');
         REG_MODE_Q          : out std_logic_vector(REG_MODE_BITS-1 downto 0);
-        REG_STAT_L          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_STAT_D          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
+        REG_STAT_L          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
+        REG_STAT_D          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
         REG_STAT_Q          : out std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_STAT_I          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_RESET_L         : in  std_logic;
-        REG_RESET_D         : in  std_logic;
+        REG_STAT_I          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
+        REG_RESET_L         : in  std_logic := '0';
+        REG_RESET_D         : in  std_logic := '0';
         REG_RESET_Q         : out std_logic;
-        REG_START_L         : in  std_logic;
-        REG_START_D         : in  std_logic;
+        REG_START_L         : in  std_logic := '0';
+        REG_START_D         : in  std_logic := '0';
         REG_START_Q         : out std_logic;
-        REG_STOP_L          : in  std_logic;
-        REG_STOP_D          : in  std_logic;
+        REG_STOP_L          : in  std_logic := '0';
+        REG_STOP_D          : in  std_logic := '0';
         REG_STOP_Q          : out std_logic;
-        REG_PAUSE_L         : in  std_logic;
-        REG_PAUSE_D         : in  std_logic;
+        REG_PAUSE_L         : in  std_logic := '0';
+        REG_PAUSE_D         : in  std_logic := '0';
         REG_PAUSE_Q         : out std_logic;
-        REG_FIRST_L         : in  std_logic;
-        REG_FIRST_D         : in  std_logic;
+        REG_FIRST_L         : in  std_logic := '0';
+        REG_FIRST_D         : in  std_logic := '0';
         REG_FIRST_Q         : out std_logic;
-        REG_LAST_L          : in  std_logic;
-        REG_LAST_D          : in  std_logic;
+        REG_LAST_L          : in  std_logic := '0';
+        REG_LAST_D          : in  std_logic := '0';
         REG_LAST_Q          : out std_logic;
-        REG_DONE_EN_L       : in  std_logic;
-        REG_DONE_EN_D       : in  std_logic;
+        REG_DONE_EN_L       : in  std_logic := '0';
+        REG_DONE_EN_D       : in  std_logic := '0';
         REG_DONE_EN_Q       : out std_logic;
-        REG_DONE_ST_L       : in  std_logic;
-        REG_DONE_ST_D       : in  std_logic;
+        REG_DONE_ST_L       : in  std_logic := '0';
+        REG_DONE_ST_D       : in  std_logic := '0';
         REG_DONE_ST_Q       : out std_logic;
-        REG_ERR_ST_L        : in  std_logic;
-        REG_ERR_ST_D        : in  std_logic;
+        REG_ERR_ST_L        : in  std_logic := '0';
+        REG_ERR_ST_D        : in  std_logic := '0';
         REG_ERR_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Configuration Signals.
     -------------------------------------------------------------------------------
-        ADDR_FIX            : in  std_logic;
+        ADDR_FIX            : in  std_logic := '0';
         BUF_READY_LEVEL     : in  std_logic_vector(BUF_DEPTH       downto 0);
         FLOW_READY_LEVEL    : in  std_logic_vector(BUF_DEPTH       downto 0);
     -------------------------------------------------------------------------------
@@ -694,26 +694,26 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         FLOW_STOP           : out std_logic;
         FLOW_LAST           : out std_logic;
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_FIN_VALID      : in  std_logic;
-        PUSH_FIN_LAST       : in  std_logic;
+        PUSH_FIN_VALID      : in  std_logic := '0';
+        PUSH_FIN_LAST       : in  std_logic := '0';
         PUSH_FIN_ERROR      : in  std_logic := '0';
-        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_RSV_VALID      : in  std_logic := '0';
         PUSH_RSV_LAST       : in  std_logic := '0';
         PUSH_RSV_ERROR      : in  std_logic := '0';
         PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_BUF_RESET      : in  std_logic := '0';
-        PUSH_BUF_VALID      : in  std_logic;
-        PUSH_BUF_LAST       : in  std_logic;
+        PUSH_BUF_VALID      : in  std_logic := '0';
+        PUSH_BUF_LAST       : in  std_logic := '0';
         PUSH_BUF_ERROR      : in  std_logic := '0';
-        PUSH_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
-        PULL_FIN_VALID      : in  std_logic;
-        PULL_FIN_LAST       : in  std_logic;
-        PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_FIN_VALID      : in  std_logic := '0';
+        PULL_FIN_LAST       : in  std_logic := '0';
+        PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PULL_RSV_VALID      : in  std_logic := '0';
         PULL_RSV_LAST       : in  std_logic := '0';
         PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
@@ -809,50 +809,50 @@ component PUMP_CONTROLLER_OUTLET_SIDE
     -------------------------------------------------------------------------------
     -- Control Status Register Interface.
     -------------------------------------------------------------------------------
-        REG_ADDR_L          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0);
-        REG_ADDR_D          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0);
+        REG_ADDR_L          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0) := (others => '0');
+        REG_ADDR_D          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0) := (others => '0');
         REG_ADDR_Q          : out std_logic_vector(REG_ADDR_BITS-1 downto 0);
-        REG_SIZE_L          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0);
-        REG_SIZE_D          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0);
+        REG_SIZE_L          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0) := (others => '0');
+        REG_SIZE_D          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0) := (others => '0');
         REG_SIZE_Q          : out std_logic_vector(REG_SIZE_BITS-1 downto 0);
-        REG_MODE_L          : in  std_logic_vector(REG_MODE_BITS-1 downto 0);
-        REG_MODE_D          : in  std_logic_vector(REG_MODE_BITS-1 downto 0);
+        REG_MODE_L          : in  std_logic_vector(REG_MODE_BITS-1 downto 0) := (others => '0');
+        REG_MODE_D          : in  std_logic_vector(REG_MODE_BITS-1 downto 0) := (others => '0');
         REG_MODE_Q          : out std_logic_vector(REG_MODE_BITS-1 downto 0);
-        REG_STAT_L          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_STAT_D          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
+        REG_STAT_L          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
+        REG_STAT_D          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
         REG_STAT_Q          : out std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_STAT_I          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_RESET_L         : in  std_logic;
-        REG_RESET_D         : in  std_logic;
+        REG_STAT_I          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
+        REG_RESET_L         : in  std_logic := '0';
+        REG_RESET_D         : in  std_logic := '0';
         REG_RESET_Q         : out std_logic;
-        REG_START_L         : in  std_logic;
-        REG_START_D         : in  std_logic;
+        REG_START_L         : in  std_logic := '0';
+        REG_START_D         : in  std_logic := '0';
         REG_START_Q         : out std_logic;
-        REG_STOP_L          : in  std_logic;
-        REG_STOP_D          : in  std_logic;
+        REG_STOP_L          : in  std_logic := '0';
+        REG_STOP_D          : in  std_logic := '0';
         REG_STOP_Q          : out std_logic;
-        REG_PAUSE_L         : in  std_logic;
-        REG_PAUSE_D         : in  std_logic;
+        REG_PAUSE_L         : in  std_logic := '0';
+        REG_PAUSE_D         : in  std_logic := '0';
         REG_PAUSE_Q         : out std_logic;
-        REG_FIRST_L         : in  std_logic;
-        REG_FIRST_D         : in  std_logic;
+        REG_FIRST_L         : in  std_logic := '0';
+        REG_FIRST_D         : in  std_logic := '0';
         REG_FIRST_Q         : out std_logic;
-        REG_LAST_L          : in  std_logic;
-        REG_LAST_D          : in  std_logic;
+        REG_LAST_L          : in  std_logic := '0';
+        REG_LAST_D          : in  std_logic := '0';
         REG_LAST_Q          : out std_logic;
-        REG_DONE_EN_L       : in  std_logic;
-        REG_DONE_EN_D       : in  std_logic;
+        REG_DONE_EN_L       : in  std_logic := '0';
+        REG_DONE_EN_D       : in  std_logic := '0';
         REG_DONE_EN_Q       : out std_logic;
-        REG_DONE_ST_L       : in  std_logic;
-        REG_DONE_ST_D       : in  std_logic;
+        REG_DONE_ST_L       : in  std_logic := '0';
+        REG_DONE_ST_D       : in  std_logic := '0';
         REG_DONE_ST_Q       : out std_logic;
-        REG_ERR_ST_L        : in  std_logic;
-        REG_ERR_ST_D        : in  std_logic;
+        REG_ERR_ST_L        : in  std_logic := '0';
+        REG_ERR_ST_D        : in  std_logic := '0';
         REG_ERR_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Configuration Signals.
     -------------------------------------------------------------------------------
-        ADDR_FIX            : in  std_logic;
+        ADDR_FIX            : in  std_logic := '0';
         BUF_READY_LEVEL     : in  std_logic_vector(BUF_DEPTH       downto 0);
         FLOW_READY_LEVEL    : in  std_logic_vector(BUF_DEPTH       downto 0);
     -------------------------------------------------------------------------------
@@ -889,26 +889,26 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         FLOW_STOP           : out std_logic;
         FLOW_LAST           : out std_logic;
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
-        PULL_FIN_VALID      : in  std_logic;
-        PULL_FIN_LAST       : in  std_logic;
+        PULL_FIN_VALID      : in  std_logic := '0';
+        PULL_FIN_LAST       : in  std_logic := '0';
         PULL_FIN_ERROR      : in  std_logic := '0';
-        PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PULL_RSV_VALID      : in  std_logic := '0';
         PULL_RSV_LAST       : in  std_logic := '0';
         PULL_RSV_ERROR      : in  std_logic := '0';
         PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PULL_BUF_RESET      : in  std_logic := '0';
-        PULL_BUF_VALID      : in  std_logic;
-        PULL_BUF_LAST       : in  std_logic;
+        PULL_BUF_VALID      : in  std_logic := '0';
+        PULL_BUF_LAST       : in  std_logic := '0';
         PULL_BUF_ERROR      : in  std_logic := '0';
-        PULL_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PULL_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Flow Control Signals.
     -------------------------------------------------------------------------------
-        PUSH_FIN_VALID      : in  std_logic;
-        PUSH_FIN_LAST       : in  std_logic;
-        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_FIN_VALID      : in  std_logic := '0';
+        PUSH_FIN_LAST       : in  std_logic := '0';
+        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_RSV_VALID      : in  std_logic := '0';
         PUSH_RSV_LAST       : in  std_logic := '0';
         PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
@@ -1074,54 +1074,54 @@ component PUMP_CONTROLLER
     -------------------------------------------------------------------------------
         I_CLK               : in  std_logic;
         I_CLR               : in  std_logic;
-        I_CKE               : in  std_logic;
+        I_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Intake Control Register Interface.
     -------------------------------------------------------------------------------
-        I_ADDR_L            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_ADDR_D            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_ADDR_L            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0) := (others => '0');
+        I_ADDR_D            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0) := (others => '0');
         I_ADDR_Q            : out std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_SIZE_L            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_SIZE_D            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_SIZE_L            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0) := (others => '0');
+        I_SIZE_D            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0) := (others => '0');
         I_SIZE_Q            : out std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_MODE_L            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_MODE_D            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_MODE_L            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0) := (others => '0');
+        I_MODE_D            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0) := (others => '0');
         I_MODE_Q            : out std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_STAT_L            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_D            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_L            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0) := (others => '0');
+        I_STAT_D            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0) := (others => '0');
         I_STAT_Q            : out std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_I            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_RESET_L           : in  std_logic;
-        I_RESET_D           : in  std_logic;
+        I_STAT_I            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0) := (others => '0');
+        I_RESET_L           : in  std_logic := '0';
+        I_RESET_D           : in  std_logic := '0';
         I_RESET_Q           : out std_logic;
-        I_START_L           : in  std_logic;
-        I_START_D           : in  std_logic;
+        I_START_L           : in  std_logic := '0';
+        I_START_D           : in  std_logic := '0';
         I_START_Q           : out std_logic;
-        I_STOP_L            : in  std_logic;
-        I_STOP_D            : in  std_logic;
+        I_STOP_L            : in  std_logic := '0';
+        I_STOP_D            : in  std_logic := '0';
         I_STOP_Q            : out std_logic;
-        I_PAUSE_L           : in  std_logic;
-        I_PAUSE_D           : in  std_logic;
+        I_PAUSE_L           : in  std_logic := '0';
+        I_PAUSE_D           : in  std_logic := '0';
         I_PAUSE_Q           : out std_logic;
-        I_FIRST_L           : in  std_logic;
-        I_FIRST_D           : in  std_logic;
+        I_FIRST_L           : in  std_logic := '0';
+        I_FIRST_D           : in  std_logic := '0';
         I_FIRST_Q           : out std_logic;
-        I_LAST_L            : in  std_logic;
-        I_LAST_D            : in  std_logic;
+        I_LAST_L            : in  std_logic := '0';
+        I_LAST_D            : in  std_logic := '0';
         I_LAST_Q            : out std_logic;
-        I_DONE_EN_L         : in  std_logic;
-        I_DONE_EN_D         : in  std_logic;
+        I_DONE_EN_L         : in  std_logic := '0';
+        I_DONE_EN_D         : in  std_logic := '0';
         I_DONE_EN_Q         : out std_logic;
-        I_DONE_ST_L         : in  std_logic;
-        I_DONE_ST_D         : in  std_logic;
+        I_DONE_ST_L         : in  std_logic := '0';
+        I_DONE_ST_D         : in  std_logic := '0';
         I_DONE_ST_Q         : out std_logic;
-        I_ERR_ST_L          : in  std_logic;
-        I_ERR_ST_D          : in  std_logic;
+        I_ERR_ST_L          : in  std_logic := '0';
+        I_ERR_ST_D          : in  std_logic := '0';
         I_ERR_ST_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Configuration Signals.
     -------------------------------------------------------------------------------
-        I_ADDR_FIX          : in  std_logic;
+        I_ADDR_FIX          : in  std_logic := '0';
         I_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
         I_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
@@ -1129,54 +1129,54 @@ component PUMP_CONTROLLER
     -------------------------------------------------------------------------------
         O_CLK               : in  std_logic;
         O_CLR               : in  std_logic;
-        O_CKE               : in  std_logic;
+        O_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Outlet Control Register Interface.
     -------------------------------------------------------------------------------
-        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0) := (others => '0');
+        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0) := (others => '0');
         O_ADDR_Q            : out std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0) := (others => '0');
+        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0) := (others => '0');
         O_SIZE_Q            : out std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0) := (others => '0');
+        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0) := (others => '0');
         O_MODE_Q            : out std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
+        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
         O_STAT_Q            : out std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_RESET_L           : in  std_logic;
-        O_RESET_D           : in  std_logic;
+        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
+        O_RESET_L           : in  std_logic := '0';
+        O_RESET_D           : in  std_logic := '0';
         O_RESET_Q           : out std_logic;
-        O_START_L           : in  std_logic;
-        O_START_D           : in  std_logic;
+        O_START_L           : in  std_logic := '0';
+        O_START_D           : in  std_logic := '0';
         O_START_Q           : out std_logic;
-        O_STOP_L            : in  std_logic;
-        O_STOP_D            : in  std_logic;
+        O_STOP_L            : in  std_logic := '0';
+        O_STOP_D            : in  std_logic := '0';
         O_STOP_Q            : out std_logic;
-        O_PAUSE_L           : in  std_logic;
-        O_PAUSE_D           : in  std_logic;
+        O_PAUSE_L           : in  std_logic := '0';
+        O_PAUSE_D           : in  std_logic := '0';
         O_PAUSE_Q           : out std_logic;
-        O_FIRST_L           : in  std_logic;
-        O_FIRST_D           : in  std_logic;
+        O_FIRST_L           : in  std_logic := '0';
+        O_FIRST_D           : in  std_logic := '0';
         O_FIRST_Q           : out std_logic;
-        O_LAST_L            : in  std_logic;
-        O_LAST_D            : in  std_logic;
+        O_LAST_L            : in  std_logic := '0';
+        O_LAST_D            : in  std_logic := '0';
         O_LAST_Q            : out std_logic;
-        O_DONE_EN_L         : in  std_logic;
-        O_DONE_EN_D         : in  std_logic;
+        O_DONE_EN_L         : in  std_logic := '0';
+        O_DONE_EN_D         : in  std_logic := '0';
         O_DONE_EN_Q         : out std_logic;
-        O_DONE_ST_L         : in  std_logic;
-        O_DONE_ST_D         : in  std_logic;
+        O_DONE_ST_L         : in  std_logic := '0';
+        O_DONE_ST_D         : in  std_logic := '0';
         O_DONE_ST_Q         : out std_logic;
-        O_ERR_ST_L          : in  std_logic;
-        O_ERR_ST_D          : in  std_logic;
+        O_ERR_ST_L          : in  std_logic := '0';
+        O_ERR_ST_D          : in  std_logic := '0';
         O_ERR_ST_Q          : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Configuration Signals.
     -------------------------------------------------------------------------------
-        O_ADDR_FIX          : in  std_logic;
+        O_ADDR_FIX          : in  std_logic := '0';
         O_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
@@ -1213,19 +1213,19 @@ component PUMP_CONTROLLER
         I_FLOW_STOP         : out std_logic;
         I_FLOW_LAST         : out std_logic;
         I_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_FIN_VALID    : in  std_logic;
-        I_PUSH_FIN_LAST     : in  std_logic;
+        I_PUSH_FIN_VALID    : in  std_logic := '0';
+        I_PUSH_FIN_LAST     : in  std_logic := '0';
         I_PUSH_FIN_ERROR    : in  std_logic := '0';
-        I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         I_PUSH_RSV_VALID    : in  std_logic := '0';
         I_PUSH_RSV_LAST     : in  std_logic := '0';
         I_PUSH_RSV_ERROR    : in  std_logic := '0';
         I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         I_PUSH_BUF_RESET    : in  std_logic := '0';
-        I_PUSH_BUF_VALID    : in  std_logic;
-        I_PUSH_BUF_LAST     : in  std_logic;
+        I_PUSH_BUF_VALID    : in  std_logic := '0';
+        I_PUSH_BUF_LAST     : in  std_logic := '0';
         I_PUSH_BUF_ERROR    : in  std_logic := '0';
-        I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Status.
@@ -1268,19 +1268,19 @@ component PUMP_CONTROLLER
         O_FLOW_STOP         : out std_logic;
         O_FLOW_LAST         : out std_logic;
         O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_FIN_VALID    : in  std_logic;
-        O_PULL_FIN_LAST     : in  std_logic;
+        O_PULL_FIN_VALID    : in  std_logic := '0';
+        O_PULL_FIN_LAST     : in  std_logic := '0';
         O_PULL_FIN_ERROR    : in  std_logic := '0';
-        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         O_PULL_RSV_VALID    : in  std_logic := '0';
         O_PULL_RSV_LAST     : in  std_logic := '0';
         O_PULL_RSV_ERROR    : in  std_logic := '0';
         O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         O_PULL_BUF_RESET    : in  std_logic := '0';
-        O_PULL_BUF_VALID    : in  std_logic;
-        O_PULL_BUF_LAST     : in  std_logic;
+        O_PULL_BUF_VALID    : in  std_logic := '0';
+        O_PULL_BUF_LAST     : in  std_logic := '0';
         O_PULL_BUF_ERROR    : in  std_logic := '0';
-        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Status.
@@ -1393,57 +1393,57 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
         I_CLK               : in  std_logic;
         I_CLR               : in  std_logic;
-        I_CKE               : in  std_logic;
+        I_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Intake Control Register Interface.
     -------------------------------------------------------------------------------
-        I_ADDR_L            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_ADDR_D            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
+        I_ADDR_L            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0) := (others => '0');
+        I_ADDR_D            : in  std_logic_vector(I_REG_ADDR_BITS-1 downto 0) := (others => '0');
         I_ADDR_Q            : out std_logic_vector(I_REG_ADDR_BITS-1 downto 0);
-        I_SIZE_L            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_SIZE_D            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
+        I_SIZE_L            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0) := (others => '0');
+        I_SIZE_D            : in  std_logic_vector(I_REG_SIZE_BITS-1 downto 0) := (others => '0');
         I_SIZE_Q            : out std_logic_vector(I_REG_SIZE_BITS-1 downto 0);
-        I_MODE_L            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_MODE_D            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0);
+        I_MODE_L            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0) := (others => '0');
+        I_MODE_D            : in  std_logic_vector(I_REG_MODE_BITS-1 downto 0) := (others => '0');
         I_MODE_Q            : out std_logic_vector(I_REG_MODE_BITS-1 downto 0);
-        I_STAT_L            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_D            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
+        I_STAT_L            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0) := (others => '0');
+        I_STAT_D            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0) := (others => '0');
         I_STAT_Q            : out std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_STAT_I            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0);
-        I_RESET_L           : in  std_logic;
-        I_RESET_D           : in  std_logic;
+        I_STAT_I            : in  std_logic_vector(I_REG_STAT_BITS-1 downto 0) := (others => '0');
+        I_RESET_L           : in  std_logic := '0';
+        I_RESET_D           : in  std_logic := '0';
         I_RESET_Q           : out std_logic;
-        I_START_L           : in  std_logic;
-        I_START_D           : in  std_logic;
+        I_START_L           : in  std_logic := '0';
+        I_START_D           : in  std_logic := '0';
         I_START_Q           : out std_logic;
-        I_STOP_L            : in  std_logic;
-        I_STOP_D            : in  std_logic;
+        I_STOP_L            : in  std_logic := '0';
+        I_STOP_D            : in  std_logic := '0';
         I_STOP_Q            : out std_logic;
-        I_PAUSE_L           : in  std_logic;
-        I_PAUSE_D           : in  std_logic;
+        I_PAUSE_L           : in  std_logic := '0';
+        I_PAUSE_D           : in  std_logic := '0';
         I_PAUSE_Q           : out std_logic;
-        I_FIRST_L           : in  std_logic;
-        I_FIRST_D           : in  std_logic;
+        I_FIRST_L           : in  std_logic := '0';
+        I_FIRST_D           : in  std_logic := '0';
         I_FIRST_Q           : out std_logic;
-        I_LAST_L            : in  std_logic;
-        I_LAST_D            : in  std_logic;
+        I_LAST_L            : in  std_logic := '0';
+        I_LAST_D            : in  std_logic := '0';
         I_LAST_Q            : out std_logic;
-        I_DONE_EN_L         : in  std_logic;
-        I_DONE_EN_D         : in  std_logic;
+        I_DONE_EN_L         : in  std_logic := '0';
+        I_DONE_EN_D         : in  std_logic := '0';
         I_DONE_EN_Q         : out std_logic;
-        I_DONE_ST_L         : in  std_logic;
-        I_DONE_ST_D         : in  std_logic;
+        I_DONE_ST_L         : in  std_logic := '0';
+        I_DONE_ST_D         : in  std_logic := '0';
         I_DONE_ST_Q         : out std_logic;
-        I_ERR_ST_L          : in  std_logic;
-        I_ERR_ST_D          : in  std_logic;
+        I_ERR_ST_L          : in  std_logic := '0';
+        I_ERR_ST_D          : in  std_logic := '0';
         I_ERR_ST_Q          : out std_logic;
-        I_CLOSE_ST_L        : in  std_logic;
-        I_CLOSE_ST_D        : in  std_logic;
+        I_CLOSE_ST_L        : in  std_logic := '0';
+        I_CLOSE_ST_D        : in  std_logic := '0';
         I_CLOSE_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Configuration Signals.
     -------------------------------------------------------------------------------
-        I_ADDR_FIX          : in  std_logic;
+        I_ADDR_FIX          : in  std_logic := '0';
         I_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
         I_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
@@ -1480,19 +1480,19 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_FLOW_STOP         : out std_logic;
         I_FLOW_LAST         : out std_logic;
         I_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_FIN_VALID    : in  std_logic;
-        I_PUSH_FIN_LAST     : in  std_logic;
-        I_PUSH_FIN_ERROR    : in  std_logic;
-        I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_RSV_VALID    : in  std_logic;
-        I_PUSH_RSV_LAST     : in  std_logic;
-        I_PUSH_RSV_ERROR    : in  std_logic;
-        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        I_PUSH_BUF_RESET    : in  std_logic;
-        I_PUSH_BUF_VALID    : in  std_logic;
-        I_PUSH_BUF_LAST     : in  std_logic;
-        I_PUSH_BUF_ERROR    : in  std_logic;
-        I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        I_PUSH_FIN_VALID    : in  std_logic := '0';
+        I_PUSH_FIN_LAST     : in  std_logic := '0';
+        I_PUSH_FIN_ERROR    : in  std_logic := '0';
+        I_PUSH_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        I_PUSH_RSV_VALID    : in  std_logic := '0';
+        I_PUSH_RSV_LAST     : in  std_logic := '0';
+        I_PUSH_RSV_ERROR    : in  std_logic := '0';
+        I_PUSH_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        I_PUSH_BUF_RESET    : in  std_logic := '0';
+        I_PUSH_BUF_VALID    : in  std_logic := '0';
+        I_PUSH_BUF_LAST     : in  std_logic := '0';
+        I_PUSH_BUF_ERROR    : in  std_logic := '0';
+        I_PUSH_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         I_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Status Signals.
@@ -1516,7 +1516,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
         O_CLK               : in  std_logic;
         O_CLR               : in  std_logic;
-        O_CKE               : in  std_logic;
+        O_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Outlet Stream Interface.
     -------------------------------------------------------------------------------
@@ -1540,7 +1540,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         O_I2O_OPEN_VALID    : out std_logic;
         O_I2O_CLOSE_INFO    : out std_logic_vector(I2O_CLOSE_INFO_BITS-1 downto 0);
         O_I2O_CLOSE_VALID   : out std_logic;
-        O_O2I_STOP          : in  std_logic;
+        O_O2I_STOP          : in  std_logic := '0';
         O_O2I_OPEN_INFO     : in  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         O_O2I_OPEN_VALID    : in  std_logic;
         O_O2I_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
@@ -1655,57 +1655,57 @@ component PUMP_STREAM_OUTLET_CONTROLLER
     -------------------------------------------------------------------------------
         O_CLK               : in  std_logic;
         O_CLR               : in  std_logic;
-        O_CKE               : in  std_logic;
+        O_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Outlet Control Register Interface.
     -------------------------------------------------------------------------------
-        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0) := (others => '0');
+        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0) := (others => '0');
         O_ADDR_Q            : out std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0) := (others => '0');
+        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0) := (others => '0');
         O_SIZE_Q            : out std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0) := (others => '0');
+        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0) := (others => '0');
         O_MODE_Q            : out std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
+        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
         O_STAT_Q            : out std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_RESET_L           : in  std_logic;
-        O_RESET_D           : in  std_logic;
+        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
+        O_RESET_L           : in  std_logic := '0';
+        O_RESET_D           : in  std_logic := '0';
         O_RESET_Q           : out std_logic;
-        O_START_L           : in  std_logic;
-        O_START_D           : in  std_logic;
+        O_START_L           : in  std_logic := '0';
+        O_START_D           : in  std_logic := '0';
         O_START_Q           : out std_logic;
-        O_STOP_L            : in  std_logic;
-        O_STOP_D            : in  std_logic;
+        O_STOP_L            : in  std_logic := '0';
+        O_STOP_D            : in  std_logic := '0';
         O_STOP_Q            : out std_logic;
-        O_PAUSE_L           : in  std_logic;
-        O_PAUSE_D           : in  std_logic;
+        O_PAUSE_L           : in  std_logic := '0';
+        O_PAUSE_D           : in  std_logic := '0';
         O_PAUSE_Q           : out std_logic;
-        O_FIRST_L           : in  std_logic;
-        O_FIRST_D           : in  std_logic;
+        O_FIRST_L           : in  std_logic := '0';
+        O_FIRST_D           : in  std_logic := '0';
         O_FIRST_Q           : out std_logic;
-        O_LAST_L            : in  std_logic;
-        O_LAST_D            : in  std_logic;
+        O_LAST_L            : in  std_logic := '0';
+        O_LAST_D            : in  std_logic := '0';
         O_LAST_Q            : out std_logic;
-        O_DONE_EN_L         : in  std_logic;
-        O_DONE_EN_D         : in  std_logic;
+        O_DONE_EN_L         : in  std_logic := '0';
+        O_DONE_EN_D         : in  std_logic := '0';
         O_DONE_EN_Q         : out std_logic;
-        O_DONE_ST_L         : in  std_logic;
-        O_DONE_ST_D         : in  std_logic;
+        O_DONE_ST_L         : in  std_logic := '0';
+        O_DONE_ST_D         : in  std_logic := '0';
         O_DONE_ST_Q         : out std_logic;
-        O_ERR_ST_L          : in  std_logic;
-        O_ERR_ST_D          : in  std_logic;
+        O_ERR_ST_L          : in  std_logic := '0';
+        O_ERR_ST_D          : in  std_logic := '0';
         O_ERR_ST_Q          : out std_logic;
-        O_CLOSE_ST_L        : in  std_logic;
-        O_CLOSE_ST_D        : in  std_logic;
+        O_CLOSE_ST_L        : in  std_logic := '0';
+        O_CLOSE_ST_D        : in  std_logic := '0';
         O_CLOSE_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Configuration Signals.
     -------------------------------------------------------------------------------
-        O_ADDR_FIX          : in  std_logic;
+        O_ADDR_FIX          : in  std_logic := '0';
         O_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
@@ -1742,19 +1742,19 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_FLOW_STOP         : out std_logic;
         O_FLOW_LAST         : out std_logic;
         O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_FIN_VALID    : in  std_logic;
-        O_PULL_FIN_LAST     : in  std_logic;
-        O_PULL_FIN_ERROR    : in  std_logic;
-        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_RSV_VALID    : in  std_logic;
-        O_PULL_RSV_LAST     : in  std_logic;
-        O_PULL_RSV_ERROR    : in  std_logic;
-        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_BUF_RESET    : in  std_logic;
-        O_PULL_BUF_VALID    : in  std_logic;
-        O_PULL_BUF_LAST     : in  std_logic;
-        O_PULL_BUF_ERROR    : in  std_logic;
-        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_FIN_VALID    : in  std_logic := '0';
+        O_PULL_FIN_LAST     : in  std_logic := '0';
+        O_PULL_FIN_ERROR    : in  std_logic := '0';
+        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        O_PULL_RSV_VALID    : in  std_logic := '0';
+        O_PULL_RSV_LAST     : in  std_logic := '0';
+        O_PULL_RSV_ERROR    : in  std_logic := '0';
+        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        O_PULL_BUF_RESET    : in  std_logic := '0';
+        O_PULL_BUF_VALID    : in  std_logic := '0';
+        O_PULL_BUF_LAST     : in  std_logic := '0';
+        O_PULL_BUF_ERROR    : in  std_logic := '0';
+        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Status Signals.
@@ -1778,7 +1778,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
     -------------------------------------------------------------------------------
         I_CLK               : in  std_logic;
         I_CLR               : in  std_logic;
-        I_CKE               : in  std_logic;
+        I_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Intake Stream Interface.
     -------------------------------------------------------------------------------
@@ -1802,7 +1802,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         I_O2I_OPEN_VALID    : out std_logic;
         I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
         I_O2I_CLOSE_VALID   : out std_logic;
-        I_I2O_STOP          : in  std_logic;
+        I_I2O_STOP          : in  std_logic := '0';
         I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         I_I2O_OPEN_VALID    : in  std_logic;
         I_I2O_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
@@ -2207,32 +2207,32 @@ component PUMP_REQUEST_CONTROLLER
     --
     -------------------------------------------------------------------------------
         M_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from requester :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   requester :
                               out std_logic;
         M_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
         M_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from requester :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   requester :
                               out std_logic;
         M_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Requester.
     -------------------------------------------------------------------------------
@@ -2350,94 +2350,94 @@ component PUMP_REQUEST_CONTROLLER
         T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
                               --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_ERR      : --! @brief Push Final Error flags :
                               --! レスポンダ側からのデータ入力中にエラーが発生した
                               --! ことを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
                               --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ入力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_RSV_ERR      : --! @brief Push Reserve Error flags :
                               --! レスポンダ側からのデータ入力中にエラーが発生した
                               --! ことを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
                               --! レスポンダ側からの"予定された"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from Responder.
     -------------------------------------------------------------------------------
         T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
                               --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_ERR      : --! @brief Pull Final Error flags :
                               --! レスポンダ側からのデータ出力中にエラーが発生した
                               --! ことを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
                               --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが先行(Precede)モードで無い場合は
                               --!   未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_RSV_ERR      : --! @brief Pull Reserve Error flags :
                               --! レスポンダ側からのデータ出力中にエラーが発生した
                               --! ことを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
                               --! レスポンダ側からの"予定された"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0')
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -2585,7 +2585,7 @@ component PIPE_REQUESTER_INTERFACE
                               --!   トするように入力されなければならない.
                               --! * この信号は T_CLK_RATE > 1 かつ M_CLK_RATE = 1の
                               --!   時のみ有効. それ以外は未使用.
-                              in  std_logic;
+                              in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Request from Responder Signals.
     -------------------------------------------------------------------------------
@@ -2766,7 +2766,7 @@ component PIPE_REQUESTER_INTERFACE
     -------------------------------------------------------------------------------
         M_CLK               : in  std_logic;
         M_CLR               : in  std_logic;
-        M_CKE               : in  std_logic;
+        M_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- リクエスタ側への要求信号出力.
     -------------------------------------------------------------------------------
@@ -2805,20 +2805,20 @@ component PIPE_REQUESTER_INTERFACE
         M_I_FLOW_READY      : out std_logic;
         M_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PUSH_FIN_VALID    : in  std_logic;
-        M_PUSH_FIN_LAST     : in  std_logic;
-        M_PUSH_FIN_ERROR    : in  std_logic;
-        M_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        M_PUSH_RSV_VALID    : in  std_logic;
-        M_PUSH_RSV_LAST     : in  std_logic;
-        M_PUSH_RSV_ERROR    : in  std_logic;
-        M_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PUSH_FIN_VALID    : in  std_logic := '0';
+        M_PUSH_FIN_LAST     : in  std_logic := '0';
+        M_PUSH_FIN_ERROR    : in  std_logic := '0';
+        M_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
+        M_PUSH_RSV_VALID    : in  std_logic := '0';
+        M_PUSH_RSV_LAST     : in  std_logic := '0';
+        M_PUSH_RSV_ERROR    : in  std_logic := '0';
+        M_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PUSH_BUF_RESET    : in  std_logic;
-        M_PUSH_BUF_VALID    : in  std_logic;
-        M_PUSH_BUF_LAST     : in  std_logic;
-        M_PUSH_BUF_ERROR    : in  std_logic;
-        M_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PUSH_BUF_RESET    : in  std_logic := '0';
+        M_PUSH_BUF_VALID    : in  std_logic := '0';
+        M_PUSH_BUF_LAST     : in  std_logic := '0';
+        M_PUSH_BUF_ERROR    : in  std_logic := '0';
+        M_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側へのデータ出力のフロー制御信号入出力
@@ -2829,20 +2829,20 @@ component PIPE_REQUESTER_INTERFACE
         M_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_O_FLOW_READY      : out std_logic;
         M_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PULL_FIN_VALID    : in  std_logic;
-        M_PULL_FIN_LAST     : in  std_logic;
-        M_PULL_FIN_ERROR    : in  std_logic;
-        M_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        M_PULL_RSV_VALID    : in  std_logic;
-        M_PULL_RSV_LAST     : in  std_logic;
-        M_PULL_RSV_ERROR    : in  std_logic;
-        M_PULL_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PULL_FIN_VALID    : in  std_logic := '0';
+        M_PULL_FIN_LAST     : in  std_logic := '0';
+        M_PULL_FIN_ERROR    : in  std_logic := '0';
+        M_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
+        M_PULL_RSV_VALID    : in  std_logic := '0';
+        M_PULL_RSV_LAST     : in  std_logic := '0';
+        M_PULL_RSV_ERROR    : in  std_logic := '0';
+        M_PULL_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PULL_BUF_RESET    : in  std_logic;
-        M_PULL_BUF_VALID    : in  std_logic;
-        M_PULL_BUF_LAST     : in  std_logic;
-        M_PULL_BUF_ERROR    : in  std_logic;
-        M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PULL_BUF_RESET    : in  std_logic := '0';
+        M_PULL_BUF_VALID    : in  std_logic := '0';
+        M_PULL_BUF_LAST     : in  std_logic := '0';
+        M_PULL_BUF_ERROR    : in  std_logic := '0';
+        M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_READY    : out std_logic
     );
 end component;
@@ -3047,43 +3047,43 @@ component PIPE_RESPONDER_INTERFACE
         T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
                               --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals from Requester.
     -------------------------------------------------------------------------------
         T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
                               --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
         T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
                               --! プールバッファに T_PUSH_BUF_LEVEL 以下のデータし
                               --! かないことを示すフラグ.
@@ -3096,13 +3096,13 @@ component PIPE_RESPONDER_INTERFACE
     --
     -------------------------------------------------------------------------------
         T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
                               --! プールバッファに T_PULL_BUF_LEVEL 以上のデータが
                               --! あることを示すフラグ.
@@ -3110,7 +3110,7 @@ component PIPE_RESPONDER_INTERFACE
         T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
                               --! T_PULL_BUF_READY 信号をアサートするかしないかを
                               --! 指示するための閾値.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Valve Signals to Responder.
     -------------------------------------------------------------------------------
@@ -3228,70 +3228,70 @@ component PIPE_RESPONDER_INTERFACE
         M_PUSH_FIN_VALID    : --! @brief Push Final Valid from requester :
                               --! M_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_LAST     : --! @brief Push Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_SIZE     : --! @brief Push Final Size :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from requester :
                               --! M_PUSH_RSV_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ入力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_SIZE     : --! @brief Push Reserve Size :
                               --! レスポンダ側からの"予定された"入力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 出力用バルブが非先行モード(O_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Intake Valve Signals from requester.
     -------------------------------------------------------------------------------
         M_PULL_FIN_VALID    : --! @brief Pull Final Valid from requester :
                               --! M_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_LAST     : --! @brief Pull Final Last flags :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_SIZE     : --! @brief Pull Final Size :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from requester :
                               --! M_PULL_RSV_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが先行(Precede)モードで無い場合は
                               --!   未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags :
                               --! レスポンダ側からの最後の"予定された"データ出力で
                               --! あることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_SIZE     : --! @brief Pull Reserve Size :
                               --! レスポンダ側からの"予定された"出力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
                               --! * 入力用バルブが非先行モード(I_VALVE_PRECEDE=0)
                               --!   の場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0)
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0')
     );
 end component;
 -----------------------------------------------------------------------------------
@@ -3463,7 +3463,7 @@ component PIPE_CONTROLLER
                               --!   トするように入力されなければならない.
                               --! * この信号は T_CLK_RATE > 1 かつ M_CLK_RATE = 1の
                               --!   時のみ有効. それ以外は未使用.
-                              in  std_logic;
+                              in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Request from Responder Signals.
     -------------------------------------------------------------------------------
@@ -3594,55 +3594,55 @@ component PIPE_CONTROLLER
         T_PUSH_FIN_VALID    : --! @brief Push Final Valid from responder :
                               --! T_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_LAST     : --! @brief Push Final Last flags from responder :
                               --! レスポンダ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_ERROR    : --! @brief Push Final Error flags from responder :
                               --! レスポンダ側からのデータ入力時にエラーが発生した
                               --! ことを示すフラグ.
                               --! * 現在この信号は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_FIN_SIZE     : --! @brief Push Final Size from responder :
                               --! レスポンダ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from responder :
                               --! T_PUSH_RSV_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags from responder :
                               --! レスポンダ側からの最後の"予約した"データ入力であ
                               --! ることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_RSV_ERROR    : --! @brief Push Reserve Error flags from responder :
                               --! レスポンダ側からのデータ入力時にエラーが発生した
                               --! ことを示すフラグ.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_RSV_SIZE     : --! @brief Push Reserve Size from responder :
                               --! レスポンダ側からの"予約した"入力バイト数.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
                               --! T_PUSH_BUF_READY 信号をアサートするかしないかを
                               --! 指示するための閾値.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
         T_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from responder :
                               --! T_PUSH_BUF_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from responder :
                               --! レスポンダ側からの最後のバッファ書き込みであるこ
                               --! とを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_ERROR    : --! @brief Push Buffer Error from responder :
                               --! レスポンダ側からのデータ書き込み時にエラーが発生
                               --! したことを示すフラグ.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from responder :
                               --! レスポンダ側からのデータ書き込みサイズ.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   responder :
                               --! プールバッファに T_PUSH_BUF_LEVEL 以下のデータし
                               --! かないことを示すフラグ.
@@ -3677,55 +3677,55 @@ component PIPE_CONTROLLER
         T_PULL_FIN_VALID    : --! @brief Pull Final Valid from responder :
                               --! T_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_LAST     : --! @brief Pull Final Last flags from responder :
                               --! レスポンダ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_ERROR    : --! @brief Pull Final Error flags from responder :
                               --! レスポンダ側からのデータ出力時にエラーが発生した
                               --! ことを示すフラグ.
                               --! * 現在この信号は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_FIN_SIZE     : --! @brief Pull Final Size from responder :
                               --! レスポンダ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from responder :
                               --! T_PULL_RSV_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags from responder :
                               --! レスポンダ側からの最後の"予約した"データ出力であ
                               --! ることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_RSV_ERROR    : --! @brief Pull Reserve Error flags from responder :
                               --! レスポンダ側からのデータ出力時にエラーが発生した
                               --! ことを示すフラグ.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_RSV_SIZE     : --! @brief Pull Reserve Size from responder :
                               --! レスポンダ側からのデータ書き込みサイズ.
-                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
+                              in  std_logic_vector(XFER_COUNT_BITS-1 downto 0) := (others => '0');
         T_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
                               --! T_PULL_BUF_READY 信号をアサートするかしないかを
                               --! 指示するための閾値.
                               in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         T_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from responder :
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from responder :
                               --! T_PULL_BUF_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from responder :
                               --! レスポンダ側からのバッファからの最後のデータ読み
                               --! 出しであることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_ERROR    : --! @brief Pull Buffer Error from responder :
                               --! レスポンダ側からのデータ読み出し時にエラーが発生
                               --! したことを示すフラグ.
-                              in  std_logic;
+                              in  std_logic := '0';
         T_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from responder :
                               --! レスポンダ側からのデータ読み出しサイズ.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         T_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   responder :
                               --! プールバッファに T_PULL_BUF_LEVEL 以上のデータが
                               --! あることを示すフラグ.
@@ -3748,7 +3748,7 @@ component PIPE_CONTROLLER
                               --!   トするように入力されなければならない.
                               --! * この信号は M_CLK_RATE > 1 かつ T_CLK_RATE = 1の
                               --!   時のみ有効. それ以外は未使用.
-                              in  std_logic;
+                              in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Request to Requester Signals.
     -------------------------------------------------------------------------------
@@ -3810,7 +3810,7 @@ component PIPE_CONTROLLER
         M_ACK_ERROR         : --! @brief Acknowledge with Error from requester :
                               --! トランザクション中になんらかのエラーが発生した場
                               --! 合、この信号がアサートされる.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_ACK_STOP          : --! @brief Acknowledge with Stop operation from requester :
                               --! トランザクションが中止された場合、この信号がアサ
                               --! ートされる.
@@ -3832,7 +3832,7 @@ component PIPE_CONTROLLER
         M_XFER_ERROR        : --! @brief Transfer Error from requester :
                               --! リクエスタ側がデータの転送中にエラーが発生した事
                               --! を示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_XFER_DONE         : --! @brief Transfer Done from requester :
                               --! データ転送中かつ、次のクロックで M_XFER_BUSY が
                               --! ネゲートされる事を示すフラグ.
@@ -3873,44 +3873,44 @@ component PIPE_CONTROLLER
         M_PUSH_FIN_VALID    : --! @brief Push Final Valid from requester :
                               --! M_PUSH_FIN_LAST/SIZE が有効であることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_LAST     : --! @brief Push Final Last flags from requester :
                               --! リクエスタ側からの最後の"確定した"データ入力であ
                               --! ることを示す.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_ERROR    : --! @brief Push Final Error flags from requester :
                               --! リクエスタ側からのデータ入力時にエラーが発生した
                               --! ことを示すフラグ.
                               --! * 現在この信号は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_FIN_SIZE     : --! @brief Push Final Size from requester :
                               --! リクエスタ側からの"確定した"入力バイト数.
                               --! * 入力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_RSV_VALID    : --! @brief Push Reserve Valid from requester :
                               --! M_PUSH_RSV_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_LAST     : --! @brief Push Reserve Last flags from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_ERROR    : --! @brief Push Reserve Error flags from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_RSV_SIZE     : --! @brief Push Reserve Size from requester :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_LEVEL    : --! @brief Push Buffer Ready Level :
                               --! M_PUSH_BUF_READY 信号をアサートするかしないかを
                               --! 指示するための閾値.
                               in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PUSH_BUF_RESET    : --! @brief Push Buffer Reset from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_VALID    : --! @brief Push Buffer Valid from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_LAST     : --! @brief Push Buffer Last  from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_ERROR    : --! @brief Push Buffer Error from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PUSH_BUF_SIZE     : --! @brief Push Buffer Size  from requester :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_READY    : --! @brief Push Buffer Ready to   requester :
                               --! プールバッファに M_PUSH_BUF_LEVEL 以下のデータし
                               --! かないことを示すフラグ.
@@ -3945,44 +3945,44 @@ component PIPE_CONTROLLER
         M_PULL_FIN_VALID    : --! @brief Pull Final Valid from requester :
                               --! M_PULL_FIN_LAST/SIZE が有効であることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_LAST     : --! @brief Pull Final Last flags from requester :
                               --! リクエスタ側からの最後の"確定した"データ出力で
                               --! あることを示す.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_ERROR    : --! @brief Pull Final Error flags from requester :
                               --! リクエスタ側からのデータ出力時にエラーが発生した
                               --! ことを示すフラグ.
                               --! * 現在この信号は未使用.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_FIN_SIZE     : --! @brief Pull Final Size from requester :
                               --! リクエスタ側からの"確定した"出力バイト数.
                               --! * 出力用バルブが固定(Fixed)モードの場合は未使用.
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_RSV_VALID    : --! @brief Pull Reserve Valid from requester :
                               --! M_PULL_RSV_LAST/SIZE が有効であることを示す.
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_LAST     : --! @brief Pull Reserve Last flags from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_ERROR    : --! @brief Pull Reserve Error flags from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_RSV_SIZE     : --! @brief Pull Reserve Size from requester :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_RESET    : --! @brief Pull Buffer Reset from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_LEVEL    : --! @brief Pull Buffer Ready Level :
                               --! M_PULL_BUF_READY 信号をアサートするかしないかを
                               --! 指示するための閾値.
                               in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_PULL_BUF_VALID    : --! @brief Pull Buffer Valid from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_LAST     : --! @brief Pull Buffer Last  from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_ERROR    : --! @brief Pull Buffer Error from requester :
-                              in  std_logic;
+                              in  std_logic := '0';
         M_PULL_BUF_SIZE     : --! @brief Pull Buffer Size  from requester :
-                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+                              in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_READY    : --! @brief Pull Buffer Ready to   requester :
                               --! プールバッファに M_PULL_BUF_LEVEL 以上のデータが
                               --! あることを示すフラグ.

@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller_intake_side.vhd
 --!     @brief   PUMP CONTROLLER INTAKE SIDE
---!     @version 1.7.0
---!     @date    2018/7/17
+--!     @version 1.8.0
+--!     @date    2019/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -111,50 +111,50 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
     -------------------------------------------------------------------------------
     -- Control Status Register Interface.
     -------------------------------------------------------------------------------
-        REG_ADDR_L          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0);
-        REG_ADDR_D          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0);
+        REG_ADDR_L          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0) := (others => '0');
+        REG_ADDR_D          : in  std_logic_vector(REG_ADDR_BITS-1 downto 0) := (others => '0');
         REG_ADDR_Q          : out std_logic_vector(REG_ADDR_BITS-1 downto 0);
-        REG_SIZE_L          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0);
-        REG_SIZE_D          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0);
+        REG_SIZE_L          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0) := (others => '0');
+        REG_SIZE_D          : in  std_logic_vector(REG_SIZE_BITS-1 downto 0) := (others => '0');
         REG_SIZE_Q          : out std_logic_vector(REG_SIZE_BITS-1 downto 0);
-        REG_MODE_L          : in  std_logic_vector(REG_MODE_BITS-1 downto 0);
-        REG_MODE_D          : in  std_logic_vector(REG_MODE_BITS-1 downto 0);
+        REG_MODE_L          : in  std_logic_vector(REG_MODE_BITS-1 downto 0) := (others => '0');
+        REG_MODE_D          : in  std_logic_vector(REG_MODE_BITS-1 downto 0) := (others => '0');
         REG_MODE_Q          : out std_logic_vector(REG_MODE_BITS-1 downto 0);
-        REG_STAT_L          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_STAT_D          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
+        REG_STAT_L          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
+        REG_STAT_D          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
         REG_STAT_Q          : out std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_STAT_I          : in  std_logic_vector(REG_STAT_BITS-1 downto 0);
-        REG_RESET_L         : in  std_logic;
-        REG_RESET_D         : in  std_logic;
+        REG_STAT_I          : in  std_logic_vector(REG_STAT_BITS-1 downto 0) := (others => '0');
+        REG_RESET_L         : in  std_logic := '0';
+        REG_RESET_D         : in  std_logic := '0';
         REG_RESET_Q         : out std_logic;
-        REG_START_L         : in  std_logic;
-        REG_START_D         : in  std_logic;
+        REG_START_L         : in  std_logic := '0';
+        REG_START_D         : in  std_logic := '0';
         REG_START_Q         : out std_logic;
-        REG_STOP_L          : in  std_logic;
-        REG_STOP_D          : in  std_logic;
+        REG_STOP_L          : in  std_logic := '0';
+        REG_STOP_D          : in  std_logic := '0';
         REG_STOP_Q          : out std_logic;
-        REG_PAUSE_L         : in  std_logic;
-        REG_PAUSE_D         : in  std_logic;
+        REG_PAUSE_L         : in  std_logic := '0';
+        REG_PAUSE_D         : in  std_logic := '0';
         REG_PAUSE_Q         : out std_logic;
-        REG_FIRST_L         : in  std_logic;
-        REG_FIRST_D         : in  std_logic;
+        REG_FIRST_L         : in  std_logic := '0';
+        REG_FIRST_D         : in  std_logic := '0';
         REG_FIRST_Q         : out std_logic;
-        REG_LAST_L          : in  std_logic;
-        REG_LAST_D          : in  std_logic;
+        REG_LAST_L          : in  std_logic := '0';
+        REG_LAST_D          : in  std_logic := '0';
         REG_LAST_Q          : out std_logic;
-        REG_DONE_EN_L       : in  std_logic;
-        REG_DONE_EN_D       : in  std_logic;
+        REG_DONE_EN_L       : in  std_logic := '0';
+        REG_DONE_EN_D       : in  std_logic := '0';
         REG_DONE_EN_Q       : out std_logic;
-        REG_DONE_ST_L       : in  std_logic;
-        REG_DONE_ST_D       : in  std_logic;
+        REG_DONE_ST_L       : in  std_logic := '0';
+        REG_DONE_ST_D       : in  std_logic := '0';
         REG_DONE_ST_Q       : out std_logic;
-        REG_ERR_ST_L        : in  std_logic;
-        REG_ERR_ST_D        : in  std_logic;
+        REG_ERR_ST_L        : in  std_logic := '0';
+        REG_ERR_ST_D        : in  std_logic := '0';
         REG_ERR_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Configuration Signals.
     -------------------------------------------------------------------------------
-        ADDR_FIX            : in  std_logic;
+        ADDR_FIX            : in  std_logic := '0';
         BUF_READY_LEVEL     : in  std_logic_vector(BUF_DEPTH       downto 0);
         FLOW_READY_LEVEL    : in  std_logic_vector(BUF_DEPTH       downto 0);
     -------------------------------------------------------------------------------
@@ -191,26 +191,26 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
         FLOW_STOP           : out std_logic;
         FLOW_LAST           : out std_logic;
         FLOW_SIZE           : out std_logic_vector(BUF_DEPTH       downto 0);
-        PUSH_FIN_VALID      : in  std_logic;
-        PUSH_FIN_LAST       : in  std_logic;
+        PUSH_FIN_VALID      : in  std_logic := '0';
+        PUSH_FIN_LAST       : in  std_logic := '0';
         PUSH_FIN_ERROR      : in  std_logic := '0';
-        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_RSV_VALID      : in  std_logic := '0';
         PUSH_RSV_LAST       : in  std_logic := '0';
         PUSH_RSV_ERROR      : in  std_logic := '0';
         PUSH_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_BUF_RESET      : in  std_logic := '0';
-        PUSH_BUF_VALID      : in  std_logic;
-        PUSH_BUF_LAST       : in  std_logic;
+        PUSH_BUF_VALID      : in  std_logic := '0';
+        PUSH_BUF_LAST       : in  std_logic := '0';
         PUSH_BUF_ERROR      : in  std_logic := '0';
-        PUSH_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PUSH_BUF_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PUSH_BUF_READY      : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
-        PULL_FIN_VALID      : in  std_logic;
-        PULL_FIN_LAST       : in  std_logic;
-        PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0);
+        PULL_FIN_VALID      : in  std_logic := '0';
+        PULL_FIN_LAST       : in  std_logic := '0';
+        PULL_FIN_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');
         PULL_RSV_VALID      : in  std_logic := '0';
         PULL_RSV_LAST       : in  std_logic := '0';
         PULL_RSV_SIZE       : in  std_logic_vector(BUF_DEPTH       downto 0) := (others => '0');

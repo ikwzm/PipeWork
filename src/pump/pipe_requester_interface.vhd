@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
---!     @version 1.7.0
---!     @date    2018/5/21
+--!     @version 1.8.0
+--!     @date    2019/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2018 Ichiro Kawazome
+--      Copyright (C) 2012-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -181,7 +181,7 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --!   トするように入力されなければならない.
                               --! * この信号は T_CLK_RATE > 1 かつ M_CLK_RATE = 1の
                               --!   時のみ有効. それ以外は未使用.
-                              in  std_logic;
+                              in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Request from Responder Signals.
     -------------------------------------------------------------------------------
@@ -362,7 +362,7 @@ entity  PIPE_REQUESTER_INTERFACE is
     -------------------------------------------------------------------------------
         M_CLK               : in  std_logic;
         M_CLR               : in  std_logic;
-        M_CKE               : in  std_logic;
+        M_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- リクエスタ側への要求信号出力.
     -------------------------------------------------------------------------------
@@ -401,20 +401,20 @@ entity  PIPE_REQUESTER_INTERFACE is
         M_I_FLOW_READY      : out std_logic;
         M_I_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
         M_I_BUF_SIZE        : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PUSH_FIN_VALID    : in  std_logic;
-        M_PUSH_FIN_LAST     : in  std_logic;
-        M_PUSH_FIN_ERROR    : in  std_logic;
-        M_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        M_PUSH_RSV_VALID    : in  std_logic;
-        M_PUSH_RSV_LAST     : in  std_logic;
-        M_PUSH_RSV_ERROR    : in  std_logic;
-        M_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PUSH_FIN_VALID    : in  std_logic := '0';
+        M_PUSH_FIN_LAST     : in  std_logic := '0';
+        M_PUSH_FIN_ERROR    : in  std_logic := '0';
+        M_PUSH_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
+        M_PUSH_RSV_VALID    : in  std_logic := '0';
+        M_PUSH_RSV_LAST     : in  std_logic := '0';
+        M_PUSH_RSV_ERROR    : in  std_logic := '0';
+        M_PUSH_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PUSH_BUF_RESET    : in  std_logic;
-        M_PUSH_BUF_VALID    : in  std_logic;
-        M_PUSH_BUF_LAST     : in  std_logic;
-        M_PUSH_BUF_ERROR    : in  std_logic;
-        M_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PUSH_BUF_RESET    : in  std_logic := '0';
+        M_PUSH_BUF_VALID    : in  std_logic := '0';
+        M_PUSH_BUF_LAST     : in  std_logic := '0';
+        M_PUSH_BUF_ERROR    : in  std_logic := '0';
+        M_PUSH_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PUSH_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- リクエスタ側へのデータ出力のフロー制御信号入出力
@@ -425,20 +425,20 @@ entity  PIPE_REQUESTER_INTERFACE is
         M_O_FLOW_SIZE       : out std_logic_vector(XFER_SIZE_BITS -1 downto 0);
         M_O_FLOW_READY      : out std_logic;
         M_O_FLOW_LEVEL      : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PULL_FIN_VALID    : in  std_logic;
-        M_PULL_FIN_LAST     : in  std_logic;
-        M_PULL_FIN_ERROR    : in  std_logic;
-        M_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
-        M_PULL_RSV_VALID    : in  std_logic;
-        M_PULL_RSV_LAST     : in  std_logic;
-        M_PULL_RSV_ERROR    : in  std_logic;
-        M_PULL_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PULL_FIN_VALID    : in  std_logic := '0';
+        M_PULL_FIN_LAST     : in  std_logic := '0';
+        M_PULL_FIN_ERROR    : in  std_logic := '0';
+        M_PULL_FIN_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
+        M_PULL_RSV_VALID    : in  std_logic := '0';
+        M_PULL_RSV_LAST     : in  std_logic := '0';
+        M_PULL_RSV_ERROR    : in  std_logic := '0';
+        M_PULL_RSV_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_LEVEL    : in  std_logic_vector(XFER_COUNT_BITS-1 downto 0);
-        M_PULL_BUF_RESET    : in  std_logic;
-        M_PULL_BUF_VALID    : in  std_logic;
-        M_PULL_BUF_LAST     : in  std_logic;
-        M_PULL_BUF_ERROR    : in  std_logic;
-        M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0);
+        M_PULL_BUF_RESET    : in  std_logic := '0';
+        M_PULL_BUF_VALID    : in  std_logic := '0';
+        M_PULL_BUF_LAST     : in  std_logic := '0';
+        M_PULL_BUF_ERROR    : in  std_logic := '0';
+        M_PULL_BUF_SIZE     : in  std_logic_vector(XFER_SIZE_BITS -1 downto 0) := (others => '0');
         M_PULL_BUF_READY    : out std_logic
     );
 end PIPE_REQUESTER_INTERFACE;

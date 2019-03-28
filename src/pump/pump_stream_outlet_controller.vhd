@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
---!     @version 1.7.0
---!     @date    2018/7/18
+--!     @version 1.8.0
+--!     @date    2019/3/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -138,57 +138,57 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
     -------------------------------------------------------------------------------
         O_CLK               : in  std_logic;
         O_CLR               : in  std_logic;
-        O_CKE               : in  std_logic;
+        O_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Outlet Control Register Interface.
     -------------------------------------------------------------------------------
-        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
+        O_ADDR_L            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0) := (others => '0');
+        O_ADDR_D            : in  std_logic_vector(O_REG_ADDR_BITS-1 downto 0) := (others => '0');
         O_ADDR_Q            : out std_logic_vector(O_REG_ADDR_BITS-1 downto 0);
-        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
+        O_SIZE_L            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0) := (others => '0');
+        O_SIZE_D            : in  std_logic_vector(O_REG_SIZE_BITS-1 downto 0) := (others => '0');
         O_SIZE_Q            : out std_logic_vector(O_REG_SIZE_BITS-1 downto 0);
-        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0);
+        O_MODE_L            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0) := (others => '0');
+        O_MODE_D            : in  std_logic_vector(O_REG_MODE_BITS-1 downto 0) := (others => '0');
         O_MODE_Q            : out std_logic_vector(O_REG_MODE_BITS-1 downto 0);
-        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
+        O_STAT_L            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
+        O_STAT_D            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
         O_STAT_Q            : out std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0);
-        O_RESET_L           : in  std_logic;
-        O_RESET_D           : in  std_logic;
+        O_STAT_I            : in  std_logic_vector(O_REG_STAT_BITS-1 downto 0) := (others => '0');
+        O_RESET_L           : in  std_logic := '0';
+        O_RESET_D           : in  std_logic := '0';
         O_RESET_Q           : out std_logic;
-        O_START_L           : in  std_logic;
-        O_START_D           : in  std_logic;
+        O_START_L           : in  std_logic := '0';
+        O_START_D           : in  std_logic := '0';
         O_START_Q           : out std_logic;
-        O_STOP_L            : in  std_logic;
-        O_STOP_D            : in  std_logic;
+        O_STOP_L            : in  std_logic := '0';
+        O_STOP_D            : in  std_logic := '0';
         O_STOP_Q            : out std_logic;
-        O_PAUSE_L           : in  std_logic;
-        O_PAUSE_D           : in  std_logic;
+        O_PAUSE_L           : in  std_logic := '0';
+        O_PAUSE_D           : in  std_logic := '0';
         O_PAUSE_Q           : out std_logic;
-        O_FIRST_L           : in  std_logic;
-        O_FIRST_D           : in  std_logic;
+        O_FIRST_L           : in  std_logic := '0';
+        O_FIRST_D           : in  std_logic := '0';
         O_FIRST_Q           : out std_logic;
-        O_LAST_L            : in  std_logic;
-        O_LAST_D            : in  std_logic;
+        O_LAST_L            : in  std_logic := '0';
+        O_LAST_D            : in  std_logic := '0';
         O_LAST_Q            : out std_logic;
-        O_DONE_EN_L         : in  std_logic;
-        O_DONE_EN_D         : in  std_logic;
+        O_DONE_EN_L         : in  std_logic := '0';
+        O_DONE_EN_D         : in  std_logic := '0';
         O_DONE_EN_Q         : out std_logic;
-        O_DONE_ST_L         : in  std_logic;
-        O_DONE_ST_D         : in  std_logic;
+        O_DONE_ST_L         : in  std_logic := '0';
+        O_DONE_ST_D         : in  std_logic := '0';
         O_DONE_ST_Q         : out std_logic;
-        O_ERR_ST_L          : in  std_logic;
-        O_ERR_ST_D          : in  std_logic;
+        O_ERR_ST_L          : in  std_logic := '0';
+        O_ERR_ST_D          : in  std_logic := '0';
         O_ERR_ST_Q          : out std_logic;
-        O_CLOSE_ST_L        : in  std_logic;
-        O_CLOSE_ST_D        : in  std_logic;
+        O_CLOSE_ST_L        : in  std_logic := '0';
+        O_CLOSE_ST_D        : in  std_logic := '0';
         O_CLOSE_ST_Q        : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Configuration Signals.
     -------------------------------------------------------------------------------
-        O_ADDR_FIX          : in  std_logic;
+        O_ADDR_FIX          : in  std_logic := '0';
         O_BUF_READY_LEVEL   : in  std_logic_vector(BUF_DEPTH         downto 0);
         O_FLOW_READY_LEVEL  : in  std_logic_vector(BUF_DEPTH         downto 0);
     -------------------------------------------------------------------------------
@@ -225,19 +225,19 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         O_FLOW_STOP         : out std_logic;
         O_FLOW_LAST         : out std_logic;
         O_FLOW_SIZE         : out std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_FIN_VALID    : in  std_logic;
-        O_PULL_FIN_LAST     : in  std_logic;
-        O_PULL_FIN_ERROR    : in  std_logic;
-        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_RSV_VALID    : in  std_logic;
-        O_PULL_RSV_LAST     : in  std_logic;
-        O_PULL_RSV_ERROR    : in  std_logic;
-        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
-        O_PULL_BUF_RESET    : in  std_logic;
-        O_PULL_BUF_VALID    : in  std_logic;
-        O_PULL_BUF_LAST     : in  std_logic;
-        O_PULL_BUF_ERROR    : in  std_logic;
-        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0);
+        O_PULL_FIN_VALID    : in  std_logic := '0';
+        O_PULL_FIN_LAST     : in  std_logic := '0';
+        O_PULL_FIN_ERROR    : in  std_logic := '0';
+        O_PULL_FIN_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        O_PULL_RSV_VALID    : in  std_logic := '0';
+        O_PULL_RSV_LAST     : in  std_logic := '0';
+        O_PULL_RSV_ERROR    : in  std_logic := '0';
+        O_PULL_RSV_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
+        O_PULL_BUF_RESET    : in  std_logic := '0';
+        O_PULL_BUF_VALID    : in  std_logic := '0';
+        O_PULL_BUF_LAST     : in  std_logic := '0';
+        O_PULL_BUF_ERROR    : in  std_logic := '0';
+        O_PULL_BUF_SIZE     : in  std_logic_vector(BUF_DEPTH         downto 0) := (others => '0');
         O_PULL_BUF_READY    : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Status Signals.
@@ -261,7 +261,7 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
     -------------------------------------------------------------------------------
         I_CLK               : in  std_logic;
         I_CLR               : in  std_logic;
-        I_CKE               : in  std_logic;
+        I_CKE               : in  std_logic := '1';
     -------------------------------------------------------------------------------
     -- Intake Stream Interface.
     -------------------------------------------------------------------------------
@@ -285,7 +285,7 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         I_O2I_OPEN_VALID    : out std_logic;
         I_O2I_CLOSE_INFO    : out std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0);
         I_O2I_CLOSE_VALID   : out std_logic;
-        I_I2O_STOP          : in  std_logic;
+        I_I2O_STOP          : in  std_logic := '0';
         I_I2O_OPEN_INFO     : in  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0) := (others => '0');
         I_I2O_OPEN_VALID    : in  std_logic;
         I_I2O_CLOSE_INFO    : in  std_logic_vector(O2I_CLOSE_INFO_BITS-1 downto 0) := (others => '0');
