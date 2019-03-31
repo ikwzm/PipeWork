@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/03/22                                                      --
+--!     @date    2019/03/31                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -445,7 +445,7 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
-                          --! * O_QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
                           --!   レクトに出力される.
                           integer := 0;
         ID              : --! @brief SDPRAM IDENTIFIER :
@@ -713,7 +713,13 @@ component IMAGE_STREAM_BUFFER_INTAKE
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        LINE_QUEUE      : --! @brief OUTLET LINE SELECTOR QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR の出力キュー
+                          --! の大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -911,7 +917,19 @@ component IMAGE_STREAM_BUFFER_OUTLET
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        BANK_QUEUE      : --! @brief BANK MEMORY READER QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_BANK_MEMORY_READER の出力キューの
+                          --! 大きさをワード数で指定する.
+                          --! * BANK_QUEUE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0;
+        LINE_QUEUE      : --! @brief OUTLET LINE SELECTOR QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR の出力キュー
+                          --! の大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 2
     );
     port (
     -------------------------------------------------------------------------------
