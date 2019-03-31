@@ -2,7 +2,7 @@
 --!     @file    convolution_parameter_buffer.vhd
 --!     @brief   Convolution Parameter Buffer Module
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -53,7 +53,12 @@ entity  CONVOLUTION_PARAMETER_BUFFER is
                           integer := 1024;
         ID              : --! @brief SDPRAM IDENTIFIER :
                           --! どのモジュールで使われているかを示す識別番号.
-                          integer := 0 
+                          integer := 0;
+        OUT_QUEUE       : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
@@ -317,7 +322,8 @@ begin
             SHAPE           => SHAPE               , --
             BANK_SIZE       => BANK_SIZE           , -- 
             BUF_ADDR_BITS   => BUF_ADDR_BITS       , --
-            BUF_DATA_BITS   => BUF_DATA_BITS         --
+            BUF_DATA_BITS   => BUF_DATA_BITS       , --
+            QUEUE_SIZE      => OUT_QUEUE             -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------

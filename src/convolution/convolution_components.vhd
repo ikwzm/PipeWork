@@ -2,7 +2,7 @@
 --!     @file    convolution_components.vhd                                      --
 --!     @brief   PIPEWORK CONVOLUTION COMPONENT LIBRARY DESCRIPTION              --
 --!     @version 1.8.0                                                           --
---!     @date    2019/03/24                                                      --
+--!     @date    2019/03/31                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -728,7 +728,12 @@ component CONVOLUTION_PARAMETER_BUFFER_READER
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
@@ -803,7 +808,12 @@ component CONVOLUTION_PARAMETER_BUFFER
                           integer := 1024;
         ID              : --! @brief SDPRAM IDENTIFIER :
                           --! どのモジュールで使われているかを示す識別番号.
-                          integer := 0 
+                          integer := 0;
+        OUT_QUEUE       : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
