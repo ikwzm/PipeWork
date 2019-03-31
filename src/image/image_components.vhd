@@ -1113,4 +1113,74 @@ component IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR
                           out std_logic_vector(LINE_SIZE-1 downto 0)
     );
 end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_STREAM_SLICE_MASTER_CONTROLLER                                  --
+-----------------------------------------------------------------------------------
+component IMAGE_STREAM_SLICE_MASTER_CONTROLLER
+    generic (
+        SOURCE_SHAPE    : --! @brief SOURCE IMAGE SHAPE PARAMETER :
+                          --! メモリに格納されているイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
+        SLICE_SHAPE     : --! @brief OUTPUT SHAPE PARAMETER :
+                          --! 取り出す(Slice)するブロックの大きさを指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
+        MAX_SLICE_C_POS : --! @brief MAX SLICE C POSITION :
+                          integer := 0;
+        MAX_SLICE_X_POS : --! @brief MAX SLICE X POSITION :
+                          integer := 0;
+        MAX_SLICE_Y_POS : --! @brief MAX SLICE Y POSITION :
+                          integer := 0;
+        ADDR_BITS       : --! @brief ADDRESS BITS :
+                          --! REQ_ADDR信号のビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! REQ_SIZE信号のビット数を指定する.
+                          integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        SOURCE_C_SIZE   : in  integer range 1 to SOURCE_SHAPE.C.MAX_SIZE := SOURCE_SHAPE.C.SIZE;
+        SOURCE_X_SIZE   : in  integer range 1 to SOURCE_SHAPE.X.MAX_SIZE := SOURCE_SHAPE.X.SIZE;
+        SOURCE_Y_SIZE   : in  integer range 1 to SOURCE_SHAPE.Y.MAX_SIZE := SOURCE_SHAPE.Y.SIZE;
+        SLICE_C_POS     : in  integer range 0 to MAX_SLICE_C_POS := 0;
+        SLICE_X_POS     : in  integer range 0 to MAX_SLICE_X_POS := 0;
+        SLICE_Y_POS     : in  integer range 0 to MAX_SLICE_Y_POS := 0;
+        SLICE_C_SIZE    : in  integer range 1 to SLICE_SHAPE .C.MAX_SIZE := SLICE_SHAPE .C.SIZE;
+        SLICE_X_SIZE    : in  integer range 1 to SLICE_SHAPE .X.MAX_SIZE := SLICE_SHAPE .X.SIZE;
+        SLICE_Y_SIZE    : in  integer range 1 to SLICE_SHAPE .Y.MAX_SIZE := SLICE_SHAPE .Y.SIZE;
+        ELEM_BYTES      : in  integer range 1 to SOURCE_SHAPE.ELEM_BITS/8;
+        REQ_ADDR        : in  std_logic_vector(ADDR_BITS-1 downto 0);
+        REQ_VALID       : in  std_logic;
+        REQ_READY       : out std_logic;
+        RES_NONE        : out std_logic;
+        RES_ERROR       : out std_logic;
+        RES_VALID       : out std_logic;
+        RES_READY       : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        MST_ADDR        : out std_logic_vector(ADDR_BITS-1 downto 0);
+        MST_SIZE        : out std_logic_vector(SIZE_BITS-1 downto 0);
+        MST_FIRST       : out std_logic;
+        MST_LAST        : out std_logic;
+        MST_START       : out std_logic;
+        MST_BUSY        : in  std_logic;
+        MST_DONE        : in  std_logic;
+        MST_ERROR       : in  std_logic
+    );
+end component;
 end IMAGE_COMPONENTS;
