@@ -151,9 +151,10 @@ architecture RTL of IMAGE_STREAM_SLICE_MASTER_CONTROLLER is
     signal    tran_bytes            :  integer range 0 to SLICE_SHAPE .X.MAX_SIZE * SLICE_SHAPE .C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8;
     signal    channel_bytes         :  integer range 0 to SOURCE_SHAPE.C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8;
     signal    width_bytes           :  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8;
-    signal    start_bytes           :  integer range 0 to (MAX_SLICE_Y_POS * SOURCE_SHAPE.C.MAX_SIZE * SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8)
-                                                        + (MAX_SLICE_X_POS *                           SOURCE_SHAPE.C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8) 
-                                                        + (MAX_SLICE_C_POS *                                                     SOURCE_SHAPE.ELEM_BITS/8);
+    signal    start_bytes           :  integer range 0 to ((MAX_SLICE_Y_POS * SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.C.MAX_SIZE) + 
+                                                           (MAX_SLICE_X_POS *                           SOURCE_SHAPE.C.MAX_SIZE) +
+                                                           (MAX_SLICE_C_POS                                                    ))
+                                                          * SOURCE_SHAPE.ELEM_BITS/8;
     signal    start_x_pos           :  integer range 0 to MAX_SLICE_X_POS;
     signal    start_y_pos           :  integer range 0 to MAX_SLICE_Y_POS;
     -------------------------------------------------------------------------------
@@ -353,24 +354,19 @@ begin
     process (CLK, RST) begin
         if (RST = '1') then
                 MST_START <= '0';
-                MST_FIRST <= '0';
-                MST_LAST  <= '0';
-                tran_addr <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
                 MST_START <= '0';
-                MST_FIRST <= '0';
-                MST_LAST  <= '0';
-                tran_addr <= (others => '0');
-            elsif (x_loop_start = '1') then
+            elsif (x_loop_start = '1') or
+                  (x_loop_next  = '1' and x_loop_last = '0') then
                 MST_START <= '1';
-                MST_FIRST <= y_loop_first and x_loop_first;
-                MST_LAST  <= y_loop_last  and x_loop_last;
             else
                 MST_START <= '0';
             end if;
         end if;
     end process;
+    MST_FIRST <= y_loop_first and x_loop_first;
+    MST_LAST  <= y_loop_last  and x_loop_last;
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
