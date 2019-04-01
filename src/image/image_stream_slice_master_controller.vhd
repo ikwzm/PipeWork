@@ -82,16 +82,16 @@ entity  IMAGE_STREAM_SLICE_MASTER_CONTROLLER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-        SOURCE_C_SIZE   : in  integer range 1 to SOURCE_SHAPE.C.MAX_SIZE := SOURCE_SHAPE.C.SIZE;
-        SOURCE_X_SIZE   : in  integer range 1 to SOURCE_SHAPE.X.MAX_SIZE := SOURCE_SHAPE.X.SIZE;
-        SOURCE_Y_SIZE   : in  integer range 1 to SOURCE_SHAPE.Y.MAX_SIZE := SOURCE_SHAPE.Y.SIZE;
+        SOURCE_C_SIZE   : in  integer range 0 to SOURCE_SHAPE.C.MAX_SIZE := SOURCE_SHAPE.C.SIZE;
+        SOURCE_X_SIZE   : in  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE := SOURCE_SHAPE.X.SIZE;
+        SOURCE_Y_SIZE   : in  integer range 0 to SOURCE_SHAPE.Y.MAX_SIZE := SOURCE_SHAPE.Y.SIZE;
         SLICE_C_POS     : in  integer range 0 to MAX_SLICE_C_POS         := 0;
         SLICE_X_POS     : in  integer range 0 to MAX_SLICE_X_POS         := 0;
         SLICE_Y_POS     : in  integer range 0 to MAX_SLICE_Y_POS         := 0;
-        SLICE_C_SIZE    : in  integer range 1 to SLICE_SHAPE .C.MAX_SIZE := SLICE_SHAPE .C.SIZE;
-        SLICE_X_SIZE    : in  integer range 1 to SLICE_SHAPE .X.MAX_SIZE := SLICE_SHAPE .X.SIZE;
-        SLICE_Y_SIZE    : in  integer range 1 to SLICE_SHAPE .Y.MAX_SIZE := SLICE_SHAPE .Y.SIZE;
-        ELEM_BYTES      : in  integer range 1 to SOURCE_SHAPE.ELEM_BITS/8:= SOURCE_SHAPE.ELEM_BITS/8;
+        SLICE_C_SIZE    : in  integer range 0 to SLICE_SHAPE .C.MAX_SIZE := SLICE_SHAPE .C.SIZE;
+        SLICE_X_SIZE    : in  integer range 0 to SLICE_SHAPE .X.MAX_SIZE := SLICE_SHAPE .X.SIZE;
+        SLICE_Y_SIZE    : in  integer range 0 to SLICE_SHAPE .Y.MAX_SIZE := SLICE_SHAPE .Y.SIZE;
+        ELEM_BYTES      : in  integer range 0 to SOURCE_SHAPE.ELEM_BITS/8:= SOURCE_SHAPE.ELEM_BITS/8;
         REQ_ADDR        : in  std_logic_vector(ADDR_BITS-1 downto 0);
         REQ_VALID       : in  std_logic;
         REQ_READY       : out std_logic;
