@@ -190,6 +190,96 @@ component IMAGE_STREAM_GENERATOR
     );
 end component;
 -----------------------------------------------------------------------------------
+--! @brief IMAGE_STREAM_GENERATOR_WITH_PADDING                                   --
+-----------------------------------------------------------------------------------
+component IMAGE_STREAM_GENERATOR_WITH_PADDING
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    generic (
+        O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
+                          --! 出力側イメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(32,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE PARAMETER :
+                          IMAGE_SHAPE_TYPE        := NEW_IMAGE_SHAPE_CONSTANT(32,1,1,1);
+                          --! 出力側イメージストリームのパラメータを指定する.
+        I_DATA_BITS     : --! @brief INPUT  STREAM DATA BIT SIZE :
+                          --! 入力側のデータのビット幅を指定する.
+                          --! * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなけれ
+                          --!   ばならない.
+                          integer := 32;
+        MAX_PAD_SIZE    : --! @brief MAX PADDING SIZE SIZE :
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        START           : --! @brief STREAM START :
+                          in  std_logic;
+        BUSY            : --! @brief STREAM BUSY :
+                          out std_logic;
+        DONE            : --! @brief STREAM DONE :
+                          out std_logic;
+        C_SIZE          : --! @brief INPUT C CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief INPUT D CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief INPUT IMAGE WIDTH :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
+        Y_SIZE          : --! @brief INPUT IMAGE HEIGHT :
+                          in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
+        LEFT_PAD_SIZE   : --! @brief IMAGE WIDTH START PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        RIGHT_PAD_SIZE  : --! @brief IMAGE WIDTH LAST  PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        TOP_PAD_SIZE    : --! @brief IMAGE HEIGHT START PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        BOTTOM_PAD_SIZE : --! @brief IMAGE HEIGHT LAST  PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        PAD_DATA        : --! @brief PADDING DATA :
+                          in  std_logic_vector(I_DATA_BITS    -1 downto 0);
+    -------------------------------------------------------------------------------
+    -- STREAM 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_DATA          : --! @brief INPUT STREAM DATA :
+                          --! ストリームデータ入力.
+                          in  std_logic_vector(I_DATA_BITS    -1 downto 0);
+        I_VALID         : --! @brief INPUT STREAM VALID :
+                          --! 入力ストリムーデータ有効信号.
+                          --! I_DATA/I_STRB/I_LAST が有効であることを示す.
+                          in  std_logic;
+        I_READY         : --! @brief INPUT STREAM READY :
+                          --! 入力ストリムーデータレディ信号.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- IMAGE STREAM 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
+                          --! イメージストリームデータ出力.
+                          out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
+                          --! 出力イメージストリームデータ有効信号.
+                          --! * O_DATAが有効であることを示す.
+                          out std_logic;
+        O_READY         : --! @brief OUTPUT IMAGE STREAM DATA READY :
+                          --! 出力イメージストリームデータレディ信号.
+                          in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
 --! @brief IMAGE_STREAM_CHANNEL_REDUCER                                          --
 -----------------------------------------------------------------------------------
 component IMAGE_STREAM_CHANNEL_REDUCER

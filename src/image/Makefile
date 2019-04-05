@@ -1,5 +1,6 @@
 ENTITY_FILES = image_stream_atrb_generator.vhd              \
                image_stream_generator.vhd                   \
+               image_stream_generator_with_padding.vhd      \
                image_stream_channel_reducer.vhd             \
                image_stream_buffer.vhd                      \
                image_stream_buffer_bank_memory.vhd          \
