@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------------
---!     @file    image_stream_slice_master_controller.vhd
---!     @brief   Image Stream Slice Master Controller Module :
+--!     @file    image_slice_master_controller.vhd
+--!     @brief   Image Slice Master Controller Module :
 --!              メモリに格納されたイメージのうち、指定された位置の指定されたサイズ
 --!              のブロックをスライスしてとりだすためのマスター制御回路.
 --!     @version 1.8.0
---!     @date    2019/4/2
+--!     @date    2019/4/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -41,11 +41,11 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   Image Stream Slice Master Controller :
+--! @brief   Image Slice Master Controller :
 --!          メモリに格納されたイメージのうち、指定された位置の指定されたサイズの
 --!          ブロックをスライスしてとりだすためのマスター制御回路.
 -----------------------------------------------------------------------------------
-entity  IMAGE_STREAM_SLICE_MASTER_CONTROLLER is
+entity  IMAGE_SLICE_MASTER_CONTROLLER is
     generic (
         SOURCE_SHAPE    : --! @brief SOURCE IMAGE SHAPE PARAMETER :
                           --! メモリに格納されているイメージの形(SHAPE)を指定する.
@@ -111,7 +111,7 @@ entity  IMAGE_STREAM_SLICE_MASTER_CONTROLLER is
         MST_DONE        : in  std_logic;
         MST_ERROR       : in  std_logic
     );
-end IMAGE_STREAM_SLICE_MASTER_CONTROLLER;
+end IMAGE_SLICE_MASTER_CONTROLLER;
 -----------------------------------------------------------------------------------
 -- アーキテクチャ本体
 -----------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
-architecture RTL of IMAGE_STREAM_SLICE_MASTER_CONTROLLER is
+architecture RTL of IMAGE_SLICE_MASTER_CONTROLLER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

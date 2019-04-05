@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/04/02                                                      --
+--!     @date    2019/04/05                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1114,9 +1114,9 @@ component IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief IMAGE_STREAM_SLICE_MASTER_CONTROLLER                                  --
+--! @brief IMAGE_SLICE_MASTER_CONTROLLER                                         --
 -----------------------------------------------------------------------------------
-component IMAGE_STREAM_SLICE_MASTER_CONTROLLER
+component IMAGE_SLICE_MASTER_CONTROLLER
     generic (
         SOURCE_SHAPE    : --! @brief SOURCE IMAGE SHAPE PARAMETER :
                           --! メモリに格納されているイメージの形(SHAPE)を指定する.
