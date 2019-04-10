@@ -1,5 +1,6 @@
 ENTITY_FILES = image_stream_atrb_generator.vhd              \
                image_stream_generator.vhd                   \
+               image_stream_generator_with_padding.vhd      \
                image_stream_channel_reducer.vhd             \
                image_stream_buffer.vhd                      \
                image_stream_buffer_bank_memory.vhd          \
@@ -9,6 +10,8 @@ ENTITY_FILES = image_stream_atrb_generator.vhd              \
                image_stream_buffer_intake_line_selector.vhd \
                image_stream_buffer_outlet.vhd               \
                image_stream_buffer_outlet_line_selector.vhd \
+               image_slice_master_controller.vhd            \
+               image_slice_range_generator.vhd              \
                ${ENDLIST}
 
 pump_components.vhd : ${ENTITY_FILES}

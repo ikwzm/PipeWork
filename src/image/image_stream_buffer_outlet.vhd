@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Outlet Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの出力側モジュール
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -64,7 +64,19 @@ entity  IMAGE_STREAM_BUFFER_OUTLET is
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        BANK_QUEUE      : --! @brief BANK MEMORY READER QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_BANK_MEMORY_READER の出力キューの
+                          --! 大きさをワード数で指定する.
+                          --! * BANK_QUEUE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0;
+        LINE_QUEUE      : --! @brief OUTLET LINE SELECTOR QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR の出力キュー
+                          --! の大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 2
     );
     port (
     -------------------------------------------------------------------------------
@@ -154,8 +166,7 @@ architecture RTL of IMAGE_STREAM_BUFFER_OUTLET is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    constant  T_PARAM       :  IMAGE_STREAM_PARAM_TYPE
-                            := NEW_IMAGE_STREAM_PARAM(
+    constant  T_PARAM       :  IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(
                                    ELEM_BITS    => O_PARAM.ELEM_BITS,
                                    INFO_BITS    => O_PARAM.INFO_BITS,
                                    C            => O_PARAM.SHAPE.C,
@@ -181,7 +192,8 @@ begin
             BANK_SIZE       => BANK_SIZE       , --   
             LINE_SIZE       => LINE_SIZE       , --   
             BUF_ADDR_BITS   => BUF_ADDR_BITS   , --   
-            BUF_DATA_BITS   => BUF_DATA_BITS     --
+            BUF_DATA_BITS   => BUF_DATA_BITS   , --
+            QUEUE_SIZE      => BANK_QUEUE        -- 
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------
@@ -219,7 +231,7 @@ begin
             I_PARAM         => T_PARAM         , -- 
             O_PARAM         => O_PARAM         , -- 
             LINE_SIZE       => LINE_SIZE       , --   
-            QUEUE_SIZE      => 1                 --   
+            QUEUE_SIZE      => LINE_QUEUE        --   
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------

@@ -3,7 +3,6 @@ ENTITY_FILES = convolution_int_adder.vhd               \
                convolution_int_accumulator.vhd         \
                convolution_int_multiplier.vhd          \
                convolution_int_core.vhd                \
-               convolution_input_data_padding.vhd      \
                convolution_parameter_buffer_writer.vhd \
                convolution_parameter_buffer_reader.vhd \
                convolution_parameter_buffer.vhd        \

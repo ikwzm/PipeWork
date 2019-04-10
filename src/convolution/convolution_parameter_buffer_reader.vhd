@@ -2,7 +2,7 @@
 --!     @file    convolution_parameter_buffer_reader.vhd
 --!     @brief   Convolution Parameter Buffer Reader Module
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -60,7 +60,12 @@ entity  CONVOLUTION_PARAMETER_BUFFER_READER is
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
+                          --! 出力キューの大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0
     );
     port (
     -------------------------------------------------------------------------------
@@ -128,6 +133,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
+use     PIPEWORK.COMPONENTS.PIPELINE_REGISTER;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
 architecture RTL of CONVOLUTION_PARAMETER_BUFFER_READER is
     -------------------------------------------------------------------------------
@@ -174,10 +180,11 @@ architecture RTL of CONVOLUTION_PARAMETER_BUFFER_READER is
     signal    outlet_data           :  std_logic_vector(PARAM.DATA.SIZE-1 downto 0);
     signal    outlet_valid          :  std_logic;
     signal    outlet_ready          :  std_logic;
+    signal    outlet_busy           :  std_logic;
     -------------------------------------------------------------------------------
     -- State Machine Signals
     -------------------------------------------------------------------------------
-    type      STATE_TYPE            is (IDLE_STATE, START_STATE, RUN_STATE, RES_STATE);
+    type      STATE_TYPE            is (IDLE_STATE, START_STATE, RUN_STATE, FLUSH_STATE, RES_STATE);
     signal    state                 :  STATE_TYPE;
 begin
     -------------------------------------------------------------------------------
@@ -200,10 +207,18 @@ begin
                     when START_STATE =>
                             state <= RUN_STATE;
                     when RUN_STATE  =>
-                        if (y_loop_done = '1') then
+                        if    (y_loop_done = '1' and outlet_busy = '0') then
                             state <= RES_STATE;
+                        elsif (y_loop_done = '1' and outlet_busy = '1') then
+                            state <= FLUSH_STATE;
                         else
                             state <= RUN_STATE;
+                        end if;
+                    when FLUSH_STATE =>
+                        if (outlet_busy = '0') then
+                            state <= RES_STATE;
+                        else
+                            state <= FLUSH_STATE;
                         end if;
                     when RES_STATE =>
                         if (RES_READY = '1') then
@@ -488,7 +503,21 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    O_DATA  <= outlet_data;
-    O_VALID <= outlet_valid;
-    outlet_ready <= O_READY;
+    QUEUE: PIPELINE_REGISTER                   -- 
+        generic map (                          -- 
+            QUEUE_SIZE  => QUEUE_SIZE        , --
+            WORD_BITS   => PARAM.DATA.SIZE     -- 
+        )                                      -- 
+        port map (                             -- 
+            CLK         => CLK               , -- In  :
+            RST         => RST               , -- In  :
+            CLR         => CLR               , -- In  :
+            I_WORD      => outlet_data       , -- In  :
+            I_VAL       => outlet_valid      , -- In  :
+            I_RDY       => outlet_ready      , -- Out :
+            Q_WORD      => O_DATA            , -- Out :
+            Q_VAL       => O_VALID           , -- Out :
+            Q_RDY       => O_READY           , -- In  :
+            BUSY        => outlet_busy         -- Out :
+        );
 end RTL;
