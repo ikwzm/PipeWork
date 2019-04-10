@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
---!     @file    convolution_input_data_padding.vhd
---!     @brief   Convolution Input Data Padding Module
+--!     @file    image_stream_generator_with_padding.vhd
+--!     @brief   Image Stream Generator with Padding Module
 --!     @version 1.8.0
---!     @date    2019/3/24
+--!     @date    2019/4/5
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -39,24 +39,18 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief 
+--! @brief   IMAGE_STREAM_GENERATOR_WITH_PADDING :
+--!          入力データに対して、指定された大きさのパディングを追加して、さらにイメ
+--!          ージストリームの属性を付加して出力する.
 -----------------------------------------------------------------------------------
-entity  CONVOLUTION_INPUT_DATA_PADDING is
+entity  IMAGE_STREAM_GENERATOR_WITH_PADDING is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     generic (
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
-                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(
-                              ELEM_BITS => 2,
-                              SHAPE     => NEW_IMAGE_SHAPE(
-                                  ELEM_BITS => 2,
-                                  C         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1*3*3*32),
-                                  D         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
-                                  X         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1),
-                                  Y         => NEW_IMAGE_SHAPE_SIDE_CONSTANT(1)
-                              )
-                          );
+                          --! 出力側イメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(32,1,1,1);
         O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE PARAMETER :
                           IMAGE_SHAPE_TYPE        := NEW_IMAGE_SHAPE_CONSTANT(32,1,1,1);
                           --! 出力側イメージストリームのパラメータを指定する.
@@ -135,7 +129,7 @@ entity  CONVOLUTION_INPUT_DATA_PADDING is
                           --! 出力イメージストリームデータレディ信号.
                           in  std_logic
     );
-end CONVOLUTION_INPUT_DATA_PADDING;
+end IMAGE_STREAM_GENERATOR_WITH_PADDING;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -145,7 +139,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
-architecture RTL of CONVOLUTION_INPUT_DATA_PADDING is
+architecture RTL of IMAGE_STREAM_GENERATOR_WITH_PADDING is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

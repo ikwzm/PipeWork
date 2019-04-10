@@ -72,7 +72,7 @@ entity  IMAGE_STREAM_BUFFER_BANK_MEMORY is
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
-                          --! * O_QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
                           --!   レクトに出力される.
                           integer := 0;
         ID              : --! @brief SDPRAM IDENTIFIER :

@@ -3,7 +3,7 @@
 --!     @brief   Image Stream Buffer Intake Module :
 --!              異なる形のイメージストリームを継ぐためのバッファの入力側モジュール
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/3/31
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -66,7 +66,13 @@ entity  IMAGE_STREAM_BUFFER_INTAKE is
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        LINE_QUEUE      : --! @brief OUTLET LINE SELECTOR QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR の出力キュー
+                          --! の大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -175,7 +181,7 @@ begin
             I_PARAM         => I_PARAM             , -- 
             O_PARAM         => T_PARAM             , -- 
             LINE_SIZE       => LINE_SIZE           , --   
-            QUEUE_SIZE      => 1                     --   
+            QUEUE_SIZE      => LINE_QUEUE            --   
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------

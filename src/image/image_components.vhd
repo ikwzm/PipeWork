@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 1.8.0                                                           --
---!     @date    2019/03/22                                                      --
+--!     @date    2019/04/08                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -161,6 +161,96 @@ component IMAGE_STREAM_GENERATOR
                           in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
         Y_SIZE          : --! @brief INPUT SHAPE.Y SIZE :
                           in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
+    -------------------------------------------------------------------------------
+    -- STREAM 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_DATA          : --! @brief INPUT STREAM DATA :
+                          --! ストリームデータ入力.
+                          in  std_logic_vector(I_DATA_BITS    -1 downto 0);
+        I_VALID         : --! @brief INPUT STREAM VALID :
+                          --! 入力ストリムーデータ有効信号.
+                          --! I_DATA/I_STRB/I_LAST が有効であることを示す.
+                          in  std_logic;
+        I_READY         : --! @brief INPUT STREAM READY :
+                          --! 入力ストリムーデータレディ信号.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- IMAGE STREAM 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_DATA          : --! @brief OUTPUT IMAGE STREAM DATA :
+                          --! イメージストリームデータ出力.
+                          out std_logic_vector(O_PARAM.DATA.SIZE-1 downto 0);
+        O_VALID         : --! @brief OUTPUT IMAGE STREAM DATA VALID :
+                          --! 出力イメージストリームデータ有効信号.
+                          --! * O_DATAが有効であることを示す.
+                          out std_logic;
+        O_READY         : --! @brief OUTPUT IMAGE STREAM DATA READY :
+                          --! 出力イメージストリームデータレディ信号.
+                          in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_STREAM_GENERATOR_WITH_PADDING                                   --
+-----------------------------------------------------------------------------------
+component IMAGE_STREAM_GENERATOR_WITH_PADDING
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    generic (
+        O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
+                          --! 出力側イメージストリームのパラメータを指定する.
+                          IMAGE_STREAM_PARAM_TYPE := NEW_IMAGE_STREAM_PARAM(32,1,1,1);
+        O_SHAPE         : --! @brief OUTPUT IMAGE SHAPE PARAMETER :
+                          IMAGE_SHAPE_TYPE        := NEW_IMAGE_SHAPE_CONSTANT(32,1,1,1);
+                          --! 出力側イメージストリームのパラメータを指定する.
+        I_DATA_BITS     : --! @brief INPUT  STREAM DATA BIT SIZE :
+                          --! 入力側のデータのビット幅を指定する.
+                          --! * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなけれ
+                          --!   ばならない.
+                          integer := 32;
+        MAX_PAD_SIZE    : --! @brief MAX PADDING SIZE SIZE :
+                          integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        START           : --! @brief STREAM START :
+                          in  std_logic;
+        BUSY            : --! @brief STREAM BUSY :
+                          out std_logic;
+        DONE            : --! @brief STREAM DONE :
+                          out std_logic;
+        C_SIZE          : --! @brief INPUT C CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.C.SIZE;
+        D_SIZE          : --! @brief INPUT D CHANNEL SIZE :
+                          in  integer range 0 to O_SHAPE.C.MAX_SIZE := O_SHAPE.D.SIZE;
+        X_SIZE          : --! @brief INPUT IMAGE WIDTH :
+                          in  integer range 0 to O_SHAPE.X.MAX_SIZE := O_SHAPE.X.SIZE;
+        Y_SIZE          : --! @brief INPUT IMAGE HEIGHT :
+                          in  integer range 0 to O_SHAPE.Y.MAX_SIZE := O_SHAPE.Y.SIZE;
+        LEFT_PAD_SIZE   : --! @brief IMAGE WIDTH START PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        RIGHT_PAD_SIZE  : --! @brief IMAGE WIDTH LAST  PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        TOP_PAD_SIZE    : --! @brief IMAGE HEIGHT START PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        BOTTOM_PAD_SIZE : --! @brief IMAGE HEIGHT LAST  PAD SIZE :
+                          in  integer range 0 to MAX_PAD_SIZE := 0;
+        PAD_DATA        : --! @brief PADDING DATA :
+                          in  std_logic_vector(I_DATA_BITS    -1 downto 0);
     -------------------------------------------------------------------------------
     -- STREAM 入力側 I/F
     -------------------------------------------------------------------------------
@@ -445,7 +535,7 @@ component IMAGE_STREAM_BUFFER_BANK_MEMORY
                           integer := 1;
         QUEUE_SIZE      : --! @brief OUTPUT QUEUE SIZE :
                           --! 出力キューの大きさをワード数で指定する.
-                          --! * O_QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイ
                           --!   レクトに出力される.
                           integer := 0;
         ID              : --! @brief SDPRAM IDENTIFIER :
@@ -713,7 +803,13 @@ component IMAGE_STREAM_BUFFER_INTAKE
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        LINE_QUEUE      : --! @brief OUTLET LINE SELECTOR QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR の出力キュー
+                          --! の大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 1
     );
     port (
     -------------------------------------------------------------------------------
@@ -911,7 +1007,19 @@ component IMAGE_STREAM_BUFFER_OUTLET
         BUF_ADDR_BITS   : --! バッファメモリのアドレスのビット幅を指定する.
                           integer := 8;
         BUF_DATA_BITS   : --! バッファメモリのデータのビット幅を指定する.
-                          integer := 8
+                          integer := 8;
+        BANK_QUEUE      : --! @brief BANK MEMORY READER QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_BANK_MEMORY_READER の出力キューの
+                          --! 大きさをワード数で指定する.
+                          --! * BANK_QUEUE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 0;
+        LINE_QUEUE      : --! @brief OUTLET LINE SELECTOR QUEUE SIZE :
+                          --! IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR の出力キュー
+                          --! の大きさをワード数で指定する.
+                          --! * QUEUE_SIZE=0 の場合は出力にキューが挿入されずダイレ
+                          --!   クトに出力される.
+                          integer := 2
     );
     port (
     -------------------------------------------------------------------------------
@@ -1093,6 +1201,231 @@ component IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR
                           --! * この信号をアサートすることでバッファの内容を再度
                           --!   出力する.
                           out std_logic_vector(LINE_SIZE-1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_SLICE_MASTER_CONTROLLER                                         --
+-----------------------------------------------------------------------------------
+component IMAGE_SLICE_MASTER_CONTROLLER
+    generic (
+        SOURCE_SHAPE    : --! @brief SOURCE IMAGE SHAPE PARAMETER :
+                          --! メモリに格納されているイメージの形(SHAPE)を指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
+        SLICE_SHAPE     : --! @brief OUTPUT SHAPE PARAMETER :
+                          --! 取り出す(Slice)するブロックの大きさを指定する.
+                          IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
+        MAX_SLICE_C_POS : --! @brief MAX SLICE C POSITION :
+                          integer := 0;
+        MAX_SLICE_X_POS : --! @brief MAX SLICE X POSITION :
+                          integer := 0;
+        MAX_SLICE_Y_POS : --! @brief MAX SLICE Y POSITION :
+                          integer := 0;
+        ADDR_BITS       : --! @brief ADDRESS BITS :
+                          --! REQ_ADDR信号のビット数を指定する.
+                          integer := 32;
+        SIZE_BITS       : --! @brief SIZE BITS :
+                          --! REQ_SIZE信号のビット数を指定する.
+                          integer := 32
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK             : --! @brief CLOCK :
+                          --! クロック信号
+                          in  std_logic; 
+        RST             : --! @brief ASYNCRONOUSE RESET :
+                          --! 非同期リセット信号.アクティブハイ.
+                          in  std_logic;
+        CLR             : --! @brief SYNCRONOUSE RESET :
+                          --! 同期リセット信号.アクティブハイ.
+                          in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        SOURCE_C_SIZE   : in  integer range 0 to SOURCE_SHAPE.C.MAX_SIZE := SOURCE_SHAPE.C.SIZE;
+        SOURCE_X_SIZE   : in  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE := SOURCE_SHAPE.X.SIZE;
+        SOURCE_Y_SIZE   : in  integer range 0 to SOURCE_SHAPE.Y.MAX_SIZE := SOURCE_SHAPE.Y.SIZE;
+        SLICE_C_POS     : in  integer range 0 to MAX_SLICE_C_POS         := 0;
+        SLICE_X_POS     : in  integer range 0 to MAX_SLICE_X_POS         := 0;
+        SLICE_Y_POS     : in  integer range 0 to MAX_SLICE_Y_POS         := 0;
+        SLICE_C_SIZE    : in  integer range 0 to SLICE_SHAPE .C.MAX_SIZE := SLICE_SHAPE .C.SIZE;
+        SLICE_X_SIZE    : in  integer range 0 to SLICE_SHAPE .X.MAX_SIZE := SLICE_SHAPE .X.SIZE;
+        SLICE_Y_SIZE    : in  integer range 0 to SLICE_SHAPE .Y.MAX_SIZE := SLICE_SHAPE .Y.SIZE;
+        ELEM_BYTES      : in  integer range 0 to SOURCE_SHAPE.ELEM_BITS/8:= SOURCE_SHAPE.ELEM_BITS/8;
+        REQ_ADDR        : in  std_logic_vector(ADDR_BITS-1 downto 0);
+        REQ_VALID       : in  std_logic;
+        REQ_READY       : out std_logic;
+        RES_NONE        : out std_logic;
+        RES_ERROR       : out std_logic;
+        RES_VALID       : out std_logic;
+        RES_READY       : in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+        MST_ADDR        : out std_logic_vector(ADDR_BITS-1 downto 0);
+        MST_SIZE        : out std_logic_vector(SIZE_BITS-1 downto 0);
+        MST_FIRST       : out std_logic;
+        MST_LAST        : out std_logic;
+        MST_START       : out std_logic;
+        MST_BUSY        : in  std_logic;
+        MST_DONE        : in  std_logic;
+        MST_ERROR       : in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief IMAGE_SLICE_RANGE_GENERATOR                                           --
+-----------------------------------------------------------------------------------
+component IMAGE_SLICE_RANGE_GENERATOR
+    generic (
+        SOURCE_SHAPE        : --! @brief SOURCE IMAGE SHAPE PARAMETER :
+                              --! メモリに格納されているイメージの形(SHAPE)を指定する.
+                              IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
+        SLICE_SHAPE         : --! @brief OUTPUT SHAPE PARAMETER :
+                              --! 取り出す(Slice)するブロックの大きさを指定する.
+                              IMAGE_SHAPE_TYPE := NEW_IMAGE_SHAPE_CONSTANT(8,1,1,1,1);
+        MIN_SLICE_X_POS     : --! @brief MIN SLICE X POSITION :
+                              integer := 0;
+        MAX_SLICE_X_POS     : --! @brief MAX SLICE X POSITION :
+                              integer := 0;
+        MIN_SLICE_Y_POS     : --! @brief MIN SLICE Y POSITION :
+                              integer := 0;
+        MAX_SLICE_Y_POS     : --! @brief MAX SLICE Y POSITION :
+                              integer := 0;
+        MAX_PAD_L_SIZE      : --! @brief MAX PADDING LEFT   SIZE :
+                              integer := 0;
+        MAX_PAD_R_SIZE      : --! @brief MAX PADDING RIGHT  SIZE :
+                              integer := 0;
+        MAX_PAD_T_SIZE      : --! @brief MAX PADDING TOP    SIZE :
+                              integer := 0;
+        MAX_PAD_B_SIZE      : --! @brief MAX PADDING BOTTOM SIZE :
+                              integer := 0;
+        MAX_KERNEL_L_SIZE   : --! @brief MAX KERNEL  LEFT   SIZE :
+                              integer := 0;
+        MAX_KERNEL_R_SIZE   : --! @brief MAX KERNEL  RIGHT  SIZE :
+                              integer := 0;
+        MAX_KERNEL_T_SIZE   : --! @brief MAX KERNEL  TOP    SIZE :
+                              integer := 0;
+        MAX_KERNEL_B_SIZE   : --! @brief MAX KERNEL  BOTTOM SIZE :
+                              integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK                 : --! @brief CLOCK :
+                              --! クロック信号
+                              in  std_logic; 
+        RST                 : --! @brief ASYNCRONOUSE RESET :
+                              --! 非同期リセット信号.アクティブハイ.
+                              in  std_logic;
+        CLR                 : --! @brief SYNCRONOUSE RESET :
+                              --! 同期リセット信号.アクティブハイ.
+                              in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 計算に必要な情報
+    -- これらの信号の値は計算中は変更してはならない.
+    -------------------------------------------------------------------------------
+        SOURCE_X_SIZE       : --! @brief INPUT IMAGE X SIZE :
+                              --! メモリに格納されたイメージの X 方向の画素数.
+                              in  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE := SOURCE_SHAPE.X.SIZE;
+        SOURCE_Y_SIZE       : --! @brief INPUT IMAGE Y SIZE :
+                              --! メモリに格納されたイメージの Y 方向の画素数.
+                              in  integer range 0 to SOURCE_SHAPE.Y.MAX_SIZE := SOURCE_SHAPE.Y.SIZE;
+        KERNEL_L_SIZE       : --! @brief KERNEL LEFT   SIZE :
+                              --! 畳み込みのために左側(-X方向)に余分に読む画素数.
+                              in  integer range 0 to MAX_KERNEL_L_SIZE := 0;
+        KERNEL_R_SIZE       : --! @brief KERNEL RIGHT  SIZE :
+                              --! 畳み込みのために右側(+X方向)に余分に読む画素数.
+                              in  integer range 0 to MAX_KERNEL_R_SIZE := 0;
+        KERNEL_T_SIZE       : --! @brief KERNEL TOP    SIZE :
+                              --! 畳み込みのために上側(-Y方向)に余分に読む画素数.
+                              in  integer range 0 to MAX_KERNEL_T_SIZE := 0;
+        KERNEL_B_SIZE       : --! @brief KERNEL BOTTOM SIZE :
+                              --! 畳み込みのために下側(+Y方向)に余分に読む画素数.
+                              in  integer range 0 to MAX_KERNEL_B_SIZE := 0;
+    -------------------------------------------------------------------------------
+    -- 計算開始信号
+    -------------------------------------------------------------------------------
+        REQ_START_X_POS     : --! @brief SLICE IMAGE START X POSITION :
+                              --! メモリから読み出す際の X 方向のスタート位置.
+                              --! * マージンがある場合はこの値に負の値を指定する.
+                              --! * ただし、畳み込みのために左側(-X方向)に余分に読
+                              --!   む画素がある場合、マージンからその分引く.
+                              --! * 例) start_x_pos <= 0-(margin_left_size - kernel_left_size);
+                              in  integer range MIN_SLICE_X_POS to MAX_SLICE_X_POS := MIN_SLICE_X_POS;
+        REQ_START_Y_POS     : --! @brief SLICE IMAGE START Y POSITION :
+                              --! メモリから読み出す際の Y 方向のスタート位置.
+                              --! * マージンがある場合はこの値に負の値を指定する.
+                              --! * ただし、畳み込みのために上側(-Y方向)に余分に読
+                              --!   む画素がある場合、マージンからその分引く.
+                              --! * 例) start_y_pos <= 0-(margin_top_size - kernel_top_size);
+                              in  integer range MIN_SLICE_Y_POS to MAX_SLICE_Y_POS := MIN_SLICE_Y_POS;
+        REQ_SLICE_X_SIZE    : --! @brief SLICE IMAGE SLICE X SIZE :
+                              --! メモリから読み出すイメージの X 方向の画素数.
+                              --! * ここで指定する画素数は、畳み込みのために余分に読
+                              --!   み込む画素数は含まれない.
+                              in  integer range 0 to SLICE_SHAPE.X.MAX_SIZE  := SLICE_SHAPE.X.SIZE;
+        REQ_SLICE_Y_SIZE    : --! @brief SLICE IMAGE SLICE Y SIZE :
+                              --! メモリから読み出すイメージの Y 方向の画素数.
+                              --! * ここで指定する画素数は、畳み込みのために余分に読
+                              --!   み込む画素数は含まれない.
+                              in  integer range 0 to SLICE_SHAPE.Y.MAX_SIZE  := SLICE_SHAPE.Y.SIZE;
+        REQ_VALID           : --! @brief REQUEST VALID :
+                              --! 計算開始を要求する信号.
+                              in  std_logic;
+        REQ_READY           : --! @brief REQUEST READY :
+                              --! 計算開始要求に対する応答信号.
+                              out std_logic;
+    -------------------------------------------------------------------------------
+    -- 計算結果
+    -------------------------------------------------------------------------------
+        RES_START_X_POS     : --! @brief SLICE IMAGE START X POSITION :
+                              --! メモリから読み出す際の X 方向のスタート位置.
+                              --! * 畳み込みで余分に読む画素分も含む.
+                              --! * REQ_START_X_POS が負の場合(左側にマージンがある
+                              --!   場合)は、その分は RES_PAD_L_SIZEに回され、
+                              --!   RES_START_X_POS は必ず0以上の値になる.
+                              out integer range 0 to MAX_SLICE_X_POS;
+        RES_START_Y_POS     : --! @brief SLICE IMAGE START Y POSITION :
+                              --! メモリから読み出す際の Y 方向のスタート位置.
+                              --! * 畳み込みで余分に読む画素分も含む.
+                              --! * REQ_START_Y_POS が負の場合(上側にマージンがある
+                              --!   場合)は、その分は RES_PAD_T_SIZEに回され、
+                              --!   RES_START_Y_POS は必ず0以上の値になる.
+                              out integer range 0 to MAX_SLICE_Y_POS;
+        RES_SLICE_X_SIZE    : --! @brief SLICE IMAGE SLICE X SIZE :
+                              --! メモリから読み出すイメージの X 方向の画素数.
+                              --! * 畳み込みで余分に読む画素分も含む.
+                              out integer range 0 to SLICE_SHAPE.X.MAX_SIZE;
+        RES_SLICE_Y_SIZE    : --! @brief SLICE IMAGE SLICE Y SIZE :
+                              --! メモリから読み出すイメージの Y 方向の画素数.
+                              --! * 畳み込みで余分に読む画素分も含む.
+                              out integer range 0 to SLICE_SHAPE.Y.MAX_SIZE;
+        RES_PAD_L_SIZE      : --! @brief PADDING LEFT   SIZE :
+                              --! メモリから読み出した後に左側(-X方向)にパディングする画素数.
+                              out integer range 0 to MAX_PAD_L_SIZE;
+        RES_PAD_R_SIZE      : --! @brief PADDING RIGHT  SIZE :
+                              --! メモリから読み出した後に右側(+X方向)にパディングする画素数.
+                              out integer range 0 to MAX_PAD_R_SIZE;
+        RES_PAD_T_SIZE      : --! @brief PADDING TOP    SIZE :
+                              --! メモリから読み出した後に上側(-Y方向)にパディングする画素数.
+                              out integer range 0 to MAX_PAD_T_SIZE;
+        RES_PAD_B_SIZE      : --! @brief PADDING BOTTOM SIZE :
+                              --! メモリから読み出した後に下側(+Y方向)にパディングする画素数.
+                              out integer range 0 to MAX_PAD_B_SIZE;
+        RES_NEXT_X_POS      : --! @brief SLICE IMAGE END X POSITION :
+                              --! メモリから読み出す際の X 方向の次のスタート位置.
+                              --! * 畳み込みで余分に読む画素分は含まれない.
+                              out integer range MIN_SLICE_X_POS to MAX_SLICE_X_POS;
+        RES_NEXT_Y_POS      : --! @brief SLICE IMAGE END Y POSITION :
+                              --! メモリから読み出す際の Y 方向の次のスタート位置.
+                              --! * 畳み込みで余分に読む画素分は含まれない.
+                              out integer range MIN_SLICE_Y_POS to MAX_SLICE_Y_POS;
+        RES_VALID           : --! @brief RESPONSE VALID :
+                              out std_logic;
+        RES_READY           : --! @brief RESPONSE READY :
+                              in  std_logic
     );
 end component;
 end IMAGE_COMPONENTS;

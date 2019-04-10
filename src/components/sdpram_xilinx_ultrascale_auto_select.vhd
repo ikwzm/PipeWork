@@ -938,8 +938,6 @@ architecture XILINX_ULTRASCALE_AUTO_SELECT of SDPRAM is
              SIM_COLLISION_CHECK : string := "ALL";
              SIM_DEVICE          : string := "7SERIES";
              READ_WIDTH_A        : integer := 0;
-             READ_WIDTH_B        : integer := 0;
-             WRITE_WIDTH_A       : integer := 0;
              WRITE_WIDTH_B       : integer := 0
          );
          port (
@@ -1039,8 +1037,6 @@ begin
                     RAM_MODE            => "SDP",
                     SIM_COLLISION_CHECK => "NONE",
                     READ_WIDTH_A        => 72,
-                    READ_WIDTH_B        => 72,
-                    WRITE_WIDTH_A       => 72,
                     WRITE_WIDTH_B       => 72
                 )
                 port map (
