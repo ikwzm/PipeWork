@@ -2,7 +2,7 @@
 --!     @file    convolution_parameter_buffer.vhd
 --!     @brief   Convolution Parameter Buffer Module
 --!     @version 1.8.0
---!     @date    2019/3/31
+--!     @date    2019/4/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -78,6 +78,10 @@ entity  CONVOLUTION_PARAMETER_BUFFER is
     -------------------------------------------------------------------------------
         REQ_VALID       : --! @brief REQUEST VALID :
                           in  std_logic;
+        REQ_WRITE       : --! @brief REQUEST BUFFER WRITE :
+                          in  std_logic := '1';
+        REQ_READ        : --! @brief REQUEST BUFFER READ :
+                          in  std_logic := '1';
         REQ_READY       : --! @brief REQUEST READY :
                           out std_logic;
         C_SIZE          : --! @brief SHAPE C SIZE :
@@ -204,24 +208,106 @@ architecture RTL of CONVOLUTION_PARAMETER_BUFFER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    rd_req_data           :  std_logic_vector(QUEUE_DATA_BITS-1 downto 0);
     signal    rd_req_addr           :  std_logic_vector(BUF_ADDR_BITS  -1 downto 0);
-    signal    rd_req_size           :  std_logic_vector(BUF_SIZE_BITS  -1 downto 0);
-    signal    rd_req_valid          :  std_logic_vector(QUEUE_SIZE        downto 0);
+    signal    rd_req_addr_valid     :  std_logic;
+    signal    rd_req_valid          :  std_logic;
     signal    rd_req_ready          :  std_logic;
     signal    rd_res_valid          :  std_logic;
     signal    rd_res_ready          :  std_logic;
     signal    rd_res_size           :  std_logic_vector(BUF_SIZE_BITS  -1 downto 0);
     signal    rd_busy               :  std_logic;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    type      STATE_TYPE            is (IDLE_STATE ,
+                                        WRITE_REQ_STATE,
+                                        WRITE_RES_STATE,
+                                        READ_REQ_STATE ,
+                                        READ_RES_STATE ,
+                                        RES_STATE);
+    signal    state                 :  STATE_TYPE;
+    signal    wr_rd                 :  std_logic;
 begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    wr_req_valid <= REQ_VALID;
-    REQ_READY    <= wr_req_ready;
-    RES_VALID    <= rd_res_valid;
-    rd_res_ready <= RES_READY;
-    BUSY         <= '1' when (wr_busy = '1' or rd_busy = '1') else '0';
+    process (CLK, RST) begin
+        if (RST = '1') then
+                state <= IDLE_STATE;
+                wr_rd <= '0';
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                state <= IDLE_STATE;
+                wr_rd <= '0';
+            else
+                case state is
+                    when IDLE_STATE =>
+                        if (REQ_VALID = '1') then
+                            if    (REQ_WRITE = '1') then
+                                state <= WRITE_REQ_STATE;
+                                wr_rd <= REQ_READ;
+                            elsif (REQ_READ  = '1') then
+                                state <= READ_REQ_STATE;
+                                wr_rd <= '0';
+                            else
+                                state <= RES_STATE;
+                                wr_rd <= '0';
+                            end if;
+                        else
+                                state <= IDLE_STATE;
+                        end if;
+                    when WRITE_REQ_STATE =>
+                        if (wr_req_ready = '1') then
+                            state <= WRITE_RES_STATE;
+                        else
+                            state <= WRITE_REQ_STATE;
+                        end if;
+                    when WRITE_RES_STATE =>
+                        if    (wr_res_valid = '1' and wr_rd = '1') then
+                            state <= READ_REQ_STATE;
+                        elsif (wr_res_valid = '1' and wr_rd = '0') then
+                            state <= RES_STATE;
+                        else
+                            state <= WRITE_RES_STATE;
+                        end if;
+                    when READ_REQ_STATE =>
+                        if (rd_req_ready = '1') then
+                            state <= READ_RES_STATE;
+                        else
+                            state <= READ_REQ_STATE;
+                        end if;
+                    when READ_RES_STATE =>
+                        if (rd_res_valid = '1') then
+                            state <= RES_STATE;
+                        else
+                            state <= READ_RES_STATE;
+                        end if;
+                    when RES_STATE =>
+                        if (RES_READY = '1') then
+                            state <= IDLE_STATE;
+                        else
+                            state <= RES_STATE;
+                        end if;
+                    when others =>
+                            state <= IDLE_STATE;
+
+                end case;
+            end if;
+        end if;
+    end process;
+    REQ_READY    <= '1' when (state  = IDLE_STATE     ) else '0';
+    RES_VALID    <= '1' when (state  = RES_STATE      ) else '0';
+    BUSY         <= '1' when (state /= IDLE_STATE     ) else '0';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    wr_req_valid <= '1' when (state  = WRITE_REQ_STATE) else '0';
+    wr_res_ready <= '1' when (state  = WRITE_RES_STATE) else '0';
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    rd_req_valid <= '1' when (state  = READ_REQ_STATE ) else '0';
+    rd_res_ready <= '1' when (state  = READ_RES_STATE ) else '0';
     -------------------------------------------------------------------------------
     -- WRITER
     -------------------------------------------------------------------------------
@@ -268,48 +354,19 @@ begin
             BUF_READY       => buf_wready            -- In  :
         );                                           --  
     -------------------------------------------------------------------------------
-    -- QUEUE
-    -------------------------------------------------------------------------------
-    QUEUE: QUEUE_REGISTER                            -- 
-        generic map (                                -- 
-            QUEUE_SIZE      => QUEUE_SIZE          , --
-            DATA_BITS       => QUEUE_DATA_BITS       --
-        )                                            -- 
-        port map (                                   -- 
-        ---------------------------------------------------------------------------
-        -- クロック&リセット信号
-        ---------------------------------------------------------------------------
-            CLK             => CLK                 , -- In  :
-            RST             => RST                 , -- In  :
-            CLR             => CLR                 , -- In  :
-        ---------------------------------------------------------------------------
-        -- 入力側
-        ---------------------------------------------------------------------------
-            I_DATA          => wr_res_data         , -- In  :
-            I_VAL           => wr_res_valid        , -- In  :
-            I_RDY           => wr_res_ready        , -- Out :
-        ---------------------------------------------------------------------------
-        -- 出力側
-        ---------------------------------------------------------------------------
-            Q_DATA          => rd_req_data         , -- Out :
-            Q_VAL           => rd_req_valid        , -- Out :
-            Q_RDY           => rd_req_ready          -- In  :
-        );
-    wr_res_data(QUEUE_DATA_ADDR_HI downto QUEUE_DATA_ADDR_LO) <= wr_res_addr;
-    wr_res_data(QUEUE_DATA_SIZE_HI downto QUEUE_DATA_SIZE_LO) <= wr_res_size;
-    rd_req_addr <= rd_req_data(QUEUE_DATA_ADDR_HI downto QUEUE_DATA_ADDR_LO);
-    rd_req_size <= rd_req_data(QUEUE_DATA_SIZE_HI downto QUEUE_DATA_SIZE_LO);
-    -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
+                rd_req_addr <= (others => '0');
                 rd_res_size <= (others => '0');
         elsif (CLK'event and CLK = '1') then
-            if (CLR = '1') then
+            if (CLR = '1' or state = IDLE_STATE) then
+                rd_req_addr <= (others => '0');
                 rd_res_size <= (others => '0');
-            elsif (rd_req_valid(0) = '1' and rd_req_ready = '1') then
-                rd_res_size <= rd_req_size;
+            elsif (wr_res_valid = '1' and wr_res_ready = '1') then
+                rd_req_addr <= wr_res_addr;
+                rd_res_size <= wr_res_size;
             end if;
         end if;
     end process;
@@ -335,8 +392,9 @@ begin
         ---------------------------------------------------------------------------
         -- 制御 I/F
         ---------------------------------------------------------------------------
-            REQ_VALID       => rd_req_valid(0)     , -- In  :
+            REQ_VALID       => rd_req_valid        , -- In  :
             REQ_READY       => rd_req_ready        , -- out :
+            REQ_ADDR_LOAD   => wr_rd               , -- In  :
             REQ_ADDR        => rd_req_addr         , -- In  :
             C_SIZE          => C_SIZE              , -- In  :
             D_SIZE          => D_SIZE              , -- In  :
