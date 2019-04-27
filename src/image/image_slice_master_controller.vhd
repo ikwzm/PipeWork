@@ -4,7 +4,7 @@
 --!              メモリに格納されたイメージのうち、指定された位置の指定されたサイズ
 --!              のブロックをスライスしてとりだすためのマスター制御回路.
 --!     @version 1.8.0
---!     @date    2019/4/5
+--!     @date    2019/4/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -157,6 +157,7 @@ architecture RTL of IMAGE_SLICE_MASTER_CONTROLLER is
                                                           * SOURCE_SHAPE.ELEM_BITS/8;
     signal    start_x_pos           :  integer range 0 to MAX_SLICE_X_POS;
     signal    start_y_pos           :  integer range 0 to MAX_SLICE_Y_POS;
+    signal    x_continuous          :  boolean;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -183,6 +184,7 @@ begin
                 start_y_pos    <= 0;
                 x_loop_size    <= 1;
                 tran_bytes     <= 0;
+                x_continuous   <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
                 state          <= IDLE_STATE;
@@ -193,6 +195,7 @@ begin
                 start_y_pos    <= 0;
                 x_loop_size    <= 1;
                 tran_bytes     <= 0;
+                x_continuous   <= FALSE;
             else
                 case state is
                     when IDLE_STATE => 
@@ -201,28 +204,34 @@ begin
                         else
                             state <= IDLE_STATE;
                         end if;
-                        channel_bytes  <= SOURCE_C_SIZE * ELEM_BYTES;
-                        start_bytes    <= SLICE_C_POS   * ELEM_BYTES;
-                        width_bytes    <= SOURCE_X_SIZE;
-                        start_x_pos    <= SLICE_X_POS;
-                        start_y_pos    <= SLICE_Y_POS;
-                        if (SLICE_C_POS = 0 and SLICE_C_SIZE = SOURCE_C_SIZE) then
-                            x_loop_size <= 1;
-                            tran_bytes  <= SLICE_X_SIZE * SLICE_C_SIZE * ELEM_BYTES;
-                        else
-                            x_loop_size <= SLICE_X_SIZE;
-                            tran_bytes  <= SLICE_C_SIZE * ELEM_BYTES;
-                        end if;
+                        channel_bytes <= SOURCE_C_SIZE * ELEM_BYTES;
+                        start_bytes   <= SLICE_C_POS   * ELEM_BYTES;
+                        width_bytes   <= SOURCE_X_SIZE;
+                        start_x_pos   <= SLICE_X_POS;
+                        start_y_pos   <= SLICE_Y_POS;
+                        x_loop_size   <= SLICE_X_SIZE;
+                        x_continuous  <= (SLICE_C_POS = 0 and SLICE_C_SIZE = SOURCE_C_SIZE);
                     when PREP0_STATE =>
                         if (y_loop_term = '1' or x_loop_size = 0) then
                             state <= RES_NONE_STATE;
                         else
                             state <= PREP1_STATE;
                         end if;
+                        if (x_continuous = TRUE) then
+                            x_loop_size <= 1;
+                            tran_bytes  <= x_loop_size * channel_bytes;
+                        else
+                            x_loop_size <= x_loop_size;
+                            tran_bytes  <= channel_bytes;
+                        end if;
+                     -- start_bytes <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*SOURCE_C_SIZE*ELEM_BYTES;
                         start_bytes <= start_bytes + start_x_pos * channel_bytes;
-                        width_bytes <= width_bytes * channel_bytes;
+                     -- width_bytes <= SOURCE_X_SIZE * SOURCE_C_SIZE * ELEM_BYTES;
+                        width_bytes <= width_bytes * channel_bytes;              
                     when PREP1_STATE =>
                         state       <= START_STATE;
+                     -- start_bytes <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*SOURCE_C_SIZE*ELEM_BYTES
+                     --              + SLICE_Y_POS * SOURCE_X_SIZE * SOURCE_C_SIZE * ELEM_BYTES;
                         start_bytes <= start_bytes + start_y_pos * width_bytes;
                     when START_STATE =>
                         state       <= RUN_STATE;
