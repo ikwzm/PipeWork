@@ -205,6 +205,7 @@ begin
                             state <= IDLE_STATE;
                         end if;
                         channel_bytes <= SOURCE_C_SIZE * ELEM_BYTES;
+                        tran_bytes    <= SLICE_C_SIZE  * ELEM_BYTES;
                         start_bytes   <= SLICE_C_POS   * ELEM_BYTES;
                         width_bytes   <= SOURCE_X_SIZE;
                         start_x_pos   <= SLICE_X_POS;
@@ -219,10 +220,7 @@ begin
                         end if;
                         if (x_continuous = TRUE) then
                             x_loop_size <= 1;
-                            tran_bytes  <= x_loop_size * channel_bytes;
-                        else
-                            x_loop_size <= x_loop_size;
-                            tran_bytes  <= channel_bytes;
+                            tran_bytes  <= x_loop_size * tran_bytes;
                         end if;
                      -- start_bytes <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*SOURCE_C_SIZE*ELEM_BYTES;
                         start_bytes <= start_bytes + start_x_pos * channel_bytes;
