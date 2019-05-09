@@ -125,6 +125,10 @@ architecture RTL of IMAGE_SLICE_MASTER_CONTROLLER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
+    constant  MAX_ELEM_BYTES        :  integer := SOURCE_SHAPE.ELEM_BITS/8;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
     signal    y_loop_start          :  std_logic;
     signal    y_loop_next           :  std_logic;
     signal    y_loop_done           :  std_logic;
@@ -148,15 +152,19 @@ architecture RTL of IMAGE_SLICE_MASTER_CONTROLLER is
     -------------------------------------------------------------------------------
     signal    base_addr             :  std_logic_vector(ADDR_BITS-1 downto 0);
     signal    tran_addr             :  std_logic_vector(ADDR_BITS-1 downto 0);
-    signal    tran_bytes            :  integer range 0 to SLICE_SHAPE .X.MAX_SIZE * SLICE_SHAPE .C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8;
-    signal    channel_bytes         :  integer range 0 to SOURCE_SHAPE.C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8;
-    signal    width_bytes           :  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.C.MAX_SIZE * SOURCE_SHAPE.ELEM_BITS/8;
-    signal    start_bytes           :  integer range 0 to ((MAX_SLICE_Y_POS * SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.C.MAX_SIZE) + 
+    signal    tran_bytes            :  integer range 0 to MAX_ELEM_BYTES * SLICE_SHAPE .C.MAX_SIZE * SLICE_SHAPE.X.MAX_SIZE;
+    signal    c_slice_bytes         :  integer range 0 to MAX_ELEM_BYTES * SLICE_SHAPE .C.MAX_SIZE;
+    signal    channel_bytes         :  integer range 0 to MAX_ELEM_BYTES * SOURCE_SHAPE.C.MAX_SIZE;
+    signal    width_size            :  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE;
+    signal    width_bytes           :  integer range 0 to SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.C.MAX_SIZE * MAX_ELEM_BYTES;
+    signal    c_start_addr          :  integer range 0 to ((MAX_SLICE_C_POS                                                    ))* MAX_ELEM_BYTES;
+    signal    x_start_addr          :  integer range 0 to ((MAX_SLICE_C_POS                                                    ) +
+                                                           (MAX_SLICE_X_POS *                           SOURCE_SHAPE.C.MAX_SIZE))* MAX_ELEM_BYTES;
+    signal    start_addr            :  integer range 0 to ((MAX_SLICE_Y_POS * SOURCE_SHAPE.X.MAX_SIZE * SOURCE_SHAPE.C.MAX_SIZE) + 
                                                            (MAX_SLICE_X_POS *                           SOURCE_SHAPE.C.MAX_SIZE) +
-                                                           (MAX_SLICE_C_POS                                                    ))
-                                                          * SOURCE_SHAPE.ELEM_BITS/8;
-    signal    start_x_pos           :  integer range 0 to MAX_SLICE_X_POS;
-    signal    start_y_pos           :  integer range 0 to MAX_SLICE_Y_POS;
+                                                           (MAX_SLICE_C_POS                                                    ))* MAX_ELEM_BYTES;
+    signal    x_start_pos           :  integer range 0 to MAX_SLICE_X_POS;
+    signal    y_start_pos           :  integer range 0 to MAX_SLICE_Y_POS;
     signal    x_continuous          :  boolean;
     -------------------------------------------------------------------------------
     -- 
@@ -178,22 +186,30 @@ begin
         if (RST = '1') then
                 state          <= IDLE_STATE;
                 channel_bytes  <= 0;
+                width_size     <= 0;
                 width_bytes    <= 0;
-                start_bytes    <= 0;
-                start_x_pos    <= 0;
-                start_y_pos    <= 0;
+                c_start_addr   <= 0;
+                x_start_addr   <= 0;
+                start_addr     <= 0;
+                x_start_pos    <= 0;
+                y_start_pos    <= 0;
                 x_loop_size    <= 1;
+                c_slice_bytes  <= 0;
                 tran_bytes     <= 0;
                 x_continuous   <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
                 state          <= IDLE_STATE;
                 channel_bytes  <= 0;
+                width_size     <= 0;
                 width_bytes    <= 0;
-                start_bytes    <= 0;
-                start_x_pos    <= 0;
-                start_y_pos    <= 0;
+                c_start_addr   <= 0;
+                x_start_addr   <= 0;
+                start_addr     <= 0;
+                x_start_pos    <= 0;
+                y_start_pos    <= 0;
                 x_loop_size    <= 1;
+                c_slice_bytes  <= 0;
                 tran_bytes     <= 0;
                 x_continuous   <= FALSE;
             else
@@ -205,11 +221,11 @@ begin
                             state <= IDLE_STATE;
                         end if;
                         channel_bytes <= SOURCE_C_SIZE * ELEM_BYTES;
-                        tran_bytes    <= SLICE_C_SIZE  * ELEM_BYTES;
-                        start_bytes   <= SLICE_C_POS   * ELEM_BYTES;
-                        width_bytes   <= SOURCE_X_SIZE;
-                        start_x_pos   <= SLICE_X_POS;
-                        start_y_pos   <= SLICE_Y_POS;
+                        c_slice_bytes <= SLICE_C_SIZE  * ELEM_BYTES;
+                        c_start_addr  <= SLICE_C_POS   * ELEM_BYTES;
+                        width_size    <= SOURCE_X_SIZE;
+                        x_start_pos   <= SLICE_X_POS;
+                        y_start_pos   <= SLICE_Y_POS;
                         x_loop_size   <= SLICE_X_SIZE;
                         x_continuous  <= (SLICE_C_POS = 0 and SLICE_C_SIZE = SOURCE_C_SIZE);
                     when PREP0_STATE =>
@@ -220,19 +236,22 @@ begin
                         end if;
                         if (x_continuous = TRUE) then
                             x_loop_size <= 1;
-                            tran_bytes  <= x_loop_size * tran_bytes;
+                            tran_bytes  <= x_loop_size * c_slice_bytes;
+                        else
+                            x_loop_size <= x_loop_size;
+                            tran_bytes  <= c_slice_bytes;
                         end if;
-                     -- start_bytes <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*SOURCE_C_SIZE*ELEM_BYTES;
-                        start_bytes <= start_bytes + start_x_pos * channel_bytes;
-                     -- width_bytes <= SOURCE_X_SIZE * SOURCE_C_SIZE * ELEM_BYTES;
-                        width_bytes <= width_bytes * channel_bytes;              
+                     -- x_start_addr <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*(SOURCE_C_SIZE*ELEM_BYTES);
+                        x_start_addr <= c_start_addr + x_start_pos * channel_bytes;
+                     -- width_bytes  <= SOURCE_X_SIZE * (SOURCE_C_SIZE * ELEM_BYTES);
+                        width_bytes  <= width_size    * channel_bytes;              
                     when PREP1_STATE =>
-                        state       <= START_STATE;
-                     -- start_bytes <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*SOURCE_C_SIZE*ELEM_BYTES
+                        state        <= START_STATE;
+                     -- start_addr   <= SLICE_C_POS*ELEM_BYTES + SLICE_X_POS*SOURCE_C_SIZE*ELEM_BYTES
                      --              + SLICE_Y_POS * SOURCE_X_SIZE * SOURCE_C_SIZE * ELEM_BYTES;
-                        start_bytes <= start_bytes + start_y_pos * width_bytes;
+                        start_addr   <= x_start_addr + y_start_pos * width_bytes;
                     when START_STATE =>
-                        state       <= RUN_STATE;
+                        state <= RUN_STATE;
                     when RUN_STATE =>
                         if    (y_loop_done = '1' and MST_ERROR = '1') then
                             state <= RES_ERROR_STATE;
@@ -286,7 +305,7 @@ begin
             elsif (state = IDLE_STATE and REQ_VALID   = '1') then
                 base_addr <= REQ_ADDR;
             elsif (state = START_STATE) then
-                base_addr <= std_logic_vector(unsigned(base_addr) + start_bytes);
+                base_addr <= std_logic_vector(unsigned(base_addr) + start_addr );
             elsif (state = RUN_STATE  and y_loop_next = '1') then
                 base_addr <= std_logic_vector(unsigned(base_addr) + width_bytes);
             end if;
