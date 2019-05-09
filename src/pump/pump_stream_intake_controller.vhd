@@ -2,7 +2,7 @@
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
 --!     @version 1.8.0
---!     @date    2019/3/25
+--!     @date    2019/5/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -912,7 +912,8 @@ begin
                 SEL_BITS        => 1                   , --   
                 SIZE_BITS       => SIZE_BITS           , --   
                 POOL_SIZE_VALID => 0                   , --   
-                QUEUE_SIZE      => 0                     --   
+                QUEUE_SIZE      => 0                   , --
+                POOL_JUSTIFIED  => 1                     -- 
             )                                            -- 
             port map (                                   -- 
             -----------------------------------------------------------------------

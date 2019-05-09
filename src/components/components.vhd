@@ -1647,7 +1647,13 @@ component POOL_OUTLET_PORT
                           --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
-                          integer := 0
+                          integer := 0;
+        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT INPUT JUSTIFIED :
+                          --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
+                          --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は、シフタが必要なくな
+                          --!   るため回路が簡単になる.
+                          integer range 0 to 1 := 0
     );
     port (
     -------------------------------------------------------------------------------
