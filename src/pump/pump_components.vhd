@@ -1360,6 +1360,13 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         O_DATA_BITS         : --! @brief OUTPUT STREAM DATA BITS :
                               --! O_DATA のビット数を指定する.
                               integer := 32;
+        O_WORD_BITS         : --! @brief INPUT STREAM WORD BITS :
+                              --! O_DATA の１ワードあたりのビット数を指定する.
+                              --! * O_DATA_BITS   >=  O_WORD_BITS でなければならない.
+                              --! * O_DATA_BITS   mod O_WORD_BITS = 0 でなければならない.
+                              --! * BUF_DATA_BITS >=  O_WORD_BITS でなければならない.
+                              --! * BUF_DATA_BITS mod O_WORD_BITS = 0 でなければならない.
+                              integer := 8;
         BUF_DEPTH           : --! @brief BUFFER DEPTH :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
