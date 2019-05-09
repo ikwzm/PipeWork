@@ -2,7 +2,7 @@
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
 --!     @version 1.8.0
---!     @date    2019/3/25
+--!     @date    2019/5/9
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -105,6 +105,12 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         I_DATA_BITS         : --! @brief INPUT STREAM DATA BITS :
                               --! I_DATA のビット数を指定する.
                               integer := 32;
+        I_JUSTIFIED         : --! @brief INPUT STREAM DATA JUSTIFIED :
+                              --! 入力側の有効なデータが常にLOW側に詰められていることを
+                              --! 示すフラグ.
+                              --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
+                              --!   ため回路が簡単になる.
+                              integer range 0 to 1 := 0;
         BUF_DEPTH           : --! @brief BUFFER DEPTH :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -930,7 +936,8 @@ begin
                 SEL_BITS        => 1                   , --   
                 SIZE_BITS       => SIZE_BITS           , --   
                 PTR_BITS        => BUF_DEPTH           , --   
-                QUEUE_SIZE      => 0                     --
+                QUEUE_SIZE      => 0                   , --
+                PORT_JUSTIFIED  => I_JUSTIFIED           -- 
             )                                            -- 
             port map (                                   --
             -----------------------------------------------------------------------

@@ -2,12 +2,12 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 1.7.1                                                           --
---!     @date    2018/12/23                                                      --
+--!     @date    2019/05/09                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2018 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2019 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -1474,7 +1474,13 @@ component POOL_INTAKE_PORT
                           --! * QUEUE_SIZE=0を指定した場合は、キューの深さは自動的に
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
-                          integer := 0
+                          integer := 0;
+        PORT_JUSTIFIED  : --! @brief PORT INPUT JUSTIFIED :
+                          --! 入力 PORT 側の有効なデータが常にLOW側に詰められている
+                          --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は、シフタが必要なくな
+                          --!   るため回路が簡単になる.
+                          integer range 0 to 1 := 0
     );
     port (
     -------------------------------------------------------------------------------
@@ -2880,6 +2886,12 @@ component UNROLLED_LOOP_COUNTER
                           --! ループ回数の最大値を指定する.
                           integer := 8;
         MAX_LOOP_INIT   : --! @brief MAX LOOP INIT SIZE :
+                          --! Unroll 時の LOOP_VALID(ループ有効信号)のオフセット値
+                          --! を指定する.
+                          --! * ここで指定する値は UNROLL で指定した値未満でなけれ
+                          --!   ばならない.
+                          --! * ここでのオフセット値は、あくまでも Unroll 時の最初
+                          --!   の端数分を指定していることに注意.
                           integer := 0
     );
     port (
@@ -2919,7 +2931,7 @@ component UNROLLED_LOOP_COUNTER
                           --! * ループが終了"する"ことを示す信号.
                           out std_logic;
         LOOP_BUSY       : --! @brief OUTPUT LOOP BUSY :
-                          --! ループ有効信号出力.
+                          --! ループ実行信号出力.
                           --! * ループ中であることを示す信号.
                           out std_logic;
         LOOP_VALID      : --! @brief OUTPUT LOOP VALID VECTOR:
@@ -2937,7 +2949,7 @@ component UNROLLED_LOOP_COUNTER
                           --! ループが終了したことを示す出力信号.
                           out std_logic;
         NEXT_BUSY       : --! @brief OUTPUT LOOP BUSY(NEXT_CYCLE) :
-                          --! ループ有効信号出力.
+                          --! ループ実行信号出力.
                           --! * ループ中であることを示す信号.
                           out std_logic;
         NEXT_VALID      : --! @brief OUTPUT LOOP VALID VECTOR(NEXT CYCLE) :
