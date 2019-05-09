@@ -1622,6 +1622,9 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         I_DATA_BITS         : --! @brief INPUT STREAM DATA BITS :
                               --! I_DATA のビット数を指定する.
                               integer := 32;
+        I_WORD_BITS         : --! @brief INPUT STREAM WORD BITS :
+                              --! 入力側の１ワードあたりのビット数を指定する.
+                              integer := 8;
         I_JUSTIFIED         : --! @brief INPUT STREAM DATA JUSTIFIED :
                               --! 入力側の有効なデータが常にLOW側に詰められていることを
                               --! 示すフラグ.
