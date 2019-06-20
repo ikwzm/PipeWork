@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ書込み側モジュール
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/4/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -216,7 +216,7 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER is
     function  CALC_NEXT_BANK_ADDR(
                   CURR_BANK_ADDR    :  BANK_ADDR_TYPE;
                   BANK_SELECT       :  BANK_SELECT_VECTOR;
-                  BASE_ADDR         :  integer;
+                  BASE_ADDR         :  unsigned;
                   CHANNEL_OFFSET    :  integer;
                   START_CHANNEL     :  std_logic
               )   return               BANK_ADDR_TYPE
@@ -227,8 +227,8 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER is
         variable  select_next_addr  :  boolean;
     begin
         if (START_CHANNEL = '1') then
-            base_curr_addr := std_logic_vector(to_unsigned(BASE_ADDR                 , RAM_ADDR_TYPE'length));
-            base_next_addr := std_logic_vector(to_unsigned(BASE_ADDR + CHANNEL_OFFSET, RAM_ADDR_TYPE'length));
+            base_curr_addr := std_logic_vector(BASE_ADDR                 );
+            base_next_addr := std_logic_vector(BASE_ADDR + CHANNEL_OFFSET);
             select_next_addr      := TRUE;
             for bank in 0 to BANK_SIZE-1 loop
                 if (select_next_addr = TRUE and BANK_SELECT(BANK_SELECT'low)(bank) = '1') then
@@ -280,7 +280,7 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_WRITER is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal    base_addr             :  integer range 0 to 2**BUF_ADDR_BITS-1;
+    signal    base_addr             :  unsigned(BUF_ADDR_BITS-1 downto 0);
     signal    channel_offset        :  integer range 0 to 2**BUF_ADDR_BITS;
     -------------------------------------------------------------------------------
     --
@@ -369,11 +369,11 @@ begin
     process(CLK, RST) begin 
         if (RST = '1') then
                 bank_select  <= INIT_BANK_SELECT(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
-                base_addr    <= 0;
+                base_addr    <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1' or I_LINE_START /= LINE_ALL_0) then
                 bank_select  <= INIT_BANK_SELECT(I_PARAM.SHAPE.X.LO, I_PARAM.SHAPE.X.HI);
-                base_addr    <= 0;
+                base_addr    <= (others => '0');
             else
                 if (I_VALID = '1' and intake_ready = '1' and intake_c_last = '1') then
                     if (IS_LAST_BANK(bank_select, I_PARAM.STRIDE.X) = TRUE) then

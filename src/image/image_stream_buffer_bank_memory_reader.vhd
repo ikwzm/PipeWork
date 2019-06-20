@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ読み出し側モジュール
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/4/11
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -243,8 +243,8 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
     function  CALC_NEXT_BANK_ADDR(
                   CURR_BANK_ADDR    :  BANK_ADDR_TYPE;
                   ADDR_SELECT       :  ADDR_SELECT_TYPE;
-                  BASE_ADDR         :  integer;
-                  NEXT_ADDR         :  integer;
+                  BASE_ADDR         :  unsigned;
+                  NEXT_ADDR         :  unsigned;
                   START_CHANNEL     :  std_logic;
                   NEXT_CHANNEL      :  std_logic
               )   return               BANK_ADDR_TYPE
@@ -255,8 +255,8 @@ architecture RTL of IMAGE_STREAM_BUFFER_BANK_MEMORY_READER is
         variable  select_next_addr  :  boolean;
     begin
         if (START_CHANNEL = '1') then
-            base_curr_addr := std_logic_vector(to_unsigned(BASE_ADDR, RAM_ADDR_TYPE'length));
-            base_next_addr := std_logic_vector(to_unsigned(NEXT_ADDR, RAM_ADDR_TYPE'length));
+            base_curr_addr := std_logic_vector(BASE_ADDR);
+            base_next_addr := std_logic_vector(NEXT_ADDR);
             for bank in 0 to BANK_SIZE-1 loop
                 if (ADDR_SELECT(bank) = '1') then
                     next_bank_addr(bank) := base_next_addr;
@@ -510,8 +510,8 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        signal    base_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
-        signal    next_addr         :  integer range 0 to 2**BUF_ADDR_BITS-1;
+        signal    base_addr         :  unsigned(BUF_ADDR_BITS-1 downto 0);
+        signal    next_addr         :  unsigned(BUF_ADDR_BITS-1 downto 0);
         signal    addr_select       :  ADDR_SELECT_TYPE;
         signal    bank_select       :  BANK_SELECT_VECTOR(curr_bank_select'range);
         signal    curr_bank_addr    :  BANK_ADDR_TYPE;
@@ -531,19 +531,19 @@ begin
         ---------------------------------------------------------------------------
         process(CLK, RST) begin
             if (RST = '1') then
-                    base_addr <= 0;
-                    next_addr <= 0;
+                    base_addr <= (others => '0');
+                    next_addr <= (others => '0');
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then
-                    base_addr <= 0;
-                    next_addr <= 0;
+                    base_addr <= (others => '0');
+                    next_addr <= (others => '0');
                 elsif (x_loop_start = '1') then
-                    base_addr <= 0;
-                    next_addr <= C_OFFSET;
+                    base_addr <= (others => '0');
+                    next_addr <=             to_unsigned(C_OFFSET, next_addr'length);
                 elsif (c_loop_last_start = '1') and
                       (IS_LAST_BANK(bank_select, O_PARAM.STRIDE.X) = TRUE) then
                     base_addr <= next_addr;
-                    next_addr <= next_addr + C_OFFSET;
+                    next_addr <= next_addr + to_unsigned(C_OFFSET, next_addr'length);
                 end if;
             end if;
         end process;
