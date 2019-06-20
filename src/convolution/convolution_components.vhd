@@ -2,7 +2,7 @@
 --!     @file    convolution_components.vhd                                      --
 --!     @brief   PIPEWORK CONVOLUTION COMPONENT LIBRARY DESCRIPTION              --
 --!     @version 1.8.0                                                           --
---!     @date    2019/04/05                                                      --
+--!     @date    2019/04/11                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -657,6 +657,15 @@ component CONVOLUTION_PARAMETER_BUFFER_READER
                           in  std_logic;
         REQ_READY       : --! @brief REQUEST READY :
                           out std_logic;
+        REQ_ADDR_LOAD   : --! @brief REQESUT BUUFER START ADDRESS VALID :
+                          --! REQ_ADDR で指定されたバッファアドレスから読み込みを開
+                          --! 始するか、前回ロードしたバッファアドレスから読み込みを
+                          --! 開始するかを指定する.
+                          --! * REQ_ADDR_LOAD='1' で REQ_ADDR で指定されたバッファ
+                          --!   アドレスから読み込みを開始する.
+                          --! * REQ_ADDR_LOAD='0' で 前回 REQ_ADDR_LOAD='1' で指定
+                          --!   したバッファアドレスから読み込みを開始する.
+                          in  std_logic := '1';
         REQ_ADDR        : --! @brief REQUEST BUFFER START ADDRESS :
                           in  std_logic_vector(BUF_ADDR_BITS-1 downto 0);
         C_SIZE          : --! @brief SHAPE C SIZE :
@@ -735,6 +744,10 @@ component CONVOLUTION_PARAMETER_BUFFER
     -------------------------------------------------------------------------------
         REQ_VALID       : --! @brief REQUEST VALID :
                           in  std_logic;
+        REQ_WRITE       : --! @brief REQUEST BUFFER WRITE :
+                          in  std_logic := '1';
+        REQ_READ        : --! @brief REQUEST BUFFER READ :
+                          in  std_logic := '1';
         REQ_READY       : --! @brief REQUEST READY :
                           out std_logic;
         C_SIZE          : --! @brief SHAPE C SIZE :

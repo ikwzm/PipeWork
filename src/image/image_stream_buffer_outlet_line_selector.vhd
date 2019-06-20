@@ -4,7 +4,7 @@
 --!              異なる形のイメージストリームを継ぐためのバッファの出力側ライン選択
 --!              モジュール
 --!     @version 1.8.0
---!     @date    2019/3/21
+--!     @date    2019/5/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -165,13 +165,11 @@ architecture RTL of IMAGE_STREAM_BUFFER_OUTLET_LINE_SELECTOR is
     -------------------------------------------------------------------------------
     subtype   LINE_SELECT_TYPE      is std_logic_vector(LINE_SIZE-1 downto 0);
     type      LINE_SELECT_VECTOR    is array(integer range <>) of LINE_SELECT_TYPE;
-    signal    line_select           :  LINE_SELECT_VECTOR(O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
-    constant  LINE_ALL_1            :  LINE_SELECT_TYPE := (others => '1');
-    constant  LINE_ALL_0            :  LINE_SELECT_TYPE := (others => '0');
-    signal    curr_line_active      :  LINE_SELECT_TYPE;
+    signal    line_select           :  LINE_SELECT_VECTOR      (O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
+    signal    curr_line_valid       :  LINE_SELECT_TYPE;
     signal    next_line_active      :  LINE_SELECT_TYPE;
     signal    line_outlet_start     :  boolean;
-    signal    atrb_y_vector         :  IMAGE_STREAM_ATRB_VECTOR (O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
+    signal    atrb_y_vector         :  IMAGE_STREAM_ATRB_VECTOR(O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI);
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
@@ -222,28 +220,27 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                curr_state       <= IDLE_STATE;
-                line_select      <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
-                curr_line_active <= (others => '0');
+                curr_state      <= IDLE_STATE;
+                line_select     <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
+                curr_line_valid <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then
-                curr_state       <= IDLE_STATE;
-                line_select      <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
-                curr_line_active <= (others => '0');
+                curr_state      <= IDLE_STATE;
+                line_select     <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
+                curr_line_valid <= (others => '0');
             else
                 case curr_state is
                     when IDLE_STATE =>
                             curr_state  <= WAIT_STATE;
                             line_select <= INIT_LINE_SELECT(O_PARAM.SHAPE.Y.LO, O_PARAM.SHAPE.Y.HI);
-                            curr_line_active <= (others => '0');
+                            curr_line_valid <= (others => '0');
                     when WAIT_STATE =>
                         if (line_outlet_start = TRUE) then
-                            curr_line_active <= next_line_active;
-                            curr_state       <= OUTLET_STATE;
+                            curr_state  <= OUTLET_STATE;
                         else
-                            curr_line_active <= (others => '0');
                             curr_state  <= WAIT_STATE;
                         end if;
+                        curr_line_valid <= next_line_active and LINE_VALID;
                     when OUTLET_STATE =>
                         if    (O_RETURN = '1') then
                             curr_state  <= LINE_RETURN_STATE;
@@ -309,28 +306,21 @@ begin
     end process;
     -------------------------------------------------------------------------------
     -- next_line_active  :
-    -- line_outlet_start :
     -------------------------------------------------------------------------------
-    process(line_select, LINE_VALID, atrb_y_vector)
+    process(line_select)
         variable line_active :  LINE_SELECT_TYPE;
-        variable line_start  :  boolean;
-        variable line_last   :  boolean;
     begin
         line_active := (others => '0');
         for y_pos in O_PARAM.SHAPE.Y.LO to O_PARAM.SHAPE.Y.HI loop
             line_active := line_active or line_select(y_pos);
         end loop;
-        if    (IMAGE_STREAM_ATRB_Y_VECTOR_IS_LAST(O_PARAM, atrb_y_vector) = TRUE) then
-            line_outlet_start <= TRUE;
-            next_line_active  <= line_active;
-        elsif ((line_active and LINE_VALID) = line_active) then
-            line_outlet_start <= TRUE;
-            next_line_active  <= line_active;
-        else
-            line_outlet_start <= FALSE;
-            next_line_active  <= (others => '0');
-        end if;
+        next_line_active <= line_active;
     end process;
+    -------------------------------------------------------------------------------
+    -- line_outlet_start :
+    -------------------------------------------------------------------------------
+    line_outlet_start <= (IMAGE_STREAM_ATRB_Y_VECTOR_IS_LAST(O_PARAM, atrb_y_vector) = TRUE) or
+                         ((next_line_active and LINE_VALID) = next_line_active);
     -------------------------------------------------------------------------------
     -- I_LINE_START :
     -------------------------------------------------------------------------------
@@ -339,11 +329,11 @@ begin
     -- LINE_FEED    :
     -- LINE_RETURN  :
     -------------------------------------------------------------------------------
-    process(curr_state, curr_line_active, next_line_active) begin
+    process(curr_state, curr_line_valid, next_line_active) begin
         case curr_state is
             when LINE_FEED_STATE   =>
                 for line in 0 to LINE_SIZE-1 loop
-                    if (curr_line_active(line) = '1') then
+                    if (curr_line_valid(line) = '1') then
                         if (next_line_active(line) = '1') then
                             LINE_FEED  (line) <= '0';
                             LINE_RETURN(line) <= '1';
@@ -357,11 +347,11 @@ begin
                     end if;
                 end loop;
             when LINE_RETURN_STATE =>
-                LINE_RETURN <= curr_line_active;
+                LINE_RETURN <= curr_line_valid;
                 LINE_FEED   <= (others => '0');
             when DONE_STATE        =>
                 LINE_RETURN <= (others => '0');
-                LINE_FEED   <= curr_line_active;
+                LINE_FEED   <= curr_line_valid;
             when others            =>
                 LINE_RETURN <= (others => '0');
                 LINE_FEED   <= (others => '0');
