@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.5.9                                                           --
---!     @date    2016/01/07                                                      --
+--!     @version 1.8.1                                                           --
+--!     @date    2019/10/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2016 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2019 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -89,6 +89,21 @@ component AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
+        CACHE_LINE_SIZE : --! @brief CACHE LINE SIZE :
+                          --! キャッシュのラインサイズを２のべき乗で指定する.
+                          --! * CACHE_LINE_SIZE>0 の場合、転送サイズを 
+                          --!   CACHE_LINE_SIZE 単位で転送するようにアライメントする.
+                          --! * CACHE_LINE_SIZE=0 の場合、なにもしない.
+                          --! CACHE_LINE_SIZE は Xilinx 社の ZynqMP の AXI-ACP に
+                          --! 接続する際に CACHE_LINE_SIZE=6(64byteを表す)にする.
+                          integer := 0;
+        ADDR_MASK_SIZE  : --! @brief ADDRESS LOW SIZE :
+                          --! アドレスの下位ビットをマスクする場合のサイズを指定する.
+                          --! * ADDR_MASK_SIZE=0の場合、マスクせずに全て出力する.
+                          --! * ADDR_MASK_SIZE=6の場合、下位6ビットをマスクして出力する.
+                          --! ZynqMP の AXI-ACP にリードアクセスする際は、アドレスの下位
+                          --! 4bit(2**4=16byte(=128bit)分)をマスクする.
+                          integer := 0;
         ACK_REGS        : --! @brief COMMAND ACKNOWLEDGE SIGNALS REGSITERED OUT :
                           --! Command Acknowledge Signals の出力をレジスタ出力に
                           --! するか否かを指定する.
@@ -303,6 +318,21 @@ component AXI4_MASTER_READ_INTERFACE
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
+        CACHE_LINE_SIZE : --! @brief CACHE LINE SIZE :
+                          --! キャッシュのラインサイズを２のべき乗で指定する.
+                          --! * CACHE_LINE_SIZE>0 の場合、転送サイズを 
+                          --!   CACHE_LINE_SIZE 単位で転送するようにアライメントする.
+                          --! * CACHE_LINE_SIZE=0 の場合、なにもしない.
+                          --! CACHE_LINE_SIZE は Xilinx 社の ZynqMP の AXI-ACP に
+                          --! 接続する際に CACHE_LINE_SIZE=6(64byteを表す)にする.
+                          integer := 0;
+        ADDR_MASK_SIZE  : --! @brief ADDRESS LOW SIZE :
+                          --! アドレスの下位ビットをマスクする場合のサイズを指定する.
+                          --! * ADDR_MASK_SIZE=0の場合、マスクせずに全て出力する.
+                          --! * ADDR_MASK_SIZE=6の場合、下位6ビットをマスクして出力する.
+                          --! ZynqMP の AXI-ACP にリードアクセスする際は、アドレスの下位
+                          --! 4bit(2**4=16byte(=128bit)分)をマスクする.
+                          integer := 0;
         QUEUE_SIZE      : --! @brief TRANSACTION QUEUE SIZE :
                           --! キューの大きさを指定する.
                           integer := 1;
@@ -714,6 +744,14 @@ component AXI4_MASTER_WRITE_INTERFACE
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
+        CACHE_LINE_SIZE : --! @brief CACHE LINE SIZE :
+                          --! キャッシュのラインサイズを２のべき乗で指定する.
+                          --! * CACHE_LINE_SIZE>0 の場合、転送サイズを 
+                          --!   CACHE_LINE_SIZE 単位で転送するようにアライメントする.
+                          --! * CACHE_LINE_SIZE=0 の場合、なにもしない.
+                          --! CACHE_LINE_SIZE は Xilinx 社の ZynqMP の AXI-ACP に
+                          --! 接続する際に CACHE_LINE_SIZE=6(64byteを表す)にする.
+                          integer := 0;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
                           --! レスンポンスのキューの大きさを指定する.
                           --! レスンポンスのキューの大きさは１以上. 

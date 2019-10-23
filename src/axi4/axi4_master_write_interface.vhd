@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.5.8
---!     @date    2015/5/6
+--!     @version 1.8.1
+--!     @date    2019/10/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2015 Ichiro Kawazome
+--      Copyright (C) 2012-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -92,6 +92,14 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
+        CACHE_LINE_SIZE : --! @brief CACHE LINE SIZE :
+                          --! キャッシュのラインサイズを２のべき乗で指定する.
+                          --! * CACHE_LINE_SIZE>0 の場合、転送サイズを 
+                          --!   CACHE_LINE_SIZE 単位で転送するようにアライメントする.
+                          --! * CACHE_LINE_SIZE=0 の場合、なにもしない.
+                          --! CACHE_LINE_SIZE は Xilinx 社の ZynqMP の AXI-ACP に
+                          --! 接続する際に CACHE_LINE_SIZE=6(64byteを表す)にする.
+                          integer := 0;
         QUEUE_SIZE      : --! @brief RESPONSE QUEUE SIZE :
                           --! レスンポンスのキューの大きさを指定する.
                           --! レスンポンスのキューの大きさは１以上. 
@@ -673,6 +681,7 @@ begin
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE     , --
+            CACHE_LINE_SIZE => CACHE_LINE_SIZE   , --
             ACK_REGS        => ACK_REGS            -- 
         )                                          -- 
         port map (                                 -- 
