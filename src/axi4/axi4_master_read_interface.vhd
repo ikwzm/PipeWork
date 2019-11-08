@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.8.1
---!     @date    2019/10/23
+--!     @version 1.5.8
+--!     @date    2015/5/6
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2015 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -92,21 +92,6 @@ entity  AXI4_MASTER_READ_INTERFACE is
         XFER_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
-        CACHE_LINE_SIZE : --! @brief CACHE LINE SIZE :
-                          --! キャッシュのラインサイズを２のべき乗で指定する.
-                          --! * CACHE_LINE_SIZE>0 の場合、転送サイズを 
-                          --!   CACHE_LINE_SIZE 単位で転送するようにアライメントする.
-                          --! * CACHE_LINE_SIZE=0 の場合、なにもしない.
-                          --! CACHE_LINE_SIZE は Xilinx 社の ZynqMP の AXI-ACP に
-                          --! 接続する際に CACHE_LINE_SIZE=6(64byteを表す)にする.
-                          integer := 0;
-        ADDR_MASK_SIZE  : --! @brief ADDRESS LOW SIZE :
-                          --! アドレスの下位ビットをマスクする場合のサイズを指定する.
-                          --! * ADDR_MASK_SIZE=0の場合、マスクせずに全て出力する.
-                          --! * ADDR_MASK_SIZE=6の場合、下位6ビットをマスクして出力する.
-                          --! ZynqMP の AXI-ACP にリードアクセスする際は、アドレスの下位
-                          --! 4bit(2**4=16byte(=128bit)分)をマスクする.
-                          integer := 0;
         QUEUE_SIZE      : --! @brief TRANSACTION QUEUE SIZE :
                           --! キューの大きさを指定する.
                           integer := 1;
@@ -602,8 +587,6 @@ begin
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE     , --
-            CACHE_LINE_SIZE => CACHE_LINE_SIZE   , --
-            ADDR_MASK_SIZE  => ADDR_MASK_SIZE    , -- 
             ACK_REGS        => ACK_REGS            -- 
         )                                          -- 
         port map (                                 -- 
