@@ -1196,6 +1196,7 @@ component PUMP_CONTROLLER
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Acknowledge Signals.
@@ -1241,6 +1242,7 @@ component PUMP_CONTROLLER
         I_OPEN              : out std_logic;
         I_RUNNING           : out std_logic;
         I_DONE              : out std_logic;
+        I_NONE              : out std_logic;
         I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Request Signals.
@@ -1251,6 +1253,7 @@ component PUMP_CONTROLLER
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Response Signals.
@@ -1296,6 +1299,7 @@ component PUMP_CONTROLLER
         O_OPEN              : out std_logic;
         O_RUNNING           : out std_logic;
         O_DONE              : out std_logic;
+        O_NONE              : out std_logic;
         O_ERROR             : out std_logic
     );
 end component;
@@ -1470,6 +1474,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Acknowledge Signals.
@@ -1515,6 +1520,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_OPEN              : out std_logic;
         I_TRAN_BUSY         : out std_logic;
         I_TRAN_DONE         : out std_logic;
+        I_TRAN_NONE         : out std_logic;
         I_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Open/Close Infomation Interface Signals.
@@ -1550,6 +1556,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
     -------------------------------------------------------------------------------
         O_I2O_RESET         : out std_logic;
         O_I2O_STOP          : out std_logic;
+        O_I2O_NONE          : out std_logic;
         O_I2O_ERROR         : out std_logic;
         O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
         O_I2O_OPEN_VALID    : out std_logic;
@@ -1741,6 +1748,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Acknowledge Signals.
@@ -1786,6 +1794,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_OPEN              : out std_logic;
         O_TRAN_BUSY         : out std_logic;
         O_TRAN_DONE         : out std_logic;
+        O_TRAN_NONE         : out std_logic;
         O_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
@@ -1821,6 +1830,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
     -------------------------------------------------------------------------------
         I_O2I_RESET         : out std_logic;
         I_O2I_STOP          : out std_logic;
+        I_O2I_NONE          : out std_logic;
         I_O2I_ERROR         : out std_logic;
         I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
         I_O2I_OPEN_VALID    : out std_logic;

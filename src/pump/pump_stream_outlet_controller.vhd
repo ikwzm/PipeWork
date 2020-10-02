@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
---!     @version 1.8.0
---!     @date    2019/5/9
+--!     @version 1.8.1
+--!     @date    2020/10/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2019 Ichiro Kawazome
+--      Copyright (C) 2018-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -209,6 +209,7 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Acknowledge Signals.
@@ -254,6 +255,7 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         O_OPEN              : out std_logic;
         O_TRAN_BUSY         : out std_logic;
         O_TRAN_DONE         : out std_logic;
+        O_TRAN_NONE         : out std_logic;
         O_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Open/Close Infomation Interface
@@ -289,6 +291,7 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
     -------------------------------------------------------------------------------
         I_O2I_RESET         : out std_logic;
         I_O2I_STOP          : out std_logic;
+        I_O2I_NONE          : out std_logic;
         I_O2I_ERROR         : out std_logic;
         I_O2I_OPEN_INFO     : out std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
         I_O2I_OPEN_VALID    : out std_logic;
@@ -332,6 +335,7 @@ architecture RTL of PUMP_STREAM_OUTLET_CONTROLLER is
     signal    o_close_valid         :  std_logic;
     signal    o_reset_valid         :  std_logic;
     signal    o_error_valid         :  std_logic;
+    signal    o_none_valid          :  std_logic;
     signal    o_stop_valid          :  std_logic;
     -------------------------------------------------------------------------------
     --
@@ -361,6 +365,7 @@ architecture RTL of PUMP_STREAM_OUTLET_CONTROLLER is
     signal    o2i_valve_open        :  std_logic;
     signal    o2i_reset_valid       :  std_logic;
     signal    o2i_error_valid       :  std_logic;
+    signal    o2i_none_valid        :  std_logic;
     signal    o2i_stop_valid        :  std_logic;
     signal    o2i_open_info         :  std_logic_vector(O2I_OPEN_INFO_BITS -1 downto 0);
     signal    o2i_open_valid        :  std_logic;
@@ -472,6 +477,7 @@ begin
             REQ_BUF_PTR         => O_REQ_BUF_PTR       , -- Out :
             REQ_FIRST           => O_REQ_FIRST         , -- Out :
             REQ_LAST            => O_REQ_LAST          , -- Out :
+            REQ_NONE            => O_REQ_NONE          , -- Out :
             REQ_READY           => O_REQ_READY         , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Transaction Command Acknowledge Signals.
@@ -534,9 +540,11 @@ begin
         ---------------------------------------------------------------------------
             TRAN_BUSY           => O_TRAN_BUSY         , -- Out :
             TRAN_DONE           => O_TRAN_DONE         , -- Out :
+            TRAN_NONE           => o_none_valid        , -- Out :
             TRAN_ERROR          => o_error_valid         -- Out :
         );
     O_OPEN       <= o_valve_open;
+    O_TRAN_NONE  <= o_none_valid;
     O_TRAN_ERROR <= o_error_valid;
     -------------------------------------------------------------------------------
     --
@@ -610,7 +618,7 @@ begin
                 O_CLK_RATE      => I_CLK_RATE          , --
                 OPEN_INFO_BITS  => O2I_OPEN_INFO_BITS  , --
                 CLOSE_INFO_BITS => O2I_CLOSE_INFO_BITS , --
-                EVENT_SIZE      => 3                   , --
+                EVENT_SIZE      => 4                   , --
                 XFER_SIZE_BITS  => SIZE_BITS           , --
                 PUSH_FIN_DELAY  => 0                   , --
                 PUSH_FIN_VALID  => 0                   , --
@@ -636,6 +644,7 @@ begin
                 I_EVENT(0)      => o_stop_valid        , -- In  :
                 I_EVENT(1)      => o_reset_valid       , -- In  :
                 I_EVENT(2)      => o_error_valid       , -- In  :
+                I_EVENT(3)      => o_none_valid        , -- In  :
                 I_PUSH_FIN_VAL  => null_valid          , -- In  :
                 I_PUSH_FIN_LAST => null_last           , -- In  :
                 I_PUSH_FIN_SIZE => null_size           , -- In  :
@@ -661,6 +670,7 @@ begin
                 O_EVENT(0)      => o2i_stop_valid      , -- Out :
                 O_EVENT(1)      => o2i_reset_valid     , -- Out :
                 O_EVENT(2)      => o2i_error_valid     , -- Out :
+                O_EVENT(3)      => o2i_none_valid      , -- Out :
                 O_PUSH_FIN_VAL  => open                , -- Out :
                 O_PUSH_FIN_LAST => open                , -- Out :
                 O_PUSH_FIN_SIZE => open                , -- Out :
@@ -821,6 +831,7 @@ begin
         I_O2I_STOP        <= o2i_stop_valid;
         I_O2I_ERROR       <= o2i_error_valid;
         I_O2I_RESET       <= o2i_reset_valid;
+        I_O2I_NONE        <= o2i_none_valid;
         ---------------------------------------------------------------------------
         -- 
         ---------------------------------------------------------------------------
@@ -988,7 +999,7 @@ begin
             -----------------------------------------------------------------------
                 BUSY            => port_busy             -- Out :
         );
-        port_reset <= '1' when (I_CLR = '1' or o2i_reset_valid = '1') else '0';
+        port_reset <= '1' when (I_CLR = '1' or o2i_reset_valid = '1' or o2i_none_valid = '1') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
