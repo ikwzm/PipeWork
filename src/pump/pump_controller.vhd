@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 1.8.0
---!     @date    2019/3/25
+--!     @version 1.8.1
+--!     @date    2020/10/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -295,6 +295,7 @@ entity  PUMP_CONTROLLER is
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Acknowledge Signals.
@@ -340,6 +341,7 @@ entity  PUMP_CONTROLLER is
         I_OPEN              : out std_logic;
         I_RUNNING           : out std_logic;
         I_DONE              : out std_logic;
+        I_NONE              : out std_logic;
         I_ERROR             : out std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Request Signals.
@@ -350,6 +352,7 @@ entity  PUMP_CONTROLLER is
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Outlet Transaction Command Response Signals.
@@ -395,6 +398,7 @@ entity  PUMP_CONTROLLER is
         O_OPEN              : out std_logic;
         O_RUNNING           : out std_logic;
         O_DONE              : out std_logic;
+        O_NONE              : out std_logic;
         O_ERROR             : out std_logic
     );
 end PUMP_CONTROLLER;
@@ -526,6 +530,7 @@ begin
             REQ_BUF_PTR         => I_REQ_BUF_PTR       , -- Out :
             REQ_FIRST           => I_REQ_FIRST         , -- Out :
             REQ_LAST            => I_REQ_LAST          , -- Out :
+            REQ_NONE            => I_REQ_NONE          , -- Out :
             REQ_READY           => I_REQ_READY         , -- In  :
         ---------------------------------------------------------------------------
         -- Intake Transaction Command Acknowledge Signals.
@@ -585,6 +590,7 @@ begin
             I_OPEN              => i_valve_open        , -- Out :
             TRAN_BUSY           => I_RUNNING           , -- Out :
             TRAN_DONE           => I_DONE              , -- Out :
+            TRAN_NONE           => I_NONE              , -- Out :
             TRAN_ERROR          => I_ERROR               -- Out :
         );
     I_OPEN <= i_valve_open;
@@ -672,6 +678,7 @@ begin
             REQ_BUF_PTR         => O_REQ_BUF_PTR       , -- Out :
             REQ_FIRST           => O_REQ_FIRST         , -- Out :
             REQ_LAST            => O_REQ_LAST          , -- Out :
+            REQ_NONE            => O_REQ_NONE          , -- Out :
             REQ_READY           => O_REQ_READY         , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Transaction Command Acknowledge Signals.
@@ -731,6 +738,7 @@ begin
             O_OPEN              => o_valve_open        , -- Out :
             TRAN_BUSY           => O_RUNNING           , -- Out :
             TRAN_DONE           => O_DONE              , -- Out :
+            TRAN_NONE           => O_NONE              , -- Out :
             TRAN_ERROR          => O_ERROR               -- Out :
         );
     O_OPEN <= o_valve_open;

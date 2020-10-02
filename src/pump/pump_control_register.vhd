@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.8.0
---!     @date    2019/3/25
+--!     @version 1.8.1
+--!     @date    2020/10/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -272,6 +272,10 @@ entity  PUMP_CONTROL_REGISTER is
                           --! トランザクションが終了したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
+        TRAN_NONE       : --! @brief Transaction None Flag.
+                          --! トランザクションが ACK_NONE で終了したことを示すフラグ.
+                          --! トランザクション終了時に１クロックだけアサートされる.
+                          out std_logic;
         TRAN_ERROR      : --! @brief Transaction Error Flag.
                           --! トランザクション中にエラーが発生したことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
@@ -296,6 +300,7 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   last_bit           : std_logic;
     signal   done_en_bit        : std_logic;
     signal   done_bit           : std_logic;
+    signal   none_flag          : std_logic;
     signal   error_bit          : std_logic;
     signal   error_flag         : std_logic;
     signal   request_bit        : std_logic;
@@ -516,6 +521,14 @@ begin
                     error_flag <= '0';
                 end if;
                 -------------------------------------------------------------------
+                -- NONE FLAG  :
+                -------------------------------------------------------------------
+                if    (next_state = DONE_STATE and ACK_NONE = '1') then
+                    none_flag <= '1';
+                else
+                    none_flag <= '0';
+                end if;
+                -------------------------------------------------------------------
                 -- MODE REGISTER
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
@@ -601,6 +614,7 @@ begin
     TRAN_START   <= '1' when (transaction_start = TRUE) else '0';
     TRAN_BUSY    <= start_bit;
     TRAN_DONE    <= '1' when (curr_state = DONE_STATE ) else '0';
+    TRAN_NONE    <= none_flag;
     TRAN_ERROR   <= error_flag;
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.

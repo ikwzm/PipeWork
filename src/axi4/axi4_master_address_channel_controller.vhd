@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.5.8
---!     @date    2015/5/6
+--!     @version 1.8.1
+--!     @date    2019/11/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2015 Ichiro Kawazome
+--      Copyright (C) 2012-2019 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -186,6 +186,7 @@ architecture RTL of AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
     signal   max_xfer_size      : std_logic_vector(XFER_MAX_SIZE downto 0);
     signal   max_xfer_load      : std_logic;
     constant max_xfer_chop      : std_logic := '0';
+    signal   dec_word_addr      : signed(DATA_SIZE downto 0);
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -449,18 +450,43 @@ begin
             );
     end generate;
     -------------------------------------------------------------------------------
+    -- dec_word_addr : 転送開始アドレスの下位ビットから1を引いた値.
+    --                 burst_length を計算するために使用する.
+    -------------------------------------------------------------------------------
+    process(CLK, RST)
+        variable s_word_addr : signed(DATA_SIZE downto 0);
+    begin
+        if (RST = '1') then
+                dec_word_addr <= (others => '1');
+        elsif (CLK'event and CLK = '1') then
+            if (CLR = '1') then
+                dec_word_addr <= (others => '1');
+            elsif (max_xfer_load = '1') then
+                for i in s_word_addr'range loop
+                    if (i >= REQ_ADDR'low and i <= REQ_ADDR'high and i < DATA_SIZE) then
+                        s_word_addr(i) := REQ_ADDR(i);
+                    else
+                        s_word_addr(i) := '0';
+                    end if;
+                end loop;
+                dec_word_addr <= s_word_addr - 1;
+            end if;
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
     -- req_xfer_size : 実際の転送要求サイズ.
     -- req_xfer_last : 最後の転送要求かつREQ_LAST='1'であることを示すフラグ.
     -- req_xfer_end  : 最後の転送要求であることを示すフラグ.
     -- burst_length  : バースト長(１少ないことに注意).
     -------------------------------------------------------------------------------
-    process (max_xfer_size, req_size_last, FLOW_SIZE, FLOW_LAST, REQ_ADDR, REQ_LAST)
+    process(max_xfer_size, req_size_last, dec_word_addr, FLOW_SIZE, FLOW_LAST, REQ_LAST)
         variable u_flow_size     : unsigned(FLOW_SIZE'length-1 downto 0);
         variable u_xfer_req_size : unsigned(XFER_MAX_SIZE downto 0);
         variable u_xfer_max_size : unsigned(XFER_MAX_SIZE downto 0);
         variable u_start_address : unsigned(XFER_MAX_SIZE downto 0);
         variable u_last_address  : unsigned(XFER_MAX_SIZE downto 0);
         variable u_burst_length  : unsigned(XFER_MAX_SIZE downto DATA_SIZE);
+        variable s_last_address  : signed(1+XFER_MAX_SIZE downto 0);
     begin
         if (FLOW_VALID /= 0) then
             u_flow_size     := to_01(unsigned(FLOW_SIZE    ), '0');
@@ -488,15 +514,9 @@ begin
                 req_xfer_next   <= '0'       or (req_size_last and not REQ_LAST);
                 req_xfer_end    <= '0'       or (req_size_last                 );
         end if;
-        for i in u_start_address'range loop
-            if (i < DATA_SIZE) then
-                u_start_address(i) := REQ_ADDR(i);
-            else
-                u_start_address(i) := '0';
-            end if;
-        end loop;
-        u_last_address := u_start_address + u_xfer_req_size - 1;
-        u_burst_length := u_last_address(u_burst_length'range);
+        s_last_address := signed("0" & u_xfer_req_size) + to_01(dec_word_addr);
+        u_last_address := unsigned(s_last_address(u_last_address'range));
+        u_burst_length := unsigned(u_last_address(u_burst_length'range));
         burst_length   <= std_logic_vector(RESIZE(u_burst_length, burst_length'length));
         req_xfer_size  <= std_logic_vector(u_xfer_req_size);
     end process;

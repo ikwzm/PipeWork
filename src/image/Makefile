@@ -17,7 +17,7 @@ ENTITY_FILES = image_stream_atrb_generator.vhd              \
 pump_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION' \
-            --version 1.8.0 \
+            --version 1.8.1 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package IMAGE_COMPONENTS \

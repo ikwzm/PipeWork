@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
---!     @version 1.8.0
---!     @date    2019/5/9
+--!     @version 1.8.1
+--!     @date    2020/10/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2019 Ichiro Kawazome
+--      Copyright (C) 2018-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -207,6 +207,7 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
     -- Intake Transaction Command Acknowledge Signals.
@@ -252,6 +253,7 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
         I_OPEN              : out std_logic;
         I_TRAN_BUSY         : out std_logic;
         I_TRAN_DONE         : out std_logic;
+        I_TRAN_NONE         : out std_logic;
         I_TRAN_ERROR        : out std_logic;
     -------------------------------------------------------------------------------
     -- Intake Open/Close Infomation Interface Signals.
@@ -287,6 +289,7 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
     -------------------------------------------------------------------------------
         O_I2O_RESET         : out std_logic;
         O_I2O_STOP          : out std_logic;
+        O_I2O_NONE          : out std_logic;
         O_I2O_ERROR         : out std_logic;
         O_I2O_OPEN_INFO     : out std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
         O_I2O_OPEN_VALID    : out std_logic;
@@ -329,6 +332,7 @@ architecture RTL of PUMP_STREAM_INTAKE_CONTROLLER is
     signal    i_close_valid         :  std_logic;
     signal    i_reset_valid         :  std_logic;
     signal    i_error_valid         :  std_logic;
+    signal    i_none_valid          :  std_logic;
     signal    i_stop_valid          :  std_logic;
     -------------------------------------------------------------------------------
     --
@@ -354,6 +358,7 @@ architecture RTL of PUMP_STREAM_INTAKE_CONTROLLER is
     signal    i2o_valve_open        :  std_logic;
     signal    i2o_reset_valid       :  std_logic;
     signal    i2o_error_valid       :  std_logic;
+    signal    i2o_none_valid        :  std_logic;
     signal    i2o_stop_valid        :  std_logic;
     signal    i2o_open_info         :  std_logic_vector(I2O_OPEN_INFO_BITS -1 downto 0);
     signal    i2o_open_valid        :  std_logic;
@@ -465,6 +470,7 @@ begin
             REQ_BUF_PTR         => I_REQ_BUF_PTR       , -- Out :
             REQ_FIRST           => I_REQ_FIRST         , -- Out :
             REQ_LAST            => I_REQ_LAST          , -- Out :
+            REQ_NONE            => I_REQ_NONE          , -- Out :
             REQ_READY           => I_REQ_READY         , -- In  :
         ---------------------------------------------------------------------------
         -- Intake Transaction Command Acknowledge Signals.
@@ -527,9 +533,11 @@ begin
         ---------------------------------------------------------------------------
             TRAN_BUSY           => I_TRAN_BUSY         , -- Out :
             TRAN_DONE           => I_TRAN_DONE         , -- Out :
+            TRAN_NONE           => i_none_valid        , -- Out :
             TRAN_ERROR          => i_error_valid         -- Out :
         );
     I_OPEN       <= i_valve_open;
+    I_TRAN_NONE  <= i_none_valid;
     I_TRAN_ERROR <= i_error_valid;
     -------------------------------------------------------------------------------
     --
@@ -603,7 +611,7 @@ begin
                 O_CLK_RATE      => O_CLK_RATE          , --
                 OPEN_INFO_BITS  => I2O_OPEN_INFO_BITS  , --
                 CLOSE_INFO_BITS => I2O_CLOSE_INFO_BITS , --
-                EVENT_SIZE      => 3                   , --
+                EVENT_SIZE      => 4                   , --
                 XFER_SIZE_BITS  => SIZE_BITS           , --
                 PUSH_FIN_DELAY  => I2O_DELAY_CYCLE     , --
                 PUSH_FIN_VALID  => 1                   , --
@@ -629,6 +637,7 @@ begin
                 I_EVENT(0)      => i_stop_valid        , -- In  :
                 I_EVENT(1)      => i_reset_valid       , -- In  :
                 I_EVENT(2)      => i_error_valid       , -- In  :
+                I_EVENT(3)      => i_none_valid        , -- In  :
                 I_PUSH_FIN_VAL  => I_PUSH_FIN_VALID    , -- In  :
                 I_PUSH_FIN_LAST => I_PUSH_FIN_LAST     , -- In  :
                 I_PUSH_FIN_SIZE => I_PUSH_FIN_SIZE     , -- In  :
@@ -654,6 +663,7 @@ begin
                 O_EVENT(0)      => i2o_stop_valid      , -- Out :
                 O_EVENT(1)      => i2o_reset_valid     , -- Out :
                 O_EVENT(2)      => i2o_error_valid     , -- Out :
+                O_EVENT(3)      => i2o_none_valid      , -- Out :
                 O_PUSH_FIN_VAL  => i2o_push_fin_valid  , -- Out :
                 O_PUSH_FIN_LAST => i2o_push_fin_last   , -- Out :
                 O_PUSH_FIN_SIZE => i2o_push_fin_size   , -- Out :
@@ -818,6 +828,7 @@ begin
         O_I2O_OPEN_VALID  <= i2o_open_valid;
         O_I2O_STOP        <= i2o_stop_valid;
         O_I2O_RESET       <= i2o_reset_valid;
+        O_I2O_NONE        <= i2o_none_valid;
         O_I2O_ERROR       <= i2o_error_valid;
         ---------------------------------------------------------------------------
         -- 
@@ -993,7 +1004,7 @@ begin
                 end if;
             end loop;
         end process;
-        port_reset <= '1' when (O_CLR = '1' or i2o_reset_valid = '1' or i2o_stop_valid = '1' or i2o_error_valid = '1' or O_O2I_STOP = '1') else '0';
+        port_reset <= '1' when (O_CLR = '1' or i2o_reset_valid = '1' or i2o_stop_valid = '1' or i2o_error_valid = '1' or i2o_none_valid = '1' or O_O2I_STOP = '1') else '0';
         pool_last  <= flow_last;
         pool_valid <= '1' when (flow_ready = '1' and pool_ready = '1') else '0';
         ---------------------------------------------------------------------------

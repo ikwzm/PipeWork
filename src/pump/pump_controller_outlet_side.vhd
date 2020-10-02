@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller_outlet_side.vhd
 --!     @brief   PUMP CONTROLLER OUTLET SIDE
---!     @version 1.8.0
---!     @date    2019/3/25
+--!     @version 1.8.1
+--!     @date    2020/10/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2019 Ichiro Kawazome
+--      Copyright (C) 2018-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -166,6 +166,7 @@ entity  PUMP_CONTROLLER_OUTLET_SIDE is
         REQ_BUF_PTR         : out std_logic_vector(BUF_DEPTH    -1 downto 0);
         REQ_FIRST           : out std_logic;
         REQ_LAST            : out std_logic;
+        REQ_NONE            : out std_logic;
         REQ_READY           : in  std_logic;
     -------------------------------------------------------------------------------
     -- Transaction Command Acknowledge Signals.
@@ -228,6 +229,7 @@ entity  PUMP_CONTROLLER_OUTLET_SIDE is
     -------------------------------------------------------------------------------
         TRAN_BUSY           : out std_logic;
         TRAN_DONE           : out std_logic;
+        TRAN_NONE           : out std_logic;
         TRAN_ERROR          : out std_logic
     );
 end PUMP_CONTROLLER_OUTLET_SIDE;
@@ -313,7 +315,7 @@ begin
             DN_VAL          => ACK_VALID           , -- In  :
             DN_SIZE         => ACK_SIZE            , -- In  :
             COUNTER         => REQ_SIZE            , -- Out :
-            ZERO            => open                , -- Out :
+            ZERO            => REQ_NONE            , -- Out :
             NEG             => open                  -- Out :
        );                                            -- 
     -------------------------------------------------------------------------------
@@ -400,6 +402,7 @@ begin
             XFER_ERROR      => XFER_ERROR          , -- In  :
             VALVE_OPEN      => valve_open          , -- Out :
             TRAN_DONE       => TRAN_DONE           , -- Out :
+            TRAN_NONE       => TRAN_NONE           , -- Out :
             TRAN_ERROR      => transaction_error   , -- Out :
             TRAN_BUSY       => transaction_busy      -- Out :
         );                                           -- 
