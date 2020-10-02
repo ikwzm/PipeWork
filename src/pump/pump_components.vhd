@@ -673,6 +673,7 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         REQ_BUF_PTR         : out std_logic_vector(BUF_DEPTH    -1 downto 0);
         REQ_FIRST           : out std_logic;
         REQ_LAST            : out std_logic;
+        REQ_NONE            : out std_logic;
         REQ_READY           : in  std_logic;
     -------------------------------------------------------------------------------
     -- Transaction Command Acknowledge Signals.
@@ -735,6 +736,7 @@ component PUMP_CONTROLLER_INTAKE_SIDE
     -------------------------------------------------------------------------------
         TRAN_BUSY           : out std_logic;
         TRAN_DONE           : out std_logic;
+        TRAN_NONE           : out std_logic;
         TRAN_ERROR          : out std_logic
     );
 end component;
@@ -868,6 +870,7 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         REQ_BUF_PTR         : out std_logic_vector(BUF_DEPTH    -1 downto 0);
         REQ_FIRST           : out std_logic;
         REQ_LAST            : out std_logic;
+        REQ_NONE            : out std_logic;
         REQ_READY           : in  std_logic;
     -------------------------------------------------------------------------------
     -- Transaction Command Acknowledge Signals.
@@ -930,6 +933,7 @@ component PUMP_CONTROLLER_OUTLET_SIDE
     -------------------------------------------------------------------------------
         TRAN_BUSY           : out std_logic;
         TRAN_DONE           : out std_logic;
+        TRAN_NONE           : out std_logic;
         TRAN_ERROR          : out std_logic
     );
 end component;
