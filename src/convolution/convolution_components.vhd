@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    convolution_components.vhd                                      --
 --!     @brief   PIPEWORK CONVOLUTION COMPONENT LIBRARY DESCRIPTION              --
---!     @version 1.8.0                                                           --
---!     @date    2019/04/11                                                      --
+--!     @version 1.8.1                                                           --
+--!     @date    2020/10/03                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2019 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2020 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
