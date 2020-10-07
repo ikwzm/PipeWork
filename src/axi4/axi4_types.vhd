@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_types.vhd
 --!     @brief   AXI4 Channel Signal Type Package.
---!     @version 1.5.5
---!     @date    2014/3/2
+--!     @version 1.8.2
+--!     @date    2020/10/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,7 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 -----------------------------------------------------------------------------------
---! @brief AXI4 の各種タイプ/定数を定義しているパッケージ.
+--! @brief AXI4 の各種タイプ/定数/関数を定義しているパッケージ.
 -----------------------------------------------------------------------------------
 package AXI4_TYPES is
     -------------------------------------------------------------------------------
@@ -184,4 +184,75 @@ package AXI4_TYPES is
               DEST                 : integer range 1 to AXI4_DEST_MAX_WIDTH;
               DATA                 : integer range 8 to AXI4_DATA_MAX_WIDTH;
     end record;
-end package;
+    -------------------------------------------------------------------------------
+    --! @brief AXI Interface の4Kbyteバウンダリー
+    -------------------------------------------------------------------------------
+    constant  AXI4_BOUNDARY_BYTES  :  integer := 4096;
+    -------------------------------------------------------------------------------
+    --! @brief AXI Interface の最大転送バイト数を２のべき乗値で計算する関数
+    -------------------------------------------------------------------------------
+    function  AXI_MAX_XFER_SIZE (ALEN_WIDTH,DATA_BITS              : integer) return integer;
+    function  AXI_MAX_XFER_SIZE (ALEN_WIDTH,DATA_BITS,MAX_XFER_SIZE: integer) return integer;
+    function  AXI4_MAX_XFER_SIZE(           DATA_BITS              : integer) return integer;
+    function  AXI4_MAX_XFER_SIZE(           DATA_BITS,MAX_XFER_SIZE: integer) return integer;
+end AXI4_TYPES;
+-----------------------------------------------------------------------------------
+--! @brief AXI4 の各種関数を定義しているパッケージ.
+-----------------------------------------------------------------------------------
+library ieee;
+use     ieee.std_logic_1164.all;
+use     ieee.numeric_std.all;
+package body AXI4_TYPES is
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function  min(A,B: integer) return integer is
+    begin
+        if (A < B) then return A;
+        else            return B;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
+    function calc_bits(SIZE:integer) return integer is
+        variable bits : integer;
+    begin
+        bits := 0;
+        while (2**bits < SIZE) loop
+            bits := bits + 1;
+        end loop;
+        return bits;
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief AXI Interface の最大転送バイト数を２のべき乗値で計算する関数
+    -------------------------------------------------------------------------------
+    function  AXI_MAX_XFER_SIZE(ALEN_WIDTH,DATA_BITS: integer) return integer is
+        variable  max_xfer_bytes : integer;
+    begin
+        max_xfer_bytes := min(AXI4_BOUNDARY_BYTES, (2**ALEN_WIDTH)*(DATA_BITS/8));
+        return calc_bits(max_xfer_bytes);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief AXI Interface の最大転送バイト数を２のべき乗値で計算する関数
+    -------------------------------------------------------------------------------
+    function  AXI_MAX_XFER_SIZE(ALEN_WIDTH,DATA_BITS,MAX_XFER_SIZE: integer) return integer is
+    begin
+        return min(AXI_MAX_XFER_SIZE(ALEN_WIDTH,DATA_BITS), MAX_XFER_SIZE);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief AXI4 Interface の最大転送バイト数を２のべき乗値で計算する関数
+    -------------------------------------------------------------------------------
+    function  AXI4_MAX_XFER_SIZE(DATA_BITS: integer) return integer is
+    begin
+        return AXI_MAX_XFER_SIZE(AXI4_ALEN_WIDTH, DATA_BITS);
+    end function;
+    -------------------------------------------------------------------------------
+    --! @brief AXI Interface の最大転送バイト数を２のべき乗値で計算する関数
+    -------------------------------------------------------------------------------
+    function  AXI4_MAX_XFER_SIZE(DATA_BITS,MAX_XFER_SIZE: integer) return integer is
+    begin
+        return AXI_MAX_XFER_SIZE(AXI4_ALEN_WIDTH, DATA_BITS, MAX_XFER_SIZE);
+    end function;
+end AXI4_TYPES;
+

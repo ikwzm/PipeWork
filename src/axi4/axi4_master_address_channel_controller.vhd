@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.8.1
---!     @date    2019/11/8
+--!     @version 1.8.2
+--!     @date    2020/10/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -364,91 +364,124 @@ begin
     -- req_size_none : REQ_SIZEの値が0であることを示すフラグ.
     -- req_size_last : REQ_SIZEによる最後の転送要求であることを示すフラグ.
     -------------------------------------------------------------------------------
-    -- REQ_SIZE_VALID /= 0 の場合.
-    -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_NE_0: if (REQ_SIZE_VALID /= 0) generate
-        GEN: CHOPPER
-            generic map (
-                BURST       => 1                     , --
-                MIN_PIECE   => XFER_MIN_SIZE         , --
-                MAX_PIECE   => XFER_MAX_SIZE         , --
-                MAX_SIZE    => REQ_SIZE'length       , --
-                ADDR_BITS   => REQ_ADDR'length       , --
-                SIZE_BITS   => REQ_SIZE'length       , --
-                COUNT_BITS  => 1                     , --
-                PSIZE_BITS  => max_xfer_size'length  , --
-                GEN_VALID   => 0                       --
-            )                                          --
-            port map (                                 --
-                CLK         => CLK                   , -- In  :
-                RST         => RST                   , -- In  :
-                CLR         => CLR                   , -- In  :
-                ADDR        => REQ_ADDR              , -- In  :
-                SIZE        => REQ_SIZE              , -- In  :
-                SEL         => XFER_SIZE_SEL         , -- In  :
-                LOAD        => max_xfer_load         , -- In  :
-                CHOP        => max_xfer_chop         , -- In  :
-                COUNT       => open                  , -- Out :
-                NONE        => req_size_none         , -- Out : 
-                LAST        => req_size_last         , -- Out : 
-                NEXT_NONE   => open                  , -- Out :
-                NEXT_LAST   => open                  , -- Out :
-                PSIZE       => max_xfer_size         , -- Out :
-                NEXT_PSIZE  => open                  , -- Out :
-                VALID       => open                  , -- Out :
-                NEXT_VALID  => open                    -- Out :
-            );
-    end generate;
-    -------------------------------------------------------------------------------
-    -- REQ_SIZE_VALID = 0 の場合.
-    -------------------------------------------------------------------------------
-    MAX_XFER_SIZE_EQ_0: if (REQ_SIZE_VALID = 0) generate
-        function GEN_MAX_REQ_SIZE return std_logic_vector is
-            variable value : std_logic_vector(XFER_MAX_SIZE downto 0);
+    MAX_XFER_SIZE_GEN: block
+        constant DATA_BITS         : integer := (2**DATA_SIZE)*8;
+        constant MAX_XFER_SIZE_LO  : integer := AXI_MAX_XFER_SIZE(ALEN_BITS, DATA_BITS, XFER_MIN_SIZE);
+        constant MAX_XFER_SIZE_HI  : integer := AXI_MAX_XFER_SIZE(ALEN_BITS, DATA_BITS, XFER_MAX_SIZE);
+        signal   max_xfer_size_sel : std_logic_vector(MAX_XFER_SIZE_HI downto MAX_XFER_SIZE_LO);
+    begin
+        ---------------------------------------------------------------------------
+        -- max_xfer_size_sel : １回のトランザクションでの最大転送サイズを選択する信号.
+        ---------------------------------------------------------------------------
+        process (XFER_SIZE_SEL)
+            variable selected : boolean;
         begin
-            for i in value'range loop
-                if (i = value'high) then
-                    value(i) := '1';
+            selected := FALSE;
+            for i in max_xfer_size_sel'low to max_xfer_size_sel'high loop
+                if (i = max_xfer_size_sel'high) then
+                    if not selected then
+                        max_xfer_size_sel(i) <= '1';
+                        selected := TRUE;
+                    else
+                        max_xfer_size_sel(i) <= '0';
+                    end if;
                 else
-                    value(i) := '0';
+                    if not selected then
+                        max_xfer_size_sel(i) <= XFER_SIZE_SEL(i);
+                        selected := (XFER_SIZE_SEL(i) = '1');
+                    else
+                        max_xfer_size_sel(i) <= '0';
+                    end if;
                 end if;
             end loop;
-            return value;
-        end function;
-        constant MAX_REQ_SIZE : std_logic_vector(XFER_MAX_SIZE downto 0) := GEN_MAX_REQ_SIZE;
-    begin
-        GEN: CHOPPER
-            generic map (
-                BURST       => 1                     , --
-                MIN_PIECE   => XFER_MIN_SIZE         , --
-                MAX_PIECE   => XFER_MAX_SIZE         , --
-                MAX_SIZE    => MAX_REQ_SIZE'length   , --
-                ADDR_BITS   => REQ_ADDR'length       , --
-                SIZE_BITS   => MAX_REQ_SIZE'length   , --
-                COUNT_BITS  => 1                     , --
-                PSIZE_BITS  => max_xfer_size'length  , --
-                GEN_VALID   => 0                       --
-            )                                          -- 
-            port map (                                 -- 
-                CLK         => CLK                   , -- In  :
-                RST         => RST                   , -- In  :
-                CLR         => CLR                   , -- In  :
-                ADDR        => REQ_ADDR              , -- In  :
-                SIZE        => MAX_REQ_SIZE          , -- In  :
-                SEL         => XFER_SIZE_SEL         , -- In  :
-                LOAD        => max_xfer_load         , -- In  :
-                CHOP        => max_xfer_chop         , -- In  :
-                COUNT       => open                  , -- Out :
-                NONE        => req_size_none         , -- Out : 
-                LAST        => req_size_last         , -- Out : 
-                NEXT_NONE   => open                  , -- Out :
-                NEXT_LAST   => open                  , -- Out :
-                PSIZE       => max_xfer_size         , -- Out :
-                NEXT_PSIZE  => open                  , -- Out :
-                VALID       => open                  , -- Out :
-                NEXT_VALID  => open                    -- Out :
-            );
-    end generate;
+        end process;
+        ---------------------------------------------------------------------------
+        -- REQ_SIZE_VALID /= 0 の場合.
+        ---------------------------------------------------------------------------
+        REQ_SIZE_VALID_NE_0: if (REQ_SIZE_VALID /= 0) generate
+            GEN: CHOPPER                                   -- 
+                generic map (                              -- 
+                    BURST       => 1                     , --
+                    MIN_PIECE   => MAX_XFER_SIZE_LO      , --
+                    MAX_PIECE   => MAX_XFER_SIZE_HI      , --
+                    MAX_SIZE    => REQ_SIZE'length       , --
+                    ADDR_BITS   => REQ_ADDR'length       , --
+                    SIZE_BITS   => REQ_SIZE'length       , --
+                    COUNT_BITS  => 1                     , --
+                    PSIZE_BITS  => max_xfer_size'length  , --
+                    GEN_VALID   => 0                       --
+                )                                          --
+                port map (                                 --
+                    CLK         => CLK                   , -- In  :
+                    RST         => RST                   , -- In  :
+                    CLR         => CLR                   , -- In  :
+                    ADDR        => REQ_ADDR              , -- In  :
+                    SIZE        => REQ_SIZE              , -- In  :
+                    SEL         => max_xfer_size_sel     , -- In  :
+                    LOAD        => max_xfer_load         , -- In  :
+                    CHOP        => max_xfer_chop         , -- In  :
+                    COUNT       => open                  , -- Out :
+                    NONE        => req_size_none         , -- Out : 
+                    LAST        => req_size_last         , -- Out : 
+                    NEXT_NONE   => open                  , -- Out :
+                    NEXT_LAST   => open                  , -- Out :
+                    PSIZE       => max_xfer_size         , -- Out :
+                    NEXT_PSIZE  => open                  , -- Out :
+                    VALID       => open                  , -- Out :
+                    NEXT_VALID  => open                    -- Out :
+                );
+        end generate;
+        ---------------------------------------------------------------------------
+        -- REQ_SIZE_VALID = 0 の場合.
+        ---------------------------------------------------------------------------
+        REQ_SIZE_VALID_EQ_0: if (REQ_SIZE_VALID = 0) generate
+            function GEN_MAX_REQ_SIZE return std_logic_vector is
+                variable value : std_logic_vector(MAX_XFER_SIZE_HI downto 0);
+            begin
+                for i in value'range loop
+                    if (i = value'high) then
+                        value(i) := '1';
+                    else
+                        value(i) := '0';
+                    end if;
+                end loop;
+                return value;
+            end function;
+            constant MAX_REQ_SIZE : std_logic_vector(MAX_XFER_SIZE_HI downto 0) := GEN_MAX_REQ_SIZE;
+        begin
+            GEN: CHOPPER                                   -- 
+                generic map (                              -- 
+                    BURST       => 1                     , --
+                    MIN_PIECE   => MAX_XFER_SIZE_LO      , --
+                    MAX_PIECE   => MAX_XFER_SIZE_HI      , --
+                    MAX_SIZE    => MAX_REQ_SIZE'length   , --
+                    ADDR_BITS   => REQ_ADDR'length       , --
+                    SIZE_BITS   => MAX_REQ_SIZE'length   , --
+                    COUNT_BITS  => 1                     , --
+                    PSIZE_BITS  => max_xfer_size'length  , --
+                    GEN_VALID   => 0                       --
+                )                                          -- 
+                port map (                                 -- 
+                    CLK         => CLK                   , -- In  :
+                    RST         => RST                   , -- In  :
+                    CLR         => CLR                   , -- In  :
+                    ADDR        => REQ_ADDR              , -- In  :
+                    SIZE        => MAX_REQ_SIZE          , -- In  :
+                    SEL         => max_xfer_size_sel     , -- In  :
+                    LOAD        => max_xfer_load         , -- In  :
+                    CHOP        => max_xfer_chop         , -- In  :
+                    COUNT       => open                  , -- Out :
+                    NONE        => req_size_none         , -- Out : 
+                    LAST        => req_size_last         , -- Out : 
+                    NEXT_NONE   => open                  , -- Out :
+                    NEXT_LAST   => open                  , -- Out :
+                    PSIZE       => max_xfer_size         , -- Out :
+                    NEXT_PSIZE  => open                  , -- Out :
+                    VALID       => open                  , -- Out :
+                    NEXT_VALID  => open                    -- Out :
+                );
+        end generate;
+    end block;
     -------------------------------------------------------------------------------
     -- dec_word_addr : 転送開始アドレスの下位ビットから1を引いた値.
     --                 burst_length を計算するために使用する.

@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.5.8
---!     @date    2015/5/6
+--!     @version 1.8.2
+--!     @date    2020/10/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2015 Ichiro Kawazome
+--      Copyright (C) 2012-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
