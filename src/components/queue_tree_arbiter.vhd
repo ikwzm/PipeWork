@@ -191,23 +191,29 @@ begin
     -------------------------------------------------------------------------------
     TREE: if (REQ_NUM > ARB_NUM) generate
         constant  NODE_STEP     :  integer := (REQ_NUM + NODE_NUM - 1) / NODE_NUM;
-        signal    i_request     :  std_logic_vector(REQ_MIN_NUM to REQ_MAX_NUM);
-        signal    o_grant       :  std_logic_vector(REQ_MIN_NUM to REQ_MAX_NUM);
+        signal    i_request     :  std_logic_vector(0 to NODE_NUM*NODE_STEP-1);
+        signal    o_grant       :  std_logic_vector(0 to NODE_NUM*NODE_STEP-1);
         function  SORT_REQUEST(REQ: std_logic_vector) return std_logic_vector is
-            alias    i_req : std_logic_vector(REQ_MIN_NUM to REQ_MAX_NUM) is REQ;
-            variable o_req : std_logic_vector(REQ_MIN_NUM to REQ_MAX_NUM);
+            alias    i_req : std_logic_vector(0 to REQ_NUM-1) is REQ;
+            variable o_req : std_logic_vector(0 to NODE_NUM*NODE_STEP-1);
         begin
             for i in o_req'range loop
-                o_req(i) := i_req(((i mod NODE_STEP) * NODE_NUM) + (i / NODE_STEP));
+                if ((((i mod NODE_STEP) * NODE_NUM) + (i / NODE_STEP)) <= i_req'high) then
+                    o_req(i) := i_req(((i mod NODE_STEP) * NODE_NUM) + (i / NODE_STEP));
+                else
+                    o_req(i) := '0';
+                end if;
             end loop;
             return o_req;
         end function;
         function  SORT_GRANT(GNT: std_logic_vector) return std_logic_vector is
-            alias    i_gnt : std_logic_vector(REQ_MIN_NUM to REQ_MAX_NUM) is GNT;
-            variable o_gnt : std_logic_vector(REQ_MIN_NUM to REQ_MAX_NUM);
+            alias    i_gnt : std_logic_vector(0 to NODE_NUM*NODE_STEP-1) is GNT;
+            variable o_gnt : std_logic_vector(0 to REQ_NUM-1);
         begin
             for i in i_gnt'range loop
-                o_gnt(((i mod NODE_STEP) * NODE_NUM) + (i / NODE_STEP)) := i_gnt(i);
+                if ((((i mod NODE_STEP) * NODE_NUM) + (i / NODE_STEP)) <= o_gnt'high) then
+                    o_gnt(((i mod NODE_STEP) * NODE_NUM) + (i / NODE_STEP)) := i_gnt(i);
+                end if;
             end loop;
             return o_gnt;
         end function;
@@ -218,7 +224,7 @@ begin
         ---------------------------------------------------------------------------
         NODE: for i in 0 to NODE_NUM-1 generate
             constant  NODE_MIN_NUM  :  integer := i*NODE_STEP;
-            constant  NODE_MAX_NUM  :  integer := MIN((i+1)*NODE_STEP-1, REQ_MAX_NUM);
+            constant  NODE_MAX_NUM  :  integer := NODE_MIN_NUM + NODE_STEP - 1;
             signal    node_request  :  std_logic_vector(NODE_MIN_NUM to NODE_MAX_NUM);
             signal    node_grant    :  std_logic_vector(NODE_MIN_NUM to NODE_MAX_NUM);
         begin
