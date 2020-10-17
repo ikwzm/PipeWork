@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_types.vhd
 --!     @brief   AXI4 Channel Signal Type Package.
---!     @version 1.8.2
---!     @date    2020/10/7
+--!     @version 1.8.3
+--!     @date    2020/10/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -206,6 +206,15 @@ package body AXI4_TYPES is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
+    function  max(A,B: integer) return integer is
+    begin
+        if (A > B) then return A;
+        else            return B;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    --
+    -------------------------------------------------------------------------------
     function  min(A,B: integer) return integer is
     begin
         if (A < B) then return A;
@@ -238,7 +247,8 @@ package body AXI4_TYPES is
     -------------------------------------------------------------------------------
     function  AXI_MAX_XFER_SIZE(ALEN_WIDTH,DATA_BITS,MAX_XFER_SIZE: integer) return integer is
     begin
-        return min(AXI_MAX_XFER_SIZE(ALEN_WIDTH,DATA_BITS), MAX_XFER_SIZE);
+        return min(AXI_MAX_XFER_SIZE(ALEN_WIDTH,DATA_BITS   ),
+                   max(MAX_XFER_SIZE, calc_bits(DATA_BITS/8)));
     end function;
     -------------------------------------------------------------------------------
     --! @brief AXI4 Interface の最大転送バイト数を２のべき乗値で計算する関数
