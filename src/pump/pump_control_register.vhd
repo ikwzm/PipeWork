@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.8.1
---!     @date    2020/10/2
+--!     @version 1.8.3
+--!     @date    2020/10/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -273,7 +273,7 @@ entity  PUMP_CONTROL_REGISTER is
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
         TRAN_NONE       : --! @brief Transaction None Flag.
-                          --! トランザクションが ACK_NONE で終了したことを示すフラグ.
+                          --! トランザクション中に転送が行われなかったことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
         TRAN_ERROR      : --! @brief Transaction Error Flag.
@@ -311,7 +311,7 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     -------------------------------------------------------------------------------
     signal   transaction_start  : boolean;
     -------------------------------------------------------------------------------
-    -- State Machine.
+    -- Main State Machine.
     -------------------------------------------------------------------------------
     type     STATE_TYPE     is  ( IDLE_STATE    ,
                                   REQ_STATE     ,
@@ -320,7 +320,16 @@ architecture RTL of PUMP_CONTROL_REGISTER is
                                   TAR_STATE     ,
                                   DONE_STATE    );
     signal   curr_state         : STATE_TYPE;
-    signal   first_state        : std_logic_vector(2 downto 0);
+    -------------------------------------------------------------------------------
+    -- Transaction State Machine.
+    -------------------------------------------------------------------------------
+    signal   tran_state         : std_logic_vector(2 downto 0);
+    constant TRAN_IDLE_STATE    : std_logic_vector(2 downto 0) := "000";
+    constant TRAN_FIRST_STATE   : std_logic_vector(2 downto 0) := "111";
+    constant TRAN_OTHER_STATE   : std_logic_vector(2 downto 0) := "110";
+    constant TRAN_TAR_STATE     : std_logic_vector(2 downto 0) := "100";
+    signal   tran_once          : std_logic;
+    signal   tran_err           : std_logic;
 begin
     -------------------------------------------------------------------------------
     -- transaction_start : トランザクション開始信号.
@@ -334,10 +343,14 @@ begin
         variable next_state : STATE_TYPE;
         variable xfer_run   : boolean;
         variable xfer_first : boolean;
+        variable error_on   : boolean;
+        variable none_on    : boolean;
     begin
         if    (RST = '1') then
                 curr_state  <= IDLE_STATE;
-                first_state <= (others => '0');
+                tran_state  <= (others => '0');
+                tran_once   <= '0';
+                tran_err    <= '0';
                 reset_bit   <= '0';
                 start_bit   <= '0';
                 stop_bit    <= '0';
@@ -354,7 +367,9 @@ begin
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1') then
                 curr_state  <= IDLE_STATE;
-                first_state <= (others => '0');
+                tran_state  <= (others => '0');
+                tran_once   <= '0';
+                tran_err    <= '0';
                 reset_bit   <= '0';
                 start_bit   <= '0';
                 stop_bit    <= '0';
@@ -494,39 +509,11 @@ begin
                 -- DONE_ST BIT :
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
-                    done_bit  <= '0';
+                    done_bit <= '0';
                 elsif (done_en_bit = '1' and next_state = DONE_STATE) then
-                    done_bit  <= '1';
+                    done_bit <= '1';
                 elsif (DONE_ST_L  = '1' and DONE_ST_D = '0') then
-                    done_bit  <= '0';
-                end if;
-                -------------------------------------------------------------------
-                -- ERR_ST BIT  :
-                -------------------------------------------------------------------
-                if    (reset_bit = '1') then
-                    error_bit <= '0';
-                elsif (XFER_ERROR = '1') or
-                      (next_state = DONE_STATE and ACK_ERROR = '1') then
-                    error_bit <= '1';
-                elsif (ERR_ST_L = '1' and ERR_ST_D = '0') then
-                    error_bit  <= '0';
-                end if;
-                -------------------------------------------------------------------
-                -- ERROR FLAG  :
-                -------------------------------------------------------------------
-                if    (XFER_ERROR = '1') or
-                      (next_state = DONE_STATE and ACK_ERROR = '1') then
-                    error_flag <= '1';
-                else
-                    error_flag <= '0';
-                end if;
-                -------------------------------------------------------------------
-                -- NONE FLAG  :
-                -------------------------------------------------------------------
-                if    (next_state = DONE_STATE and ACK_NONE = '1') then
-                    none_flag <= '1';
-                else
-                    none_flag <= '0';
+                    done_bit <= '0';
                 end if;
                 -------------------------------------------------------------------
                 -- MODE REGISTER
@@ -563,32 +550,91 @@ begin
                     request_bit <= '0';
                 end if;
                 -------------------------------------------------------------------
-                -- first_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
+                -- tran_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
+                -- tran_once  : トランザクション中に最低１回転送が行われたことを示すフラグ
+                -- tran_err   : トランザクション中にエラーが発生したことを示すフラグ
+                -- none_on    : none_flag をアサートするための変数
+                -- error_on   : error_flag をアサートするための変数
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
-                        first_state <= "000";
-                elsif (first_state = "000") then
+                    tran_state <= TRAN_IDLE_STATE;
+                    tran_once <= '0';
+                    tran_err  <= '0';
+                    none_on   := FALSE;
+                    error_on  := FALSE;
+                elsif (tran_state = TRAN_IDLE_STATE) then
                     if (transaction_start and xfer_first) then
-                        first_state <= "111";
+                        tran_state <= TRAN_FIRST_STATE;
                     else
-                        first_state <= "000";
+                        tran_state <= TRAN_IDLE_STATE;
                     end if;
-                elsif (first_state = "100") then
+                    tran_once <= '0';
+                    tran_err  <= '0';
+                    none_on   := FALSE;
+                    error_on  := FALSE;
+                elsif (tran_state = TRAN_TAR_STATE) then
                     if (xfer_run = TRUE) then
-                        first_state <= "100";
+                        tran_state <= TRAN_TAR_STATE;
                     else
-                        first_state <= "000";
+                        tran_state <= TRAN_IDLE_STATE;
                     end if;
+                    tran_err  <= XFER_ERROR;
+                    none_on   := (tran_once = '0');
+                    error_on  := (tran_err  = '1' or XFER_ERROR = '1');
                 elsif (ACK_VALID = '1') then
                     if (ACK_LAST = '1' or ACK_ERROR = '1' or ACK_STOP = '1') then
                         if (xfer_run = TRUE) then
-                            first_state <= "100";
+                            tran_state <= TRAN_TAR_STATE;
                         else
-                            first_state <= "000";
+                            tran_state <= TRAN_IDLE_STATE;
                         end if;
+                        none_on    := (tran_once = '0' and ACK_NONE  = '1');
+                        error_on   := (tran_err  = '1' or XFER_ERROR = '1' or ACK_ERROR = '1');
                     else
-                            first_state <= "110";
+                        tran_state <= TRAN_OTHER_STATE;
+                        none_on    := FALSE;
+                        error_on   := (tran_err  = '1' or XFER_ERROR = '1');
                     end if;
+                    if (ACK_NONE = '0') then
+                        tran_once  <= '1';
+                    end if;
+                    if (ACK_ERROR ='1' or XFER_ERROR = '1') then
+                        tran_err   <= '1';
+                    end if;
+                else
+                    if (XFER_ERROR = '1') then
+                        tran_err   <= '1';
+                    end if;
+                    none_on  := FALSE;
+                    error_on := FALSE;
+                end if;
+                -------------------------------------------------------------------
+                -- NONE FLAG  : トランザクション中に転送が行われなかったことを示すフラグ
+                -------------------------------------------------------------------
+                if    (reset_bit = '1') then
+                    none_flag <= '0';
+                elsif (next_state = DONE_STATE and none_on) then
+                    none_flag <= '1';
+                else
+                    none_flag <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- ERROR FLAG : トランザクション中にエラーが発生したことを示すフラグ.
+                -------------------------------------------------------------------
+                if    (reset_bit = '1') then
+                    error_flag <= '0';
+                elsif (next_state = DONE_STATE and error_on) then
+                    error_flag <= '1';
+                end if;
+                -------------------------------------------------------------------
+                -- ERROR BIT  : トランザクション中にエラーが発生したことを示すフラグ.
+                -------------------------------------------------------------------
+                if    (reset_bit = '1') then
+                    error_bit <= '0';
+                elsif (next_state = DONE_STATE and error_on) then
+                    error_bit <= '1';
+                elsif (ERR_ST_L = '1' and ERR_ST_D = '0') then
+                    error_bit <= '0';
                 end if;
             end if;
         end if;
@@ -610,7 +656,7 @@ begin
     -------------------------------------------------------------------------------
     -- Status
     -------------------------------------------------------------------------------
-    VALVE_OPEN   <= first_state(2);
+    VALVE_OPEN   <= tran_state(2);
     TRAN_START   <= '1' when (transaction_start = TRUE) else '0';
     TRAN_BUSY    <= start_bit;
     TRAN_DONE    <= '1' when (curr_state = DONE_STATE ) else '0';
@@ -620,6 +666,6 @@ begin
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
     REQ_VALID    <= request_bit;
-    REQ_FIRST    <= first_state(0);
+    REQ_FIRST    <= tran_state(0);
     REQ_LAST     <= last_bit;
 end RTL;
