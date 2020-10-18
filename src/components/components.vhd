@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.8.2                                                           --
---!     @date    2020/10/07                                                      --
+--!     @version 1.8.3                                                           --
+--!     @date    2020/10/13                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -485,6 +485,63 @@ component QUEUE_ARBITER
                       --! * VALIDと異なり、リクエストキューに次の要求があっても、
                       --!   対応するREQUEST信号が'0'の場合はアサートされない.
                       out std_logic;
+        VALID       : --! @brief REQUEST QUEUE VALID :
+                      --! リクエストキューに次の要求があることを示す信号.
+                      --! * REQUEST_Oと異なり、リスエストキューに次の要求があると
+                      --!   対応するREQUEST信号の状態に関わらずアサートされる.
+                      out std_logic;
+        SHIFT       : --! @brief REQUEST QUEUE SHIFT :
+                      --! リクエストキューの先頭からリクエストを取り除く信号.
+                      in  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief QUEUE_TREE_ARBITER                                                    --
+-----------------------------------------------------------------------------------
+component QUEUE_TREE_ARBITER
+    generic (
+        MIN_NUM     : --! @brief REQUEST MINIMUM NUMBER :
+                      --! リクエストの最小番号を指定する.
+                      integer := 0;
+        MAX_NUM     : --! @brief REQUEST MAXIMUM NUMBER :
+                      --! リクエストの最大番号を指定する.
+                      integer := 7;
+        NODE_NUM    : --! @brief MAX TREE NODE SIZE :
+                      --! ノードの最大リクエスト数を指定する.
+                      --! (MAX_NUM-MIN_NUM+1) > NODE_NUM の時、ツリー構造にする.
+                      integer := 8;
+        PIPELINE    : --! @brief PIPELINE CONTROL:
+                      --! 各ノードの出力をレジスタ出力にすることを指定する.
+                      --! PIPELINE mod 2 = 1 の時レジスタ出力にする.
+                      --! ツリーの子ノードへは PIPELINE/2 の値を渡す.
+                      integer := 0
+    );
+    port (
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        ENABLE      : --! @brief ARBITORATION ENABLE :
+                      --! この調停回路を有効にするかどうかを指定する.
+                      --! * 幾つかの調停回路を組み合わせて使う場合、設定によっては
+                      --!  この調停回路の出力を無効にしたいことがある.
+                      --!  その時はこの信号を'0'にすることで簡単に出来る.
+                      --! * ENABLE='1'でこの回路は調停を行う.
+                      --! * ENABLE='0'でこの回路は調停を行わない.
+                      --!   この場合REQUEST信号に関係なREQUEST_OおよびGRANTは'0'になる.
+                      --!   リクエストキューの中身は破棄される.
+                      in  std_logic := '1';
+        REQUEST     : --! @brief REQUEST INPUT :
+                      --! リクエスト入力.
+                      in  std_logic_vector(MIN_NUM to MAX_NUM);
+        GRANT       : --! @brief GRANT OUTPUT :
+                      --! 調停結果出力.
+                      out std_logic_vector(MIN_NUM to MAX_NUM);
         VALID       : --! @brief REQUEST QUEUE VALID :
                       --! リクエストキューに次の要求があることを示す信号.
                       --! * REQUEST_Oと異なり、リスエストキューに次の要求があると

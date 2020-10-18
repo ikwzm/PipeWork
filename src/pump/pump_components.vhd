@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.8.1                                                           --
---!     @date    2020/10/02                                                      --
+--!     @version 1.8.3                                                           --
+--!     @date    2020/10/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -278,7 +278,7 @@ component PUMP_CONTROL_REGISTER
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
         TRAN_NONE       : --! @brief Transaction None Flag.
-                          --! トランザクションが ACK_NONE で終了したことを示すフラグ.
+                          --! トランザクション中に転送が行われなかったことを示すフラグ.
                           --! トランザクション終了時に１クロックだけアサートされる.
                           out std_logic;
         TRAN_ERROR      : --! @brief Transaction Error Flag.
