@@ -2,12 +2,12 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.5.8
---!     @date    2015/9/20
+--!     @version 1.8.4
+--!     @date    2020/11/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2015 Ichiro Kawazome
+--      Copyright (C) 2012-2020 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -95,6 +95,10 @@ entity  REDUCER is
         O_SHIFT_MAX : --! @brief OUTPUT SHIFT SIZE MINIMUM NUMBER :
                       --! O_SHIFT信号の配列の最大値を指定する.
                       integer := 1;
+        NO_VAL_SET  : --! @brief NO VALID SET :
+                      --! キューのうち NO_VAL_SET-1 で示されたキューの 内容をチェックして、
+                      --! VAL = 0 の時の DATA 内容を NO_VAL_DATA にセットする.
+                      integer := 0;
         I_JUSTIFIED : --! @brief INPUT WORD JUSTIFIED :
                       --! 入力側の有効なデータが常にLOW側に詰められていることを
                       --! 示すフラグ.
@@ -164,6 +168,26 @@ entity  REDUCER is
                       --!   その際、最後のワードと同時にO_FLUSH信号がアサートされる.
                       --! * DONE信号との違いは、FLUSH_ENABLEの項を参照.
                       in  std_logic := '0';
+        START_DATA  : --! @brief START DATA :
+                      --! * START = '1' の時に DATA に設定する値
+                      in  std_logic_vector(WORD_BITS-1 downto 0) := (others => '0');
+        START_STRB  : --! @brief START STRB :
+                      --! * START = '1' の時に STRB に設定する値
+                      in  std_logic_vector(STRB_BITS-1 downto 0) := (others => '0');
+        FLUSH_DATA  : --! @brief FLUSH DATA :
+                      --! * フラッシュ処理の際に DATA に設定する値
+                      in  std_logic_vector(WORD_BITS-1 downto 0) := (others => '0');
+        FLUSH_STRB  : --! @brief FLUSH STRB :
+                      --! * フラッシュ処理の際に STRB に設定する値
+                      in  std_logic_vector(STRB_BITS-1 downto 0) := (others => '0');
+        NO_VAL_DATA : --! @brief NO_VALID DATA :
+                      --! * VAL=0 の時に強制的に DATA に設定する値.
+                      --! * NO_VAL_SET > 0 の時のみ有効.
+                      in  std_logic_vector(WORD_BITS-1 downto 0) := (others => '0');
+        NO_VAL_STRB : --! @brief NO_VALID STRB :
+                      --! * VAL=0 の時に強制的に STRB に設定する値.
+                      --! * NO_VAL_SET > 0 の時のみ有効.
+                      in  std_logic_vector(STRB_BITS-1 downto 0) := (others => '0');
         BUSY        : --! @brief BUSY :
                       --! ビジー信号.
                       --! * 最初にデータが入力されたときにアサートされる.
@@ -530,7 +554,9 @@ architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
     function  flush_words(
                  WORDS   :  WORD_VECTOR;
-                 SHIFT   :  std_logic_vector
+                 SHIFT   :  std_logic_vector;
+                 DATA    :  std_logic_vector;
+                 STRB    :  std_logic_vector
     )            return     WORD_VECTOR
     is
         alias    i_vec   :  WORD_VECTOR(0 to WORDS'length-1) is WORDS;
@@ -544,8 +570,8 @@ architecture RTL of REDUCER is
             else
                 result(i).VAL := FALSE;
             end if;
-            result(i).DATA := (others => '0');
-            result(i).STRB := (others => '0');
+            result(i).DATA := DATA;
+            result(i).STRB := STRB;
         end loop;
         return result;
     end function;
@@ -702,8 +728,8 @@ begin
                         else
                             next_queue(i).VAL := FALSE;
                         end if;
-                        next_queue(i).DATA := (others => '0');
-                        next_queue(i).STRB := (others => '0');
+                        next_queue(i).DATA := START_DATA;
+                        next_queue(i).STRB := START_STRB;
                     end loop;
                 end if;
                 -------------------------------------------------------------------
@@ -735,13 +761,25 @@ begin
                         flush_output_done := FALSE;
                     end if;
                     if (flush_output_last) then
-                        next_queue := flush_words(next_queue, O_SHIFT);
+                        next_queue := flush_words(next_queue, O_SHIFT, FLUSH_DATA, FLUSH_STRB);
                     else
                         next_queue := shift_words(next_queue, O_SHIFT);
                     end if;
                 else
                         flush_output_last := FALSE;
                         flush_output_done := FALSE;
+                end if;
+                -------------------------------------------------------------------
+                -- NO_VAL_SET > 0 の時は 0..NO_VAL_SET-1 のキューの内容をチェックして
+                -- VAL=0 の時は DATA に NO_VAL_DATA をセットする.
+                -------------------------------------------------------------------
+                if (NO_VAL_SET > 0) then
+                    for i in next_queue'range loop
+                        if (i < NO_VAL_SET and next_queue(i).VAL = FALSE) then
+                            next_queue(i).DATA := NO_VAL_DATA;
+                            next_queue(i).STRB := NO_VAL_STRB;
+                        end if;
+                    end loop;
                 end if;
                 -------------------------------------------------------------------
                 -- 次のクロックでのキューの状態をレジスタに保持
