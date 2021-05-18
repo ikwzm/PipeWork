@@ -2,12 +2,12 @@
 --!     @file    register_access_decoder.vhd
 --!     @brief   REGISTER ACCESS DECODER MODULE :
 --!              レジスタアクセスデコーダ.
---!     @version 1.5.5
---!     @date    2014/3/13
+--!     @version 1.8.5
+--!     @date    2021/5/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2014 Ichiro Kawazome
+--      Copyright (C) 2014-2018 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -97,6 +97,7 @@ entity  REGISTER_ACCESS_DECODER is
     -------------------------------------------------------------------------------
     -- レジスタリードデータ入力
     -------------------------------------------------------------------------------
+        R_ENAB      : out std_logic_vector(RBIT_MAX downto RBIT_MIN);
         R_DATA      : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
     );
 end REGISTER_ACCESS_DECODER;
@@ -127,6 +128,7 @@ architecture RTL of REGISTER_ACCESS_DECODER is
     constant A_POS_HI   : natural := max(R_POS_HI,W_POS_HI);
     signal   addr_hit   : std_logic_vector(A_POS_HI downto A_POS_LO);
     signal   word_wen   : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal   word_ren   : std_logic_vector(DATA_WIDTH-1 downto 0);
 begin
     -------------------------------------------------------------------------------
     -- addr_hit   : 
@@ -186,6 +188,42 @@ begin
                 for n in 0 to DATA_WIDTH-1 loop
                     if (W_LOAD'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= W_LOAD'high) then
                         W_LOAD(DATA_WIDTH*i+n) <= '0';
+                    end if;
+                end loop;
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- word_ren   : 
+    -------------------------------------------------------------------------------
+    process (REGS_REQ, REGS_WRITE, REGS_BEN) begin
+        if (REGS_REQ = '1' and REGS_WRITE = '0') then
+            for i in 0 to DATA_WIDTH/8-1 loop
+                if (REGS_BEN(i) = '1') then
+                    word_ren(8*(i+1)-1 downto 8*i) <= (8*(i+1)-1 downto 8*i => '1');
+                else
+                    word_ren(8*(i+1)-1 downto 8*i) <= (8*(i+1)-1 downto 8*i => '0');
+                end if;
+            end loop;
+        else
+            word_ren <= (others => '0');
+        end if;
+    end process;
+    -------------------------------------------------------------------------------
+    -- R_ENAB     :
+    -------------------------------------------------------------------------------
+    process (addr_hit, word_ren) begin
+        for i in R_POS_LO to R_POS_HI loop
+            if (addr_hit(i) = '1') then
+                for n in 0 to DATA_WIDTH-1 loop
+                    if (R_ENAB'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= R_ENAB'high) then
+                        R_ENAB(DATA_WIDTH*i+n) <= word_ren(n);
+                    end if;
+                end loop;
+            else
+                for n in 0 to DATA_WIDTH-1 loop
+                    if (R_ENAB'low <= DATA_WIDTH*i+n and DATA_WIDTH*i+n <= R_ENAB'high) then
+                        R_ENAB(DATA_WIDTH*i+n) <= '0';
                     end if;
                 end loop;
             end if;

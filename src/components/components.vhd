@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.8.4                                                           --
---!     @date    2020/11/07                                                      --
+--!     @version 1.8.5                                                           --
+--!     @date    2021/05/18                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2020 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2021 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -2687,6 +2687,7 @@ component REGISTER_ACCESS_DECODER
     -------------------------------------------------------------------------------
     -- レジスタリードデータ入力
     -------------------------------------------------------------------------------
+        R_ENAB      : out std_logic_vector(RBIT_MAX downto RBIT_MIN);
         R_DATA      : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
     );
 end component;
@@ -2955,6 +2956,7 @@ component REGISTER_ACCESS_ADAPTER
     -------------------------------------------------------------------------------
     -- レジスタリードデータ入力
     -------------------------------------------------------------------------------
+        O_RENAB     : out std_logic_vector(RBIT_MAX downto RBIT_MIN);
         O_RDATA     : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
     );
 end component;
