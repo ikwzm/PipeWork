@@ -2,12 +2,12 @@
 --!     @file    register_access_adapter.vhd
 --!     @brief   REGISTER ACCESS ADAPTER MODULE :
 --!              レジスタアクセスアダプタ.
---!     @version 1.5.4
---!     @date    2014/2/16
+--!     @version 1.8.5
+--!     @date    2021/5/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2014 Ichiro Kawazome
+--      Copyright (C) 2014-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -162,6 +162,7 @@ entity  REGISTER_ACCESS_ADAPTER is
     -------------------------------------------------------------------------------
     -- レジスタリードデータ入力
     -------------------------------------------------------------------------------
+        O_RENAB     : out std_logic_vector(RBIT_MAX downto RBIT_MIN);
         O_RDATA     : in  std_logic_vector(RBIT_MAX downto RBIT_MIN)
     );
 end REGISTER_ACCESS_ADAPTER;
@@ -243,6 +244,7 @@ begin
             REGS_ERR    => regs_err    , -- Out :
             W_DATA      => O_WDATA     , -- Out :
             W_LOAD      => O_WLOAD     , -- Out :
+            R_ENAB      => O_RENAB     , -- Out :
             R_DATA      => O_RDATA       -- In  :
         );
 end RTL;

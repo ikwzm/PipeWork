@@ -2,12 +2,12 @@
 --!     @file    register_access_syncronizer.vhd
 --!     @brief   REGISTER ACCESS SYNCRONIZER MODULE :
 --!              異なるクロックドメイン間でレジスタアクセスを中継するモジュール.
---!     @version 1.5.5
---!     @date    2014/3/20
+--!     @version 1.8.5
+--!     @date    2021/5/18
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2014 Ichiro Kawazome
+--      Copyright (C) 2014-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
