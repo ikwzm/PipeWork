@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.8.3                                                           --
---!     @date    2020/10/17                                                      --
+--!     @version 1.8.6                                                           --
+--!     @date    2021/05/25                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2020 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2021 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -1671,6 +1671,9 @@ component AXI4_REGISTER_WRITE_INTERFACE
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
+        AXI4_LITE       : --! @brief AIX4-Lite MODE :
+                          --! AXI4-Lite モード
+                          integer range 0 to 1 := 0;
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 ライトアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
@@ -1714,16 +1717,16 @@ component AXI4_REGISTER_WRITE_INTERFACE
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         AWBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         AWVALID         : --! @brief Write address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -1744,7 +1747,7 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           in    std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
         WLAST           : --! @brief Write last.
                           --! This signal indicates the last transfer in a write burst.
-                          in    std_logic;
+                          in    std_logic := '1';
         WVALID          : --! @brief Write valid.
                           --! This signal indicates that valid write data and
                           --! strobes are available.
@@ -1800,6 +1803,9 @@ component AXI4_REGISTER_READ_INTERFACE
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
+        AXI4_LITE       : --! @brief AIX4-Lite MODE :
+                          --! AXI4-Lite モード
+                          integer range 0 to 1 := 0;
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
@@ -1843,16 +1849,16 @@ component AXI4_REGISTER_READ_INTERFACE
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         ARBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         ARVALID         : --! @brief Read address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -1913,6 +1919,9 @@ component AXI4_REGISTER_INTERFACE
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
+        AXI4_LITE       : --! @brief AIX4-Lite MODE :
+                          --! AXI4-Lite モード
+                          integer range 0 to 1 := 0;
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
@@ -1956,16 +1965,16 @@ component AXI4_REGISTER_INTERFACE
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         ARBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         ARVALID         : --! @brief Read address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -2011,16 +2020,16 @@ component AXI4_REGISTER_INTERFACE
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         AWBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         AWVALID         : --! @brief Write address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -2041,7 +2050,7 @@ component AXI4_REGISTER_INTERFACE
                           in    std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
         WLAST           : --! @brief Write last.
                           --! This signal indicates the last transfer in a write burst.
-                          in    std_logic;
+                          in    std_logic := '1';
         WVALID          : --! @brief Write valid.
                           --! This signal indicates that valid write data and
                           --! strobes are available.
@@ -2330,6 +2339,13 @@ component AXI4_DATA_OUTLET_PORT
         TRAN_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
+        QUEUE_SIZE      : --! @brief QUEUE SIZE :
+                          --! キューの段数を指定する.
+                          --! * QUEUE_SIZE=0を指定した場合、バースト転送時に１ワード転
+                          --!   送毎に１サイクルのウェイトが発生する.
+                          --! * QUEUE_SIZE>0を指定した場合、バースト転送時にウェイトは
+                          --!   発生しない.
+                          integer := 1;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
