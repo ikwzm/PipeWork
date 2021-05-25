@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 1.5.9
---!     @date    2016/1/7
+--!     @version 1.8.6
+--!     @date    2021/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2016 Ichiro Kawazome
+--      Copyright (C) 2012-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,9 @@ entity  AXI4_REGISTER_READ_INTERFACE is
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
+        AXI4_LITE       : --! @brief AIX4-Lite MODE :
+                          --! AXI4-Lite モード
+                          integer range 0 to 1 := 0;
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
@@ -89,16 +92,16 @@ entity  AXI4_REGISTER_READ_INTERFACE is
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         ARBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         ARVALID         : --! @brief Read address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -197,6 +200,45 @@ architecture RTL of AXI4_REGISTER_READ_INTERFACE is
     end function;
     constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
     -------------------------------------------------------------------------------
+    -- デフォルトの WORD_SIZE
+    -------------------------------------------------------------------------------
+    function CALC_DEFAULT_WORD_SIZE return AXI4_ASIZE_TYPE is begin
+        if    (AXI4_DATA_WIDTH >= 128*8) then return AXI4_ASIZE_128BYTE;
+        elsif (AXI4_DATA_WIDTH >=  64*8) then return AXI4_ASIZE_64BYTE;
+        elsif (AXI4_DATA_WIDTH >=  32*8) then return AXI4_ASIZE_32BYTE;
+        elsif (AXI4_DATA_WIDTH >=  16*8) then return AXI4_ASIZE_16BYTE;
+        elsif (AXI4_DATA_WIDTH >=   8*8) then return AXI4_ASIZE_8BYTE;
+        elsif (AXI4_DATA_WIDTH >=   4*8) then return AXI4_ASIZE_4BYTE;
+        elsif (AXI4_DATA_WIDTH >=   2*8) then return AXI4_ASIZE_2BYTE;
+        else                                  return AXI4_ASIZE_1BYTE;
+        end if;
+    end function;
+    constant DEFAULT_WORD_SIZE  : AXI4_ASIZE_TYPE := CALC_DEFAULT_WORD_SIZE;
+    -------------------------------------------------------------------------------
+    -- USE_BURST_SIZE
+    -------------------------------------------------------------------------------
+    function USE_BURST_SIZE  return integer is begin
+        if (AXI4_LITE = 0) then return 1;
+        else                    return 0;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    -- CHECK_BURST_LEN
+    -------------------------------------------------------------------------------
+    function CHECK_BURST_LEN return integer is begin
+        if (AXI4_LITE = 0) then return 1;
+        else                    return 0;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
+    -- PORT_QUEUE_SIZE
+    -------------------------------------------------------------------------------
+    function PORT_QUEUE_SIZE return integer is begin
+        if (AXI4_LITE = 0) then return 1;
+        else                    return 0;
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
     signal   xfer_start         : std_logic;
@@ -208,7 +250,6 @@ architecture RTL of AXI4_REGISTER_READ_INTERFACE is
     signal   burst_type         : AXI4_ABURST_TYPE;
     signal   burst_length       : std_logic_vector(AXI4_ALEN_WIDTH-1 downto 0);
     signal   word_size          : AXI4_ASIZE_TYPE;
-    signal   xfer_beat_load     : std_logic;
     signal   xfer_beat_chop     : std_logic;
     signal   xfer_beat_valid    : std_logic;
     signal   xfer_beat_ready    : std_logic;
@@ -278,28 +319,56 @@ begin
     xfer_start   <= '1' when (curr_state = PREPARE and size_error = FALSE) else '0';
     xfer_error   <= '1' when (curr_state = PREPARE and size_error = TRUE ) else '0';
     -------------------------------------------------------------------------------
-    -- ARVALID='1' and ARREADY='1'の時に、各種情報をレジスタに保存しておく.
+    -- identifier : ARVALID='1' and ARREADY='1'の時に、ARIDをレジスタに保存しておく.
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                identifier    <= (others => '0');
-                burst_length  <= (others => '0');
-                burst_type    <= AXI4_ABURST_FIXED;
-                word_size     <= AXI4_ASIZE_1BYTE;
+                identifier <= (others => '0');
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
-                identifier    <= (others => '0');
-                burst_length  <= (others => '0');
-                burst_type    <= AXI4_ABURST_FIXED;
-                word_size     <= AXI4_ASIZE_1BYTE;
+                identifier <= (others => '0');
             elsif (curr_state = IDLE and ARVALID = '1') then
-                burst_length  <= ARLEN;
-                burst_type    <= ARBURST;
-                word_size     <= ARSIZE;
-                identifier    <= ARID;
+                identifier <= ARID;
             end if;
         end if;
     end process;
+    -------------------------------------------------------------------------------
+    -- AXI4_LITE = 0 の場合
+    -- burst_length : ARVALID='1' and ARREADY='1'の時に、ARLEN   をレジスタに保存しておく.
+    -- burst_type   : ARVALID='1' and ARREADY='1'の時に、ARBURST をレジスタに保存しておく.
+    -- word_size    : ARVALID='1' and ARREADY='1'の時に、ARSIZE  をレジスタに保存しておく.
+    -------------------------------------------------------------------------------
+    AXI4_LITE_F: if (AXI4_LITE = 0) generate
+        process (CLK, RST) begin
+            if (RST = '1') then
+                    burst_length <= (others => '0');
+                    burst_type   <= AXI4_ABURST_FIXED;
+                    word_size    <= DEFAULT_WORD_SIZE;
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then 
+                    burst_length <= (others => '0');
+                    burst_type   <= AXI4_ABURST_FIXED;
+                    word_size    <= DEFAULT_WORD_SIZE;
+                elsif (curr_state = IDLE and ARVALID = '1') then
+                    burst_length <= ARLEN;
+                    burst_type   <= ARBURST;
+                    word_size    <= ARSIZE;
+                end if;
+            end if;
+        end process;
+    end generate;
+    -------------------------------------------------------------------------------
+    -- AXI4_LITE /= 0 の場合
+    -- burst_length : 0
+    -- burst_type   : AXI4_ABURST_FIXED
+    -- word_size    : AXI4_DATA_WIDTH に基づいたサイズ
+    -------------------------------------------------------------------------------
+    AXI4_LITE_T: if (AXI4_LITE /= 0) generate
+    begin 
+        burst_length <= (others => '0');
+        burst_type   <= AXI4_ABURST_FIXED;
+        word_size    <= DEFAULT_WORD_SIZE;
+    end generate;
     -------------------------------------------------------------------------------
     -- xfer_req_addr : 転送要求アドレス.
     -------------------------------------------------------------------------------
@@ -317,7 +386,9 @@ begin
                         xfer_req_addr(i) <= '0';
                     end if;
                 end loop;
-            elsif (burst_type = AXI4_ABURST_INCR and xfer_beat_chop = '1') then
+            elsif ((AXI4_LITE /= 0 and REGS_DATA_SIZE < AXI4_DATA_SIZE) or
+                   (AXI4_LITE  = 0 and burst_type = AXI4_ABURST_INCR  )) and
+                  (xfer_beat_chop = '1') then
                 xfer_req_addr <= std_logic_vector(unsigned(xfer_req_addr) + unsigned(xfer_beat_size));
             end if;
         end if;
@@ -395,8 +466,9 @@ begin
             EXIT_SIZE_BITS  => REGS_DATA_SIZE+1, --
             POOL_PTR_BITS   => REGS_ADDR_WIDTH , --
             TRAN_MAX_SIZE   => XFER_MAX_SIZE   , --
-            USE_BURST_SIZE  => 1               , --
-            CHECK_BURST_LEN => 1               , -- 
+            USE_BURST_SIZE  => USE_BURST_SIZE  , --
+            CHECK_BURST_LEN => CHECK_BURST_LEN , --
+            QUEUE_SIZE      => PORT_QUEUE_SIZE , -- 
             PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 

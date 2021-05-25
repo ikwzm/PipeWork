@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 1.5.8
---!     @date    2015/9/20
+--!     @version 1.8.6
+--!     @date    2021/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2015 Ichiro Kawazome
+--      Copyright (C) 2012-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,9 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
+        AXI4_LITE       : --! @brief AIX4-Lite MODE :
+                          --! AXI4-Lite モード
+                          integer range 0 to 1 := 0;
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 ライトアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
@@ -89,16 +92,16 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         AWBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         AWVALID         : --! @brief Write address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -119,7 +122,7 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
                           in    std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
         WLAST           : --! @brief Write last.
                           --! This signal indicates the last transfer in a write burst.
-                          in    std_logic;
+                          in    std_logic := '1';
         WVALID          : --! @brief Write valid.
                           --! This signal indicates that valid write data and
                           --! strobes are available.
@@ -198,20 +201,27 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     constant REGS_DATA_SIZE     : integer := CALC_DATA_SIZE(REGS_DATA_WIDTH);
     -------------------------------------------------------------------------------
+    -- WBUF のキューのサイズ
+    -------------------------------------------------------------------------------
+    function WBUF_QUEUE_SIZE return integer is begin
+        if (AXI4_LITE = 0) then       -- AXI4-Lite でない場合は、
+            return 0;                 -- バースト転送に対応するように自動的に算出される
+        elsif (REGS_DATA_WIDTH > AXI4_DATA_WIDTH) then
+            return REGS_DATA_WIDTH/8; -- AXI4-Lite の場合は、
+        else                          -- レジスタインターフェース側のデータバスのバイト数と
+            return AXI4_DATA_WIDTH/8; -- AXI4 データバスのバイト数の大きい方
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH-1 downto 0);
     signal   wbuf_enable        : std_logic;
     signal   wbuf_intake        : std_logic;
     signal   wbuf_busy          : std_logic;
-    signal   wbuf_valid         : std_logic;
     signal   wbuf_ready         : std_logic;
     signal   wbuf_start         : std_logic;
     signal   wbuf_offset        : std_logic_vector(REGS_DATA_WIDTH/8-1 downto 0);
-    constant wbuf_shift         : std_logic_vector(REGS_DATA_WIDTH/8   downto REGS_DATA_WIDTH/8) := "0";
-    constant wbuf_flush         : std_logic := '0';
-    constant wbuf_done          : std_logic := '0';
-    constant regs_enable        : std_logic := '1';
     signal   regs_valid         : std_logic;
     signal   regs_ready         : std_logic;
     signal   regs_last          : std_logic;
@@ -310,12 +320,12 @@ begin
         variable temp_addr : unsigned(xfer_req_addr'range);
     begin
         if (RST = '1') then
-                xfer_req_addr  <= (others => '0');
-                burst_type <= AXI4_ABURST_FIXED;
+                xfer_req_addr <= (others => '0');
+                burst_type    <= AXI4_ABURST_FIXED;
         elsif (CLK'event and CLK = '1') then
             if (CLR = '1') then 
-                xfer_req_addr  <= (others => '0');
-                burst_type <= AXI4_ABURST_FIXED;
+                xfer_req_addr <= (others => '0');
+                burst_type    <= AXI4_ABURST_FIXED;
             elsif (curr_state = IDLE and AWVALID = '1') then
                 for i in xfer_req_addr'range loop
                     if (AWADDR'low <= i and i <= AWADDR'high) then
@@ -325,8 +335,9 @@ begin
                     end if;
                 end loop;
                 burst_type <= AWBURST;
-            elsif (burst_type = AXI4_ABURST_INCR and
-                   regs_valid = '1' and regs_ready = '1') then
+            elsif ((AXI4_LITE /= 0 and REGS_DATA_SIZE < AXI4_DATA_SIZE) or
+                   (AXI4_LITE  = 0 and burst_type = AXI4_ABURST_INCR  )) and
+                  (regs_valid = '1' and regs_ready = '1') then
                 for i in xfer_req_addr'range loop
                     if (i >= REGS_DATA_SIZE) then
                         temp_addr(i) := xfer_req_addr(i);
@@ -393,15 +404,10 @@ begin
             WORD_BITS       => 8                 , -- 
             STRB_BITS       => 1                 , -- 
             I_WIDTH         => AXI4_DATA_WIDTH/8 , -- 
-            O_WIDTH         => REGS_DATA_WIDTH/8 , -- 
-            QUEUE_SIZE      => 0                 , -- 
-            VALID_MIN       => 0                 , -- 
-            VALID_MAX       => 0                 , -- 
-            O_VAL_SIZE      => REGS_DATA_WIDTH/8 , -- 
-            O_SHIFT_MIN     => wbuf_shift'low    , -- 
-            O_SHIFT_MAX     => wbuf_shift'high   , -- 
-            I_JUSTIFIED     => 0                 , -- 
-            FLUSH_ENABLE    => 0                   -- 
+            O_WIDTH         => REGS_DATA_WIDTH/8 , --
+            O_SHIFT_MIN     => REGS_DATA_WIDTH/8 , --
+            O_SHIFT_MAX     => REGS_DATA_WIDTH/8 , --
+            QUEUE_SIZE      => WBUF_QUEUE_SIZE     -- 
         )                                          -- 
         port map (                                 -- 
         ---------------------------------------------------------------------------
@@ -415,8 +421,6 @@ begin
         ---------------------------------------------------------------------------
             START           => wbuf_start        , -- In  :
             OFFSET          => wbuf_offset       , -- In  :
-            DONE            => wbuf_done         , -- In  :
-            FLUSH           => wbuf_flush        , -- In  :
             BUSY            => wbuf_busy         , -- Out :
             VALID           => open              , -- Out :
         ---------------------------------------------------------------------------
@@ -426,20 +430,17 @@ begin
             I_DATA          => WDATA             , -- In  :
             I_STRB          => WSTRB             , -- In  :
             I_DONE          => WLAST             , -- In  :
-            I_FLUSH         => wbuf_flush        , -- In  :
             I_VAL           => WVALID            , -- In  :
             I_RDY           => wbuf_ready        , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
-            O_ENABLE        => regs_enable       , -- In  :
             O_DATA          => REGS_DATA         , -- Out :
             O_STRB          => REGS_BEN          , -- Out :
             O_DONE          => regs_last         , -- Out :
             O_FLUSH         => open              , -- Out :
             O_VAL           => regs_valid        , -- Out :
-            O_RDY           => regs_ready        , -- In  :
-            O_SHIFT         => wbuf_shift          -- In  :
+            O_RDY           => regs_ready          -- In  :
     );
     WREADY <= wbuf_ready;
 end RTL;
