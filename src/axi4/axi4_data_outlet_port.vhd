@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
---!     @version 1.5.5
---!     @date    2014/3/8
+--!     @version 1.8.6
+--!     @date    2021/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -98,6 +98,13 @@ entity  AXI4_DATA_OUTLET_PORT is
         TRAN_MAX_SIZE   : --! @brief TRANSFER MAXIMUM SIZE :
                           --! 一回の転送サイズの最大バイト数を２のべき乗で指定する.
                           integer := 4;
+        QUEUE_SIZE      : --! @brief QUEUE SIZE :
+                          --! キューの段数を指定する.
+                          --! * QUEUE_SIZE=0を指定した場合、バースト転送時に１ワード転
+                          --!   送毎に１サイクルのウェイトが発生する.
+                          --! * QUEUE_SIZE>0を指定した場合、バースト転送時にウェイトは
+                          --!   発生しない.
+                          integer := 1;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
@@ -339,18 +346,19 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
              O_O_SIZE       : integer;  -- O:AXI4_DATA_PORT の O_REGS_SIZE
     end record;
     function SET_SETTING return SETTING_TYPE is
-        variable setting : SETTING_TYPE;
+        variable setting    : SETTING_TYPE;
+        constant POOL_WORDS : integer := POOL_DATA_BITS / ALIGNMENT_BITS;
+        constant PORT_WORDS : integer := PORT_DATA_BITS / ALIGNMENT_BITS;
     begin
-        setting.O_O_SIZE := PORT_REGS_SIZE;
-        if (USE_BURST_SIZE /= 0) and 
-           (PORT_DATA_BITS = ALIGNMENT_BITS) and
-           (POOL_DATA_BITS = ALIGNMENT_BITS) then
-            setting.Q_Q_SIZE := -1;
-            setting.O_I_SIZE :=  2;
+        if (PORT_DATA_BITS /= ALIGNMENT_BITS) or
+           (POOL_DATA_BITS /= ALIGNMENT_BITS) then
+            setting.Q_Q_SIZE := POOL_WORDS*(QUEUE_SIZE+1)+PORT_WORDS-1;
+            setting.O_I_SIZE := 0;
         else
-            setting.Q_Q_SIZE :=  0;
-            setting.O_I_SIZE :=  0;
+            setting.Q_Q_SIZE := -1;
+            setting.O_I_SIZE := (QUEUE_SIZE+1);
         end if;
+        setting.O_O_SIZE := PORT_REGS_SIZE;
         return setting;
     end function;
     constant SET            : SETTING_TYPE := SET_SETTING;
