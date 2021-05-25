@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_interface.vhd
 --!     @brief   AXI4 Register Interface
---!     @version 1.5.5
---!     @date    2014/3/2
+--!     @version 1.8.6
+--!     @date    2021/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,9 @@ entity  AXI4_REGISTER_INTERFACE is
     -- ジェネリック変数.
     -------------------------------------------------------------------------------
     generic (
+        AXI4_LITE       : --! @brief AIX4-Lite MODE :
+                          --! AXI4-Lite モード
+                          integer range 0 to 1 := 0;
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
@@ -89,16 +92,16 @@ entity  AXI4_REGISTER_INTERFACE is
         ARLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         ARSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         ARBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         ARVALID         : --! @brief Read address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -144,16 +147,16 @@ entity  AXI4_REGISTER_INTERFACE is
         AWLEN           : --! @brief Burst length.  
                           --! This signal indicates the exact number of transfer
                           --! in a burst.
-                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0);
+                          in    std_logic_vector(AXI4_ALEN_WIDTH  -1 downto 0) := (others => '0');
         AWSIZE          : --! @brief Burst size.
                           --! This signal indicates the size of each transfer in
                           --! the burst.
-                          in    AXI4_ASIZE_TYPE;
+                          in    AXI4_ASIZE_TYPE  := (others => '0');
         AWBURST         : --! @brief Burst type.
                           --! The burst type and size infomation determine how
                           --! the address for each transfer within the burst is
                           --! calculated.
-                          in    AXI4_ABURST_TYPE;
+                          in    AXI4_ABURST_TYPE := (others => '0');
         AWVALID         : --! @brief Write address valid.
                           --! This signal indicates that the channel is signaling
                           --! valid read address and control infomation.
@@ -174,7 +177,7 @@ entity  AXI4_REGISTER_INTERFACE is
                           in    std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
         WLAST           : --! @brief Write last.
                           --! This signal indicates the last transfer in a write burst.
-                          in    std_logic;
+                          in    std_logic := '1';
         WVALID          : --! @brief Write valid.
                           --! This signal indicates that valid write data and
                           --! strobes are available.
@@ -265,15 +268,16 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    R: AXI4_REGISTER_READ_INTERFACE
-        generic map (
-            AXI4_ADDR_WIDTH => AXI4_ADDR_WIDTH ,
-            AXI4_DATA_WIDTH => AXI4_DATA_WIDTH ,
-            AXI4_ID_WIDTH   => AXI4_ID_WIDTH   ,
-            REGS_ADDR_WIDTH => REGS_ADDR_WIDTH ,
-            REGS_DATA_WIDTH => REGS_DATA_WIDTH
-        )
-        port map (
+    R: AXI4_REGISTER_READ_INTERFACE              -- 
+        generic map (                            -- 
+            AXI4_LITE       => AXI4_LITE       , -- 
+            AXI4_ADDR_WIDTH => AXI4_ADDR_WIDTH , -- 
+            AXI4_DATA_WIDTH => AXI4_DATA_WIDTH , -- 
+            AXI4_ID_WIDTH   => AXI4_ID_WIDTH   , -- 
+            REGS_ADDR_WIDTH => REGS_ADDR_WIDTH , -- 
+            REGS_DATA_WIDTH => REGS_DATA_WIDTH   -- 
+        )                                        -- 
+        port map (                               -- 
         ---------------------------------------------------------------------------
         -- Clock and Reset Signals.
         ---------------------------------------------------------------------------
@@ -312,15 +316,16 @@ begin
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    W: AXI4_REGISTER_WRITE_INTERFACE 
-        generic map (
-            AXI4_ADDR_WIDTH => AXI4_ADDR_WIDTH ,
-            AXI4_DATA_WIDTH => AXI4_DATA_WIDTH ,
-            AXI4_ID_WIDTH   => AXI4_ID_WIDTH   ,
-            REGS_ADDR_WIDTH => REGS_ADDR_WIDTH ,
-            REGS_DATA_WIDTH => REGS_DATA_WIDTH 
-        )
-        port map (
+    W: AXI4_REGISTER_WRITE_INTERFACE             -- 
+        generic map (                            -- 
+            AXI4_LITE       => AXI4_LITE       , -- 
+            AXI4_ADDR_WIDTH => AXI4_ADDR_WIDTH , -- 
+            AXI4_DATA_WIDTH => AXI4_DATA_WIDTH , -- 
+            AXI4_ID_WIDTH   => AXI4_ID_WIDTH   , -- 
+            REGS_ADDR_WIDTH => REGS_ADDR_WIDTH , -- 
+            REGS_DATA_WIDTH => REGS_DATA_WIDTH   -- 
+        )                                        -- 
+        port map (                               -- 
         ---------------------------------------------------------------------------
         -- Clock and Reset Signals.
         ---------------------------------------------------------------------------

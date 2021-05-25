@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 1.8.2
---!     @date    2020/10/7
+--!     @version 1.8.6
+--!     @date    2021/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2020 Ichiro Kawazome
+--      Copyright (C) 2012-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -888,6 +888,7 @@ begin
             TRAN_MAX_SIZE   => XFER_MAX_SIZE     , --
             USE_BURST_SIZE  => 0                 , --
             CHECK_BURST_LEN => 0                 , --
+            QUEUE_SIZE      => 1                 , --
             PORT_REGS_SIZE  => 0                   --
         )                                          -- 
         port map (                                 -- 

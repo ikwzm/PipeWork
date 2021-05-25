@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
---!     @version 1.5.5
---!     @date    2014/3/23
+--!     @version 1.8.6
+--!     @date    2021/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2021 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -545,7 +545,8 @@ begin
             POOL_PTR_BITS   => BUF_PTR_BITS    , --
             TRAN_MAX_SIZE   => XFER_MAX_SIZE   , --
             USE_BURST_SIZE  => 1               , --
-            CHECK_BURST_LEN => 1               , -- 
+            CHECK_BURST_LEN => 1               , --
+            QUEUE_SIZE      => 1               , --
             PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 
