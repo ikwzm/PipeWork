@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.8
-#       Created     :   2015/10/7
+#       Version     :   1.8.7
+#       Created     :   2022/1/13
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -12,7 +12,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012-2015 Ichiro Kawazome
+#       Copyright (C) 2012-2022 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -882,15 +882,18 @@ module PipeWork
         @be_used_list   = Set.new
         @level          = 0
       end
-      def add_use_name_list(use_name_list)
+      def add_use_name_list(use_name_list, exclusion_library_list=[])
         use_name_list.each do |library_name, package_list|
-          if (library_name.upcase == @library_name.upcase)
-             @use_name_list = @use_name_list + package_list
+          if (exclusion_library_list.include?(library_name.upcase) == false)
+            package_list.each do |package_name|
+              @use_name_list.add("#{library_name.upcase}.#{package_name}")
+            end
           end
         end
       end
       def debug_print
         warn "- file_name : " + @file_name
+        warn "  library   : " + @library_name
         warn "  level     : " + @level.to_s
         @unit_name_list.each do |unit_name|
           warn "  - unit  : " + unit_name
@@ -942,7 +945,7 @@ module PipeWork
       #---------------------------------------------------------------------------
       # add_unit : LibraryUnitオブジェクトをUnitFileに変換して@list に追加する.
       #---------------------------------------------------------------------------
-      def add_unit(unit)
+      def add_unit(unit, exclusion_library_list=[])
         #-------------------------------------------------------------------------
         # UnitFile を生成して、@list に登録する.
         # ただし、一度生成した UnitFile は新たに生成せずに、すでにあるものを使う.
@@ -964,14 +967,14 @@ module PipeWork
           when :Package 
             unit_file.unit_name_list << unit.name
         end
-        unit_file.add_use_name_list(unit.use_unit_list)
+        unit_file.add_use_name_list(unit.use_unit_list, exclusion_library_list)
       end
       #---------------------------------------------------------------------------
       # add_unit_list : LibraryUnitの配列をUnitFileに変換して@listに追加する.
       #---------------------------------------------------------------------------
       def add_unit_list(unit_list)
         unit_list.each do |unit|
-          add_unit(unit)
+          add_unit(unit, unit_list.exclusion_library_list)
         end
       end
       #---------------------------------------------------------------------------
@@ -985,7 +988,7 @@ module PipeWork
         #-------------------------------------------------------------------------
         @list.each do |unit_file|
           unit_file.unit_name_list.each do |unit_name|
-            defined_unit_file[unit_name] = unit_file
+            defined_unit_file["#{unit_file.library_name}.#{unit_name}"] = unit_file
           end
         end
         #-------------------------------------------------------------------------
