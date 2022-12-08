@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    image_types.vhd
 --!     @brief   Image Types Package.
---!     @version 1.8.0
---!     @date    2019/3/22
+--!     @version 1.9.0
+--!     @date    2022/12/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2019 Ichiro Kawazome
+--      Copyright (C) 2018-2022 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -100,13 +100,112 @@ package IMAGE_TYPES is
     function  NEW_IMAGE_SHAPE_CONSTANT(ELEM_BITS,    X,Y: integer      ) return IMAGE_SHAPE_TYPE;
 
     -------------------------------------------------------------------------------
-    --! @brief Image Stream の ボーダー処理タイプの定義
+    --! @brief Image Stream の ボーダーのサイズ指定の種類
     -------------------------------------------------------------------------------
-    type      IMAGE_STREAM_BORDER_TYPE is (
-                  IMAGE_STREAM_BORDER_NONE,
-                  IMAGE_STREAM_BORDER_CONSTANT,
-                  IMAGE_STREAM_BORDER_REPEAT_EDGE
+    type      IMAGE_STREAM_BORDER_SIZE_TYPE is (
+                  IMAGE_STREAM_BORDER_SIZE_NONE         ,  -- ボーダー無し
+                  IMAGE_STREAM_BORDER_SIZE_CONSTANT     ,  -- 指定された値で常に静的に決める.
+                  IMAGE_STREAM_BORDER_SIZE_EXTERNAL        -- 外部からの信号で動的に決める.
     );
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の ボーダーのパディング処理の種類
+    -------------------------------------------------------------------------------
+    type      IMAGE_STREAM_BORDER_PADDING_TYPE is (
+                  IMAGE_STREAM_BORDER_PADDING_NONE      ,  -- パディングなし.
+                  IMAGE_STREAM_BORDER_PADDING_EXTERNAL  ,  -- 外部からのデータでパディング.
+                  IMAGE_STREAM_BORDER_PADDING_REPEAT_EDGE  -- エッジ部分からコピー.
+    );
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の ボーダーの各辺の属性
+    -------------------------------------------------------------------------------
+    type      IMAGE_STREAM_BORDER_EDGE_TYPE is record
+                  SIZE_TYPE        :  IMAGE_STREAM_BORDER_SIZE_TYPE;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE;
+                  SIZE             :  integer;
+                  MAX_SIZE         :  integer;
+    end record;
+                  
+    constant  IMAGE_STREAM_BORDER_EDGE_NONE : IMAGE_STREAM_BORDER_EDGE_TYPE := (
+                  SIZE_TYPE        => IMAGE_STREAM_BORDER_SIZE_NONE   ,
+                  PADDING_TYPE     => IMAGE_STREAM_BORDER_PADDING_NONE,
+                  SIZE             => 0,
+                  MAX_SIZE         => 0);
+
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_BORDER_EDGE_TYPE を生成する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(
+                  SIZE             :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_EDGE_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(
+                  MAX_SIZE         :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_EDGE_TYPE;
+
+    -------------------------------------------------------------------------------
+    --! @brief Image Stream の ボーダーの属性
+    -------------------------------------------------------------------------------
+    type      IMAGE_STREAM_BORDER_TYPE is record
+                  LEFT             :  IMAGE_STREAM_BORDER_EDGE_TYPE;  -- 画面の左(X軸に負方向)
+                  RIGHT            :  IMAGE_STREAM_BORDER_EDGE_TYPE;  -- 画面の右(X軸に正方向)
+                  TOP              :  IMAGE_STREAM_BORDER_EDGE_TYPE;  -- 画面の上(Y軸に負方向)
+                  BOTTOM           :  IMAGE_STREAM_BORDER_EDGE_TYPE;  -- 画面の下(Y軸に正方向)
+    end record;
+
+    constant  IMAGE_STREAM_BORDER_NONE : IMAGE_STREAM_BORDER_TYPE := (
+                  LEFT             => IMAGE_STREAM_BORDER_EDGE_NONE,
+                  RIGHT            => IMAGE_STREAM_BORDER_EDGE_NONE,
+                  TOP              => IMAGE_STREAM_BORDER_EDGE_NONE,
+                  BOTTOM           => IMAGE_STREAM_BORDER_EDGE_NONE);
+
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_BORDER_TYPE を生成する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_BORDER(
+                  LEFT             :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  RIGHT            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  TOP              :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  BOTTOM           :  IMAGE_STREAM_BORDER_EDGE_TYPE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER(
+                  X                :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  Y                :  IMAGE_STREAM_BORDER_EDGE_TYPE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_CONSTANT(
+                  LEFT_SIZE        :  integer;
+                  RIGHT_SIZE       :  integer;
+                  TOP_SIZE         :  integer;
+                  BOTTOM_SIZE      :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_CONSTANT(
+                  X_SIZE           :  integer;
+                  Y_SIZE           :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_CONSTANT(
+                  SIZE             :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)       
+                  return IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_EXTERNAL(
+                  MAX_LEFT_SIZE    :  integer;
+                  MAX_RIGHT_SIZE   :  integer;
+                  MAX_TOP_SIZE     :  integer;
+                  MAX_BOTTOM_SIZE  :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_EXTERNAL(
+                  MAX_X_SIZE       :  integer;
+                  MAX_Y_SIZE       :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+    function  NEW_IMAGE_STREAM_BORDER_EXTERNAL(
+                  MAX_SIZE         :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE;
+
     -------------------------------------------------------------------------------
     --! @brief Image Stream の 属性(Attribute)信号の定義
     -------------------------------------------------------------------------------
@@ -201,7 +300,7 @@ package IMAGE_TYPES is
                   SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
                   DATA              :  IMAGE_STREAM_DATA_FIELD_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
     end record;
     -------------------------------------------------------------------------------
     --! @brief Image Stream の各種パラメータをを設定する関数群
@@ -211,13 +310,13 @@ package IMAGE_TYPES is
                   INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -227,7 +326,7 @@ package IMAGE_TYPES is
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -236,7 +335,7 @@ package IMAGE_TYPES is
                   D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -245,7 +344,7 @@ package IMAGE_TYPES is
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -253,7 +352,7 @@ package IMAGE_TYPES is
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -261,14 +360,14 @@ package IMAGE_TYPES is
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer := 0;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE;
     function  NEW_IMAGE_STREAM_PARAM(
                   ELEM_BITS         :  integer;
@@ -510,7 +609,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_X_VECTOR_IS_START(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_X            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -524,7 +623,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_X_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_X            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -538,7 +637,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_Y_VECTOR_IS_START(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_Y            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -552,7 +651,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_Y_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_Y            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -598,7 +697,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_START_X(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -612,7 +711,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_START_Y(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -626,7 +725,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_X(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -640,7 +739,7 @@ package IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_Y(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean;
@@ -926,6 +1025,171 @@ package body IMAGE_TYPES is
     end function;
 
     -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_BORDER_EDGE_TYPE を生成する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(
+                  SIZE             :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_EDGE_TYPE
+    is
+        variable  border_edge      :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+    begin
+        if (SIZE > 0) then
+            border_edge.SIZE_TYPE    := IMAGE_STREAM_BORDER_SIZE_CONSTANT;
+            border_edge.PADDING_TYPE := PADDING_TYPE;
+            border_edge.SIZE         := SIZE;
+            border_edge.MAX_SIZE     := SIZE;
+        else
+            border_edge := IMAGE_STREAM_BORDER_EDGE_NONE;
+        end if;
+        return border_edge;
+    end function;
+    
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_BORDER_EDGE_TYPE を生成する関数
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(
+                  MAX_SIZE         :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_EDGE_TYPE
+    is         
+        variable  border_edge      :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+    begin
+        if (MAX_SIZE > 0) then
+            border_edge.SIZE_TYPE    := IMAGE_STREAM_BORDER_SIZE_EXTERNAL;
+            border_edge.PADDING_TYPE := PADDING_TYPE;
+            border_edge.SIZE         := 0;
+            border_edge.MAX_SIZE     := MAX_SIZE;
+        else
+            border_edge := IMAGE_STREAM_BORDER_EDGE_NONE;
+        end if;
+        return border_edge;
+    end function;
+
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_BORDER_TYPE を生成する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_BORDER(
+                  LEFT             :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  RIGHT            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  TOP              :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  BOTTOM           :  IMAGE_STREAM_BORDER_EDGE_TYPE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := LEFT;
+        border.RIGHT  := RIGHT;
+        border.TOP    := TOP;
+        border.BOTTOM := BOTTOM;
+        return border;
+    end function;
+        
+    function  NEW_IMAGE_STREAM_BORDER(
+                  X                :  IMAGE_STREAM_BORDER_EDGE_TYPE;
+                  Y                :  IMAGE_STREAM_BORDER_EDGE_TYPE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is
+    begin
+        return NEW_IMAGE_STREAM_BORDER(LEFT => X, RIGHT => X, TOP => Y, BOTTOM => Y);
+    end function;
+        
+    -------------------------------------------------------------------------------
+    --! @brief IMAGE_STREAM_BORDER_TYPE を生成する関数群
+    -------------------------------------------------------------------------------
+    function  NEW_IMAGE_STREAM_BORDER_CONSTANT(
+                  LEFT_SIZE        :  integer;
+                  RIGHT_SIZE       :  integer;
+                  TOP_SIZE         :  integer;
+                  BOTTOM_SIZE      :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(LEFT_SIZE  , PADDING_TYPE);
+        border.RIGHT  := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(RIGHT_SIZE , PADDING_TYPE);
+        border.TOP    := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(TOP_SIZE   , PADDING_TYPE);
+        border.BOTTOM := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(BOTTOM_SIZE, PADDING_TYPE);
+        return border;
+    end function;
+
+    function  NEW_IMAGE_STREAM_BORDER_CONSTANT(
+                  X_SIZE           :  integer;
+                  Y_SIZE           :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(X_SIZE, PADDING_TYPE);
+        border.RIGHT  := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(X_SIZE, PADDING_TYPE);
+        border.TOP    := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(Y_SIZE, PADDING_TYPE);
+        border.BOTTOM := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(Y_SIZE, PADDING_TYPE);
+        return border;
+    end function;
+        
+    function  NEW_IMAGE_STREAM_BORDER_CONSTANT(
+                  SIZE             :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(SIZE, PADDING_TYPE);
+        border.RIGHT  := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(SIZE, PADDING_TYPE);
+        border.TOP    := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(SIZE, PADDING_TYPE);
+        border.BOTTOM := NEW_IMAGE_STREAM_BORDER_EDGE_CONSTANT(SIZE, PADDING_TYPE);
+        return border;
+    end function;
+        
+    function  NEW_IMAGE_STREAM_BORDER_EXTERNAL(
+                  MAX_LEFT_SIZE    :  integer;
+                  MAX_RIGHT_SIZE   :  integer;
+                  MAX_TOP_SIZE     :  integer;
+                  MAX_BOTTOM_SIZE  :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is         
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_LEFT_SIZE  , PADDING_TYPE);
+        border.RIGHT  := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_RIGHT_SIZE , PADDING_TYPE);
+        border.TOP    := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_TOP_SIZE   , PADDING_TYPE);
+        border.BOTTOM := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_BOTTOM_SIZE, PADDING_TYPE);
+        return border;
+    end function;
+
+    function  NEW_IMAGE_STREAM_BORDER_EXTERNAL(
+                  MAX_X_SIZE       :  integer;
+                  MAX_Y_SIZE       :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is         
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_X_SIZE, PADDING_TYPE);
+        border.RIGHT  := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_X_SIZE, PADDING_TYPE);
+        border.TOP    := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_Y_SIZE, PADDING_TYPE);
+        border.BOTTOM := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_Y_SIZE, PADDING_TYPE);
+        return border;
+    end function;
+
+    function  NEW_IMAGE_STREAM_BORDER_EXTERNAL(
+                  MAX_SIZE         :  integer;
+                  PADDING_TYPE     :  IMAGE_STREAM_BORDER_PADDING_TYPE := IMAGE_STREAM_BORDER_PADDING_NONE)
+                  return              IMAGE_STREAM_BORDER_TYPE
+    is         
+        variable  border           :  IMAGE_STREAM_BORDER_TYPE;
+    begin
+        border.LEFT   := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_SIZE, PADDING_TYPE);
+        border.RIGHT  := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_SIZE, PADDING_TYPE);
+        border.TOP    := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_SIZE, PADDING_TYPE);
+        border.BOTTOM := NEW_IMAGE_STREAM_BORDER_EDGE_EXTERNAL(MAX_SIZE, PADDING_TYPE);
+        return border;
+    end function;
+
+    -------------------------------------------------------------------------------
     --! @brief Image Vector の各種パラメータを設定する関数
     -------------------------------------------------------------------------------
     function  NEW_IMAGE_VECTOR_RANGE(LO,HI:integer) return IMAGE_VECTOR_RANGE_TYPE
@@ -1123,7 +1387,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
         variable  param             :  IMAGE_STREAM_PARAM_TYPE;
@@ -1143,7 +1407,7 @@ package body IMAGE_TYPES is
         param.INFO_BITS   := INFO_BITS;
         param.SHAPE       := SHAPE;
         param.STRIDE      := STRIDE;
-        param.BORDER_TYPE := BORDER_TYPE;
+        param.BORDER      := BORDER;
         param.DATA        := NEW_IMAGE_STREAM_DATA_FIELD(ELEM_BITS, INFO_BITS, SHAPE);
         return param;
     end function;
@@ -1154,7 +1418,7 @@ package body IMAGE_TYPES is
                   ELEM_BITS         :  integer;
                   INFO_BITS         :  integer := 0;
                   SHAPE             :  IMAGE_SHAPE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1163,7 +1427,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => SHAPE    ,
                   STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(SHAPE.X.SIZE, SHAPE.Y.SIZE),
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1177,7 +1441,7 @@ package body IMAGE_TYPES is
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1186,7 +1450,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,D,X,Y),
                   STRIDE            => STRIDE,
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1199,7 +1463,7 @@ package body IMAGE_TYPES is
                   D                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1208,7 +1472,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,D,X,Y),
                   STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(X.SIZE, Y.SIZE),
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1221,7 +1485,7 @@ package body IMAGE_TYPES is
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1230,7 +1494,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y),
                   STRIDE            => STRIDE,
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1242,7 +1506,7 @@ package body IMAGE_TYPES is
                   C                 :  IMAGE_SHAPE_SIDE_TYPE;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1251,7 +1515,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,C,X,Y),
                   STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(X.SIZE, Y.SIZE),
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1263,7 +1527,7 @@ package body IMAGE_TYPES is
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
                   STRIDE            :  IMAGE_STREAM_STRIDE_PARAM_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1272,7 +1536,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y),
                   STRIDE            => STRIDE,
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -1283,7 +1547,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         :  integer := 0;
                   X                 :  IMAGE_SHAPE_SIDE_TYPE;
                   Y                 :  IMAGE_SHAPE_SIDE_TYPE;
-                  BORDER_TYPE       :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
+                  BORDER            :  IMAGE_STREAM_BORDER_TYPE := IMAGE_STREAM_BORDER_NONE)
                   return               IMAGE_STREAM_PARAM_TYPE
     is
     begin
@@ -1292,7 +1556,7 @@ package body IMAGE_TYPES is
                   INFO_BITS         => INFO_BITS,
                   SHAPE             => NEW_IMAGE_SHAPE(ELEM_BITS,X,Y),
                   STRIDE            => NEW_IMAGE_STREAM_STRIDE_PARAM(X.SIZE, Y.SIZE),
-                  BORDER_TYPE       => BORDER_TYPE
+                  BORDER            => BORDER
                );
     end function;
     -------------------------------------------------------------------------------
@@ -2065,13 +2329,13 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_X_VECTOR_IS_START(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_X            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (BORDER = IMAGE_STREAM_BORDER_NONE) then
+        if (BORDER.SIZE_TYPE = IMAGE_STREAM_BORDER_SIZE_NONE) then
             return CHECK_IMAGE_STREAM_ATRB(
                        ATRB_VEC => ATRB_X(PARAM.SHAPE.X.LO to PARAM.SHAPE.X.LO+(PARAM.STRIDE.X-1)),
                        VALID    => VALID,
@@ -2095,7 +2359,7 @@ package body IMAGE_TYPES is
                   return               boolean
     is
     begin
-        return IMAGE_STREAM_ATRB_X_VECTOR_IS_START(PARAM, PARAM.BORDER_TYPE, ATRB_X, VALID);
+        return IMAGE_STREAM_ATRB_X_VECTOR_IS_START(PARAM, PARAM.BORDER.LEFT, ATRB_X, VALID);
     end function;
     
     -------------------------------------------------------------------------------
@@ -2103,13 +2367,13 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_X_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_X            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (BORDER = IMAGE_STREAM_BORDER_NONE) then
+        if (BORDER.SIZE_TYPE = IMAGE_STREAM_BORDER_SIZE_NONE) then
             return CHECK_IMAGE_STREAM_ATRB(
                        ATRB_VEC => ATRB_X(PARAM.SHAPE.X.HI-(PARAM.STRIDE.X-1) to PARAM.SHAPE.X.HI),
                        VALID    => VALID,
@@ -2133,7 +2397,7 @@ package body IMAGE_TYPES is
                   return               boolean
     is
     begin
-        return IMAGE_STREAM_ATRB_X_VECTOR_IS_LAST(PARAM, PARAM.BORDER_TYPE, ATRB_X, VALID);
+        return IMAGE_STREAM_ATRB_X_VECTOR_IS_LAST(PARAM, PARAM.BORDER.RIGHT, ATRB_X, VALID);
     end function;
     
     -------------------------------------------------------------------------------
@@ -2141,13 +2405,13 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_Y_VECTOR_IS_START(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_Y            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (BORDER = IMAGE_STREAM_BORDER_NONE) then
+        if (BORDER.SIZE_TYPE = IMAGE_STREAM_BORDER_SIZE_NONE) then
             return CHECK_IMAGE_STREAM_ATRB(
                        ATRB_VEC => ATRB_Y(PARAM.SHAPE.Y.LO to PARAM.SHAPE.Y.LO+(PARAM.STRIDE.Y-1)),
                        VALID    => VALID,
@@ -2171,7 +2435,7 @@ package body IMAGE_TYPES is
                   return               boolean
     is
     begin
-        return IMAGE_STREAM_ATRB_Y_VECTOR_IS_START(PARAM, PARAM.BORDER_TYPE, ATRB_Y, VALID);
+        return IMAGE_STREAM_ATRB_Y_VECTOR_IS_START(PARAM, PARAM.BORDER.TOP, ATRB_Y, VALID);
     end function;
 
     -------------------------------------------------------------------------------
@@ -2179,13 +2443,13 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_ATRB_Y_VECTOR_IS_LAST(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   ATRB_Y            :  IMAGE_STREAM_ATRB_VECTOR;
                   VALID             :  boolean := FALSE)
                   return               boolean
     is
     begin
-        if (PARAM.BORDER_TYPE = IMAGE_STREAM_BORDER_NONE) then
+        if (BORDER.SIZE_TYPE = IMAGE_STREAM_BORDER_SIZE_NONE) then
             return CHECK_IMAGE_STREAM_ATRB(
                        ATRB_VEC => ATRB_Y(PARAM.SHAPE.Y.HI-(PARAM.STRIDE.Y-1) to PARAM.SHAPE.Y.HI),
                        VALID    => VALID,
@@ -2209,7 +2473,7 @@ package body IMAGE_TYPES is
                   return               boolean
     is
     begin
-        return IMAGE_STREAM_ATRB_Y_VECTOR_IS_LAST(PARAM, PARAM.BORDER_TYPE, ATRB_Y, VALID);
+        return IMAGE_STREAM_ATRB_Y_VECTOR_IS_LAST(PARAM, PARAM.BORDER.BOTTOM, ATRB_Y, VALID);
     end function;
 
     -------------------------------------------------------------------------------
@@ -2297,7 +2561,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_START_X(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean
@@ -2336,7 +2600,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_START_Y(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean
@@ -2375,7 +2639,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_X(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean
@@ -2414,7 +2678,7 @@ package body IMAGE_TYPES is
     -------------------------------------------------------------------------------
     function  IMAGE_STREAM_DATA_IS_LAST_Y(
                   PARAM             :  IMAGE_STREAM_PARAM_TYPE;
-                  BORDER            :  IMAGE_STREAM_BORDER_TYPE;
+                  BORDER            :  IMAGE_STREAM_BORDER_EDGE_TYPE;
                   DATA              :  std_logic_vector;
                   VALID             :  boolean := FALSE)
                   return               boolean
