@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.8.3                                                           --
---!     @date    2020/10/18                                                      --
+--!     @version 1.8.9                                                           --
+--!     @date    2023/08/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2020 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2023 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
