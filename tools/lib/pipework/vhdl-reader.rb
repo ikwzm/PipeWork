@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   1.8.7
-#       Created     :   2022/1/13
+#       Version     :   1.8.8
+#       Created     :   2023/8/22
 #       File name   :   vhdl-reader.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードを解析する ruby モジュール.
@@ -12,7 +12,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012-2022 Ichiro Kawazome
+#       Copyright (C) 2012-2023 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -146,17 +146,17 @@ module PipeWork
           #-----------------------------------------------------------------------
           # ２文字以上からなるオペレータがあるかどうかを解析する
           #-----------------------------------------------------------------------
-          found_special_ops = FALSE
+          found_special_ops = false
           REGEXP_SPECIAL_OPS.each {|r|
             if (line =~ r)
               text = ""
               line.sub!(r){text=$1;""}
               tokens << Token.new(text.to_sym, text, line_number)
-              found_special_ops = TRUE
+              found_special_ops = true
               break
             end
           }
-          next if found_special_ops == TRUE
+          next if found_special_ops == true
           #-----------------------------------------------------------------------
           # １文字からなるオペレータがあるかどうかを解析する
           #-----------------------------------------------------------------------
