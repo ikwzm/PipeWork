@@ -2,12 +2,12 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.8.4
---!     @date    2020/11/7
+--!     @version 1.9.0
+--!     @date    2023/12/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2020 Ichiro Kawazome
+--      Copyright (C) 2012-2023 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -104,6 +104,16 @@ entity  REDUCER is
                       --! 示すフラグ.
                       --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
                       --!   ため回路が簡単になる.
+                      integer range 0 to 1 := 0;
+        I_DVAL_ENABLE:--! @brief INPUT DATA VALID ENABLE :
+                      --! ワードデータのうち有効なデータであることを示す信号として
+                      --! I_DVAL 信号を使う.
+                      --! * I_DVAL_ENABLE=1を指定した場合は、I_DVAL をワードデータ
+                      --!   のうちの有効なデータであることを示す信号として使う.
+                      --! * I_DVAL_ENABLE=0を指定した場合は、I_STRB をワードデータ
+                      --!   のうちの有効なデータであることを示す信号として使う.
+                      --! * I_STRB の値に関係なく I_DATA と I_STRB をキューに格納
+                      --!   したい場合は I_DVAL を使うと良い.
                       integer range 0 to 1 := 0;
         FLUSH_ENABLE: --! @brief FLUSH ENABLE :
                       --! FLUSH/I_FLUSHによるフラッシュ処理を有効にするかどうかを
@@ -211,7 +221,14 @@ entity  REDUCER is
                       in  std_logic_vector(I_WIDTH*WORD_BITS-1 downto 0);
         I_STRB      : --! @brief INPUT WORD ENABLE :
                       --! ワードストローブ信号入力.
-                      in  std_logic_vector(I_WIDTH*STRB_BITS-1 downto 0);
+                      in  std_logic_vector(I_WIDTH*STRB_BITS-1 downto 0) := (others => '1');
+        I_DVAL      : --! @brief INPUT WORD ENABLE :
+                      --! ワード有効信号入力.
+                      --! * I_DATA/I_STRB のうちどのワードをキューに入れるかを示す信号.
+                      --! * I_DVAL_ENABLE=1の時のみ有効.
+                      --! * I_DVAL_ENABLE=0の時は I_STRB 信号の値によって、どのワードを
+                      --!   キューに入れるかを示す.
+                      in  std_logic_vector(I_WIDTH          -1 downto 0) := (others => '1');
         I_DONE      : --! @brief INPUT WORD DONE :
                       --! 最終ワード信号入力.
                       --! * 最後の力ワードデータ入であることを示すフラグ.
@@ -228,7 +245,7 @@ entity  REDUCER is
                       in  std_logic := '0';
         I_VAL       : --! @brief INPUT WORD VALID :
                       --! 入力ワード有効信号.
-                      --! * I_DATA/I_STRB/I_DONE/I_FLUSHが有効であることを示す.
+                      --! * I_DATA/I_STRB/I_DVAL/I_DONE/I_FLUSHが有効であることを示す.
                       --! * I_VAL='1'and I_RDY='1'でワードデータがキューに取り込まれる.
                       in  std_logic;
         I_RDY       : --! @brief INPUT WORD READY :
@@ -737,9 +754,13 @@ begin
                 -------------------------------------------------------------------
                 if (I_VAL = '1' and i_ready = '1') then
                     for i in in_words'range loop
-                        in_words(i).DATA :=  I_DATA((i+1)*WORD_BITS-1 downto i*WORD_BITS);
-                        in_words(i).STRB :=  I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS);
-                        in_words(i).VAL  := (I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL);
+                        in_words(i).DATA := I_DATA((i+1)*WORD_BITS-1 downto i*WORD_BITS);
+                        in_words(i).STRB := I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS);
+                        if (I_DVAL_ENABLE > 0) then
+                            in_words(i).VAL := (I_DVAL(i) = '1');
+                        else
+                            in_words(i).VAL := (I_STRB((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL);
+                        end if;
                     end loop;
                     if (I_JUSTIFIED     = 0) and
                        (in_words'length > 1) then
