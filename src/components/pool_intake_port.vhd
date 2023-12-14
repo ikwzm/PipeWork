@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
---!     @version 1.8.0
---!     @date    2019/5/9
+--!     @version 1.9.0
+--!     @date    2023/12/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2023 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -215,7 +215,8 @@ architecture RTL of POOL_INTAKE_PORT is
     constant o_shift        : std_logic_vector(O_WORDS downto O_WORDS) := "0";
     signal   offset         : std_logic_vector(O_WORDS-1 downto 0);
     signal   queue_busy     : std_logic;
-    signal   i_strobe       : std_logic_vector(PORT_DVAL'length-1 downto 0);   
+    signal   i_strobe       : std_logic_vector(PORT_DVAL'length-1 downto 0);
+    signal   i_word_valid   : std_logic_vector(I_WORDS-1 downto 0);
     signal   i_ready        : std_logic;
     constant o_enable       : std_logic := '1';
     signal   o_size         : std_logic_vector(PUSH_SIZE'length-1 downto 0);
@@ -250,9 +251,29 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- i_strobe : エラー発生時はキューにデータを入れないようにする.
+    -- i_strobe     : エラー発生時はキューにデータを入れないようにする.
+    -- i_word_valid : 最後のデータを入力する際にデータが無い場合はダミーのワードを入力する.
+    --                こうしないと、POOL_RDY='0' の時に PUSH_VAL がアサートされない.
     -------------------------------------------------------------------------------
-    i_strobe <= PORT_DVAL when (PORT_ERROR = '0') else (others => '0');
+    process (PORT_DVAL, PORT_LAST, PORT_ERROR)
+        constant DVAL_NULL : std_logic_vector(PORT_DVAL'range) := (others => '0');
+        variable dval      : std_logic_vector(PORT_DVAL'range);
+    begin
+        if (PORT_ERROR = '1') then
+            dval := (others => '0');
+        else
+            dval := PORT_DVAL;
+        end if;
+        i_strobe <= dval;
+        for i in i_word_valid'range loop
+            if (i = i_word_valid'high and PORT_LAST = '1' and dval = DVAL_NULL) or
+               (dval((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= DVAL_NULL(STRB_BITS-1 downto 0)) then
+                i_word_valid(i) <= '1';
+            else
+                i_word_valid(i) <= '0';
+            end if;
+        end loop;
+    end process;
     -------------------------------------------------------------------------------
     -- offset        : REDUCER にセットするオフセット値.
     -------------------------------------------------------------------------------
@@ -306,7 +327,8 @@ begin
             O_VAL_SIZE      => O_WORDS        , -- 
             O_SHIFT_MIN     => o_shift'low    , --
             O_SHIFT_MAX     => o_shift'high   , --
-            I_JUSTIFIED     => PORT_JUSTIFIED , -- 
+            I_JUSTIFIED     => PORT_JUSTIFIED , --
+            I_DVAL_ENABLE   => 1              , --
             FLUSH_ENABLE    => 0                -- 
         )                                       -- 
         port map (                              -- 
@@ -329,6 +351,7 @@ begin
         -- 入力側 I/F
         ---------------------------------------------------------------------------
             I_ENABLE        => PORT_ENABLE    , -- In  :
+            I_DVAL          => i_word_valid   , -- In  :
             I_STRB          => i_strobe       , -- In  :
             I_DATA          => PORT_DATA      , -- In  :
             I_DONE          => PORT_LAST      , -- In  :
