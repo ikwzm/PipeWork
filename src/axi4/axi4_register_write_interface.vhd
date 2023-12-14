@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 1.8.6
---!     @date    2021/5/25
+--!     @version 1.9.0
+--!     @date    2023/12/14
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2021 Ichiro Kawazome
+--      Copyright (C) 2012-2023 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -193,6 +193,19 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
         return value;
     end function;
     -------------------------------------------------------------------------------
+    --! 最大公約数(Greatest Common Divisor)を求める関数
+    -------------------------------------------------------------------------------
+    function  gcd(A,B:integer) return integer is
+    begin
+        if    (A < B) then
+            return gcd(B, A);
+        elsif (A mod B = 0) then
+            return B;
+        else
+            return gcd(B, A mod B);
+        end if;
+    end function;
+    -------------------------------------------------------------------------------
     -- AXI4 データバスのバイト数の２のべき乗値.
     -------------------------------------------------------------------------------
     constant AXI4_DATA_SIZE     : integer := CALC_DATA_SIZE(AXI4_DATA_WIDTH);
@@ -201,27 +214,56 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     constant REGS_DATA_SIZE     : integer := CALC_DATA_SIZE(REGS_DATA_WIDTH);
     -------------------------------------------------------------------------------
-    -- WBUF のキューのサイズ
+    -- WBUF の ワードのビット数.
     -------------------------------------------------------------------------------
-    function WBUF_QUEUE_SIZE return integer is begin
-        if (AXI4_LITE = 0) then       -- AXI4-Lite でない場合は、
-            return 0;                 -- バースト転送に対応するように自動的に算出される
-        elsif (REGS_DATA_WIDTH > AXI4_DATA_WIDTH) then
-            return REGS_DATA_WIDTH/8; -- AXI4-Lite の場合は、
-        else                          -- レジスタインターフェース側のデータバスのバイト数と
-            return AXI4_DATA_WIDTH/8; -- AXI4 データバスのバイト数の大きい方
+    function CALC_WBUF_WORD_BITS return integer is begin
+        if    (AXI4_LITE = 0) then
+            return 8;
+        else
+            return gcd(AXI4_DATA_WIDTH,REGS_DATA_WIDTH);
         end if;
     end function;
+    constant WBUF_WORD_BITS     : integer := CALC_WBUF_WORD_BITS;
+    -------------------------------------------------------------------------------
+    -- WBUF の ワードのバイト数の２のべき乗値.
+    -------------------------------------------------------------------------------
+    constant WBUF_WORD_SIZE     : integer := CALC_DATA_SIZE(WBUF_WORD_BITS);
+    -------------------------------------------------------------------------------
+    -- WBUF の ストローブのビット数.
+    -------------------------------------------------------------------------------
+    constant WBUF_STRB_BITS     : integer := WBUF_WORD_BITS/8;
+    -------------------------------------------------------------------------------
+    -- WBUF の 入力側のワード数.
+    -------------------------------------------------------------------------------
+    constant WBUF_I_WORDS       : integer := AXI4_DATA_WIDTH/WBUF_WORD_BITS;
+    -------------------------------------------------------------------------------
+    -- WBUF の 出力側のワード数.
+    -------------------------------------------------------------------------------
+    constant WBUF_O_WORDS       : integer := REGS_DATA_WIDTH/WBUF_WORD_BITS;
+    -------------------------------------------------------------------------------
+    -- WBUF のキューのサイズ.
+    -------------------------------------------------------------------------------
+    function CALC_WBUF_QUEUE_SIZE return integer is begin
+        if    (AXI4_LITE = 0) then    -- AXI4-Lite でない場合は、
+            return 0;                 -- バースト転送に対応するように自動的に算出される
+        elsif (WBUF_I_WORDS > WBUF_O_WORDS) then
+            return WBUF_I_WORDS;      -- AXI4-Lite の場合は、
+        else                          -- WBUF の入力側のワード数と
+            return WBUF_O_WORDS;      -- WBUF の出力側のワード数の大きい方
+        end if;
+    end function;
+    constant WBUF_QUEUE_SIZE    : integer := CALC_WBUF_QUEUE_SIZE;
     -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH-1 downto 0);
+    signal   wbuf_word_valid    : std_logic_vector(WBUF_I_WORDS-1 downto 0);
     signal   wbuf_enable        : std_logic;
     signal   wbuf_intake        : std_logic;
     signal   wbuf_busy          : std_logic;
     signal   wbuf_ready         : std_logic;
     signal   wbuf_start         : std_logic;
-    signal   wbuf_offset        : std_logic_vector(REGS_DATA_WIDTH/8-1 downto 0);
+    signal   wbuf_offset        : std_logic_vector(WBUF_O_WORDS-1 downto 0);
     signal   regs_valid         : std_logic;
     signal   regs_ready         : std_logic;
     signal   regs_last          : std_logic;
@@ -379,20 +421,41 @@ begin
     -- wbuf_offset : 
     -------------------------------------------------------------------------------
     process (AWADDR)
-        variable addr : unsigned(REGS_DATA_SIZE downto 0);
+        variable regs_offset : unsigned(REGS_DATA_SIZE-WBUF_WORD_SIZE downto 0);
     begin
-        for i in addr'range loop
-            if (i < REGS_DATA_SIZE and AWADDR(i) = '1') then
-                addr(i) := '1';
+        for i in regs_offset'range loop
+            if (i+WBUF_WORD_SIZE <  REGS_DATA_SIZE) and
+               (i+WBUF_WORD_SIZE <= AWADDR'high   ) and
+               (i+WBUF_WORD_SIZE >= AWADDR'low    ) then
+                if (AWADDR(i+WBUF_WORD_SIZE) = '1') then
+                    regs_offset(i) := '1';
+                else
+                    regs_offset(i) := '0';
+                end if;
             else
-                addr(i) := '0';
+                    regs_offset(i) := '0';
             end if;
         end loop;
         for i in wbuf_offset'range loop
-            if (i < addr) then
+            if (i < regs_offset) then
                 wbuf_offset(i) <= '1';
             else
                 wbuf_offset(i) <= '0';
+            end if;
+        end loop;
+    end process;
+    -------------------------------------------------------------------------------
+    -- wbuf_word_valid : 
+    -------------------------------------------------------------------------------
+    process (WSTRB, WLAST)
+        constant WSTRB_NONE : std_logic_vector(WSTRB'range) := (others => '0');
+    begin
+        for i in wbuf_word_valid'range loop
+            if (i = wbuf_word_valid'high and WLAST = '1' and WSTRB = WSTRB_NONE) or
+               (WSTRB((i+1)*WBUF_STRB_BITS-1 downto i*WBUF_STRB_BITS) /= WSTRB_NONE(WBUF_STRB_BITS-1 downto 0)) then
+                wbuf_word_valid(i) <= '1';
+            else
+                wbuf_word_valid(i) <= '0';
             end if;
         end loop;
     end process;
@@ -401,12 +464,14 @@ begin
     -------------------------------------------------------------------------------
     WBUF: REDUCER                                  -- 
         generic map (                              -- 
-            WORD_BITS       => 8                 , -- 
-            STRB_BITS       => 1                 , -- 
-            I_WIDTH         => AXI4_DATA_WIDTH/8 , -- 
-            O_WIDTH         => REGS_DATA_WIDTH/8 , --
-            O_SHIFT_MIN     => REGS_DATA_WIDTH/8 , --
-            O_SHIFT_MAX     => REGS_DATA_WIDTH/8 , --
+            WORD_BITS       => WBUF_WORD_BITS    , -- 
+            STRB_BITS       => WBUF_STRB_BITS    , -- 
+            I_WIDTH         => WBUF_I_WORDS      , -- 
+            O_WIDTH         => WBUF_O_WORDS      , -- 
+            O_SHIFT_MIN     => WBUF_O_WORDS      , -- 
+            O_SHIFT_MAX     => WBUF_O_WORDS      , --
+            I_JUSTIFIED     => 0                 , --
+            I_DVAL_ENABLE   => 1                 , --
             QUEUE_SIZE      => WBUF_QUEUE_SIZE     -- 
         )                                          -- 
         port map (                                 -- 
@@ -427,6 +492,7 @@ begin
         -- 入力側 I/F
         ---------------------------------------------------------------------------
             I_ENABLE        => wbuf_enable       , -- In  :
+            I_DVAL          => wbuf_word_valid   , -- In  :
             I_DATA          => WDATA             , -- In  :
             I_STRB          => WSTRB             , -- In  :
             I_DONE          => WLAST             , -- In  :
