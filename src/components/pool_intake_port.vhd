@@ -266,7 +266,7 @@ begin
         end if;
         i_strobe <= dval;
         for i in i_word_valid'range loop
-            if (i = i_word_valid'high and PORT_LAST = '1' and dval = DVAL_NULL) or
+            if (i = i_word_valid'low and PORT_LAST = '1' and dval = DVAL_NULL) or
                (dval((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= DVAL_NULL(STRB_BITS-1 downto 0)) then
                 i_word_valid(i) <= '1';
             else
