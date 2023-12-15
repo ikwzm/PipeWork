@@ -2,7 +2,7 @@
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
 --!     @version 1.9.0
---!     @date    2023/12/14
+--!     @date    2023/12/15
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -451,7 +451,7 @@ begin
         constant WSTRB_NONE : std_logic_vector(WSTRB'range) := (others => '0');
     begin
         for i in wbuf_word_valid'range loop
-            if (i = wbuf_word_valid'high and WLAST = '1' and WSTRB = WSTRB_NONE) or
+            if (i = wbuf_word_valid'low and WLAST = '1' and WSTRB = WSTRB_NONE) or
                (WSTRB((i+1)*WBUF_STRB_BITS-1 downto i*WBUF_STRB_BITS) /= WSTRB_NONE(WBUF_STRB_BITS-1 downto 0)) then
                 wbuf_word_valid(i) <= '1';
             else
