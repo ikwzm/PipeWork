@@ -437,7 +437,7 @@ begin
             constant STRB_NULL : std_logic_vector(intake_strobe'range) := (others => '0');
         begin
             for i in i_word_valid'range loop
-                if (i = i_word_valid'high and intake_last = '1' and intake_strobe = STRB_NULL) or
+                if (i = i_word_valid'low and intake_last = '1' and intake_strobe = STRB_NULL) or
                    (intake_strobe((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL(STRB_BITS-1 downto 0)) then
                     i_word_valid(i) <= '1';
                 else
