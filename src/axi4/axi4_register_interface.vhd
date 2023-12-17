@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_interface.vhd
 --!     @brief   AXI4 Register Interface
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
