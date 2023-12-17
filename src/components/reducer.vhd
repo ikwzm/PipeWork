@@ -601,16 +601,22 @@ architecture RTL of REDUCER is
     )            return     boolean
     is
         alias    i_vec   :  WORD_VECTOR(0 to WORDS'length-1) is WORDS;
+        variable w_val   :  boolean;
         variable result  :  boolean;
     begin
         result := FALSE;
         for i in SHIFT'high downto i_vec'low loop
+            if (i > i_vec'high) then
+                w_val := FALSE;
+            else
+                w_val := i_vec(i).VAL;
+            end if;
             if (i < SHIFT'low) then
-                if (i_vec(i).VAL = FALSE) then
+                if (w_val = FALSE) then
                     result := TRUE;
                 end if;
             else
-                if (i_vec(i).VAL = FALSE and SHIFT(i) = '1') then
+                if (w_val = FALSE and SHIFT(i) = '1') then
                     result := TRUE;
                 end if;
             end if;
