@@ -2,8 +2,8 @@
 --!     @file    reducer.vhd
 --!     @brief   REDUCER MODULE :
 --!              異なるデータ幅のパスを継ぐためのアダプタ
---!     @version 1.9.0
---!     @date    2023/12/7
+--!     @version 2.0.0
+--!     @date    2023/12/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -669,6 +669,10 @@ architecture RTL of REDUCER is
     -------------------------------------------------------------------------------
     signal    flush_output  : std_logic;
     -------------------------------------------------------------------------------
+    --! @brief FLUSH 出力フラグ(キューが空の場合).
+    -------------------------------------------------------------------------------
+    signal    flush_empty   : std_logic;
+    -------------------------------------------------------------------------------
     --! @brief FLUSH 保留フラグ.
     -------------------------------------------------------------------------------
     signal    flush_pending : std_logic;
@@ -676,6 +680,10 @@ architecture RTL of REDUCER is
     --! @brief DONE 出力フラグ.
     -------------------------------------------------------------------------------
     signal    done_output   : std_logic;
+    -------------------------------------------------------------------------------
+    --! @brief DONE 出力フラグ(キューが空の場合).
+    -------------------------------------------------------------------------------
+    signal    done_empty    : std_logic;
     -------------------------------------------------------------------------------
     --! @brief DONE 保留フラグ.
     -------------------------------------------------------------------------------
@@ -701,9 +709,11 @@ begin
         variable    next_queue        : WORD_VECTOR(curr_queue'range);
         variable    next_valid_output : boolean;
         variable    next_flush_output : std_logic;
+        variable    next_flush_empty  : std_logic;
         variable    next_flush_pending: std_logic;
         variable    next_flush_fall   : std_logic;
         variable    next_done_output  : std_logic;
+        variable    next_done_empty   : std_logic;
         variable    next_done_pending : std_logic;
         variable    next_done_fall    : std_logic;
         variable    pending_flag      : boolean;
@@ -713,8 +723,10 @@ begin
         if (RST = '1') then
                 curr_queue    <= (others => WORD_NULL);
                 flush_output  <= '0';
+                flush_empty   <= '0';
                 flush_pending <= '0';
                 done_output   <= '0';
+                done_empty    <= '0';
                 done_pending  <= '0';
                 i_ready       <= '0';
                 o_valid       <= '0';
@@ -723,8 +735,10 @@ begin
             if (CLR = '1') then
                 curr_queue    <= (others => WORD_NULL);
                 flush_output  <= '0';
+                flush_empty   <= '0';
                 flush_pending <= '0';
                 done_output   <= '0';
+                done_empty    <= '0';
                 done_pending  <= '0';
                 i_ready       <= '0';
                 o_valid       <= '0';
@@ -823,15 +837,30 @@ begin
                 -------------------------------------------------------------------
                 if    (FLUSH_ENABLE = 0) then
                         next_flush_output  := '0';
+                        next_flush_empty   := '0';
                         next_flush_pending := '0';
                         next_flush_fall    := '0';
-                elsif (flush_output = '1') then
-                    if (flush_output_done) then
+                elsif (flush_empty  = '1') then
+                    if (o_valid = '1' and O_RDY = '1') then
                         next_flush_output  := '0';
+                        next_flush_empty   := '0';
                         next_flush_pending := '0';
                         next_flush_fall    := '1';
                     else
                         next_flush_output  := '1';
+                        next_flush_empty   := '1';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '0';
+                    end if;
+                elsif (flush_output = '1') then
+                    if (flush_output_done) then
+                        next_flush_output  := '0';
+                        next_flush_empty   := '0';
+                        next_flush_pending := '0';
+                        next_flush_fall    := '1';
+                    else
+                        next_flush_output  := '1';
+                        next_flush_empty   := '0';
                         next_flush_pending := '0';
                         next_flush_fall    := '0';
                     end if;
@@ -840,30 +869,53 @@ begin
                       (I_VAL = '1' and i_ready = '1' and I_FLUSH = '1') then
                     if (pending_flag) then
                         next_flush_output  := '0';
+                        next_flush_empty   := '0';
                         next_flush_pending := '1';
+                        next_flush_fall    := '0';
+                    elsif (next_queue(next_queue'low).VAL = FALSE) then
+                        next_flush_output  := '1';
+                        next_flush_empty   := '1';
+                        next_flush_pending := '0';
                         next_flush_fall    := '0';
                     else
                         next_flush_output  := '1';
+                        next_flush_empty   := '0';
                         next_flush_pending := '0';
                         next_flush_fall    := '0';
                     end if;
                 else
                         next_flush_output  := '0';
+                        next_flush_empty   := '0';
                         next_flush_pending := '0';
                         next_flush_fall    := '0';
                 end if;
                 flush_output  <= next_flush_output;
+                flush_empty   <= next_flush_empty;
                 flush_pending <= next_flush_pending;
                 -------------------------------------------------------------------
                 -- DONE制御
                 -------------------------------------------------------------------
-                if    (done_output = '1') then
-                    if (next_queue(next_queue'low).VAL = FALSE) then
+                if    (done_empty  = '1') then
+                    if (o_valid = '1' and O_RDY = '1') then
                         next_done_output   := '0';
+                        next_done_empty    := '0';
                         next_done_pending  := '0';
                         next_done_fall     := '1';
                     else
                         next_done_output   := '1';
+                        next_done_empty    := '1';
+                        next_done_pending  := '0';
+                        next_done_fall     := '0';
+                    end if;
+                elsif (done_output = '1') then
+                    if (next_queue(next_queue'low).VAL = FALSE) then
+                        next_done_output   := '0';
+                        next_done_empty    := '0';
+                        next_done_pending  := '0';
+                        next_done_fall     := '1';
+                    else
+                        next_done_output   := '1';
+                        next_done_empty    := '0';
                         next_done_pending  := '0';
                         next_done_fall     := '0';
                     end if;
@@ -872,19 +924,28 @@ begin
                       (I_VAL = '1' and i_ready = '1' and I_DONE = '1') then
                     if (pending_flag) then
                         next_done_output   := '0';
+                        next_done_empty    := '0';
                         next_done_pending  := '1';
+                        next_done_fall     := '0';
+                    elsif (next_queue(next_queue'low).VAL = FALSE) then
+                        next_done_output   := '1';
+                        next_done_empty    := '1';
+                        next_done_pending  := '0';
                         next_done_fall     := '0';
                     else
                         next_done_output   := '1';
+                        next_done_empty    := '0';
                         next_done_pending  := '0';
                         next_done_fall     := '0';
                     end if;
                 else
                         next_done_output   := '0';
+                        next_done_empty    := '0';
                         next_done_pending  := '0';
                         next_done_fall     := '0';
                 end if;
                 done_output   <= next_done_output;
+                done_empty    <= next_done_empty;
                 done_pending  <= next_done_pending;
                 -------------------------------------------------------------------
                 -- 出力有効信号の生成.
