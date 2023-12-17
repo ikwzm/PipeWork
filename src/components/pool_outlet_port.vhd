@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -427,24 +427,8 @@ begin
         constant  done          : std_logic := '0';
         constant  o_shift       : std_logic_vector(O_WORDS   downto O_WORDS) := "0";
         signal    offset        : std_logic_vector(O_WORDS-1 downto 0);
-        signal    i_word_valid  : std_logic_vector(I_WORDS-1 downto 0);
         signal    error_flag    : boolean;
     begin
-        ---------------------------------------------------------------------------
-        --
-        ---------------------------------------------------------------------------
-        process (intake_strobe, intake_last)
-            constant STRB_NULL : std_logic_vector(intake_strobe'range) := (others => '0');
-        begin
-            for i in i_word_valid'range loop
-                if (i = i_word_valid'low and intake_last = '1' and intake_strobe = STRB_NULL) or
-                   (intake_strobe((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= STRB_NULL(STRB_BITS-1 downto 0)) then
-                    i_word_valid(i) <= '1';
-                else
-                    i_word_valid(i) <= '0';
-                end if;
-            end loop;
-        end process;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -515,7 +499,6 @@ begin
                 O_SHIFT_MIN     => o_shift'low    , --
                 O_SHIFT_MAX     => o_shift'high   , --
                 I_JUSTIFIED     => POOL_JUSTIFIED , -- 
-                I_DVAL_ENABLE   => 1              , --
                 FLUSH_ENABLE    => 0                -- 
             )                                       -- 
             port map (                              -- 
@@ -538,7 +521,6 @@ begin
             -- 入力側 I/F
             -----------------------------------------------------------------------
                 I_ENABLE        => intake_enable  , -- In  :
-                I_DVAL          => i_word_valid   , -- In  :
                 I_STRB          => intake_strobe  , -- In  :
                 I_DATA          => POOL_DATA      , -- In  :
                 I_DONE          => intake_last    , -- In  :
