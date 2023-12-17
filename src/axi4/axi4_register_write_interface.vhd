@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -257,7 +257,6 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -- 内部信号
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH-1 downto 0);
-    signal   wbuf_word_valid    : std_logic_vector(WBUF_I_WORDS-1 downto 0);
     signal   wbuf_enable        : std_logic;
     signal   wbuf_intake        : std_logic;
     signal   wbuf_busy          : std_logic;
@@ -445,21 +444,6 @@ begin
         end loop;
     end process;
     -------------------------------------------------------------------------------
-    -- wbuf_word_valid : 
-    -------------------------------------------------------------------------------
-    process (WSTRB, WLAST)
-        constant WSTRB_NONE : std_logic_vector(WSTRB'range) := (others => '0');
-    begin
-        for i in wbuf_word_valid'range loop
-            if (i = wbuf_word_valid'low and WLAST = '1' and WSTRB = WSTRB_NONE) or
-               (WSTRB((i+1)*WBUF_STRB_BITS-1 downto i*WBUF_STRB_BITS) /= WSTRB_NONE(WBUF_STRB_BITS-1 downto 0)) then
-                wbuf_word_valid(i) <= '1';
-            else
-                wbuf_word_valid(i) <= '0';
-            end if;
-        end loop;
-    end process;
-    -------------------------------------------------------------------------------
     -- ライトデータバッファ
     -------------------------------------------------------------------------------
     WBUF: REDUCER                                  -- 
@@ -471,7 +455,6 @@ begin
             O_SHIFT_MIN     => WBUF_O_WORDS      , -- 
             O_SHIFT_MAX     => WBUF_O_WORDS      , --
             I_JUSTIFIED     => 0                 , --
-            I_DVAL_ENABLE   => 1                 , --
             QUEUE_SIZE      => WBUF_QUEUE_SIZE     -- 
         )                                          -- 
         port map (                                 -- 
@@ -492,7 +475,6 @@ begin
         -- 入力側 I/F
         ---------------------------------------------------------------------------
             I_ENABLE        => wbuf_enable       , -- In  :
-            I_DVAL          => wbuf_word_valid   , -- In  :
             I_DATA          => WDATA             , -- In  :
             I_STRB          => WSTRB             , -- In  :
             I_DONE          => WLAST             , -- In  :
