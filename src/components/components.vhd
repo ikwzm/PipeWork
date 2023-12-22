@@ -1695,9 +1695,18 @@ component POOL_INTAKE_PORT
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        PORT_PIPELINE   : --! @brief PORT PIPELINE STAGE SIZE :
+                          --! 入力 PORT 側のパイプラインの段数を指定する.
+                          --! * 後述の PORT_JUSTIFIED が 0 の場合は、入力 PORT 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は PORT_PIPELINE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
         PORT_JUSTIFIED  : --! @brief PORT INPUT JUSTIFIED :
                           --! 入力 PORT 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
                           --! * 常にLOW側に詰められている場合は、シフタが必要なくな
                           --!   るため回路が簡単になる.
                           integer range 0 to 1 := 0
@@ -1868,9 +1877,18 @@ component POOL_OUTLET_PORT
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        POOL_PIPELINE   : --! @brief POOL PIPELINE STAGE SIZE :
+                          --! 入力 POOL 側のパイプラインの段数を指定する.
+                          --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は POOL_PIPELINE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
         POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT INPUT JUSTIFIED :
                           --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
                           --! * 常にLOW側に詰められている場合は、シフタが必要なくな
                           --!   るため回路が簡単になる.
                           integer range 0 to 1 := 0

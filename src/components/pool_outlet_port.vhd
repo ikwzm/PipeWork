@@ -2,7 +2,7 @@
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
 --!     @version 2.0.0
---!     @date    2023/12/17
+--!     @date    2023/12/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -82,9 +82,18 @@ entity  POOL_OUTLET_PORT is
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        POOL_PIPELINE   : --! @brief POOL PIPELINE STAGE SIZE :
+                          --! 入力 POOL 側のパイプラインの段数を指定する.
+                          --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は POOL_PIPELINE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
         POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT INPUT JUSTIFIED :
                           --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
                           --! * 常にLOW側に詰められている場合は、シフタが必要なくな
                           --!   るため回路が簡単になる.
                           integer range 0 to 1 := 0
@@ -236,6 +245,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.REDUCER;
+use     PIPEWORK.COMPONENTS.JUSTIFIER;
 architecture RTL of POOL_OUTLET_PORT is
     -------------------------------------------------------------------------------
     -- 
@@ -286,24 +296,24 @@ architecture RTL of POOL_OUTLET_PORT is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal    regs_busy     : std_logic;
-    signal    intake_running: boolean;
-    signal    intake_enable : std_logic;
-    signal    intake_valid  : std_logic;
-    signal    intake_ready  : std_logic;
-    signal    intake_last   : std_logic;
-    signal    intake_select : std_logic_vector( SEL_BITS-1 downto 0);
-    signal    intake_strobe : std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
-    signal    intake_size   : std_logic_vector(SIZE_BITS-1 downto 0);
-    constant  outlet_enable : std_logic := '1';
-    signal    outlet_valid  : std_logic;
-    signal    outlet_ready  : std_logic;
-    signal    outlet_last   : std_logic;
-    signal    outlet_error  : std_logic;
-    signal    outlet_size   : std_logic_vector(SIZE_BITS-1 downto 0);
-    signal    outlet_strobe : std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
-    constant  SEL_ALL0      : std_logic_vector(SEL_BITS -1 downto 0) := (others => '0');
-    constant  SEL_ALL1      : std_logic_vector(SEL_BITS -1 downto 0) := (others => '1');
+    signal    queue_busy     :  std_logic;
+    signal    intake_running :  std_logic;
+    signal    intake_enable  :  std_logic;
+    signal    intake_valid   :  std_logic;
+    signal    intake_ready   :  std_logic;
+    signal    intake_last    :  std_logic;
+    signal    intake_select  :  std_logic_vector( SEL_BITS-1 downto 0);
+    signal    intake_strobe  :  std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
+    signal    intake_size    :  std_logic_vector(SIZE_BITS-1 downto 0);
+    constant  outlet_enable  :  std_logic := '1';
+    signal    outlet_valid   :  std_logic;
+    signal    outlet_ready   :  std_logic;
+    signal    outlet_last    :  std_logic;
+    signal    outlet_error   :  std_logic;
+    signal    outlet_size    :  std_logic_vector(SIZE_BITS-1 downto 0);
+    signal    outlet_strobe  :  std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+    constant  SEL_ALL0       :  std_logic_vector(SEL_BITS -1 downto 0) := (others => '0');
+    constant  SEL_ALL1       :  std_logic_vector(SEL_BITS -1 downto 0) := (others => '1');
 begin
     -------------------------------------------------------------------------------
     -- 
@@ -313,8 +323,8 @@ begin
         signal   curr_read_ptr    : std_logic_vector(POOL_PTR_BITS-1 downto 0);
         signal   curr_select      : std_logic_vector(SEL_BITS -1 downto 0);
         signal   curr_xfer_last   : boolean;
-        signal   intake_done      : boolean;
-        signal   intake_continue  : boolean;
+        signal   intake_done      : std_logic;
+        signal   intake_continue  : std_logic;
         signal   intake_chop      : std_logic;
         signal   strb_size        : std_logic_vector(SIZE_BITS-1 downto 0);
     begin
@@ -330,14 +340,14 @@ begin
         intake_size     <= strb_size when (POOL_SIZE_VALID = 0) else
                            POOL_SIZE when (POOL_ERROR = '0') else
                            (others => '0');
-        intake_last     <= '1' when (POOL_LAST = '1' or  POOL_ERROR   = '1') else '0';
-        intake_enable   <= '1' when (START     = '1' or  intake_continue   ) else '0';
+        intake_last     <= '1' when (POOL_LAST = '1' or POOL_ERROR      = '1') else '0';
+        intake_enable   <= '1' when (START     = '1' or intake_continue = '1') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
         intake_chop     <= '1' when (intake_valid = '1' and intake_ready = '1') else '0';
-        intake_done     <= (intake_running = TRUE  and intake_chop = '1' and intake_last = '1');
-        intake_continue <= (intake_running = TRUE  and not intake_done);
+        intake_done     <= '1' when (intake_running = '1' and intake_chop = '1' and intake_last = '1') else '0';
+        intake_continue <= '1' when (intake_running = '1' and intake_done = '0') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -356,18 +366,18 @@ begin
         ---------------------------------------------------------------------------
         process(CLK, RST) begin
             if (RST = '1') then
-                    intake_running <= FALSE;
+                    intake_running <= '0';
                     curr_xfer_last <= FALSE;
                     curr_select    <= (others => '0');
                     curr_read_ptr  <= (others => '0');
             elsif (CLK'event and CLK = '1') then
                 if (CLR = '1') then 
-                    intake_running <= FALSE;
+                    intake_running <= '0';
                     curr_xfer_last <= FALSE;
                     curr_select    <= (others => '0');
                     curr_read_ptr  <= (others => '0');
                 elsif (START = '1') then
-                    intake_running <= TRUE;
+                    intake_running <= '1';
                     curr_xfer_last <= (XFER_LAST = '1');
                     curr_select    <= XFER_SEL;
                     curr_read_ptr  <= START_POOL_PTR;
@@ -386,16 +396,16 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        POOL_BUSY <= '1' when (intake_running = TRUE) else '0';
-        POOL_DONE <= '1' when (intake_done    = TRUE) else '0';
+        POOL_BUSY <= '1' when (intake_running = '1') else '0';
+        POOL_DONE <= '1' when (intake_done    = '1') else '0';
         POOL_PTR  <= START_POOL_PTR when (START       = '1') else
                      next_read_ptr  when (intake_chop = '1') else
                      curr_read_ptr;
         POOL_REN  <= XFER_SEL       when (START = '1' and SEL_BITS > 1) else
                      SEL_ALL1       when (START = '1' and SEL_BITS = 1) else
-                     intake_select  when (intake_continue             ) else
+                     intake_select  when (intake_continue = '1'       ) else
                      SEL_ALL0;
-        BUSY      <= '1' when (intake_running = TRUE or regs_busy = '1') else '0';
+        POOL_RDY  <= intake_ready;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -421,13 +431,17 @@ begin
             end if;
         end function;
         constant  STRB_BITS     : integer   := WORD_BITS/UNIT_BITS;
-        constant  I_WORDS       : integer   := POOL_DATA_BITS/WORD_BITS;
-        constant  O_WORDS       : integer   := PORT_DATA_BITS/WORD_BITS;
-        constant  flush         : std_logic := '0';
-        constant  done          : std_logic := '0';
-        constant  o_shift       : std_logic_vector(O_WORDS   downto O_WORDS) := "0";
-        signal    offset        : std_logic_vector(O_WORDS-1 downto 0);
+        constant  POOL_WORDS    : integer   := POOL_DATA_BITS/WORD_BITS;
+        constant  PORT_WORDS    : integer   := PORT_DATA_BITS/WORD_BITS;
+        constant  port_shift    : std_logic_vector(PORT_WORDS downto PORT_WORDS) := "0";
+        signal    port_offset   : std_logic_vector(PORT_WORDS-1 downto 0);
         signal    error_flag    : boolean;
+        signal    justify_strb  : std_logic_vector(POOL_WORDS*STRB_BITS-1 downto 0);
+        signal    justify_data  : std_logic_vector(POOL_WORDS*WORD_BITS-1 downto 0);
+        signal    justify_last  : std_logic;
+        signal    justify_valid : std_logic;
+        signal    justify_ready : std_logic;
+        signal    justify_busy  : std_logic;
     begin
         ---------------------------------------------------------------------------
         --
@@ -442,7 +456,7 @@ begin
                 end loop;
                 return value;
             end function;
-            constant O_DATA_WIDTH : integer := CALC_WIDTH(O_WORDS*WORD_BITS);
+            constant O_DATA_WIDTH : integer := CALC_WIDTH(PORT_WORDS*WORD_BITS);
             constant WORD_WIDTH   : integer := CALC_WIDTH(WORD_BITS);
             variable u_offset     : unsigned(O_DATA_WIDTH-WORD_WIDTH downto 0);
         begin
@@ -459,11 +473,11 @@ begin
                         u_offset(i) := '0';
                 end if;
             end loop;
-            for i in offset'range loop
+            for i in port_offset'range loop
                 if (i < u_offset) then
-                    offset(i) <= '1';
+                    port_offset(i) <= '1';
                 else
-                    offset(i) <= '0';
+                    port_offset(i) <= '0';
                 end if;
             end loop;
         end process;
@@ -484,22 +498,61 @@ begin
             end if;
         end process;
         ---------------------------------------------------------------------------
+        -- 入力データの前処理
+        ---------------------------------------------------------------------------
+        JUST: JUSTIFIER                             -- 
+            generic map (                           -- 
+                WORD_BITS       => WORD_BITS      , -- 
+                STRB_BITS       => STRB_BITS      , -- 
+                WORDS           => POOL_WORDS     , -- 
+                I_JUSTIFIED     => POOL_JUSTIFIED , --
+                PIPELINE        => POOL_PIPELINE    --
+            )                                       -- 
+            port map (                              -- 
+            -----------------------------------------------------------------------
+            -- クロック&リセット信号
+            -----------------------------------------------------------------------
+                CLK             => CLK            , -- In  :
+                RST             => RST            , -- In  :
+                CLR             => CLR            , -- In  :
+            -----------------------------------------------------------------------
+            -- 入力側 I/F
+            -----------------------------------------------------------------------
+                I_ENABLE        => intake_running , --
+                I_DATA          => POOL_DATA      , -- In  :
+                I_STRB          => intake_strobe  , -- In  :
+                I_INFO(0)       => intake_last    , -- In  :
+                I_VAL           => intake_valid   , -- In  :
+                I_RDY           => intake_ready   , -- Out :
+            -----------------------------------------------------------------------
+            -- 出力側 I/F
+            -----------------------------------------------------------------------
+                O_DATA          => justify_data   , -- Out :
+                O_STRB          => justify_strb   , -- Out :
+                O_INFO(0)       => justify_last   , -- Out :
+                O_VAL           => justify_valid  , -- Out :
+                O_RDY           => justify_ready  , -- In  :
+            -----------------------------------------------------------------------
+            -- Status Signals
+            -----------------------------------------------------------------------
+                BUSY            => justify_busy     -- Out :
+            );                                      -- 
+        ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
         QUEUE: REDUCER                              -- 
             generic map (                           -- 
                 WORD_BITS       => WORD_BITS      , -- 
                 STRB_BITS       => STRB_BITS      , -- 
-                I_WIDTH         => I_WORDS        , -- 
-                O_WIDTH         => O_WORDS        , -- 
+                I_WIDTH         => POOL_WORDS     , -- 
+                O_WIDTH         => PORT_WORDS     , -- 
                 QUEUE_SIZE      => Q_SIZE         , -- 
                 VALID_MIN       => 0              , -- 
                 VALID_MAX       => 0              , -- 
-                O_VAL_SIZE      => O_WORDS        , -- 
-                O_SHIFT_MIN     => o_shift'low    , --
-                O_SHIFT_MAX     => o_shift'high   , --
-                I_JUSTIFIED     => POOL_JUSTIFIED , -- 
-                FLUSH_ENABLE    => 0                -- 
+                O_VAL_SIZE      => PORT_WORDS     , -- 
+                O_SHIFT_MIN     => port_shift'low , --
+                O_SHIFT_MAX     => port_shift'high, --
+                I_JUSTIFIED     => 1                -- 
             )                                       -- 
             port map (                              -- 
             -----------------------------------------------------------------------
@@ -512,21 +565,17 @@ begin
             -- 各種制御信号
             -----------------------------------------------------------------------
                 START           => START          , -- In  :
-                OFFSET          => offset         , -- In  :
-                DONE            => done           , -- In  :
-                FLUSH           => flush          , -- In  :
-                BUSY            => regs_busy      , -- Out :
-                VALID           => open           , -- Out :
+                OFFSET          => port_offset    , -- In  :
+                BUSY            => queue_busy     , -- Out :
             -----------------------------------------------------------------------
             -- 入力側 I/F
             -----------------------------------------------------------------------
                 I_ENABLE        => intake_enable  , -- In  :
-                I_STRB          => intake_strobe  , -- In  :
-                I_DATA          => POOL_DATA      , -- In  :
-                I_DONE          => intake_last    , -- In  :
-                I_FLUSH         => flush          , -- In  :
-                I_VAL           => intake_valid   , -- In  :
-                I_RDY           => intake_ready   , -- Out :
+                I_STRB          => justify_strb   , -- In  :
+                I_DATA          => justify_data   , -- In  :
+                I_DONE          => justify_last   , -- In  :
+                I_VAL           => justify_valid  , -- In  :
+                I_RDY           => justify_ready  , -- Out :
             -----------------------------------------------------------------------
             -- 出力側 I/F
             -----------------------------------------------------------------------
@@ -534,10 +583,9 @@ begin
                 O_DATA          => PORT_DATA      , -- Out :
                 O_STRB          => outlet_strobe  , -- Out :
                 O_DONE          => outlet_last    , -- Out :
-                O_FLUSH         => open           , -- Out :
                 O_VAL           => outlet_valid   , -- Out :
                 O_RDY           => outlet_ready   , -- In  :
-                O_SHIFT         => o_shift          -- In  :
+                O_SHIFT         => port_shift       -- In  :
         );
         ---------------------------------------------------------------------------
         --
@@ -558,13 +606,16 @@ begin
         outlet_last  <= intake_last;
         outlet_valid <= intake_valid;
         outlet_size  <= intake_size;
-        intake_ready <= '1' when (intake_running and outlet_ready = '1') else '0';
-        regs_busy    <= '0';
+        intake_ready <= '1' when (intake_running = '1' and outlet_ready = '1') else '0';
+        queue_busy   <= '0';
     end generate;
     -------------------------------------------------------------------------------
-    --
+    -- 
     -------------------------------------------------------------------------------
-    POOL_RDY     <= intake_ready;
+    BUSY         <= '1' when (intake_running = '1' or queue_busy = '1') else '0';
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
     PORT_SIZE    <= outlet_size;
     PORT_DVAL    <= outlet_strobe;
     PORT_LAST    <= outlet_last;
