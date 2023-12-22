@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.9.0                                                           --
---!     @date    2023/12/15                                                      --
+--!     @version 2.0.0                                                           --
+--!     @date    2023/12/22                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -210,6 +210,128 @@ component CHOPPER
         NEXT_VALID  : --! @brief PIECE VALID FALG(NEXT CYCLE)
                       --! 次のクロックでのピース有効信号
                       out std_logic_vector(2**(MAX_PIECE)-1 downto 0)
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief JUSTIFIER                                                             --
+-----------------------------------------------------------------------------------
+component JUSTIFIER
+    generic (
+        WORD_BITS   : --! @brief WORD BITS :
+                      --! １ワードのデータのビット数を指定する.
+                      integer := 8;
+        STRB_BITS   : --! @brief ENABLE BITS :
+                      --! ワードデータのうち有効なデータであることを示す信号(STRB)
+                      --! のビット数を指定する.
+                      integer := 1;
+        INFO_BITS   : --! @brief INFOMATION BITS :
+                      --! インフォメーション信号のビット数を指定する.
+                      integer := 1;
+        WORDS       : --! @brief INPUT WORD WIDTH :
+                      --! 入力側のデータのワード数を指定する.
+                      integer := 1;
+        I_JUSTIFIED : --! @brief INPUT WORD JUSTIFIED :
+                      --! 入力側の有効なデータが常にLOW側に詰められていることを
+                      --! 示すフラグ.
+                      --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
+                      --!   ため回路が簡単になる.
+                      integer range 0 to 1 := 0;
+        I_DVAL_ENABLE:--! @brief INPUT DATA VALID ENABLE :
+                      --! ワードデータのうち有効なデータであることを示す信号として
+                      --! I_DVAL 信号を使う.
+                      --! * I_DVAL_ENABLE=1を指定した場合は、I_DVAL をワードデータ
+                      --!   のうちの有効なデータであることを示す信号として使う.
+                      --! * I_DVAL_ENABLE=0を指定した場合は、I_STRB をワードデータ
+                      --!   のうちの有効なデータであることを示す信号として使う.
+                      --! * I_STRB の値に関係なく I_DATA と I_STRB をキューに格納
+                      --!   したい場合は I_DVAL を使うと良い.
+                      integer range 0 to 1 := 0;
+        PIPELINE     : --! @brief PORT PIPELINE STAGE SIZE :
+                       --! パイプラインの段数を指定する.
+                       --! * 前述の I_JUSTIFIED が 0 の場合は、入力側 I/F の有効
+                       --!   なデータを LOW 側に詰る必要があるが、その際に遅延時間
+                       --!   が増大して動作周波数が上らないことがある.
+                       --!   そのような場合は PIPELINE に 1 以上を指定してパイプラ
+                       --!   イン化すると動作周波数が向上する可能性がある.
+                      integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_ENABLE    : --! @brief INPUT ENABLE :
+                      in  std_logic;
+        I_DATA      : --! @brief INPUT WORD DATA :
+                      --! ワードデータ入力.
+                      in  std_logic_vector(WORDS*WORD_BITS-1 downto 0);
+        I_STRB      : --! @brief INPUT WORD ENABLE :
+                      --! ワードストローブ信号入力.
+                      in  std_logic_vector(WORDS*STRB_BITS-1 downto 0) := (others => '1');
+        I_DVAL      : --! @brief INPUT WORD ENABLE :
+                      --! ワード有効信号入力.
+                      --! * I_DATA/I_STRB のうちどのワードをパイプラインに入れるかを示す信号.
+                      --! * I_DVAL_ENABLE=1の時のみ有効.
+                      --! * I_DVAL_ENABLE=0の時は I_STRB 信号の値によって、どのワードを
+                      --!   パイプラインに入れるかを示す.
+                      in  std_logic_vector(WORDS          -1 downto 0) := (others => '1');
+        I_INFO      : --! @brief INPUT INFOMATION :
+                      --! インフォメーション入力.
+                      in  std_logic_vector(      INFO_BITS-1 downto 0) := (others => '0');
+        I_VAL       : --! @brief INPUT WORD VALID :
+                      --! 入力ワード有効信号.
+                      --! * I_DATA/I_STRB/I_DVAL/I_LASTが有効であることを示す.
+                      --! * I_VAL='1'and I_RDY='1'でワードデータがパイプラインに取り込まれる.
+                      in  std_logic;
+        I_RDY       : --! @brief INPUT WORD READY :
+                      --! 入力レディ信号.
+                      --! * パイプラインが次のワードデータを入力出来ることを示す.
+                      --! * I_VAL='1'and I_RDY='1'でワードデータがパイプラインに取り込まれる.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_DATA      : --! @brief OUTPUT WORD DATA :
+                      --! ワードデータ出力.
+                      out std_logic_vector(WORDS*WORD_BITS-1 downto 0);
+        O_STRB      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワードストローブ信号出力.
+                      out std_logic_vector(WORDS*STRB_BITS-1 downto 0);
+        O_DVAL      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワード有効信号出力.
+                      out std_logic_vector(WORDS          -1 downto 0);
+        O_INFO      : --! @brief OUTPUT INFOMATION :
+                      --! インフォメーション出力.
+                      out std_logic_vector(      INFO_BITS-1 downto 0);
+        O_VAL       : --! @brief OUTPUT WORD VALID :
+                      --! 出力ワード有効信号.
+                      --! * O_DATA/O_STRB/O_DVAL/O_LASTが有効であることを示す.
+                      --! * O_VAL='1'and O_RDY='1'でワードデータがパイプラインから取り除かれる.
+                      out std_logic;
+        O_RDY       : --! @brief OUTPUT WORD READY :
+                      --! 出力レディ信号.
+                      --! * パイプラインから次のワードを取り除く準備が出来ていることを示す.
+                      --! * O_VAL='1'and O_RDY='1'でワードデータがパイプラインから取り除かれる.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY        : --! @brief QUEUE BUSY :
+                      --! パイプラインが動作中であることを示す信号.
+                      --! * 最初にデータが入力されたときにアサートされる.
+                      --! * 最後のデータが出力し終えたらネゲートされる.
+                      out  std_logic
     );
 end component;
 -----------------------------------------------------------------------------------

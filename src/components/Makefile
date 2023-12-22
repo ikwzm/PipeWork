@@ -1,4 +1,5 @@
 ENTITY_FILES = chopper.vhd                             \
+               justifier.vhd                           \
                reducer.vhd                             \
                queue_arbiter.vhd                       \
                queue_tree_arbiter.vhd                  \
@@ -29,7 +30,7 @@ ENTITY_FILES = chopper.vhd                             \
 components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK COMPONENT LIBRARY DESCRIPTION' \
-            --version 1.9.0 \
+            --version 2.0.0 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package COMPONENTS \
