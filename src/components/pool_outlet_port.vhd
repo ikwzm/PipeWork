@@ -90,7 +90,7 @@ entity  POOL_OUTLET_PORT is
                           --!   そのような場合は POOL_PIPELINE に 1 以上を指定して
                           --!   パイプライン化すると動作周波数が向上する可能性がある.
                           integer := 0;
-        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT INPUT JUSTIFIED :
+        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT JUSTIFIED :
                           --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
                           --! * 常にLOW側に詰められている場合は 1 を指定する.
