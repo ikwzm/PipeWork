@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 2.0.0                                                           --
---!     @date    2023/12/17                                                      --
+--!     @date    2023/12/23                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -2346,6 +2346,21 @@ component AXI4_DATA_OUTLET_PORT
                           --! * QUEUE_SIZE>0を指定した場合、バースト転送時にウェイトは
                           --!   発生しない.
                           integer := 1;
+        POOL_REGS_SIZE  : --! @brief POOL PIPELINE STAGE SIZE :
+                          --! 入力側に挿入するパイプラインの段数を指定する.
+                          --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は POOL_REGS_SIZE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
+        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT JUSTIFIED :
+                          --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
+                          --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
+                          --! * 常にLOW側に詰められている場合は、シフタが必要なくな
+                          --!   るため回路が簡単になる.
+                          integer range 0 to 1 := 0;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
