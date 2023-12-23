@@ -2,7 +2,7 @@
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
 --!     @version 2.0.0
---!     @date    2023/12/17
+--!     @date    2023/12/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -111,9 +111,18 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         I_JUSTIFIED         : --! @brief INPUT STREAM DATA JUSTIFIED :
                               --! 入力側の有効なデータが常にLOW側に詰められていることを
                               --! 示すフラグ.
+                              --! * 常にLOW側に詰められている場合は 1 を指定する.
                               --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
                               --!   ため回路が簡単になる.
                               integer range 0 to 1 := 0;
+        I_PIPELINE          : --! @brief INPUT STREAM DATA PIPELINE STAGE SIZE :
+                              --! 入力側のパイプラインの段数を指定する.
+                              --! * 前述の I_JUSTIFIED が 0 の場合は、入力 PORT 側
+                              --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                              --!   遅延時間が増大して動作周波数が上らないことがある.
+                              --!   そのような場合は I_PIPELINE に 1 以上を指定して
+                              --!   パイプライン化すると動作周波数が向上する可能性がある.
+                              integer := 0;
         BUF_DEPTH           : --! @brief BUFFER DEPTH :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
@@ -951,6 +960,7 @@ begin
                 SIZE_BITS       => SIZE_BITS           , --   
                 PTR_BITS        => BUF_DEPTH           , --   
                 QUEUE_SIZE      => 0                   , --
+                PORT_PIPELINE   => I_PIPELINE          , -- 
                 PORT_JUSTIFIED  => I_JUSTIFIED           -- 
             )                                            -- 
             port map (                                   --
