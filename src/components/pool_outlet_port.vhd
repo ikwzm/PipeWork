@@ -2,7 +2,7 @@
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
 --!     @version 2.0.0
---!     @date    2023/12/22
+--!     @date    2023/12/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -297,8 +297,9 @@ architecture RTL of POOL_OUTLET_PORT is
     -- 
     -------------------------------------------------------------------------------
     signal    queue_busy     :  std_logic;
-    signal    intake_running :  std_logic;
+    signal    queue_enable   :  std_logic;
     signal    intake_enable  :  std_logic;
+    signal    intake_running :  std_logic;
     signal    intake_valid   :  std_logic;
     signal    intake_ready   :  std_logic;
     signal    intake_last    :  std_logic;
@@ -340,14 +341,15 @@ begin
         intake_size     <= strb_size when (POOL_SIZE_VALID = 0) else
                            POOL_SIZE when (POOL_ERROR = '0') else
                            (others => '0');
-        intake_last     <= '1' when (POOL_LAST = '1' or POOL_ERROR      = '1') else '0';
-        intake_enable   <= '1' when (START     = '1' or intake_continue = '1') else '0';
+        intake_last     <= '1' when (POOL_LAST   = '1' or POOL_ERROR      = '1') else '0';
+        intake_enable   <= '1' when (POOL_PIPELINE = 0 or intake_running  = '1') else '0';
+        queue_enable    <= '1' when (START       = '1' or intake_continue = '1') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        intake_chop     <= '1' when (intake_valid = '1' and intake_ready = '1') else '0';
-        intake_done     <= '1' when (intake_running = '1' and intake_chop = '1' and intake_last = '1') else '0';
-        intake_continue <= '1' when (intake_running = '1' and intake_done = '0') else '0';
+        intake_chop     <= '1' when (intake_valid   = '1' and intake_ready = '1') else '0';
+        intake_done     <= '1' when (intake_running = '1' and intake_chop  = '1' and intake_last = '1') else '0';
+        intake_continue <= '1' when (intake_running = '1' and intake_done  = '0') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -518,7 +520,7 @@ begin
             -----------------------------------------------------------------------
             -- 入力側 I/F
             -----------------------------------------------------------------------
-                I_ENABLE        => intake_running , --
+                I_ENABLE        => intake_enable  , -- In  :
                 I_DATA          => POOL_DATA      , -- In  :
                 I_STRB          => intake_strobe  , -- In  :
                 I_INFO(0)       => intake_last    , -- In  :
@@ -570,7 +572,7 @@ begin
             -----------------------------------------------------------------------
             -- 入力側 I/F
             -----------------------------------------------------------------------
-                I_ENABLE        => intake_enable  , -- In  :
+                I_ENABLE        => queue_enable   , -- In  :
                 I_STRB          => justify_strb   , -- In  :
                 I_DATA          => justify_data   , -- In  :
                 I_DONE          => justify_last   , -- In  :
