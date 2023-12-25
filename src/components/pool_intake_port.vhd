@@ -2,7 +2,7 @@
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
 --!     @version 2.0.0
---!     @date    2023/12/22
+--!     @date    2023/12/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -126,10 +126,10 @@ entity  POOL_INTAKE_PORT is
     -------------------------------------------------------------------------------
         PORT_ENABLE     : --! @brief INTAKE PORT ENABLE :
                           --! 動作許可信号.
-                          --! * この信号がアサートされている場合、キューの入出力を
-                          --!   許可する.
-                          --! * この信号がネゲートされている場合、PORT_RDY はアサー
-                          --!   トされない.
+                          --! * この信号がアサートされた１クロック後から、キューへの入力を開始
+                          --!   する(その際キューが入力可能ならばPORT_RDY信号をアサートする).
+                          --! * この信号がネゲートされた１クロック後から、キューへの入力を停止
+                          --!   する(その際キューの状態に拘わらずPORT_RDY信号をネゲートする).
                           in  std_logic := '1';
         PORT_DATA       : --! @brief INTAKE PORT DATA :
                           --! ワードデータ入力.
@@ -226,6 +226,7 @@ architecture RTL of POOL_INTAKE_PORT is
     signal   port_strb      : std_logic_vector(PORT_WORDS*STRB_BITS-1 downto 0);
     signal   port_ready     : std_logic;
     signal   port_busy      : std_logic;
+    signal   i_enable       : std_logic;
     signal   i_data         : std_logic_vector(PORT_WORDS*WORD_BITS-1 downto 0);
     signal   i_strb         : std_logic_vector(PORT_WORDS*STRB_BITS-1 downto 0);
     signal   i_last         : std_logic;
@@ -305,6 +306,25 @@ begin
     -------------------------------------------------------------------------------
     port_strb <= PORT_DVAL when (PORT_ERROR = '0') else (others => '0');
     -------------------------------------------------------------------------------
+    -- i_enable      : データ入力を許可するための信号. PORT_RDY の生成に関与する.
+    -------------------------------------------------------------------------------
+    PORT_PIPELINE_EQ_0 : if (PORT_PIPELINE = 0) generate
+        i_enable <= '1';
+    end generate;
+    PORT_PIPELINE_GT_0 : if (PORT_PIPELINE > 0) generate
+        process(CLK, RST) begin
+            if (RST = '1') then
+                    i_enable <= '0';
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    i_enable <= '0';
+                else
+                    i_enable <= PORT_ENABLE;
+                end if;
+            end if;
+        end process;
+    end generate;
+    -------------------------------------------------------------------------------
     -- 入力データの前処理
     -------------------------------------------------------------------------------
     JUST: JUSTIFIER                             -- 
@@ -326,7 +346,7 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_ENABLE        => PORT_ENABLE    , -- In  :
+            I_ENABLE        => i_enable       , -- In  :
             I_STRB          => port_strb      , -- In  :
             I_DATA          => PORT_DATA      , -- In  :
             I_INFO(0)       => PORT_LAST      , -- In  :
