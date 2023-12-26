@@ -2,7 +2,7 @@
 --!     @file    axi4_slave_read_interface.vhd
 --!     @brief   AXI4 Slave Read Interface
 --!     @version 2.0.0
---!     @date    2023/12/17
+--!     @date    2023/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -71,7 +71,10 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           integer := 8;
         ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
                           --! アライメントサイズのビット数を指定する.
-                          integer := 8
+                          integer := 8;
+        RDATA_PIPELINE  : --! @brief READ DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -547,6 +550,7 @@ begin
             USE_BURST_SIZE  => 1               , --
             CHECK_BURST_LEN => 1               , --
             QUEUE_SIZE      => 1               , --
+            POOL_REGS_SIZE  => RDATA_PIPELINE  , -- 
             PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 
