@@ -2,7 +2,7 @@
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
 --!     @version 2.0.0                                                           --
---!     @date    2023/12/23                                                      --
+--!     @date    2023/12/26                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1685,13 +1685,14 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        DATA_PIPELINE   : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -1809,7 +1810,7 @@ component AXI4_REGISTER_READ_INTERFACE
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
-        AXI4_DATA_WIDTH : --! @brief AXI4 WRITE DATA CHANNEL DATA WIDTH :
+        AXI4_DATA_WIDTH : --! @brief AXI4 READ DATA CHANNEL DATA WIDTH :
                           --! AXI4 リードデータチャネルのRDATA信号のビット幅.
                           integer range 8 to AXI4_DATA_MAX_WIDTH := 32;
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
@@ -1817,13 +1818,14 @@ component AXI4_REGISTER_READ_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        DATA_PIPELINE   : --! @brief READ DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -1933,13 +1935,17 @@ component AXI4_REGISTER_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0;
+        RDATA_PIPELINE  : --! @brief READ  DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------

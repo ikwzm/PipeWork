@@ -2,7 +2,7 @@
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
 --!     @version 2.0.0
---!     @date    2023/12/17
+--!     @date    2023/12/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -60,13 +60,14 @@ entity  AXI4_REGISTER_WRITE_INTERFACE is
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        DATA_PIPELINE   : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -178,6 +179,7 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.AXI4_TYPES.all;
+use     PIPEWORK.COMPONENTS.JUSTIFIER;
 use     PIPEWORK.COMPONENTS.REDUCER;
 architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
@@ -214,55 +216,62 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     constant REGS_DATA_SIZE     : integer := CALC_DATA_SIZE(REGS_DATA_WIDTH);
     -------------------------------------------------------------------------------
-    -- WBUF の ワードのビット数.
+    -- アライメントのビット数(データの１ワードあたりのビット数).
     -------------------------------------------------------------------------------
-    function CALC_WBUF_WORD_BITS return integer is begin
+    function CALC_ALIGNMENT_BITS return integer is begin
         if    (AXI4_LITE = 0) then
             return 8;
         else
             return gcd(AXI4_DATA_WIDTH,REGS_DATA_WIDTH);
         end if;
     end function;
-    constant WBUF_WORD_BITS     : integer := CALC_WBUF_WORD_BITS;
+    constant ALIGNMENT_BITS     : integer := CALC_ALIGNMENT_BITS;
     -------------------------------------------------------------------------------
-    -- WBUF の ワードのバイト数の２のべき乗値.
+    -- アライメントのバイト数の２のべき乗値.
     -------------------------------------------------------------------------------
-    constant WBUF_WORD_SIZE     : integer := CALC_DATA_SIZE(WBUF_WORD_BITS);
+    constant ALIGNMENT_SIZE     : integer := CALC_DATA_SIZE(ALIGNMENT_BITS);
     -------------------------------------------------------------------------------
-    -- WBUF の ストローブのビット数.
+    -- ストローブ信号の１ワードあたりのビット数.
     -------------------------------------------------------------------------------
-    constant WBUF_STRB_BITS     : integer := WBUF_WORD_BITS/8;
+    constant WORD_STRB_BITS     : integer := ALIGNMENT_BITS/8;
     -------------------------------------------------------------------------------
-    -- WBUF の 入力側のワード数.
+    -- AXI4 側のデータのワード数.
     -------------------------------------------------------------------------------
-    constant WBUF_I_WORDS       : integer := AXI4_DATA_WIDTH/WBUF_WORD_BITS;
+    constant AXI4_DATA_WORDS    : integer := AXI4_DATA_WIDTH/ALIGNMENT_BITS;
     -------------------------------------------------------------------------------
-    -- WBUF の 出力側のワード数.
+    -- REGS 側のデータのワード数.
     -------------------------------------------------------------------------------
-    constant WBUF_O_WORDS       : integer := REGS_DATA_WIDTH/WBUF_WORD_BITS;
+    constant REGS_DATA_WORDS    : integer := REGS_DATA_WIDTH/ALIGNMENT_BITS;
     -------------------------------------------------------------------------------
     -- WBUF のキューのサイズ.
     -------------------------------------------------------------------------------
     function CALC_WBUF_QUEUE_SIZE return integer is begin
         if    (AXI4_LITE = 0) then    -- AXI4-Lite でない場合は、
             return 0;                 -- バースト転送に対応するように自動的に算出される
-        elsif (WBUF_I_WORDS > WBUF_O_WORDS) then
-            return WBUF_I_WORDS;      -- AXI4-Lite の場合は、
-        else                          -- WBUF の入力側のワード数と
-            return WBUF_O_WORDS;      -- WBUF の出力側のワード数の大きい方
+        elsif (AXI4_DATA_WORDS > REGS_DATA_WORDS) then
+            return AXI4_DATA_WORDS;   -- AXI4-Lite の場合は、
+        else                          -- AXI4 側のワード数と
+            return REGS_DATA_WORDS;   -- REGS 側のワード数の大きい方
         end if;
     end function;
     constant WBUF_QUEUE_SIZE    : integer := CALC_WBUF_QUEUE_SIZE;
     -------------------------------------------------------------------------------
     -- 内部信号
     -------------------------------------------------------------------------------
-    signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH-1 downto 0);
+    signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH  -1 downto 0);
+    signal   wdata_ready        : std_logic;
+    signal   intake_start       : std_logic;
+    signal   intake_running     : std_logic;
+    signal   intake_enable      : std_logic;
+    signal   intake_data        : std_logic_vector(AXI4_DATA_WIDTH  -1 downto 0);
+    signal   intake_strb        : std_logic_vector(AXI4_DATA_WIDTH/8-1 downto 0);
+    signal   intake_last        : std_logic;
+    signal   intake_valid       : std_logic;
+    signal   intake_ready       : std_logic;
+    signal   intake_busy        : std_logic;
     signal   wbuf_enable        : std_logic;
-    signal   wbuf_intake        : std_logic;
     signal   wbuf_busy          : std_logic;
-    signal   wbuf_ready         : std_logic;
-    signal   wbuf_start         : std_logic;
-    signal   wbuf_offset        : std_logic_vector(WBUF_O_WORDS-1 downto 0);
+    signal   wbuf_offset        : std_logic_vector(REGS_DATA_WORDS  -1 downto 0);
     signal   regs_valid         : std_logic;
     signal   regs_ready         : std_logic;
     signal   regs_last          : std_logic;
@@ -402,31 +411,32 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
-                wbuf_intake <= '0';
+                intake_running <= '0';
         elsif (CLK'event and CLK = '1') then
             if    (CLR = '1') then
-                wbuf_intake <= '0';
-            elsif (wbuf_start = '1') then
-                wbuf_intake <= '1';
+                intake_running <= '0';
+            elsif (intake_start = '1') then
+                intake_running <= '1';
             elsif (curr_state = IDLE) or
-                  (WVALID = '1' and WLAST = '1' and wbuf_ready = '1') then
-                wbuf_intake <= '0';
+                  (WVALID = '1' and WLAST = '1' and wdata_ready = '1') then
+                intake_running <= '0';
             end if;
         end if;
     end process;
-    wbuf_start  <= '1' when (curr_state = IDLE and AWVALID = '1' ) else '0';
-    wbuf_enable <= '1' when (wbuf_start = '1' or wbuf_intake ='1') else '0';
+    intake_start  <= '1' when (curr_state = IDLE and AWVALID = '1') else '0';
+    intake_enable <= '1' when (DATA_PIPELINE = 0  or intake_running ='1') else '0';
+    wbuf_enable   <= '1' when (intake_start = '1' or intake_running ='1') else '0';
     -------------------------------------------------------------------------------
     -- wbuf_offset : 
     -------------------------------------------------------------------------------
     process (AWADDR)
-        variable regs_offset : unsigned(REGS_DATA_SIZE-WBUF_WORD_SIZE downto 0);
+        variable regs_offset : unsigned(REGS_DATA_SIZE-ALIGNMENT_SIZE downto 0);
     begin
         for i in regs_offset'range loop
-            if (i+WBUF_WORD_SIZE <  REGS_DATA_SIZE) and
-               (i+WBUF_WORD_SIZE <= AWADDR'high   ) and
-               (i+WBUF_WORD_SIZE >= AWADDR'low    ) then
-                if (AWADDR(i+WBUF_WORD_SIZE) = '1') then
+            if (i+ALIGNMENT_SIZE <  REGS_DATA_SIZE) and
+               (i+ALIGNMENT_SIZE <= AWADDR'high   ) and
+               (i+ALIGNMENT_SIZE >= AWADDR'low    ) then
+                if (AWADDR(i+ALIGNMENT_SIZE) = '1') then
                     regs_offset(i) := '1';
                 else
                     regs_offset(i) := '0';
@@ -444,17 +454,58 @@ begin
         end loop;
     end process;
     -------------------------------------------------------------------------------
+    -- ライトデータの前処理
+    -------------------------------------------------------------------------------
+    INTAKE: JUSTIFIER                           -- 
+        generic map (                           -- 
+            WORD_BITS       => ALIGNMENT_BITS , -- 
+            STRB_BITS       => WORD_STRB_BITS , -- 
+            WORDS           => AXI4_DATA_WORDS, -- 
+            I_JUSTIFIED     => 0              , --
+            PIPELINE        => DATA_PIPELINE    --
+        )                                       -- 
+        port map (                              -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK            , -- In  :
+            RST             => RST            , -- In  :
+            CLR             => CLR            , -- In  :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            I_ENABLE        => intake_enable  , -- In  :
+            I_DATA          => WDATA          , -- In  :
+            I_STRB          => WSTRB          , -- In  :
+            I_INFO(0)       => WLAST          , -- In  :
+            I_VAL           => WVALID         , -- In  :
+            I_RDY           => wdata_ready    , -- Out :
+        ---------------------------------------------------------------------------
+        -- 出力側 I/F
+        ---------------------------------------------------------------------------
+            O_DATA          => intake_data    , -- Out :
+            O_STRB          => intake_strb    , -- Out :
+            O_INFO(0)       => intake_last    , -- Out :
+            O_VAL           => intake_valid   , -- Out :
+            O_RDY           => intake_ready   , -- In  :
+        ---------------------------------------------------------------------------
+        -- Status Signals
+        ---------------------------------------------------------------------------
+            BUSY            => intake_busy      -- Out :
+        );                                      -- 
+    WREADY <= wdata_ready;
+    -------------------------------------------------------------------------------
     -- ライトデータバッファ
     -------------------------------------------------------------------------------
     WBUF: REDUCER                                  -- 
         generic map (                              -- 
-            WORD_BITS       => WBUF_WORD_BITS    , -- 
-            STRB_BITS       => WBUF_STRB_BITS    , -- 
-            I_WIDTH         => WBUF_I_WORDS      , -- 
-            O_WIDTH         => WBUF_O_WORDS      , -- 
-            O_SHIFT_MIN     => WBUF_O_WORDS      , -- 
-            O_SHIFT_MAX     => WBUF_O_WORDS      , --
-            I_JUSTIFIED     => 0                 , --
+            WORD_BITS       => ALIGNMENT_BITS    , -- 
+            STRB_BITS       => WORD_STRB_BITS    , -- 
+            I_WIDTH         => AXI4_DATA_WORDS   , -- 
+            O_WIDTH         => REGS_DATA_WORDS   , -- 
+            O_SHIFT_MIN     => REGS_DATA_WORDS   , -- 
+            O_SHIFT_MAX     => REGS_DATA_WORDS   , --
+            I_JUSTIFIED     => 1                 , --
             QUEUE_SIZE      => WBUF_QUEUE_SIZE     -- 
         )                                          -- 
         port map (                                 -- 
@@ -467,7 +518,7 @@ begin
         ---------------------------------------------------------------------------
         -- 各種制御信号
         ---------------------------------------------------------------------------
-            START           => wbuf_start        , -- In  :
+            START           => intake_start      , -- In  :
             OFFSET          => wbuf_offset       , -- In  :
             BUSY            => wbuf_busy         , -- Out :
             VALID           => open              , -- Out :
@@ -475,11 +526,11 @@ begin
         -- 入力側 I/F
         ---------------------------------------------------------------------------
             I_ENABLE        => wbuf_enable       , -- In  :
-            I_DATA          => WDATA             , -- In  :
-            I_STRB          => WSTRB             , -- In  :
-            I_DONE          => WLAST             , -- In  :
-            I_VAL           => WVALID            , -- In  :
-            I_RDY           => wbuf_ready        , -- Out :
+            I_DATA          => intake_data       , -- In  :
+            I_STRB          => intake_strb       , -- In  :
+            I_DONE          => intake_last       , -- In  :
+            I_VAL           => intake_valid      , -- In  :
+            I_RDY           => intake_ready      , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
         ---------------------------------------------------------------------------
@@ -490,5 +541,4 @@ begin
             O_VAL           => regs_valid        , -- Out :
             O_RDY           => regs_ready          -- In  :
     );
-    WREADY <= wbuf_ready;
 end RTL;
