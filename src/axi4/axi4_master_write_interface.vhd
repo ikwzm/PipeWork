@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 2.0.0
---!     @date    2023/12/17
+--!     @date    2023/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -114,7 +114,10 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           integer range 0 to 1 := 0;
         RESP_REGS       : --! @brief RESPONSE REGISTER USE :
                           --! レスポンスの入力側にレジスタを挿入する.
-                          integer range 0 to 1 := 0
+                          integer range 0 to 1 := 0;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -889,6 +892,7 @@ begin
             USE_BURST_SIZE  => 0                 , --
             CHECK_BURST_LEN => 0                 , --
             QUEUE_SIZE      => 1                 , --
+            POOL_REGS_SIZE  => WDATA_PIPELINE    , --
             PORT_REGS_SIZE  => 0                   --
         )                                          -- 
         port map (                                 -- 

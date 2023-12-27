@@ -321,7 +321,10 @@ component AXI4_MASTER_READ_INTERFACE
                           --! するか否かを指定する.
                           --! * ACK_REGS=0で組み合わせ出力.
                           --! * ACK_REGS=1でレジスタ出力.
-                          integer range 0 to 1 := 0
+                          integer range 0 to 1 := 0;
+        RDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -736,7 +739,10 @@ component AXI4_MASTER_WRITE_INTERFACE
                           integer range 0 to 1 := 0;
         RESP_REGS       : --! @brief RESPONSE REGISTER USE :
                           --! レスポンスの入力側にレジスタを挿入する.
-                          integer range 0 to 1 := 0
+                          integer range 0 to 1 := 0;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
