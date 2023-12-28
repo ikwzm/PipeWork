@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 2.0.0                                                           --
---!     @date    2023/12/23                                                      --
+--!     @date    2023/12/28                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1372,7 +1372,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         O_DATA_BITS         : --! @brief OUTPUT STREAM DATA BITS :
                               --! O_DATA のビット数を指定する.
                               integer := 32;
-        O_WORD_BITS         : --! @brief INPUT STREAM WORD BITS :
+        O_WORD_BITS         : --! @brief OUTPUT STREAM WORD BITS :
                               --! O_DATA の１ワードあたりのビット数を指定する.
                               --! * O_DATA_BITS   >=  O_WORD_BITS でなければならない.
                               --! * O_DATA_BITS   mod O_WORD_BITS = 0 でなければならない.
