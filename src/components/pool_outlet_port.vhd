@@ -2,7 +2,7 @@
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
 --!     @version 2.0.0
---!     @date    2023/12/25
+--!     @date    2023/12/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -296,9 +296,6 @@ architecture RTL of POOL_OUTLET_PORT is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    signal    queue_busy     :  std_logic;
-    signal    queue_enable   :  std_logic;
-    signal    intake_enable  :  std_logic;
     signal    intake_running :  std_logic;
     signal    intake_valid   :  std_logic;
     signal    intake_ready   :  std_logic;
@@ -307,6 +304,7 @@ architecture RTL of POOL_OUTLET_PORT is
     signal    intake_strobe  :  std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
     signal    intake_size    :  std_logic_vector(SIZE_BITS-1 downto 0);
     constant  outlet_enable  :  std_logic := '1';
+    signal    outlet_busy    :  std_logic;
     signal    outlet_valid   :  std_logic;
     signal    outlet_ready   :  std_logic;
     signal    outlet_last    :  std_logic;
@@ -342,8 +340,6 @@ begin
                            POOL_SIZE when (POOL_ERROR = '0') else
                            (others => '0');
         intake_last     <= '1' when (POOL_LAST   = '1' or POOL_ERROR      = '1') else '0';
-        intake_enable   <= '1' when (POOL_PIPELINE = 0 or intake_running  = '1') else '0';
-        queue_enable    <= '1' when (START       = '1' or intake_continue = '1') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -438,12 +434,17 @@ begin
         constant  port_shift    : std_logic_vector(PORT_WORDS downto PORT_WORDS) := "0";
         signal    port_offset   : std_logic_vector(PORT_WORDS-1 downto 0);
         signal    error_flag    : boolean;
+        signal    intake_done   : std_logic;
+        signal    justify_enable: std_logic;
         signal    justify_strb  : std_logic_vector(POOL_WORDS*STRB_BITS-1 downto 0);
         signal    justify_data  : std_logic_vector(POOL_WORDS*WORD_BITS-1 downto 0);
         signal    justify_last  : std_logic;
         signal    justify_valid : std_logic;
         signal    justify_ready : std_logic;
         signal    justify_busy  : std_logic;
+        signal    justify_done  : std_logic;
+        signal    queue_enable  : std_logic;
+        signal    queue_busy    : std_logic;
     begin
         ---------------------------------------------------------------------------
         --
@@ -500,6 +501,10 @@ begin
             end if;
         end process;
         ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        justify_enable <= '1' when (POOL_PIPELINE = 0 or intake_running  = '1') else '0';
+        ---------------------------------------------------------------------------
         -- 入力データの前処理
         ---------------------------------------------------------------------------
         JUST: JUSTIFIER                             -- 
@@ -520,7 +525,7 @@ begin
             -----------------------------------------------------------------------
             -- 入力側 I/F
             -----------------------------------------------------------------------
-                I_ENABLE        => intake_enable  , -- In  :
+                I_ENABLE        => justify_enable , -- In  :
                 I_DATA          => POOL_DATA      , -- In  :
                 I_STRB          => intake_strobe  , -- In  :
                 I_INFO(0)       => intake_last    , -- In  :
@@ -539,6 +544,18 @@ begin
             -----------------------------------------------------------------------
                 BUSY            => justify_busy     -- Out :
             );                                      -- 
+        ---------------------------------------------------------------------------
+        --
+        ---------------------------------------------------------------------------
+        intake_done  <= '1' when (intake_valid  = '1' and intake_ready  = '1' and intake_last  = '1') else '0';
+        justify_done <= '1' when (justify_valid = '1' and justify_ready = '1' and justify_last = '1') else '0';
+        queue_enable <= '1' when (POOL_PIPELINE = 0 and
+                                  (START = '1' or
+                                   (intake_running = '1' and intake_done  = '0'))) or
+                                 (POOL_PIPELINE > 0 and
+                                  (START = '1' or intake_running = '1' or 
+                                   (justify_busy   = '1' and justify_done = '0'))) else '0';
+        outlet_busy  <= '1' when (queue_busy = '1' or justify_busy = '1') else '0';
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -609,12 +626,12 @@ begin
         outlet_valid <= intake_valid;
         outlet_size  <= intake_size;
         intake_ready <= '1' when (intake_running = '1' and outlet_ready = '1') else '0';
-        queue_busy   <= '0';
+        outlet_busy  <= '0';
     end generate;
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    BUSY         <= '1' when (intake_running = '1' or queue_busy = '1') else '0';
+    BUSY         <= '1' when (intake_running = '1' or outlet_busy = '1') else '0';
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

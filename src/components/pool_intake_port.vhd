@@ -2,7 +2,7 @@
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
 --!     @version 2.0.0
---!     @date    2023/12/25
+--!     @date    2023/12/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -222,10 +222,12 @@ architecture RTL of POOL_INTAKE_PORT is
     constant POOL_WORDS     : integer   := (POOL_DATA'length/WORD_BITS);
     constant pool_shift     : std_logic_vector(POOL_WORDS downto POOL_WORDS) := "0";
     signal   pool_offset    : std_logic_vector(POOL_WORDS-1 downto 0);
+    signal   queue_enable   : std_logic;
     signal   queue_busy     : std_logic;
     signal   port_strb      : std_logic_vector(PORT_WORDS*STRB_BITS-1 downto 0);
     signal   port_ready     : std_logic;
-    signal   port_busy      : std_logic;
+    signal   i_busy         : std_logic;
+    signal   i_done         : std_logic;
     signal   i_enable       : std_logic;
     signal   i_data         : std_logic_vector(PORT_WORDS*WORD_BITS-1 downto 0);
     signal   i_strb         : std_logic_vector(PORT_WORDS*STRB_BITS-1 downto 0);
@@ -309,7 +311,8 @@ begin
     -- i_enable      : データ入力を許可するための信号. PORT_RDY の生成に関与する.
     -------------------------------------------------------------------------------
     PORT_PIPELINE_EQ_0 : if (PORT_PIPELINE = 0) generate
-        i_enable <= '1';
+        i_enable     <= '1';
+        queue_enable <= PORT_ENABLE;
     end generate;
     PORT_PIPELINE_GT_0 : if (PORT_PIPELINE > 0) generate
         process(CLK, RST) begin
@@ -323,6 +326,8 @@ begin
                 end if;
             end if;
         end process;
+        queue_enable <= '1' when (PORT_ENABLE = '1') or
+                                 (i_busy = '1' and i_done = '0') else '0';
     end generate;
     -------------------------------------------------------------------------------
     -- 入力データの前処理
@@ -363,9 +368,10 @@ begin
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
-            BUSY            => port_busy        -- Out :
+            BUSY            => i_busy           -- Out :
         );                                      --
     PORT_RDY <= port_ready;
+    i_done   <= '1' when (i_valid = '1' and i_ready = '1' and i_last = '1') else '0';
     -------------------------------------------------------------------------------
     -- データーキュー
     -------------------------------------------------------------------------------
@@ -399,7 +405,7 @@ begin
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_ENABLE        => PORT_ENABLE    , -- In  :
+            I_ENABLE        => queue_enable   , -- In  :
             I_STRB          => i_strb         , -- In  :
             I_DATA          => i_data         , -- In  :
             I_DONE          => i_last         , -- In  :
@@ -551,5 +557,5 @@ begin
     -------------------------------------------------------------------------------
     -- BUSY       : 
     -------------------------------------------------------------------------------
-    BUSY <= '1' when (queue_busy = '1' or port_busy = '1') else '0';
+    BUSY <= '1' when (queue_busy = '1' or i_busy = '1') else '0';
 end RTL;
