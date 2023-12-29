@@ -2,7 +2,7 @@
 --!     @file    axi4_register_write_interface.vhd
 --!     @brief   AXI4 Register Write Interface
 --!     @version 2.0.0
---!     @date    2023/12/26
+--!     @date    2023/12/29
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -260,6 +260,7 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     -------------------------------------------------------------------------------
     signal   xfer_req_addr      : std_logic_vector(REGS_ADDR_WIDTH  -1 downto 0);
     signal   wdata_ready        : std_logic;
+    signal   wdata_done         : std_logic;
     signal   intake_start       : std_logic;
     signal   intake_running     : std_logic;
     signal   intake_enable      : std_logic;
@@ -269,6 +270,7 @@ architecture RTL of AXI4_REGISTER_WRITE_INTERFACE is
     signal   intake_valid       : std_logic;
     signal   intake_ready       : std_logic;
     signal   intake_busy        : std_logic;
+    signal   intake_done        : std_logic;
     signal   wbuf_enable        : std_logic;
     signal   wbuf_busy          : std_logic;
     signal   wbuf_offset        : std_logic_vector(REGS_DATA_WORDS  -1 downto 0);
@@ -425,7 +427,6 @@ begin
     end process;
     intake_start  <= '1' when (curr_state = IDLE and AWVALID = '1') else '0';
     intake_enable <= '1' when (DATA_PIPELINE = 0  or intake_running ='1') else '0';
-    wbuf_enable   <= '1' when (intake_start = '1' or intake_running ='1') else '0';
     -------------------------------------------------------------------------------
     -- wbuf_offset : 
     -------------------------------------------------------------------------------
@@ -494,6 +495,17 @@ begin
             BUSY            => intake_busy      -- Out :
         );                                      -- 
     WREADY <= wdata_ready;
+    -------------------------------------------------------------------------------
+    -- 
+    -------------------------------------------------------------------------------
+    wdata_done  <= '1' when (WVALID       = '1' and wdata_ready  = '1' and WLAST       = '1') else '0';
+    intake_done <= '1' when (intake_valid = '1' and intake_ready = '1' and intake_last = '1') else '0';
+    wbuf_enable <= '1' when (DATA_PIPELINE = 0 and
+                             (intake_start = '1' or
+                              (intake_running = '1' and wdata_done  = '0'))) or
+                            (DATA_PIPELINE > 0 and
+                             (intake_start = '1' or intake_running  = '1' or 
+                              (intake_busy  = '1'   and intake_done = '0'))) else '0';
     -------------------------------------------------------------------------------
     -- ライトデータバッファ
     -------------------------------------------------------------------------------
