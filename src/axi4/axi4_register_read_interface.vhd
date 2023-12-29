@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_read_interface.vhd
 --!     @brief   AXI4 Register Read Interface
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -52,7 +52,7 @@ entity  AXI4_REGISTER_READ_INTERFACE is
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
-        AXI4_DATA_WIDTH : --! @brief AXI4 WRITE DATA CHANNEL DATA WIDTH :
+        AXI4_DATA_WIDTH : --! @brief AXI4 READ DATA CHANNEL DATA WIDTH :
                           --! AXI4 リードデータチャネルのRDATA信号のビット幅.
                           integer range 8 to AXI4_DATA_MAX_WIDTH := 32;
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
@@ -60,13 +60,14 @@ entity  AXI4_REGISTER_READ_INTERFACE is
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        DATA_PIPELINE   : --! @brief READ DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -468,7 +469,8 @@ begin
             TRAN_MAX_SIZE   => XFER_MAX_SIZE   , --
             USE_BURST_SIZE  => USE_BURST_SIZE  , --
             CHECK_BURST_LEN => CHECK_BURST_LEN , --
-            QUEUE_SIZE      => PORT_QUEUE_SIZE , -- 
+            QUEUE_SIZE      => PORT_QUEUE_SIZE , --
+            POOL_REGS_SIZE  => DATA_PIPELINE   , -- 
             PORT_REGS_SIZE  => 0                 --
         )                                        -- 
         port map (                               -- 

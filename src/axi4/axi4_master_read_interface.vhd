@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -110,7 +110,10 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! するか否かを指定する.
                           --! * ACK_REGS=0で組み合わせ出力.
                           --! * ACK_REGS=1でレジスタ出力.
-                          integer range 0 to 1 := 0
+                          integer range 0 to 1 := 0;
+        RDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -1126,7 +1129,8 @@ begin
             SEL_BITS        => VAL_BITS            , -- 
             SIZE_BITS       => XFER_SIZE_BITS      , --
             PTR_BITS        => BUF_PTR_BITS        , -- 
-            QUEUE_SIZE      => 0                     -- 
+            QUEUE_SIZE      => 0                   , --
+            PORT_PIPELINE   => RDATA_PIPELINE        -- 
         )                                            -- 
         port map (                                   -- 
         ---------------------------------------------------------------------------

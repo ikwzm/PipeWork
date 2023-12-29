@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_data_outlet_port.vhd
 --!     @brief   AXI4 DATA OUTLET PORT
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/22
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -105,6 +105,21 @@ entity  AXI4_DATA_OUTLET_PORT is
                           --! * QUEUE_SIZE>0を指定した場合、バースト転送時にウェイトは
                           --!   発生しない.
                           integer := 1;
+        POOL_REGS_SIZE  : --! @brief POOL PIPELINE STAGE SIZE :
+                          --! 入力側に挿入するパイプラインの段数を指定する.
+                          --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は POOL_REGS_SIZE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
+        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT JUSTIFIED :
+                          --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
+                          --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
+                          --! * 常にLOW側に詰められている場合は、シフタが必要なくな
+                          --!   るため回路が簡単になる.
+                          integer range 0 to 1 := 0;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ
@@ -341,9 +356,11 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     --
     -------------------------------------------------------------------------------
     type     SETTING_TYPE   is record
-             Q_Q_SIZE       : integer;  -- Q:POOL_OUTLET_PORT の QUEUE_SIZE
-             O_I_SIZE       : integer;  -- O:AXI4_DATA_PORT の I_REGS_SIZE
-             O_O_SIZE       : integer;  -- O:AXI4_DATA_PORT の O_REGS_SIZE
+             Q_QUEUE_SIZE   : integer;  -- Q:POOL_OUTLET_PORT の QUEUE_SIZE
+             Q_I_PIPELINE   : integer;  -- Q:POOL_OUTLET_PORT の POOL_PIPELINE
+             Q_I_JUSTIFIED  : integer;  -- Q:POOL_OUTLET_PORT の POOL_JUSTIFIED
+             O_I_REGS_SIZE  : integer;  -- O:AXI4_DATA_PORT の I_REGS_SIZE
+             O_O_REGS_SIZE  : integer;  -- O:AXI4_DATA_PORT の O_REGS_SIZE
     end record;
     function SET_SETTING return SETTING_TYPE is
         variable setting    : SETTING_TYPE;
@@ -352,13 +369,17 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     begin
         if (PORT_DATA_BITS /= ALIGNMENT_BITS) or
            (POOL_DATA_BITS /= ALIGNMENT_BITS) then
-            setting.Q_Q_SIZE := POOL_WORDS*(QUEUE_SIZE+1)+PORT_WORDS-1;
-            setting.O_I_SIZE := 0;
+            setting.Q_QUEUE_SIZE  := POOL_WORDS*(QUEUE_SIZE+1)+PORT_WORDS-1;
+            setting.Q_I_PIPELINE  := POOL_REGS_SIZE;
+            setting.Q_I_JUSTIFIED := POOL_JUSTIFIED;
+            setting.O_I_REGS_SIZE := 0;
         else
-            setting.Q_Q_SIZE := -1;
-            setting.O_I_SIZE := (QUEUE_SIZE+1);
+            setting.Q_QUEUE_SIZE  := -1;
+            setting.Q_I_PIPELINE  := 0;
+            setting.Q_I_JUSTIFIED := 1;
+            setting.O_I_REGS_SIZE := (QUEUE_SIZE+1);
         end if;
-        setting.O_O_SIZE := PORT_REGS_SIZE;
+        setting.O_O_REGS_SIZE := PORT_REGS_SIZE;
         return setting;
     end function;
     constant SET            : SETTING_TYPE := SET_SETTING;
@@ -374,7 +395,6 @@ architecture RTL of AXI4_DATA_OUTLET_PORT is
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    signal   i_busy         : std_logic;
     signal   i_chop         : std_logic;
     signal   i_valid        : std_logic;
     signal   i_ready        : std_logic;
@@ -487,7 +507,9 @@ begin
             SEL_BITS        => TRAN_SEL_BITS   , --
             SIZE_BITS       => SIZE_BITS       , --
             POOL_SIZE_VALID => 1               , --
-            QUEUE_SIZE      => SET.Q_Q_SIZE      -- 
+            QUEUE_SIZE      => SET.Q_QUEUE_SIZE, --
+            POOL_PIPELINE   => SET.Q_I_PIPELINE, --
+            POOL_JUSTIFIED  => SET.Q_I_JUSTIFIED --
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------
@@ -569,8 +591,8 @@ begin
             ALEN_BITS       => BURST_LEN_BITS  , --
             USE_ASIZE       => USE_BURST_SIZE  , --
             CHECK_ALEN      => CHECK_BURST_LEN , -- 
-            I_REGS_SIZE     => SET.O_I_SIZE    , --
-            O_REGS_SIZE     => SET.O_O_SIZE      --
+            I_REGS_SIZE     => SET.O_I_REGS_SIZE,--
+            O_REGS_SIZE     => SET.O_O_REGS_SIZE --
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------

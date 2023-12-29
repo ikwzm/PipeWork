@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 1.9.0                                                           --
---!     @date    2023/12/15                                                      --
+--!     @version 2.0.0                                                           --
+--!     @date    2023/12/28                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -213,6 +213,128 @@ component CHOPPER
     );
 end component;
 -----------------------------------------------------------------------------------
+--! @brief JUSTIFIER                                                             --
+-----------------------------------------------------------------------------------
+component JUSTIFIER
+    generic (
+        WORD_BITS   : --! @brief WORD BITS :
+                      --! １ワードのデータのビット数を指定する.
+                      integer := 8;
+        STRB_BITS   : --! @brief ENABLE BITS :
+                      --! ワードデータのうち有効なデータであることを示す信号(STRB)
+                      --! のビット数を指定する.
+                      integer := 1;
+        INFO_BITS   : --! @brief INFOMATION BITS :
+                      --! インフォメーション信号のビット数を指定する.
+                      integer := 1;
+        WORDS       : --! @brief INPUT WORD WIDTH :
+                      --! 入力側のデータのワード数を指定する.
+                      integer := 1;
+        I_JUSTIFIED : --! @brief INPUT WORD JUSTIFIED :
+                      --! 入力側の有効なデータが常にLOW側に詰められていることを
+                      --! 示すフラグ.
+                      --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
+                      --!   ため回路が簡単になる.
+                      integer range 0 to 1 := 0;
+        I_DVAL_ENABLE:--! @brief INPUT DATA VALID ENABLE :
+                      --! ワードデータのうち有効なデータであることを示す信号として
+                      --! I_DVAL 信号を使う.
+                      --! * I_DVAL_ENABLE=1を指定した場合は、I_DVAL をワードデータ
+                      --!   のうちの有効なデータであることを示す信号として使う.
+                      --! * I_DVAL_ENABLE=0を指定した場合は、I_STRB をワードデータ
+                      --!   のうちの有効なデータであることを示す信号として使う.
+                      --! * I_STRB の値に関係なく I_DATA と I_STRB をキューに格納
+                      --!   したい場合は I_DVAL を使うと良い.
+                      integer range 0 to 1 := 0;
+        PIPELINE     : --! @brief PORT PIPELINE STAGE SIZE :
+                       --! パイプラインの段数を指定する.
+                       --! * 前述の I_JUSTIFIED が 0 の場合は、入力側 I/F の有効
+                       --!   なデータを LOW 側に詰る必要があるが、その際に遅延時間
+                       --!   が増大して動作周波数が上らないことがある.
+                       --!   そのような場合は PIPELINE に 1 以上を指定してパイプラ
+                       --!   イン化すると動作周波数が向上する可能性がある.
+                      integer := 0
+    );
+    port (
+    -------------------------------------------------------------------------------
+    -- クロック&リセット信号
+    -------------------------------------------------------------------------------
+        CLK         : --! @brief CLOCK :
+                      --! クロック信号
+                      in  std_logic; 
+        RST         : --! @brief ASYNCRONOUSE RESET :
+                      --! 非同期リセット信号.アクティブハイ.
+                      in  std_logic;
+        CLR         : --! @brief SYNCRONOUSE RESET :
+                      --! 同期リセット信号.アクティブハイ.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- 入力側 I/F
+    -------------------------------------------------------------------------------
+        I_ENABLE    : --! @brief INPUT ENABLE :
+                      in  std_logic;
+        I_DATA      : --! @brief INPUT WORD DATA :
+                      --! ワードデータ入力.
+                      in  std_logic_vector(WORDS*WORD_BITS-1 downto 0);
+        I_STRB      : --! @brief INPUT WORD ENABLE :
+                      --! ワードストローブ信号入力.
+                      in  std_logic_vector(WORDS*STRB_BITS-1 downto 0) := (others => '1');
+        I_DVAL      : --! @brief INPUT WORD ENABLE :
+                      --! ワード有効信号入力.
+                      --! * I_DATA/I_STRB のうちどのワードをパイプラインに入れるかを示す信号.
+                      --! * I_DVAL_ENABLE=1の時のみ有効.
+                      --! * I_DVAL_ENABLE=0の時は I_STRB 信号の値によって、どのワードを
+                      --!   パイプラインに入れるかを示す.
+                      in  std_logic_vector(WORDS          -1 downto 0) := (others => '1');
+        I_INFO      : --! @brief INPUT INFOMATION :
+                      --! インフォメーション入力.
+                      in  std_logic_vector(      INFO_BITS-1 downto 0) := (others => '0');
+        I_VAL       : --! @brief INPUT WORD VALID :
+                      --! 入力ワード有効信号.
+                      --! * I_DATA/I_STRB/I_DVAL/I_LASTが有効であることを示す.
+                      --! * I_VAL='1'and I_RDY='1'でワードデータがパイプラインに取り込まれる.
+                      in  std_logic;
+        I_RDY       : --! @brief INPUT WORD READY :
+                      --! 入力レディ信号.
+                      --! * パイプラインが次のワードデータを入力出来ることを示す.
+                      --! * I_VAL='1'and I_RDY='1'でワードデータがパイプラインに取り込まれる.
+                      out std_logic;
+    -------------------------------------------------------------------------------
+    -- 出力側 I/F
+    -------------------------------------------------------------------------------
+        O_DATA      : --! @brief OUTPUT WORD DATA :
+                      --! ワードデータ出力.
+                      out std_logic_vector(WORDS*WORD_BITS-1 downto 0);
+        O_STRB      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワードストローブ信号出力.
+                      out std_logic_vector(WORDS*STRB_BITS-1 downto 0);
+        O_DVAL      : --! @brief OUTPUT WORD ENABLE :
+                      --! ワード有効信号出力.
+                      out std_logic_vector(WORDS          -1 downto 0);
+        O_INFO      : --! @brief OUTPUT INFOMATION :
+                      --! インフォメーション出力.
+                      out std_logic_vector(      INFO_BITS-1 downto 0);
+        O_VAL       : --! @brief OUTPUT WORD VALID :
+                      --! 出力ワード有効信号.
+                      --! * O_DATA/O_STRB/O_DVAL/O_LASTが有効であることを示す.
+                      --! * O_VAL='1'and O_RDY='1'でワードデータがパイプラインから取り除かれる.
+                      out std_logic;
+        O_RDY       : --! @brief OUTPUT WORD READY :
+                      --! 出力レディ信号.
+                      --! * パイプラインから次のワードを取り除く準備が出来ていることを示す.
+                      --! * O_VAL='1'and O_RDY='1'でワードデータがパイプラインから取り除かれる.
+                      in  std_logic;
+    -------------------------------------------------------------------------------
+    -- Status Signals.
+    -------------------------------------------------------------------------------
+        BUSY        : --! @brief QUEUE BUSY :
+                      --! パイプラインが動作中であることを示す信号.
+                      --! * 最初にデータが入力されたときにアサートされる.
+                      --! * 最後のデータが出力し終えたらネゲートされる.
+                      out  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
 --! @brief REDUCER                                                               --
 -----------------------------------------------------------------------------------
 component REDUCER
@@ -375,8 +497,10 @@ component REDUCER
     -------------------------------------------------------------------------------
         I_ENABLE    : --! @brief INPUT ENABLE :
                       --! 入力許可信号.
-                      --! * この信号がアサートされている場合、キューの入力を許可する.
-                      --! * この信号がネゲートされている場合、I_RDY アサートされない.
+                      --! * この信号がアサートされた１クロック後から、キューへの入力を開始
+                      --!   する(その際キューが入力可能ならばIRDY信号をアサートする).
+                      --! * この信号がネゲートされた１クロック後から、キューへの入力を停止
+                      --!   する(その際キューの状態に拘わらずIRDY信号をネゲートする).
                       in  std_logic := '1';
         I_DATA      : --! @brief INPUT WORD DATA :
                       --! ワードデータ入力.
@@ -420,8 +544,10 @@ component REDUCER
     -------------------------------------------------------------------------------
         O_ENABLE    : --! @brief OUTPUT ENABLE :
                       --! 出力許可信号.
-                      --! * この信号がアサートされている場合、キューの出力を許可する.
-                      --! * この信号がネゲートされている場合、O_VAL アサートされない.
+                      --! * この信号がアサートされた１クロック後から、キューからの出力を開始
+                      --!   する(その際キューが出力可能ならばOVAL信号をアサートする).
+                      --! * この信号がネゲートされた１クロック後から、キューからの出力を停止
+                      --!   する(その際キューの状態に拘わらずOVAL信号をネゲートする).
                       in  std_logic := '1';
         O_DATA      : --! @brief OUTPUT WORD DATA :
                       --! ワードデータ出力.
@@ -1573,9 +1699,18 @@ component POOL_INTAKE_PORT
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        PORT_PIPELINE   : --! @brief PORT PIPELINE STAGE SIZE :
+                          --! 入力 PORT 側のパイプラインの段数を指定する.
+                          --! * 後述の PORT_JUSTIFIED が 0 の場合は、入力 PORT 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は PORT_PIPELINE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
         PORT_JUSTIFIED  : --! @brief PORT INPUT JUSTIFIED :
                           --! 入力 PORT 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
                           --! * 常にLOW側に詰められている場合は、シフタが必要なくな
                           --!   るため回路が簡単になる.
                           integer range 0 to 1 := 0
@@ -1619,10 +1754,10 @@ component POOL_INTAKE_PORT
     -------------------------------------------------------------------------------
         PORT_ENABLE     : --! @brief INTAKE PORT ENABLE :
                           --! 動作許可信号.
-                          --! * この信号がアサートされている場合、キューの入出力を
-                          --!   許可する.
-                          --! * この信号がネゲートされている場合、PORT_RDY はアサー
-                          --!   トされない.
+                          --! * この信号がアサートされた１クロック後から、キューへの入力を開始
+                          --!   する(その際キューが入力可能ならばPORT_RDY信号をアサートする).
+                          --! * この信号がネゲートされた１クロック後から、キューへの入力を停止
+                          --!   する(その際キューの状態に拘わらずPORT_RDY信号をネゲートする).
                           in  std_logic := '1';
         PORT_DATA       : --! @brief INTAKE PORT DATA :
                           --! ワードデータ入力.
@@ -1746,9 +1881,18 @@ component POOL_OUTLET_PORT
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
-        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT INPUT JUSTIFIED :
+        POOL_PIPELINE   : --! @brief POOL PIPELINE STAGE SIZE :
+                          --! 入力 POOL 側のパイプラインの段数を指定する.
+                          --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は POOL_PIPELINE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
+        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT JUSTIFIED :
                           --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
                           --! * 常にLOW側に詰められている場合は、シフタが必要なくな
                           --!   るため回路が簡単になる.
                           integer range 0 to 1 := 0

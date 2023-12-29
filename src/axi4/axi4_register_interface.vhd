@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_register_interface.vhd
 --!     @brief   AXI4 Register Interface
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -60,13 +60,17 @@ entity  AXI4_REGISTER_INTERFACE is
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0;
+        RDATA_PIPELINE  : --! @brief READ  DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -275,7 +279,8 @@ begin
             AXI4_DATA_WIDTH => AXI4_DATA_WIDTH , -- 
             AXI4_ID_WIDTH   => AXI4_ID_WIDTH   , -- 
             REGS_ADDR_WIDTH => REGS_ADDR_WIDTH , -- 
-            REGS_DATA_WIDTH => REGS_DATA_WIDTH   -- 
+            REGS_DATA_WIDTH => REGS_DATA_WIDTH , -- 
+            DATA_PIPELINE   => RDATA_PIPELINE    -- 
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------
@@ -297,12 +302,12 @@ begin
         ---------------------------------------------------------------------------
         -- AXI4 Read Data Channel Signals.
         ---------------------------------------------------------------------------
-            RID             => RID             , -- In  :
-            RDATA           => RDATA           , -- In  :
-            RRESP           => RRESP           , -- In  :
-            RLAST           => RLAST           , -- In  :
-            RVALID          => RVALID          , -- In  :
-            RREADY          => RREADY          , -- Out :
+            RID             => RID             , -- Out :
+            RDATA           => RDATA           , -- Out :
+            RRESP           => RRESP           , -- Out :
+            RLAST           => RLAST           , -- Out :
+            RVALID          => RVALID          , -- Out :
+            RREADY          => RREADY          , -- In  :
         ---------------------------------------------------------------------------
         -- Register Write Interface.
         ---------------------------------------------------------------------------
@@ -312,7 +317,7 @@ begin
             REGS_ADDR       => r_addr          , -- Out :
             REGS_BEN        => r_ben           , -- Out :
             REGS_DATA       => REGS_RDATA        -- In  :
-        );
+        );                                       -- 
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -323,7 +328,8 @@ begin
             AXI4_DATA_WIDTH => AXI4_DATA_WIDTH , -- 
             AXI4_ID_WIDTH   => AXI4_ID_WIDTH   , -- 
             REGS_ADDR_WIDTH => REGS_ADDR_WIDTH , -- 
-            REGS_DATA_WIDTH => REGS_DATA_WIDTH   -- 
+            REGS_DATA_WIDTH => REGS_DATA_WIDTH , --
+            DATA_PIPELINE   => WDATA_PIPELINE    -- 
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------
@@ -345,18 +351,18 @@ begin
         ---------------------------------------------------------------------------
         -- AXI4 Write Data Channel Signals.
         ---------------------------------------------------------------------------
-            WDATA           => WDATA           , -- Out :
-            WSTRB           => WSTRB           , -- Out :
-            WLAST           => WLAST           , -- Out :
-            WVALID          => WVALID          , -- Out :
-            WREADY          => WREADY          , -- In  :
+            WDATA           => WDATA           , -- In  :
+            WSTRB           => WSTRB           , -- In  :
+            WLAST           => WLAST           , -- In  :
+            WVALID          => WVALID          , -- In  :
+            WREADY          => WREADY          , -- Out :
         ---------------------------------------------------------------------------
         -- AXI4 Write Response Channel Signals.
         ---------------------------------------------------------------------------
-            BID             => BID             , -- In  :
-            BRESP           => BRESP           , -- In  :
-            BVALID          => BVALID          , -- In  :
-            BREADY          => BREADY          , -- Out :
+            BID             => BID             , -- Out :
+            BRESP           => BRESP           , -- Out :
+            BVALID          => BVALID          , -- Out :
+            BREADY          => BREADY          , -- In  :
         ---------------------------------------------------------------------------
         -- Register Write Interface.
         ---------------------------------------------------------------------------
@@ -366,16 +372,16 @@ begin
             REGS_ADDR       => w_addr          , -- Out :
             REGS_BEN        => w_ben           , -- Out :
             REGS_DATA       => REGS_WDATA        -- Out :
-        );
+        );                                       -- 
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
-    ARB: QUEUE_ARBITER 
-        generic map (
-            MIN_NUM         => arb_req'low     ,
-            MAX_NUM         => arb_req'high
-        )
-        port map (
+    ARB: QUEUE_ARBITER                           -- 
+        generic map (                            -- 
+            MIN_NUM         => arb_req'low     , --
+            MAX_NUM         => arb_req'high      --
+        )                                        -- 
+        port map (                               -- 
             CLK             => CLK             , -- In  :
             RST             => RST             , -- In  :
             CLR             => CLR             , -- In  :
@@ -386,7 +392,7 @@ begin
             REQUEST_O       => REGS_REQ        , -- Out :
             VALID           => open            , -- Out :
             SHIFT           => REGS_ACK          -- In  :
-        );
+        );                                       -- 
     REGS_ADDR  <= w_addr   when (arb_gnt(W_NUM) = '1') else r_addr;
     REGS_BEN   <= w_ben    when (arb_gnt(W_NUM) = '1') else r_ben;
     REGS_WRITE <= '1'      when (arb_gnt(W_NUM) = '1') else '0';

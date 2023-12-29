@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 1.9.0                                                           --
---!     @date    2023/12/15                                                      --
+--!     @version 2.0.0                                                           --
+--!     @date    2023/12/29                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -321,7 +321,10 @@ component AXI4_MASTER_READ_INTERFACE
                           --! するか否かを指定する.
                           --! * ACK_REGS=0で組み合わせ出力.
                           --! * ACK_REGS=1でレジスタ出力.
-                          integer range 0 to 1 := 0
+                          integer range 0 to 1 := 0;
+        RDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -736,7 +739,10 @@ component AXI4_MASTER_WRITE_INTERFACE
                           integer range 0 to 1 := 0;
         RESP_REGS       : --! @brief RESPONSE REGISTER USE :
                           --! レスポンスの入力側にレジスタを挿入する.
-                          integer range 0 to 1 := 0
+                          integer range 0 to 1 := 0;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -1134,7 +1140,10 @@ component AXI4_SLAVE_READ_INTERFACE
                           integer := 8;
         ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
                           --! アライメントサイズのビット数を指定する.
-                          integer := 8
+                          integer := 8;
+        RDATA_PIPELINE  : --! @brief READ DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -1406,7 +1415,10 @@ component AXI4_SLAVE_WRITE_INTERFACE
                           integer := 8;
         ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
                           --! アライメントサイズのビット数を指定する.
-                          integer := 8
+                          integer := 8;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -1685,13 +1697,14 @@ component AXI4_REGISTER_WRITE_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        DATA_PIPELINE   : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -1809,7 +1822,7 @@ component AXI4_REGISTER_READ_INTERFACE
         AXI4_ADDR_WIDTH : --! @brief AIX4 ADDRESS CHANNEL ADDR WIDTH :
                           --! AXI4 リードアドレスチャネルのAWADDR信号のビット幅.
                           integer range 1 to AXI4_ADDR_MAX_WIDTH := 32;
-        AXI4_DATA_WIDTH : --! @brief AXI4 WRITE DATA CHANNEL DATA WIDTH :
+        AXI4_DATA_WIDTH : --! @brief AXI4 READ DATA CHANNEL DATA WIDTH :
                           --! AXI4 リードデータチャネルのRDATA信号のビット幅.
                           integer range 8 to AXI4_DATA_MAX_WIDTH := 32;
         AXI4_ID_WIDTH   : --! @brief AXI4 ID WIDTH :
@@ -1817,13 +1830,14 @@ component AXI4_REGISTER_READ_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        DATA_PIPELINE   : --! @brief READ DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -1933,13 +1947,17 @@ component AXI4_REGISTER_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         REGS_ADDR_WIDTH : --! @brief REGISTER ADDRESS WIDTH :
-                          --! レジスタアクセスインターフェースのアドレスのビット幅
-                          --! を指定する.
+                          --! レジスタアクセスインターフェースのアドレスのビット幅.
                           integer := 32;
         REGS_DATA_WIDTH : --! @brief REGISTER DATA WIDTH :
-                          --! レジスタアクセスインターフェースのデータのビット幅を
-                          --! 指定する.
-                          integer := 32
+                          --! レジスタアクセスインターフェースのデータのビット幅.
+                          integer := 32;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0;
+        RDATA_PIPELINE  : --! @brief READ  DATA CHANNEL INTAKE PIPELINE :
+                          --! リードデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     ------------------------------------------------------------------------------
@@ -2346,6 +2364,21 @@ component AXI4_DATA_OUTLET_PORT
                           --! * QUEUE_SIZE>0を指定した場合、バースト転送時にウェイトは
                           --!   発生しない.
                           integer := 1;
+        POOL_REGS_SIZE  : --! @brief POOL PIPELINE STAGE SIZE :
+                          --! 入力側に挿入するパイプラインの段数を指定する.
+                          --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は POOL_REGS_SIZE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
+        POOL_JUSTIFIED  : --! @brief POOL BUFFER INPUT JUSTIFIED :
+                          --! 入力 POOL 側の有効なデータが常にLOW側に詰められている
+                          --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
+                          --! * 常にLOW側に詰められている場合は、シフタが必要なくな
+                          --!   るため回路が簡単になる.
+                          integer range 0 to 1 := 0;
         PORT_REGS_SIZE  : --! @brief PORT REGS SIZE :
                           --! 出力側に挿入するパイプラインレジスタの段数を指定する.
                           --! * PORT_REGS_SIZE=0を指定した場合、パイプラインレジスタ

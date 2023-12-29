@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_slave_write_interface.vhd
 --!     @brief   AXI4 Slave Write Interface
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/27
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -71,7 +71,10 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           integer := 8;
         ALIGNMENT_BITS  : --! @brief ALIGNMENT BITS :
                           --! アライメントサイズのビット数を指定する.
-                          integer := 8
+                          integer := 8;
+        WDATA_PIPELINE  : --! @brief WRITE DATA CHANNEL INTAKE PIPELINE :
+                          --! ライトデータチャネルに挿入するパイプラインの段数.
+                          integer := 0
     );
     port(
     -------------------------------------------------------------------------------
@@ -482,7 +485,8 @@ begin
             SEL_BITS        => VAL_BITS        , -- 
             SIZE_BITS       => XFER_SIZE_BITS  , -- 
             PTR_BITS        => BUF_PTR_BITS    , -- 
-            QUEUE_SIZE      => 0                 -- 
+            QUEUE_SIZE      => 0               , --
+            PORT_PIPELINE   => WDATA_PIPELINE    -- 
         )                                        -- 
         port map (                               -- 
         ---------------------------------------------------------------------------

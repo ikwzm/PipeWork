@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/23
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -105,7 +105,7 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
         O_DATA_BITS         : --! @brief OUTPUT STREAM DATA BITS :
                               --! O_DATA のビット数を指定する.
                               integer := 32;
-        O_WORD_BITS         : --! @brief INPUT STREAM WORD BITS :
+        O_WORD_BITS         : --! @brief OUTPUT STREAM WORD BITS :
                               --! O_DATA の１ワードあたりのビット数を指定する.
                               --! * O_DATA_BITS   >=  O_WORD_BITS でなければならない.
                               --! * O_DATA_BITS   mod O_WORD_BITS = 0 でなければならない.
@@ -931,6 +931,7 @@ begin
                 SIZE_BITS       => SIZE_BITS           , --   
                 POOL_SIZE_VALID => 0                   , --   
                 QUEUE_SIZE      => 0                   , --
+                POOL_PIPELINE   => 0                   , --
                 POOL_JUSTIFIED  => 1                     -- 
             )                                            -- 
             port map (                                   -- 

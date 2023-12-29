@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
---!     @version 1.9.0
---!     @date    2023/12/15
+--!     @version 2.0.0
+--!     @date    2023/12/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -71,9 +71,18 @@ entity  POOL_INTAKE_PORT is
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        PORT_PIPELINE   : --! @brief PORT PIPELINE STAGE SIZE :
+                          --! 入力 PORT 側のパイプラインの段数を指定する.
+                          --! * 後述の PORT_JUSTIFIED が 0 の場合は、入力 PORT 側
+                          --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                          --!   遅延時間が増大して動作周波数が上らないことがある.
+                          --!   そのような場合は PORT_PIPELINE に 1 以上を指定して
+                          --!   パイプライン化すると動作周波数が向上する可能性がある.
+                          integer := 0;
         PORT_JUSTIFIED  : --! @brief PORT INPUT JUSTIFIED :
                           --! 入力 PORT 側の有効なデータが常にLOW側に詰められている
                           --! ことを示すフラグ.
+                          --! * 常にLOW側に詰められている場合は 1 を指定する.
                           --! * 常にLOW側に詰められている場合は、シフタが必要なくな
                           --!   るため回路が簡単になる.
                           integer range 0 to 1 := 0
@@ -117,10 +126,10 @@ entity  POOL_INTAKE_PORT is
     -------------------------------------------------------------------------------
         PORT_ENABLE     : --! @brief INTAKE PORT ENABLE :
                           --! 動作許可信号.
-                          --! * この信号がアサートされている場合、キューの入出力を
-                          --!   許可する.
-                          --! * この信号がネゲートされている場合、PORT_RDY はアサー
-                          --!   トされない.
+                          --! * この信号がアサートされた１クロック後から、キューへの入力を開始
+                          --!   する(その際キューが入力可能ならばPORT_RDY信号をアサートする).
+                          --! * この信号がネゲートされた１クロック後から、キューへの入力を停止
+                          --!   する(その際キューの状態に拘わらずPORT_RDY信号をネゲートする).
                           in  std_logic := '1';
         PORT_DATA       : --! @brief INTAKE PORT DATA :
                           --! ワードデータ入力.
@@ -206,17 +215,24 @@ use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.COMPONENTS.REDUCER;
+use     PIPEWORK.COMPONENTS.JUSTIFIER;
 architecture RTL of POOL_INTAKE_PORT is
     constant STRB_BITS      : integer   := (WORD_BITS/UNIT_BITS);
-    constant I_WORDS        : integer   := (PORT_DATA'length/WORD_BITS);
-    constant O_WORDS        : integer   := (POOL_DATA'length/WORD_BITS);
-    constant done           : std_logic := '0';
-    constant flush          : std_logic := '0';
-    constant o_shift        : std_logic_vector(O_WORDS downto O_WORDS) := "0";
-    signal   offset         : std_logic_vector(O_WORDS-1 downto 0);
+    constant PORT_WORDS     : integer   := (PORT_DATA'length/WORD_BITS);
+    constant POOL_WORDS     : integer   := (POOL_DATA'length/WORD_BITS);
+    constant pool_shift     : std_logic_vector(POOL_WORDS downto POOL_WORDS) := "0";
+    signal   pool_offset    : std_logic_vector(POOL_WORDS-1 downto 0);
+    signal   queue_enable   : std_logic;
     signal   queue_busy     : std_logic;
-    signal   i_strobe       : std_logic_vector(PORT_DVAL'length-1 downto 0);
-    signal   i_word_valid   : std_logic_vector(I_WORDS-1 downto 0);
+    signal   port_strb      : std_logic_vector(PORT_WORDS*STRB_BITS-1 downto 0);
+    signal   port_ready     : std_logic;
+    signal   i_busy         : std_logic;
+    signal   i_done         : std_logic;
+    signal   i_enable       : std_logic;
+    signal   i_data         : std_logic_vector(PORT_WORDS*WORD_BITS-1 downto 0);
+    signal   i_strb         : std_logic_vector(PORT_WORDS*STRB_BITS-1 downto 0);
+    signal   i_last         : std_logic;
+    signal   i_valid        : std_logic;
     signal   i_ready        : std_logic;
     constant o_enable       : std_logic := '1';
     signal   o_size         : std_logic_vector(PUSH_SIZE'length-1 downto 0);
@@ -229,7 +245,6 @@ architecture RTL of POOL_INTAKE_PORT is
     signal   i_xfer_select  : std_logic_vector(SEL_BITS-1 downto 0);
     signal   o_xfer_last    : std_logic;
     signal   o_xfer_select  : std_logic_vector(SEL_BITS-1 downto 0);
-    signal   xfer_error     : std_logic;
     signal   write_ptr      : unsigned(PTR_BITS-1 downto 0);
 begin
     -------------------------------------------------------------------------------
@@ -251,30 +266,6 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
-    -- i_strobe     : エラー発生時はキューにデータを入れないようにする.
-    -- i_word_valid : 最後のデータを入力する際にデータが無い場合はダミーのワードを入力する.
-    --                こうしないと、POOL_RDY='0' の時に PUSH_VAL がアサートされない.
-    -------------------------------------------------------------------------------
-    process (PORT_DVAL, PORT_LAST, PORT_ERROR)
-        constant DVAL_NULL : std_logic_vector(PORT_DVAL'range) := (others => '0');
-        variable dval      : std_logic_vector(PORT_DVAL'range);
-    begin
-        if (PORT_ERROR = '1') then
-            dval := (others => '0');
-        else
-            dval := PORT_DVAL;
-        end if;
-        i_strobe <= dval;
-        for i in i_word_valid'range loop
-            if (i = i_word_valid'low and PORT_LAST = '1' and dval = DVAL_NULL) or
-               (dval((i+1)*STRB_BITS-1 downto i*STRB_BITS) /= DVAL_NULL(STRB_BITS-1 downto 0)) then
-                i_word_valid(i) <= '1';
-            else
-                i_word_valid(i) <= '0';
-            end if;
-        end loop;
-    end process;
-    -------------------------------------------------------------------------------
     -- offset        : REDUCER にセットするオフセット値.
     -------------------------------------------------------------------------------
     process (START_PTR)
@@ -287,7 +278,7 @@ begin
             end loop;
             return value;
         end function;
-        constant O_DATA_WIDTH : integer := CALC_WIDTH(O_WORDS*WORD_BITS);
+        constant O_DATA_WIDTH : integer := CALC_WIDTH(POOL_WORDS*WORD_BITS);
         constant WORD_WIDTH   : integer := CALC_WIDTH(WORD_BITS);
         variable u_offset     : unsigned(O_DATA_WIDTH-WORD_WIDTH downto 0);
     begin
@@ -304,14 +295,83 @@ begin
                     u_offset(i) := '0';
             end if;
         end loop;
-        for i in offset'range loop
+        for i in pool_offset'range loop
             if (i < u_offset) then
-                offset(i) <= '1';
+                pool_offset(i) <= '1';
             else
-                offset(i) <= '0';
+                pool_offset(i) <= '0';
             end if;
         end loop;
     end process;
+    -------------------------------------------------------------------------------
+    -- port_strb     : エラー発生時はキューにデータを入れないようにする.
+    -------------------------------------------------------------------------------
+    port_strb <= PORT_DVAL when (PORT_ERROR = '0') else (others => '0');
+    -------------------------------------------------------------------------------
+    -- i_enable      : データ入力を許可するための信号. PORT_RDY の生成に関与する.
+    -------------------------------------------------------------------------------
+    PORT_PIPELINE_EQ_0 : if (PORT_PIPELINE = 0) generate
+        i_enable     <= '1';
+        queue_enable <= PORT_ENABLE;
+    end generate;
+    PORT_PIPELINE_GT_0 : if (PORT_PIPELINE > 0) generate
+        process(CLK, RST) begin
+            if (RST = '1') then
+                    i_enable <= '0';
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    i_enable <= '0';
+                else
+                    i_enable <= PORT_ENABLE;
+                end if;
+            end if;
+        end process;
+        queue_enable <= '1' when (PORT_ENABLE = '1') or
+                                 (i_busy = '1' and i_done = '0') else '0';
+    end generate;
+    -------------------------------------------------------------------------------
+    -- 入力データの前処理
+    -------------------------------------------------------------------------------
+    JUST: JUSTIFIER                             -- 
+        generic map (                           -- 
+            WORD_BITS       => WORD_BITS      , -- 
+            STRB_BITS       => STRB_BITS      , --
+            INFO_BITS       => 1              , --
+            WORDS           => PORT_WORDS     , -- 
+            I_JUSTIFIED     => PORT_JUSTIFIED , --
+            PIPELINE        => PORT_PIPELINE    --
+        )                                       -- 
+        port map (                              -- 
+        ---------------------------------------------------------------------------
+        -- クロック&リセット信号
+        ---------------------------------------------------------------------------
+            CLK             => CLK            , -- In  :
+            RST             => RST            , -- In  :
+            CLR             => CLR            , -- In  :
+        ---------------------------------------------------------------------------
+        -- 入力側 I/F
+        ---------------------------------------------------------------------------
+            I_ENABLE        => i_enable       , -- In  :
+            I_STRB          => port_strb      , -- In  :
+            I_DATA          => PORT_DATA      , -- In  :
+            I_INFO(0)       => PORT_LAST      , -- In  :
+            I_VAL           => PORT_VAL       , -- In  :
+            I_RDY           => port_ready     , -- Out :
+        ---------------------------------------------------------------------------
+        -- 出力側 I/F
+        ---------------------------------------------------------------------------
+            O_DATA          => i_data         , -- Out :
+            O_STRB          => i_strb         , -- Out :
+            O_INFO(0)       => i_last         , -- Out :
+            O_VAL           => i_valid        , -- Out :
+            O_RDY           => i_ready        , -- In  :
+        ---------------------------------------------------------------------------
+        -- Status Signals.
+        ---------------------------------------------------------------------------
+            BUSY            => i_busy           -- Out :
+        );                                      --
+    PORT_RDY <= port_ready;
+    i_done   <= '1' when (i_valid = '1' and i_ready = '1' and i_last = '1') else '0';
     -------------------------------------------------------------------------------
     -- データーキュー
     -------------------------------------------------------------------------------
@@ -319,17 +379,15 @@ begin
         generic map (                           -- 
             WORD_BITS       => WORD_BITS      , -- 
             STRB_BITS       => STRB_BITS      , -- 
-            I_WIDTH         => I_WORDS        , -- 
-            O_WIDTH         => O_WORDS        , -- 
+            I_WIDTH         => PORT_WORDS     , -- 
+            O_WIDTH         => POOL_WORDS     , -- 
             QUEUE_SIZE      => QUEUE_SIZE     , -- 
             VALID_MIN       => 0              , -- 
             VALID_MAX       => 0              , --
-            O_VAL_SIZE      => O_WORDS        , -- 
-            O_SHIFT_MIN     => o_shift'low    , --
-            O_SHIFT_MAX     => o_shift'high   , --
-            I_JUSTIFIED     => PORT_JUSTIFIED , --
-            I_DVAL_ENABLE   => 1              , --
-            FLUSH_ENABLE    => 0                -- 
+            O_VAL_SIZE      => POOL_WORDS     , -- 
+            O_SHIFT_MIN     => pool_shift'low , --
+            O_SHIFT_MAX     => pool_shift'high, --
+            I_JUSTIFIED     => 1                --
         )                                       -- 
         port map (                              -- 
         ---------------------------------------------------------------------------
@@ -342,21 +400,16 @@ begin
         -- 各種制御信号
         ---------------------------------------------------------------------------
             START           => START          , -- In  :
-            OFFSET          => offset         , -- In  :
-            DONE            => done           , -- In  :
-            FLUSH           => flush          , -- In  :
+            OFFSET          => pool_offset    , -- In  :
             BUSY            => queue_busy     , -- Out :
-            VALID           => open           , -- Out :
         ---------------------------------------------------------------------------
         -- 入力側 I/F
         ---------------------------------------------------------------------------
-            I_ENABLE        => PORT_ENABLE    , -- In  :
-            I_DVAL          => i_word_valid   , -- In  :
-            I_STRB          => i_strobe       , -- In  :
-            I_DATA          => PORT_DATA      , -- In  :
-            I_DONE          => PORT_LAST      , -- In  :
-            I_FLUSH         => flush          , -- In  :
-            I_VAL           => PORT_VAL       , -- In  :
+            I_ENABLE        => queue_enable   , -- In  :
+            I_STRB          => i_strb         , -- In  :
+            I_DATA          => i_data         , -- In  :
+            I_DONE          => i_last         , -- In  :
+            I_VAL           => i_valid        , -- In  :
             I_RDY           => i_ready        , -- Out :
         ---------------------------------------------------------------------------
         -- 出力側 I/F
@@ -365,13 +418,10 @@ begin
             O_DATA          => POOL_DATA      , -- Out :
             O_STRB          => o_strobe       , -- Out :
             O_DONE          => o_last         , -- Out :
-            O_FLUSH         => open           , -- Out :
             O_VAL           => o_valid        , -- Out :
             O_RDY           => o_ready        , -- In  :
-            O_SHIFT         => o_shift          -- In  :
-    );
-    BUSY     <= queue_busy;
-    PORT_RDY <= i_ready;
+            O_SHIFT         => pool_shift       -- In  :
+        );
     o_ready  <= POOL_RDY;
     -------------------------------------------------------------------------------
     -- o_size : バッファの出力側のバイト数.
@@ -421,10 +471,10 @@ begin
             end case;
             return n;
         end function;
-        variable size : integer range 0 to o_strobe'length;
+        variable v_size : integer range 0 to o_strobe'length;
     begin
-        size   := count_assert_bit(o_strobe);
-        o_size <= std_logic_vector(to_unsigned(size, o_size'length));
+        v_size := count_assert_bit(o_strobe);
+        o_size <= std_logic_vector(to_unsigned(v_size, o_size'length));
     end process;
     -------------------------------------------------------------------------------
     -- PORT_ERR/i_xfer_last/i_xfer_selectをレジスタに保存しておく.
@@ -442,7 +492,7 @@ begin
                 o_error       <= '0';
                 o_xfer_last   <= '0';
                 o_xfer_select <= (others => '0');
-            elsif (PORT_VAL = '1' and i_ready = '1') then
+            elsif (PORT_VAL = '1' and port_ready = '1') then
                 if (START = '1') then
                     o_xfer_last   <= XFER_LAST;
                     o_xfer_select <= XFER_SEL;
@@ -504,4 +554,8 @@ begin
         end if;
     end process;
     POOL_PTR <= std_logic_vector(write_ptr);
+    -------------------------------------------------------------------------------
+    -- BUSY       : 
+    -------------------------------------------------------------------------------
+    BUSY <= '1' when (queue_busy = '1' or i_busy = '1') else '0';
 end RTL;

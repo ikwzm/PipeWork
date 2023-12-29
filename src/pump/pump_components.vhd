@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 1.9.0                                                           --
---!     @date    2023/12/15                                                      --
+--!     @version 2.0.0                                                           --
+--!     @date    2023/12/28                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1372,7 +1372,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         O_DATA_BITS         : --! @brief OUTPUT STREAM DATA BITS :
                               --! O_DATA のビット数を指定する.
                               integer := 32;
-        O_WORD_BITS         : --! @brief INPUT STREAM WORD BITS :
+        O_WORD_BITS         : --! @brief OUTPUT STREAM WORD BITS :
                               --! O_DATA の１ワードあたりのビット数を指定する.
                               --! * O_DATA_BITS   >=  O_WORD_BITS でなければならない.
                               --! * O_DATA_BITS   mod O_WORD_BITS = 0 でなければならない.
@@ -1650,9 +1650,18 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         I_JUSTIFIED         : --! @brief INPUT STREAM DATA JUSTIFIED :
                               --! 入力側の有効なデータが常にLOW側に詰められていることを
                               --! 示すフラグ.
+                              --! * 常にLOW側に詰められている場合は 1 を指定する.
                               --! * 常にLOW側に詰められている場合は、シフタが必要なくなる
                               --!   ため回路が簡単になる.
                               integer range 0 to 1 := 0;
+        I_PIPELINE          : --! @brief INPUT STREAM DATA PIPELINE STAGE SIZE :
+                              --! 入力側のパイプラインの段数を指定する.
+                              --! * 前述の I_JUSTIFIED が 0 の場合は、入力 PORT 側
+                              --!   の有効なデータを LOW 側に詰る必要があるが、その際に
+                              --!   遅延時間が増大して動作周波数が上らないことがある.
+                              --!   そのような場合は I_PIPELINE に 1 以上を指定して
+                              --!   パイプライン化すると動作周波数が向上する可能性がある.
+                              integer := 0;
         BUF_DEPTH           : --! @brief BUFFER DEPTH :
                               --! バッファの容量(バイト数)を２のべき乗値で指定する.
                               integer := 12;
