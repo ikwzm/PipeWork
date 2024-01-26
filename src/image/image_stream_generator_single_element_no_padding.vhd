@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
---!     @file    image_stream_generator.vhd
---!     @brief   Image Stream Generator Module
---!     @version 1.8.0
---!     @date    2019/3/19
+--!     @file    image_stream_generator_single_element_no_padding.vhd
+--!     @brief   Image Stream Generator(Single Element No Padding) Module
+--!     @version 2.1.0
+--!     @date    2024/2/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2019 Ichiro Kawazome
+--      Copyright (C) 2019-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -39,10 +39,12 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_STREAM_GENERATOR :
+--! @brief   IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING :
 --!          入力データに対してイメージストリームの属性を付加して出力する.
+--!          * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなければならない.
+--!          * PADDING は行わない.
 -----------------------------------------------------------------------------------
-entity  IMAGE_STREAM_GENERATOR is
+entity  IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING is
     generic (
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
                           --! 出力側イメージストリームのパラメータを指定する.
@@ -113,7 +115,7 @@ entity  IMAGE_STREAM_GENERATOR is
                           --! 出力イメージストリームデータレディ信号.
                           in  std_logic
     );
-end IMAGE_STREAM_GENERATOR;
+end IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -123,7 +125,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.IMAGE_COMPONENTS.IMAGE_STREAM_ATRB_GENERATOR;
-architecture RTL of IMAGE_STREAM_GENERATOR is
+architecture RTL of IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

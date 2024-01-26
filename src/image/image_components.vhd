@@ -2,12 +2,12 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 2.0.0                                                           --
---!     @date    2023/12/31                                                      --
+--!     @date    2024/01/26                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2023 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2024 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -115,9 +115,9 @@ component IMAGE_STREAM_ATRB_GENERATOR
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief IMAGE_STREAM_GENERATOR                                                --
+--! @brief IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING                      --
 -----------------------------------------------------------------------------------
-component IMAGE_STREAM_GENERATOR
+component IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING
     generic (
         O_PARAM         : --! @brief OUTPUT IMAGE STREAM PARAMETER :
                           --! 出力側イメージストリームのパラメータを指定する.
