@@ -3,12 +3,12 @@
 --!     @brief   Image Stream Buffer Bank Memory Writer Module :
 --!              異なる形のイメージストリームを継ぐためのバッファのバンク分割型メモ
 --!              リ書込み側モジュール
---!     @version 1.8.0
---!     @date    2019/4/11
+--!     @version 2.0.0
+--!     @date    2024/1/24
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2019 Ichiro Kawazome
+--      Copyright (C) 2018-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -384,7 +384,6 @@ begin
             end if;
         end if;
     end process;
-    I_READY <= intake_ready;
     -------------------------------------------------------------------------------
     -- I_SHAPE.C.DICIDE_TYPE = IMAGE_SHAPE_SIDE_DICIDE_CONSTANT でない場合
     -------------------------------------------------------------------------------
