@@ -2,11 +2,11 @@
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
 --!     @version 2.0.0
---!     @date    2023/12/23
+--!     @date    2024/2/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2023 Ichiro Kawazome
+--      Copyright (C) 2018-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
