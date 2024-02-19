@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
---!     @file    image_stream_generator_with_padding.vhd
---!     @brief   Image Stream Generator with Padding Module
---!     @version 1.8.0
---!     @date    2019/4/5
+--!     @file    image_stream_generator_single_element_with_padding.vhd
+--!     @brief   Image Stream Generator(Single Element with Padding) Module
+--!     @version 2.1.0
+--!     @date    2024/2/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2019 Ichiro Kawazome
+--      Copyright (C) 2019-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -39,11 +39,12 @@ use     ieee.std_logic_1164.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 -----------------------------------------------------------------------------------
---! @brief   IMAGE_STREAM_GENERATOR_WITH_PADDING :
---!          入力データに対して、指定された大きさのパディングを追加して、さらにイメ
---!          ージストリームの属性を付加して出力する.
+--! @brief   IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING :
+--!          入力データに対してイメージストリームの属性を付加して出力する.
+--!          * I_DATA_BITS = O_PARAM.DATA.ELEM_FIELD.SIZE でなければならない.
+--!          * PADDING を追加する.
 -----------------------------------------------------------------------------------
-entity  IMAGE_STREAM_GENERATOR_WITH_PADDING is
+entity  IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
@@ -129,7 +130,7 @@ entity  IMAGE_STREAM_GENERATOR_WITH_PADDING is
                           --! 出力イメージストリームデータレディ信号.
                           in  std_logic
     );
-end IMAGE_STREAM_GENERATOR_WITH_PADDING;
+end IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING;
 -----------------------------------------------------------------------------------
 -- 
 -----------------------------------------------------------------------------------
@@ -139,7 +140,7 @@ use     ieee.numeric_std.all;
 library PIPEWORK;
 use     PIPEWORK.IMAGE_TYPES.all;
 use     PIPEWORK.COMPONENTS.UNROLLED_LOOP_COUNTER;
-architecture RTL of IMAGE_STREAM_GENERATOR_WITH_PADDING is
+architecture RTL of IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------

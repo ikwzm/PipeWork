@@ -2,7 +2,7 @@
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
 --!     @version 2.0.0                                                           --
---!     @date    2024/01/26                                                      --
+--!     @date    2024/02/21                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -190,9 +190,9 @@ component IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING
     );
 end component;
 -----------------------------------------------------------------------------------
---! @brief IMAGE_STREAM_GENERATOR_WITH_PADDING                                   --
+--! @brief IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING                    --
 -----------------------------------------------------------------------------------
-component IMAGE_STREAM_GENERATOR_WITH_PADDING
+component IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
