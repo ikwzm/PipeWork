@@ -397,7 +397,13 @@ begin
         if    (next_loop_term = '1') then
             next_loop_valid <= (others => '0');
         elsif (next_last_pos_hi /= NEXT_LAST_POS_HI_ZERO) then
-            next_loop_valid <= (others => '1');
+            for i in 0 to UNROLL-1 loop
+                if (i >= next_first_pos) then
+                    next_loop_valid(i) <= '1';
+                else
+                    next_loop_valid(i) <= '0';
+                end if;
+            end loop;
         else
             for i in 0 to UNROLL-1 loop
                 if (i >= next_first_pos and i <= next_last_pos_lo) then
