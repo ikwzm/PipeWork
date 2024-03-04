@@ -2,7 +2,7 @@
 --!     @file    image_stream_generator_single_element_with_padding.vhd
 --!     @brief   Image Stream Generator(Single Element with Padding) Module
 --!     @version 2.1.0
---!     @date    2024/2/21
+--!     @date    2024/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -81,6 +81,8 @@ entity  IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING is
     -------------------------------------------------------------------------------
         START           : --! @brief STREAM START :
                           in  std_logic;
+        ABORT           : --! @brief STREAM ABORT :
+                          in  std_logic := '0';
         BUSY            : --! @brief STREAM BUSY :
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
@@ -248,6 +250,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => y_loop_start            , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => y_loop_next             , -- In  :
                 LOOP_SIZE       => y_loop_size             , -- In  :
                 LOOP_DONE       => y_loop_done             , -- Out :
@@ -271,6 +274,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => y_pad_start             , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => y_pad_next              , -- In  :
                 LOOP_SIZE       => y_pad_size              , -- In  :
                 LOOP_BUSY       => y_pad_busy              , -- Out :
@@ -291,6 +295,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => y_input_start           , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => y_input_next            , -- In  :
                 LOOP_SIZE       => y_input_size            , -- In  :
                 LOOP_BUSY       => y_input_enable            -- Out :
@@ -339,6 +344,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => x_loop_start            , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => x_loop_next             , -- In  :
                 LOOP_SIZE       => x_loop_size             , -- In  :
                 LOOP_DONE       => x_loop_done             , -- Out :
@@ -362,6 +368,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => x_pad_start             , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => x_pad_next              , -- In  :
                 LOOP_SIZE       => x_pad_size              , -- In  :
                 LOOP_BUSY       => x_pad_busy              , -- Out :
@@ -382,6 +389,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => x_input_start           , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => x_input_next            , -- In  :
                 LOOP_SIZE       => x_input_size            , -- In  :
                 LOOP_BUSY       => x_input_enable            -- Out :
@@ -422,6 +430,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => d_loop_start            , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => d_loop_next             , -- In  :
                 LOOP_SIZE       => d_loop_size             , -- In  :
                 LOOP_DONE       => d_loop_done             , -- Out :
@@ -464,6 +473,7 @@ begin
                 RST             => RST                     , -- In  :
                 CLR             => CLR                     , -- In  :
                 LOOP_START      => c_loop_start            , -- In  :
+                LOOP_ABORT      => ABORT                   , -- In  :
                 LOOP_NEXT       => c_loop_next             , -- In  :
                 LOOP_SIZE       => c_loop_size             , -- In  :
                 LOOP_DONE       => c_loop_done             , -- Out :

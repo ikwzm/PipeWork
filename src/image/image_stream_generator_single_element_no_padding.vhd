@@ -2,7 +2,7 @@
 --!     @file    image_stream_generator_single_element_no_padding.vhd
 --!     @brief   Image Stream Generator(Single Element No Padding) Module
 --!     @version 2.1.0
---!     @date    2024/2/21
+--!     @date    2024/3/2
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -76,6 +76,8 @@ entity  IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING is
     -------------------------------------------------------------------------------
         START           : --! @brief STREAM START :
                           in  std_logic;
+        ABORT           : --! @brief STREAM ABORT :
+                          in  std_logic := '0';
         BUSY            : --! @brief STREAM BUSY :
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
@@ -134,6 +136,7 @@ architecture RTL of IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING is
     signal    y_loop_busy           :  std_logic;
     signal    y_loop_term           :  std_logic;
     signal    y_loop_done           :  std_logic;
+    signal    y_loop_abort          :  std_logic;
     signal    y_loop_first          :  std_logic;
     signal    y_loop_last           :  std_logic;
     signal    y_loop_size           :  integer range 0 to O_SHAPE.Y.MAX_SIZE;
@@ -186,7 +189,7 @@ begin
     -------------------------------------------------------------------------------
     y_loop_start <= '1' when (START       = '1') else '0';
     BUSY         <= '1' when (y_loop_busy = '1') else '0';
-    DONE         <= '1' when (y_loop_done = '1') else '0';
+    DONE         <= '1' when (y_loop_done = '1' or y_loop_abort = '1') else '0';
     -------------------------------------------------------------------------------
     -- Y LOOP
     -------------------------------------------------------------------------------
@@ -227,15 +230,15 @@ begin
         y_loop_done  <= '1' when (y_loop_busy = '1' and y_loop_term = '1') or
                                  (y_loop_busy = '1' and y_loop_next = '1' and y_loop_last = '1') else '0';
         ---------------------------------------------------------------------------
-        -- x_loop_busy  :
-        -- x_loop_term  :
+        -- y_loop_busy  :
+        -- y_loop_term  :
         ---------------------------------------------------------------------------
         process(CLK, RST) begin 
             if (RST = '1') then
                     y_loop_busy <= '0';
                     y_loop_term <= '0';
             elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then
+                if (CLR = '1' or ABORT = '1') then
                     y_loop_busy <= '0';
                     y_loop_term <= '0';
                 elsif (y_loop_start = '1') then
@@ -254,6 +257,23 @@ begin
                         y_loop_busy <= '1';
                         y_loop_term <= '0';
                     end if;
+                end if;
+            end if;
+        end process;
+        ---------------------------------------------------------------------------
+        -- y_loop_abort :
+        ---------------------------------------------------------------------------
+        process(CLK, RST) begin 
+            if (RST = '1') then
+                    y_loop_abort <= '0';
+            elsif (CLK'event and CLK = '1') then
+                if (CLR = '1') then
+                    y_loop_abort <= '0';
+                elsif (y_loop_start = '1' and ABORT = '1') or
+                      (y_loop_busy  = '1' and ABORT = '1') then
+                    y_loop_abort <= '1';
+                else
+                    y_loop_abort <= '0';
                 end if;
             end if;
         end process;
@@ -311,7 +331,7 @@ begin
                     x_loop_busy <= '0';
                     x_loop_term <= '0';
             elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then
+                if (CLR = '1') or (ABORT = '1') then
                     x_loop_busy <= '0';
                     x_loop_term <= '0';
                 elsif (x_loop_start = '1') then
@@ -387,7 +407,7 @@ begin
                     d_loop_busy <= '0';
                     d_loop_term <= '0';
             elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then
+                if (CLR = '1' or ABORT = '1') then
                     d_loop_busy <= '0';
                     d_loop_term <= '0';
                 elsif (d_loop_start = '1') then
@@ -464,7 +484,7 @@ begin
                     c_loop_busy <= '0';
                     c_loop_term <= '0';
             elsif (CLK'event and CLK = '1') then
-                if (CLR = '1') then
+                if (CLR = '1' or ABORT = '1') then
                     io_enable   <= '0';
                     c_loop_busy <= '0';
                     c_loop_term <= '0';

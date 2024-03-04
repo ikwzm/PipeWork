@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    image_components.vhd                                            --
 --!     @brief   PIPEWORK IMAGE COMPONENTS LIBRARY DESCRIPTION                   --
---!     @version 2.0.0                                                           --
---!     @date    2024/02/21                                                      --
+--!     @version 2.1.0                                                           --
+--!     @date    2024/03/04                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -155,6 +155,8 @@ component IMAGE_STREAM_GENERATOR
     -------------------------------------------------------------------------------
         START           : --! @brief STREAM START :
                           in  std_logic;
+        ABORT           : --! @brief STREAM ABORT :
+                          in  std_logic := '0';
         BUSY            : --! @brief STREAM BUSY :
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
@@ -243,6 +245,8 @@ component IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_NO_PADDING
     -------------------------------------------------------------------------------
         START           : --! @brief STREAM START :
                           in  std_logic;
+        ABORT           : --! @brief STREAM ABORT :
+                          in  std_logic := '0';
         BUSY            : --! @brief STREAM BUSY :
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
@@ -323,6 +327,8 @@ component IMAGE_STREAM_GENERATOR_SINGLE_ELEMENT_WITH_PADDING
     -------------------------------------------------------------------------------
         START           : --! @brief STREAM START :
                           in  std_logic;
+        ABORT           : --! @brief STREAM ABORT :
+                          in  std_logic := '0';
         BUSY            : --! @brief STREAM BUSY :
                           out std_logic;
         DONE            : --! @brief STREAM DONE :

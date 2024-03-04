@@ -2,7 +2,7 @@
 --!     @file    image_stream_generator.vhd
 --!     @brief   Image Stream Generator Module
 --!     @version 2.1.0
---!     @date    2024/2/21
+--!     @date    2024/3/4
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -80,6 +80,8 @@ entity  IMAGE_STREAM_GENERATOR is
     -------------------------------------------------------------------------------
         START           : --! @brief STREAM START :
                           in  std_logic;
+        ABORT           : --! @brief STREAM ABORT :
+                          in  std_logic := '0';
         BUSY            : --! @brief STREAM BUSY :
                           out std_logic;
         DONE            : --! @brief STREAM DONE :
@@ -162,6 +164,7 @@ begin
                 RST             => RST             , -- In  :
                 CLR             => CLR             , -- In  :
                 START           => START           , -- In  :
+                ABORT           => ABORT           , -- In  :
                 BUSY            => BUSY            , -- Out :
                 DONE            => DONE            , -- Out :
                 C_SIZE          => C_SIZE          , -- In  :
@@ -194,6 +197,7 @@ begin
                 RST             => RST             , -- In  :
                 CLR             => CLR             , -- In  :
                 START           => START           , -- In  :
+                ABORT           => ABORT           , -- In  :
                 BUSY            => BUSY            , -- Out :
                 DONE            => DONE            , -- Out :
                 C_SIZE          => C_SIZE          , -- In  :
