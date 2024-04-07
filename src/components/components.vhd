@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 2.0.0                                                           --
---!     @date    2024/02/19                                                      --
+--!     @version 2.1.0                                                           --
+--!     @date    2024/04/07                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -3164,6 +3164,9 @@ component UNROLLED_LOOP_COUNTER
                           --! LOOP_SIZE と LOOP_INIT をロードしてループを開始するこ
                           --! とを指示する信号.
                           in  std_logic;
+        LOOP_ABORT      : --! @brief LOOP ABORT :
+                          --! 現在実行中のループを強制的に終了することを指示する信号.
+                          in  std_logic := '0';
         LOOP_NEXT       : --! @brief COUNT ENABLE :
                           --! ループを一つ進めることを指定する信号.
                           in  std_logic;
@@ -3179,10 +3182,14 @@ component UNROLLED_LOOP_COUNTER
         LOOP_DONE       : --! @brief OUTPUT LOOP DONE :
                           --! ループ終了信号出力.
                           --! * ループが終了"する"ことを示す信号.
+                          --! * ループが終了する際に１クロックだけアサートされる.
+                          --! * LOOP_SIZE=0 の場合にもアサートされる.
+                          --! * LOOP_ABORT による中断の際にもアサートされる.
                           out std_logic;
         LOOP_BUSY       : --! @brief OUTPUT LOOP BUSY :
-                          --! ループ実行信号出力.
+                          --! ループ実行中信号出力.
                           --! * ループ中であることを示す信号.
+                          --! * LOOP_SIZE=0 の場合はアサートされないことに注意.
                           out std_logic;
         LOOP_VALID      : --! @brief OUTPUT LOOP VALID VECTOR:
                           --! ループ有効信号出力.
@@ -3199,8 +3206,9 @@ component UNROLLED_LOOP_COUNTER
                           --! ループが終了したことを示す出力信号.
                           out std_logic;
         NEXT_BUSY       : --! @brief OUTPUT LOOP BUSY(NEXT_CYCLE) :
-                          --! ループ実行信号出力.
-                          --! * ループ中であることを示す信号.
+                          --! 次のクロックでのループ実行中信号出力.
+                          --! * 次のクロックでループが実行中になることを示す.
+                          --! * LOOP_SIZE=0 の場合はアサートされないことに注意.
                           out std_logic;
         NEXT_VALID      : --! @brief OUTPUT LOOP VALID VECTOR(NEXT CYCLE) :
                           --! 次のクロックでのループ有効信号出力.

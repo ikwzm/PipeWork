@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    unrolled_loop_counter.vhd
 --!     @brief   Unrolled Loop Counter Module
---!     @version 1.7.1
---!     @date    2018/12/22
+--!     @version 2.1.0
+--!     @date    2024/2/28
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018 Ichiro Kawazome
+--      Copyright (C) 2018-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -90,6 +90,9 @@ entity  UNROLLED_LOOP_COUNTER is
                           --! LOOP_SIZE と LOOP_INIT をロードしてループを開始するこ
                           --! とを指示する信号.
                           in  std_logic;
+        LOOP_ABORT      : --! @brief LOOP ABORT :
+                          --! 現在実行中のループを強制的に終了することを指示する信号.
+                          in  std_logic := '0';
         LOOP_NEXT       : --! @brief COUNT ENABLE :
                           --! ループを一つ進めることを指定する信号.
                           in  std_logic;
@@ -105,10 +108,14 @@ entity  UNROLLED_LOOP_COUNTER is
         LOOP_DONE       : --! @brief OUTPUT LOOP DONE :
                           --! ループ終了信号出力.
                           --! * ループが終了"する"ことを示す信号.
+                          --! * ループが終了する際に１クロックだけアサートされる.
+                          --! * LOOP_SIZE=0 の場合にもアサートされる.
+                          --! * LOOP_ABORT による中断の際にもアサートされる.
                           out std_logic;
         LOOP_BUSY       : --! @brief OUTPUT LOOP BUSY :
-                          --! ループ実行信号出力.
+                          --! ループ実行中信号出力.
                           --! * ループ中であることを示す信号.
+                          --! * LOOP_SIZE=0 の場合はアサートされないことに注意.
                           out std_logic;
         LOOP_VALID      : --! @brief OUTPUT LOOP VALID VECTOR:
                           --! ループ有効信号出力.
@@ -125,8 +132,9 @@ entity  UNROLLED_LOOP_COUNTER is
                           --! ループが終了したことを示す出力信号.
                           out std_logic;
         NEXT_BUSY       : --! @brief OUTPUT LOOP BUSY(NEXT_CYCLE) :
-                          --! ループ実行信号出力.
-                          --! * ループ中であることを示す信号.
+                          --! 次のクロックでのループ実行中信号出力.
+                          --! * 次のクロックでループが実行中になることを示す.
+                          --! * LOOP_SIZE=0 の場合はアサートされないことに注意.
                           out std_logic;
         NEXT_VALID      : --! @brief OUTPUT LOOP VALID VECTOR(NEXT CYCLE) :
                           --! 次のクロックでのループ有効信号出力.
@@ -231,6 +239,7 @@ architecture RTL of UNROLLED_LOOP_COUNTER is
     -------------------------------------------------------------------------------
     -- 
     -------------------------------------------------------------------------------
+    signal    loop_update           :  std_logic;
     signal    loop_done_by_term     :  std_logic;
 begin
     -------------------------------------------------------------------------------
@@ -278,7 +287,8 @@ begin
         next_first_pos <= 0;
     end generate;
     -------------------------------------------------------------------------------
-    -- loop_done_by_term : SIZE=0 の時にループを終了するための信号.
+    -- loop_done_by_term : LOOP_SIZE=0 の時、または LOOP_ABORT 信号のアサート時にループ
+    --                     の終了を告げる信号.
     -------------------------------------------------------------------------------
     process (CLK, RST) begin
         if (RST = '1') then
@@ -286,7 +296,8 @@ begin
         elsif (CLK'event and CLK = '1') then
             if    (CLR = '1') then
                 loop_done_by_term <= '0';
-            elsif (LOOP_START = '1' and next_loop_term = '1') then
+            elsif (LOOP_START = '1' and next_loop_term = '1') or
+                  (LOOP_ABORT = '1' and curr_loop_busy = '1') then
                 loop_done_by_term <= '1';
             else
                 loop_done_by_term <= '0';
@@ -294,37 +305,47 @@ begin
         end if;
     end process;
     -------------------------------------------------------------------------------
+    -- loop_update     : ループを次に進める信号
+    --                   curr_loop_busy ='1' の間だけ LOOP_NEXT を有効にするため
+    -------------------------------------------------------------------------------
+    loop_update     <= '1' when (curr_loop_busy = '1' and LOOP_NEXT = '1') else '0';
+    -------------------------------------------------------------------------------
     -- next_loop_busy  : 次のクロックでのループ中であることを示す信号.
     -------------------------------------------------------------------------------
-    next_loop_busy  <= '1' when (LOOP_START = '1' and next_loop_term = '0') else
-                       '0' when (LOOP_START = '1' and next_loop_term = '1') else
-                       '1' when (LOOP_NEXT  = '1' and next_loop_term = '0') else
-                       '0' when (LOOP_NEXT  = '1' and next_loop_term = '1') else
+    next_loop_busy  <= '0' when (LOOP_ABORT  = '1'                         ) else
+                       '1' when (LOOP_START  = '1' and next_loop_term = '0') else
+                       '0' when (LOOP_START  = '1' and next_loop_term = '1') else
+                       '1' when (loop_update = '1' and next_loop_term = '0') else
+                       '0' when (loop_update = '1' and next_loop_term = '1') else
                        curr_loop_busy;
     -------------------------------------------------------------------------------
     -- next_loop_first : 次のクロックでの出力が最初のループであることを示す信号
     -------------------------------------------------------------------------------
-    next_loop_first <= '1' when (LOOP_START = '1' and next_loop_term = '0') else
-                       '0' when (LOOP_START = '1' and next_loop_term = '1') else
-                       '0' when (LOOP_NEXT  = '1') else
+    next_loop_first <= '1' when (LOOP_START  = '1' and next_loop_term = '0') else
+                       '0' when (LOOP_START  = '1' and next_loop_term = '1') else
+                       '0' when (loop_update = '1') else
                        curr_loop_first;
     -------------------------------------------------------------------------------
     -- next_last_pos   : 次のクロックでの最終位置を示す信号
     -- next_loop_last  : 次のクロックでループの最後になることを示す信号
     -- next_loop_term  : 次のクロックでループが終了することを示す信号.
     -------------------------------------------------------------------------------
-    process(LOOP_START, LOOP_SIZE, LOOP_NEXT, curr_last_pos)
+    process(LOOP_START, LOOP_SIZE, loop_update, LOOP_ABORT, curr_last_pos)
         variable last_pos  :  signed(LAST_POS_BITS-1 downto 0);
     begin
         if    (LOOP_START = '1') then
             last_pos := to_01(to_signed(LOOP_SIZE-1, LAST_POS_BITS));
-        elsif (LOOP_NEXT  = '1') then
+        elsif (loop_update  = '1') then
             last_pos := to_01(curr_last_pos) - (STRIDE*UNROLL);
         else
             last_pos := to_01(curr_last_pos);
         end if;
-        next_last_pos  <= last_pos;
-        next_loop_term <= last_pos(last_pos'high);
+        next_last_pos <= last_pos;
+        if (LOOP_ABORT = '1') then
+            next_loop_term <= '1';
+        else
+            next_loop_term <= last_pos(last_pos'high);
+        end if;
         if (last_pos < (STRIDE*UNROLL)) then
             next_loop_last <= '1';
         else
@@ -376,7 +397,13 @@ begin
         if    (next_loop_term = '1') then
             next_loop_valid <= (others => '0');
         elsif (next_last_pos_hi /= NEXT_LAST_POS_HI_ZERO) then
-            next_loop_valid <= (others => '1');
+            for i in 0 to UNROLL-1 loop
+                if (i >= next_first_pos) then
+                    next_loop_valid(i) <= '1';
+                else
+                    next_loop_valid(i) <= '0';
+                end if;
+            end loop;
         else
             for i in 0 to UNROLL-1 loop
                 if (i >= next_first_pos and i <= next_last_pos_lo) then
@@ -404,8 +431,8 @@ begin
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
-    LOOP_DONE  <= '1' when (loop_done_by_term = '1') or
-                           (curr_loop_busy = '1' and curr_loop_last = '1' and LOOP_NEXT = '1') else '0';
+    LOOP_DONE  <= '1' when (loop_done_by_term  = '1') or
+                           (loop_update = '1' and curr_loop_last = '1') else '0';
     -------------------------------------------------------------------------------
     --
     -------------------------------------------------------------------------------
