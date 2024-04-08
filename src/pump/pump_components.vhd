@@ -2,7 +2,7 @@
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
 --!     @version 2.0.0                                                           --
---!     @date    2024/02/19                                                      --
+--!     @date    2024/04/08                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -201,6 +201,9 @@ component PUMP_CONTROL_REGISTER
         REQ_LAST        : --! @brief Request Last Transaction.
                           --! 最後のトランザクションであることを示す.
                           out std_logic;
+        REQ_STOP        : --! @brief Request Stop Transaction.
+                          --! トランザクションを中止すること示す.
+                          out std_logic;
         REQ_READY       : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           in  std_logic;
@@ -264,6 +267,9 @@ component PUMP_CONTROL_REGISTER
                           --! ートされ、最後の(REQ_LAST='1'付き)トランザクション終
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
+                          out std_logic;
+        VALVE_STOP      : --! @brief Valve Stop Flag.
+                          --! VALVE のオープン中に転送中止の要求が発生したことを示す.
                           out std_logic;
         TRAN_START      : --! @brief Transaction Start Flag.
                           --! トランザクションを開始したことを示すフラグ.
