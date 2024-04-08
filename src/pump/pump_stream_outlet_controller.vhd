@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
---!     @version 2.0.0
---!     @date    2024/2/19
+--!     @version 2.2.0
+--!     @date    2024/4/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -88,9 +88,12 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
                               --! * O_USE_PULL_BUF_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
         O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FIXED FLOW OPEN :
-                              --! O_FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * O_FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * O_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! O_FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * O_FIXED_FLOW_OPEN=1 : フローカウンタによるフロー
+                              --!   制御を行わない.
+                              --! * O_FIXED_FLOW_OPEN=0 : フローカウンタによるフロー
+                              --!   制御を行う.
                               integer range 0 to 1 := 0;
         O_FIXED_POOL_OPEN   : --! @brief OUTLET VALVE FIXED POOL OPEN :
                               --! O_PULL_BUF_READYを常に'1'にするか否かを指定する.
@@ -218,6 +221,7 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_STOP          : out std_logic;
         O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
@@ -486,6 +490,7 @@ begin
             REQ_BUF_PTR         => O_REQ_BUF_PTR       , -- Out :
             REQ_FIRST           => O_REQ_FIRST         , -- Out :
             REQ_LAST            => O_REQ_LAST          , -- Out :
+            REQ_STOP            => O_REQ_STOP          , -- Out :
             REQ_NONE            => O_REQ_NONE          , -- Out :
             REQ_READY           => O_REQ_READY         , -- In  :
         ---------------------------------------------------------------------------

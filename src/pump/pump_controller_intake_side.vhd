@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller_intake_side.vhd
 --!     @brief   PUMP CONTROLLER INTAKE SIDE
---!     @version 1.8.1
---!     @date    2020/10/2
+--!     @version 2.2.0
+--!     @date    2024/4/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2020 Ichiro Kawazome
+--      Copyright (C) 2018-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -77,10 +77,13 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
         REG_STAT_BITS       : --! @brief STATUS REGISTER BITS :
                               --! REG_STAT_L/REG_STAT_D/REG_STAT_Qのビット数を指定する.
                               integer := 32;
-        FIXED_FLOW_OPEN     : --! @brief VALVE FIXED FLOW OPEN :
-                              --! FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+        FIXED_FLOW_OPEN     : --! @brief FIXED VALVE FLOE OPEN :
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * FIXED_FLOW_OPEN=1 : フローカウンタによるフロー制御
+                              --!   を行わない.
+                              --! * FIXED_FLOW_OPEN=0 : フローカウンタによるフロー制御
+                              --!   を行う.
                               integer range 0 to 1 := 0;
         FIXED_POOL_OPEN     : --! @brief VALVE FIXED POOL OPEN :
                               --! PUSH_BUF_READYを常に'1'にするか否かを指定する.
@@ -166,6 +169,7 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
         REQ_BUF_PTR         : out std_logic_vector(BUF_DEPTH    -1 downto 0);
         REQ_FIRST           : out std_logic;
         REQ_LAST            : out std_logic;
+        REQ_STOP            : out std_logic;
         REQ_NONE            : out std_logic;
         REQ_READY           : in  std_logic;
     -------------------------------------------------------------------------------
@@ -390,6 +394,7 @@ begin
             REQ_VALID       => REQ_VALID           , -- Out :
             REQ_FIRST       => REQ_FIRST           , -- Out :
             REQ_LAST        => REQ_LAST            , -- Out :
+            REQ_STOP        => REQ_STOP            , -- Out :
             REQ_READY       => REQ_READY           , -- In  :
             ACK_VALID       => ACK_VALID           , -- In  :
             ACK_ERROR       => ACK_ERROR           , -- In  :
