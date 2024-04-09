@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_address_channel_controller.vhd
 --!     @brief   AXI4 Master Address Channel Controller
---!     @version 1.8.2
---!     @date    2020/10/7
+--!     @version 2.2.0
+--!     @date    2024/4/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2020 Ichiro Kawazome
+--      Copyright (C) 2012-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -74,6 +74,12 @@ entity  AXI4_MASTER_ADDRESS_CHANNEL_CONTROLLER is
                           --! にするかどうかを指定する.
                           --! * FLOW_VALID=0で無効.
                           --! * FLOW_VALID=1で有効.
+                          integer range 0 to 1 := 1;
+        FLOW_SIZE_VALID : --! @brief FLOW SIZE/LAST VALID :
+                          --! FLOW_SIZE、FLOW_LAST信号を有効にするかどうかを指定する.
+                          --! FLOW_VALID=1の場合のみFLOW_SIZE_VALIDは有効.
+                          --! * FLOW_SIZE_VALID=0で無効.
+                          --! * FLOW_SIZE_VALID=1で有効.
                           integer range 0 to 1 := 1;
         XFER_SIZE_BITS  : --! @brief TRANSFER SIZE BITS :
                           --! ACK_SIZE/FLOW_SIZE信号のビット数を指定する.
@@ -521,7 +527,7 @@ begin
         variable u_burst_length  : unsigned(XFER_MAX_SIZE downto DATA_SIZE);
         variable s_last_address  : signed(1+XFER_MAX_SIZE downto 0);
     begin
-        if (FLOW_VALID /= 0) then
+        if ((FLOW_VALID /= 0) and (FLOW_SIZE_VALID /= 0)) then
             u_flow_size     := to_01(unsigned(FLOW_SIZE    ), '0');
             u_xfer_max_size := to_01(unsigned(max_xfer_size), '0');
             if    (u_flow_size < u_xfer_max_size) then

@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_outlet_manifold_valve.vhd
 --!     @brief   FLOAT OUTLET MANIFOLD VALVE
---!     @version 1.5.4
---!     @date    2014/2/20
+--!     @version 2.2.0
+--!     @date    2024/4/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -48,11 +48,12 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! * FIXED_CLOSE=0 : 栓の状態は他の変数に依存する.
                           integer range 0 to 1 := 0;
         FIXED_FLOW_OPEN : --! @brief FIXED VALVE FLOE OPEN :
-                          --! フローカウンタによるフロー制御を行わず、常にフロー栓
-                          --! が開いた状態にするか否かを指定する.
-                          --! * FIXED_FLOW_OPEN=1 : 常にフロー栓が開いた状態にする.
-                          --! * FIXED_FLOW_OPEN=0 : フロー栓の状態は他の変数に依存
-                          --!   する.
+                          --! フローカウンタによるフロー制御を行うか否かを指定する.
+                          --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                          --! * FIXED_FLOW_OPEN=1 : フローカウンタによるフロー制御
+                          --!   を行わない.
+                          --! * FIXED_FLOW_OPEN=0 : フローカウンタによるフロー制御
+                          --!   を行う.
                           integer range 0 to 1 := 0;
         FIXED_POOL_OPEN : --! @brief FIXED VALVE POOL OPEN :
                           --! プールカウンタによるフロー制御を行わず、常にプール栓
@@ -102,13 +103,13 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
     -------------------------------------------------------------------------------
         RESET           : --! @brief RESET REQUEST :
                           --! 強制的に内部状態をリセットする事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         PAUSE           : --! @brief PAUSE REQUEST :
                           --! 強制的にフローを一時的に停止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         STOP            : --! @brief STOP  REQUEST :
                           --! 強制的にフローを中止する事を指示する信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         INTAKE_OPEN     : --! @brief INTAKE VALVE OPEN FLAG :
                           --! 入力(INTAKE)側の栓が開いている事を示すフラグ.
                           in  std_logic;
@@ -119,26 +120,26 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! 一時停止する/しないを指示するための閾値.
                           --! フローカウンタの値がこの値以上の時に転送を開始する.
                           --! フローカウンタの値がこの値未満の時に転送を一時停止.
-                          in  std_logic_vector(COUNT_BITS-1 downto 0);
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
         POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
                           --! PUSH_FIN_SIZEによるフローカウンタの加算結果が、この値
                           --! 以上の時にPOOL_READY 信号をアサートする.
-                          in  std_logic_vector(COUNT_BITS-1 downto 0);
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Final Size Signals.
     -------------------------------------------------------------------------------
         PUSH_FIN_VALID  : --! @brief PUSH FINAL VALID :
                           --! PUSH_FIN_LAST/PUSH_FIN_SIZEが有効であることを示す信号.
                           --! * 栓が固定(Fixed)モードの場合は未使用.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_FIN_LAST   : --! @brief PUSH FINAL LAST :
                           --! 最後のPUSH_FIN入力であることを示す信号.
                           --! * 栓が固定(Fixed)モードの場合は未使用.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_FIN_SIZE   : --! @brief PUSH FINAL SIZE :
                           --! 入力が確定(FINAL)したバイト数.
                           --! * 栓が固定(Fixed)モードの場合は未使用.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Reserve Size Signals.
     -------------------------------------------------------------------------------
@@ -146,29 +147,29 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! PUSH_RSV_LAST/PUSH_RSV_SIZEが有効であることを示す信号.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           --! * USE_PUSH_RSV=0 の場合は未使用.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_RSV_LAST   : --! @brief PUSH RESERVE LAST :
                           --! 最後のPUSH_RSV入力であることを示す信号.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           --! * USE_PUSH_RSV=0 の場合は未使用.
-                          in  std_logic;
+                          in  std_logic := '0';
         PUSH_RSV_SIZE   : --! @brief PUSH RESERVE SIZE :
                           --! 入力する予定(RESERVE)のバイト数.
                           --! * バルブが固定(Fixed)モードの場合は未使用.
                           --! * USE_PUSH_RSV=0 の場合は未使用.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Flow Pull Size Signals.
     -------------------------------------------------------------------------------
         FLOW_PULL_VALID : --! @brief FLOW PULL VALID :
                           --! FLOW_PULL_LAST/FLOW_PULL_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         FLOW_PULL_LAST  : --! @brief FLOW PULL LAST :
                           --! 最後の出力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         FLOW_PULL_SIZE  : --! @brief FLOW PULL SIZE :
                           --! 出力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Flow Control Signals.
     -------------------------------------------------------------------------------
@@ -178,12 +179,13 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! * FLOW_READY='0' : 一時停止.
                           --! * バルブが閉固定(FIXED_CLOSE=1)の時は常に'0'を出力
                           --!   する.
-                          --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は常に'1'を
-                          --!   出力する.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
-                          --!   '1'を出力する.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
-                          --!   '0'を出力する.
+                          --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は PAUSE 信号の
+                          --!   否定を出力する.
+                          --! * FIXED_FLOW_OPEN=0 の時はフローカウンタの値に依存する.
+                          --!   * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!     '1'を出力する.
+                          --!   * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!     '0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
@@ -191,20 +193,20 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! * FLOW_PAUSE='1' : 一時停止.
                           --! * バルブが閉固定(FIXED_CLOSE=1)の時は常に'1'を出力
                           --!   する.
-                          --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は常に'0'を
-                          --!   出力する.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
-                          --!   '0'を出力する.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
-                          --!   '1'を出力する.
+                          --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は PAUSE 信号
+                          --!   の値を出力する.
+                          --! * FIXED_FLOW_OPEN=0 の時はフローカウンタの値に依存する.
+                          --!   * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
+                          --!     '0'を出力する.
+                          --!   * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
+                          --!     '1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
                           --! * FLOW_PAUSE=1 : 中止.
-                          --! * バルブが閉固定(FIXED_CLOSE=1)の時は常に'1'を出力
-                          --!   する.
-                          --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は常に'0'を
-                          --!   出力する.
+                          --! * バルブが閉固定(FIXED_CLOSE=1)の時は常に'1'を出力する.
+                          --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は STOP 信号の
+                          --!   値を出力する.
                           out std_logic;
         FLOW_LAST       : --! @brief FLOW OUTLET LAST :
                           --! 入力側から最後の入力を示すフラグがあったことを示す.
@@ -247,16 +249,16 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --!   を POOL COUNTER にセットする.
                           --! * POOL COUNTER をリセットすることにより、再送、再出力
                           --!   に対応することが出来る.
-                          in  std_logic;
+                          in  std_logic := '0';
         POOL_PULL_VALID : --! @brief POOL PULL VALID :
                           --! POOL_PULL_SIZEが有効であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         POOL_PULL_LAST  : --! @brief POOL PULL LAST :
                           --! 最後のPOOL_PULL入力であることを示す信号.
-                          in  std_logic;
+                          in  std_logic := '0';
         POOL_PULL_SIZE  : --! @brief FLOW PULL SIZE :
                           --! 出力したバイト数.
-                          in  std_logic_vector(SIZE_BITS-1 downto 0);
+                          in  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Outlet Pool Counter.
     -------------------------------------------------------------------------------
@@ -320,10 +322,10 @@ begin
     --
     -------------------------------------------------------------------------------
     GEN_FIXED_FLOW_OPEN : if (FIXED_CLOSE = 0 and FIXED_FLOW_OPEN /= 0) generate
-        PAUSED     <= '0';
-        FLOW_READY <= '1';
-        FLOW_PAUSE <= '0';
-        FLOW_STOP  <= '0';
+        PAUSED     <= '1' when (PAUSE = '1') else '0';
+        FLOW_READY <= '0' when (PAUSE = '1') else '1';
+        FLOW_PAUSE <= '1' when (PAUSE = '1') else '0';
+        FLOW_STOP  <= '1' when (STOP  = '1') else '0';
         FLOW_LAST  <= '0';
         FLOW_ZERO  <= '0';
         FLOW_POS   <= '1';

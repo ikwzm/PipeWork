@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
---!     @version 2.0.0
---!     @date    2024/2/19
+--!     @version 2.2.0
+--!     @date    2024/4/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -88,9 +88,12 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
                               --! * I_USE_PUSH_BUF_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
         I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FIXED FLOW OPEN :
-                              --! I_FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * I_FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * I_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! I_FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * I_FIXED_FLOW_OPEN=1 : フローカウンタによるフロー
+                              --!   制御を行わない.
+                              --! * I_FIXED_FLOW_OPEN=0 : フローカウンタによるフロー
+                              --!   制御を行う.
                               integer range 0 to 1 := 0;
         I_FIXED_POOL_OPEN   : --! @brief INTAKE VALVE FIXED POOL OPEN :
                               --! I_PUSH_BUF_READYを常に'1'にするか否かを指定する.
@@ -207,6 +210,7 @@ entity  PUMP_STREAM_INTAKE_CONTROLLER is
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_STOP          : out std_logic;
         I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
@@ -470,6 +474,7 @@ begin
             REQ_BUF_PTR         => I_REQ_BUF_PTR       , -- Out :
             REQ_FIRST           => I_REQ_FIRST         , -- Out :
             REQ_LAST            => I_REQ_LAST          , -- Out :
+            REQ_STOP            => I_REQ_STOP          , -- Out :
             REQ_NONE            => I_REQ_NONE          , -- Out :
             REQ_READY           => I_REQ_READY         , -- In  :
         ---------------------------------------------------------------------------

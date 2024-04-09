@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_control_register.vhd
 --!     @brief   PUMP CONTROL REGISTER
---!     @version 1.8.3
---!     @date    2020/10/18
+--!     @version 2.2.0
+--!     @date    2024/4/8
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2020 Ichiro Kawazome
+--      Copyright (C) 2012-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -196,6 +196,9 @@ entity  PUMP_CONTROL_REGISTER is
         REQ_LAST        : --! @brief Request Last Transaction.
                           --! 最後のトランザクションであることを示す.
                           out std_logic;
+        REQ_STOP        : --! @brief Request Stop Transaction.
+                          --! トランザクションを中止すること示す.
+                          out std_logic;
         REQ_READY       : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           in  std_logic;
@@ -252,7 +255,7 @@ entity  PUMP_CONTROL_REGISTER is
                           --!   アサートされるわけでは無い.
                           in std_logic;
     -------------------------------------------------------------------------------
-    -- Status.
+    -- Valve Status Signals.
     -------------------------------------------------------------------------------
         VALVE_OPEN      : --! @brief Valve Open Flag.
                           --! 最初の(REQ_FIRST='1'付き)トランザクション開始時にアサ
@@ -260,9 +263,21 @@ entity  PUMP_CONTROL_REGISTER is
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
                           out std_logic;
+        VALVE_STOP      : --! @brief Valve Stop Flag.
+                          --! VALVE のオープン中にトランザクション中止要求が発生したことを
+                          --! 示す.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
         TRAN_START      : --! @brief Transaction Start Flag.
                           --! トランザクションを開始したことを示すフラグ.
                           --! トランザクション開始"の直前"に１クロックだけアサート
+                          --! される.
+                          out std_logic;
+        TRAN_STOP       : --! @brief Transaction Stop Flag.
+                          --! トランザクションを中止する要求があったことを示すフラグ.
+                          --! 一度アサートされると、トランザクションが終了するまでアサート
                           --! される.
                           out std_logic;
         TRAN_BUSY       : --! @brief Transaction Busy Flag.
@@ -303,13 +318,15 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     signal   none_flag          : std_logic;
     signal   error_bit          : std_logic;
     signal   error_flag         : std_logic;
-    signal   request_bit        : std_logic;
+    signal   request_valid      : std_logic;
+    signal   request_stop       : std_logic;
     signal   mode_regs          : std_logic_vector(MODE_BITS-1 downto 0);
     signal   stat_regs          : std_logic_vector(STAT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Control Signals.
     -------------------------------------------------------------------------------
     signal   transaction_start  : boolean;
+    signal   transaction_stop   : boolean;
     -------------------------------------------------------------------------------
     -- Main State Machine.
     -------------------------------------------------------------------------------
@@ -337,6 +354,10 @@ begin
     transaction_start <= (curr_state = IDLE_STATE) and
                          (start_bit = '1' or (START_L = '1' and START_D = '1'));
     -------------------------------------------------------------------------------
+    -- transaction_stop  : トランザクション中止信号.
+    -------------------------------------------------------------------------------
+    transaction_stop  <= (stop_bit  = '1' or (STOP_L  = '1' and STOP_D  = '1'));
+    -------------------------------------------------------------------------------
     -- コントロールステータスレジスタとステートマシン
     -------------------------------------------------------------------------------
     process (CLK, RST)
@@ -347,42 +368,42 @@ begin
         variable none_on    : boolean;
     begin
         if    (RST = '1') then
-                curr_state  <= IDLE_STATE;
-                tran_state  <= (others => '0');
-                tran_once   <= '0';
-                tran_err    <= '0';
-                reset_bit   <= '0';
-                start_bit   <= '0';
-                stop_bit    <= '0';
-                pause_bit   <= '0';
-                first_bit   <= '0';
-                last_bit    <= '0';
-                done_en_bit <= '0';
-                done_bit    <= '0';
-                error_bit   <= '0';
-                error_flag  <= '0';
-                mode_regs   <= (others => '0');
-                stat_regs   <= (others => '0');
-                request_bit <= '0';
+                curr_state    <= IDLE_STATE;
+                tran_state    <= (others => '0');
+                tran_once     <= '0';
+                tran_err      <= '0';
+                reset_bit     <= '0';
+                start_bit     <= '0';
+                stop_bit      <= '0';
+                pause_bit     <= '0';
+                first_bit     <= '0';
+                last_bit      <= '0';
+                done_en_bit   <= '0';
+                done_bit      <= '0';
+                error_bit     <= '0';
+                error_flag    <= '0';
+                mode_regs     <= (others => '0');
+                stat_regs     <= (others => '0');
+                request_valid <= '0';
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1') then
-                curr_state  <= IDLE_STATE;
-                tran_state  <= (others => '0');
-                tran_once   <= '0';
-                tran_err    <= '0';
-                reset_bit   <= '0';
-                start_bit   <= '0';
-                stop_bit    <= '0';
-                pause_bit   <= '0';
-                first_bit   <= '0';
-                last_bit    <= '0';
-                done_en_bit <= '0';
-                done_bit    <= '0';
-                error_bit   <= '0';
-                error_flag  <= '0';
-                mode_regs   <= (others => '0');
-                stat_regs   <= (others => '0');
-                request_bit <= '0';
+                curr_state    <= IDLE_STATE;
+                tran_state    <= (others => '0');
+                tran_once     <= '0';
+                tran_err      <= '0';
+                reset_bit     <= '0';
+                start_bit     <= '0';
+                stop_bit      <= '0';
+                pause_bit     <= '0';
+                first_bit     <= '0';
+                last_bit      <= '0';
+                done_en_bit   <= '0';
+                done_bit      <= '0';
+                error_bit     <= '0';
+                error_flag    <= '0';
+                mode_regs     <= (others => '0');
+                stat_regs     <= (others => '0');
+                request_valid <= '0';
             else
                 -------------------------------------------------------------------
                 --
@@ -469,7 +490,8 @@ begin
                     stop_bit  <= '0';
                 elsif (STOP_L  = '1' and STOP_D  = '1') then
                     stop_bit  <= '1';
-                elsif (next_state = DONE_STATE) then
+                elsif (next_state = DONE_STATE) or
+                      (next_state = IDLE_STATE and tran_state = TRAN_IDLE_STATE) then
                     stop_bit  <= '0';
                 end if;
                 -------------------------------------------------------------------
@@ -545,9 +567,18 @@ begin
                 -- REQ_VALID   : 
                 -------------------------------------------------------------------
                 if (next_state = REQ_STATE or next_state = ACK_STATE) then
-                    request_bit <= '1';
+                    request_valid <= '1';
                 else
-                    request_bit <= '0';
+                    request_valid <= '0';
+                end if;
+                -------------------------------------------------------------------
+                -- REQ_STOP   : 
+                -------------------------------------------------------------------
+                if    (next_state = REQ_STATE and transaction_stop) then
+                    request_stop  <= '1';
+                elsif (next_state = DONE_STATE) or
+                      (next_state = IDLE_STATE) then
+                    request_stop  <= '0';
                 end if;
                 -------------------------------------------------------------------
                 -- tran_state : REQ_FIRST(最初の転送要求信号)を作るためのステートマシン.
@@ -558,29 +589,29 @@ begin
                 -------------------------------------------------------------------
                 if    (reset_bit = '1') then
                     tran_state <= TRAN_IDLE_STATE;
-                    tran_once <= '0';
-                    tran_err  <= '0';
-                    none_on   := FALSE;
-                    error_on  := FALSE;
+                    tran_once  <= '0';
+                    tran_err   <= '0';
+                    none_on    := FALSE;
+                    error_on   := FALSE;
                 elsif (tran_state = TRAN_IDLE_STATE) then
                     if (transaction_start and xfer_first) then
                         tran_state <= TRAN_FIRST_STATE;
                     else
                         tran_state <= TRAN_IDLE_STATE;
                     end if;
-                    tran_once <= '0';
-                    tran_err  <= '0';
-                    none_on   := FALSE;
-                    error_on  := FALSE;
+                    tran_once  <= '0';
+                    tran_err   <= '0';
+                    none_on    := FALSE;
+                    error_on   := FALSE;
                 elsif (tran_state = TRAN_TAR_STATE) then
                     if (xfer_run = TRUE) then
                         tran_state <= TRAN_TAR_STATE;
                     else
                         tran_state <= TRAN_IDLE_STATE;
                     end if;
-                    tran_err  <= XFER_ERROR;
-                    none_on   := (tran_once = '0');
-                    error_on  := (tran_err  = '1' or XFER_ERROR = '1');
+                    tran_err   <= XFER_ERROR;
+                    none_on    := (tran_once = '0');
+                    error_on   := (tran_err  = '1' or XFER_ERROR = '1');
                 elsif (ACK_VALID = '1') then
                     if (ACK_LAST = '1' or ACK_ERROR = '1' or ACK_STOP = '1') then
                         if (xfer_run = TRUE) then
@@ -654,10 +685,15 @@ begin
     MODE_Q       <= mode_regs;
     STAT_Q       <= stat_regs;
     -------------------------------------------------------------------------------
-    -- Status
+    -- Valve Status Signals.
     -------------------------------------------------------------------------------
     VALVE_OPEN   <= tran_state(2);
+    VALVE_STOP   <= '1' when (tran_state(2) = '1' and transaction_stop = true) else '0';
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
     TRAN_START   <= '1' when (transaction_start = TRUE) else '0';
+    TRAN_STOP    <= '1' when (transaction_stop  = TRUE) else '0';
     TRAN_BUSY    <= start_bit;
     TRAN_DONE    <= '1' when (curr_state = DONE_STATE ) else '0';
     TRAN_NONE    <= none_flag;
@@ -665,7 +701,8 @@ begin
     -------------------------------------------------------------------------------
     -- Transaction Command Request Signals.
     -------------------------------------------------------------------------------
-    REQ_VALID    <= request_bit;
+    REQ_VALID    <= request_valid;
+    REQ_STOP     <= request_stop;
     REQ_FIRST    <= tran_state(0);
     REQ_LAST     <= last_bit;
 end RTL;

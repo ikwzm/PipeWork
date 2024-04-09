@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 2.0.0                                                           --
---!     @date    2024/02/19                                                      --
+--!     @version 2.2.0                                                           --
+--!     @date    2024/04/09                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -201,6 +201,9 @@ component PUMP_CONTROL_REGISTER
         REQ_LAST        : --! @brief Request Last Transaction.
                           --! 最後のトランザクションであることを示す.
                           out std_logic;
+        REQ_STOP        : --! @brief Request Stop Transaction.
+                          --! トランザクションを中止すること示す.
+                          out std_logic;
         REQ_READY       : --! @brief Request Ready Signal.
                           --! 上記の各種リクエスト信号を受け付け可能かどうかを示す.
                           in  std_logic;
@@ -257,7 +260,7 @@ component PUMP_CONTROL_REGISTER
                           --!   アサートされるわけでは無い.
                           in std_logic;
     -------------------------------------------------------------------------------
-    -- Status.
+    -- Valve Status Signals.
     -------------------------------------------------------------------------------
         VALVE_OPEN      : --! @brief Valve Open Flag.
                           --! 最初の(REQ_FIRST='1'付き)トランザクション開始時にアサ
@@ -265,9 +268,21 @@ component PUMP_CONTROL_REGISTER
                           --! 了時または、トランザクション中にエラーが発生した時に
                           --! ネゲートされる.
                           out std_logic;
+        VALVE_STOP      : --! @brief Valve Stop Flag.
+                          --! VALVE のオープン中にトランザクション中止要求が発生したことを
+                          --! 示す.
+                          out std_logic;
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
         TRAN_START      : --! @brief Transaction Start Flag.
                           --! トランザクションを開始したことを示すフラグ.
                           --! トランザクション開始"の直前"に１クロックだけアサート
+                          --! される.
+                          out std_logic;
+        TRAN_STOP       : --! @brief Transaction Stop Flag.
+                          --! トランザクションを中止する要求があったことを示すフラグ.
+                          --! 一度アサートされると、トランザクションが終了するまでアサート
                           --! される.
                           out std_logic;
         TRAN_BUSY       : --! @brief Transaction Busy Flag.
@@ -584,10 +599,13 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         REG_STAT_BITS       : --! @brief STATUS REGISTER BITS :
                               --! REG_STAT_L/REG_STAT_D/REG_STAT_Qのビット数を指定する.
                               integer := 32;
-        FIXED_FLOW_OPEN     : --! @brief VALVE FIXED FLOW OPEN :
-                              --! FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+        FIXED_FLOW_OPEN     : --! @brief FIXED VALVE FLOE OPEN :
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * FIXED_FLOW_OPEN=1 : フローカウンタによるフロー制御
+                              --!   を行わない.
+                              --! * FIXED_FLOW_OPEN=0 : フローカウンタによるフロー制御
+                              --!   を行う.
                               integer range 0 to 1 := 0;
         FIXED_POOL_OPEN     : --! @brief VALVE FIXED POOL OPEN :
                               --! PUSH_BUF_READYを常に'1'にするか否かを指定する.
@@ -673,6 +691,7 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         REQ_BUF_PTR         : out std_logic_vector(BUF_DEPTH    -1 downto 0);
         REQ_FIRST           : out std_logic;
         REQ_LAST            : out std_logic;
+        REQ_STOP            : out std_logic;
         REQ_NONE            : out std_logic;
         REQ_READY           : in  std_logic;
     -------------------------------------------------------------------------------
@@ -781,10 +800,13 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         REG_STAT_BITS       : --! @brief STATUS REGISTER BITS :
                               --! REG_STAT_L/REG_STAT_D/REG_STAT_Qのビット数を指定する.
                               integer := 32;
-        FIXED_FLOW_OPEN     : --! @brief VALVE FIXED FLOW OPEN :
-                              --! FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+        FIXED_FLOW_OPEN     : --! @brief FIXED VALVE FLOE OPEN :
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * FIXED_FLOW_OPEN=1 : フローカウンタによるフロー制御
+                              --!   を行わない.
+                              --! * FIXED_FLOW_OPEN=0 : フローカウンタによるフロー制御
+                              --!   を行う.
                               integer range 0 to 1 := 0;
         FIXED_POOL_OPEN     : --! @brief VALVE FIXED POOL OPEN :
                               --! PULL_BUF_READYを常に'1'にするか否かを指定する.
@@ -870,6 +892,7 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         REQ_BUF_PTR         : out std_logic_vector(BUF_DEPTH    -1 downto 0);
         REQ_FIRST           : out std_logic;
         REQ_LAST            : out std_logic;
+        REQ_STOP            : out std_logic;
         REQ_NONE            : out std_logic;
         REQ_READY           : in  std_logic;
     -------------------------------------------------------------------------------
@@ -994,9 +1017,12 @@ component PUMP_CONTROLLER
                               --! * I_USE_PUSH_BUF_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
         I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FIXED FLOW OPEN :
-                              --! I_FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * I_FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * I_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! I_FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * I_FIXED_FLOW_OPEN=1 : フローカウンタによるフロー
+                              --!   制御を行わない.
+                              --! * I_FIXED_FLOW_OPEN=0 : フローカウンタによるフロー
+                              --!   制御を行う.
                               integer range 0 to 1 := 0;
         I_FIXED_POOL_OPEN   : --! @brief INTAKE VALVE FIXED POOL OPEN :
                               --! I_PUSH_BUF_READYを常に'1'にするか否かを指定する.
@@ -1045,9 +1071,12 @@ component PUMP_CONTROLLER
                               --! O_STAT_L/O_STAT_D/O_STAT_Qのビット数を指定する.
                               integer := 32;
         O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FIXED FLOW OPEN :
-                              --! O_FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * O_FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * O_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! O_FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * O_FIXED_FLOW_OPEN=1 : フローカウンタによるフロー
+                              --!   制御を行わない.
+                              --! * O_FIXED_FLOW_OPEN=0 : フローカウンタによるフロー
+                              --!   制御を行う.
                               integer range 0 to 1 := 0;
         O_FIXED_POOL_OPEN   : --! @brief OUTLET VALVE FIXED POOL OPEN :
                               --! O_PULL_BUF_READYを常に'1'にするか否かを指定する.
@@ -1196,6 +1225,7 @@ component PUMP_CONTROLLER
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_STOP          : out std_logic;
         I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
@@ -1253,6 +1283,7 @@ component PUMP_CONTROLLER
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_STOP          : out std_logic;
         O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
@@ -1355,9 +1386,12 @@ component PUMP_STREAM_INTAKE_CONTROLLER
                               --! * I_USE_PUSH_BUF_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
         I_FIXED_FLOW_OPEN   : --! @brief INTAKE VALVE FIXED FLOW OPEN :
-                              --! I_FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * I_FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * I_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! I_FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * I_FIXED_FLOW_OPEN=1 : フローカウンタによるフロー
+                              --!   制御を行わない.
+                              --! * I_FIXED_FLOW_OPEN=0 : フローカウンタによるフロー
+                              --!   制御を行う.
                               integer range 0 to 1 := 0;
         I_FIXED_POOL_OPEN   : --! @brief INTAKE VALVE FIXED POOL OPEN :
                               --! I_PUSH_BUF_READYを常に'1'にするか否かを指定する.
@@ -1474,6 +1508,7 @@ component PUMP_STREAM_INTAKE_CONTROLLER
         I_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         I_REQ_FIRST         : out std_logic;
         I_REQ_LAST          : out std_logic;
+        I_REQ_STOP          : out std_logic;
         I_REQ_NONE          : out std_logic;
         I_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------
@@ -1627,9 +1662,12 @@ component PUMP_STREAM_OUTLET_CONTROLLER
                               --! * O_USE_PULL_BUF_SIZE=1で使用する.
                               integer range 0 to 1 := 0;
         O_FIXED_FLOW_OPEN   : --! @brief OUTLET VALVE FIXED FLOW OPEN :
-                              --! O_FLOW_READYを常に'1'にするか否かを指定する.
-                              --! * O_FIXED_FLOW_OPEN=1で常に'1'にする.
-                              --! * O_FIXED_FLOW_OPEN=0で状況に応じて開閉する.
+                              --! フローカウンタによるフロー制御を行うか否かを指定する.
+                              --! O_FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
+                              --! * O_FIXED_FLOW_OPEN=1 : フローカウンタによるフロー
+                              --!   制御を行わない.
+                              --! * O_FIXED_FLOW_OPEN=0 : フローカウンタによるフロー
+                              --!   制御を行う.
                               integer range 0 to 1 := 0;
         O_FIXED_POOL_OPEN   : --! @brief OUTLET VALVE FIXED POOL OPEN :
                               --! O_PULL_BUF_READYを常に'1'にするか否かを指定する.
@@ -1757,6 +1795,7 @@ component PUMP_STREAM_OUTLET_CONTROLLER
         O_REQ_BUF_PTR       : out std_logic_vector(BUF_DEPTH      -1 downto 0);
         O_REQ_FIRST         : out std_logic;
         O_REQ_LAST          : out std_logic;
+        O_REQ_STOP          : out std_logic;
         O_REQ_NONE          : out std_logic;
         O_REQ_READY         : in  std_logic;
     -------------------------------------------------------------------------------

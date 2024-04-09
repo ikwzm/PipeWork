@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
---!     @version 2.0.0
---!     @date    2024/2/19
+--!     @version 2.2.0
+--!     @date    2024/4/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -72,6 +72,12 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! にするかどうかを指定する.
                           --! * FLOW_VALID=0で無効.
                           --! * FLOW_VALID=1で有効.
+                          integer range 0 to 1 := 1;
+        FLOW_SIZE_VALID : --! @brief FLOW SIZE/LAST VALID :
+                          --! FLOW_SIZE、FLOW_LAST信号を有効にするかどうかを指定する.
+                          --! FLOW_VALID=1の場合のみFLOW_SIZE_VALIDは有効.
+                          --! * FLOW_SIZE_VALID=0で無効.
+                          --! * FLOW_SIZE_VALID=1で有効.
                           integer range 0 to 1 := 1;
         BUF_DATA_WIDTH  : --! @brief BUFFER DATA WIDTH :
                           --! バッファのビット幅を指定する.
@@ -403,14 +409,16 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! * 例えば FIFO に残っているデータで最後の時に、この信
                           --!   号をアサートしておけば、最後のデータを出力し終えた
                           --!   時点で、転送をする.
-                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          --! * FLOW_VALID=0 または FLOW_SIZE_VALID=0の場合、
+                          --!   この信号は無視される.
                           in    std_logic := '1';
         FLOW_SIZE       : --! @brief Flow Size.
                           --! 転送するバイト数を指定する.
                           --! * FLOW_PAUSE='0'の時のみ有効.
                           --! * 例えば FIFO に残っているデータの容量を入力しておく
                           --!   と、そのバイト数を越えた転送は行わない.
-                          --! * FLOW_VALID=0の場合、この信号は無視される.
+                          --! * FLOW_VALID=0 または FLOW_SIZE_VALID=0の場合、
+                          --!   この信号は無視される.
                           in    std_logic_vector(XFER_SIZE_BITS   -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Pull Reserve Size Signals.
@@ -673,6 +681,7 @@ begin
             REQ_SIZE_BITS   => REQ_SIZE_BITS     , --
             REQ_SIZE_VALID  => REQ_SIZE_VALID    , --
             FLOW_VALID      => FLOW_VALID        , --
+            FLOW_SIZE_VALID => FLOW_SIZE_VALID   , --
             XFER_SIZE_BITS  => XFER_SIZE_BITS    , --
             XFER_MIN_SIZE   => XFER_MIN_SIZE     , --
             XFER_MAX_SIZE   => XFER_MAX_SIZE     , --
