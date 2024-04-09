@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 2.0.0                                                           --
+--!     @version 2.2.0                                                           --
 --!     @date    2024/04/09                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
