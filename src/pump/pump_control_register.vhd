@@ -255,7 +255,7 @@ entity  PUMP_CONTROL_REGISTER is
                           --!   アサートされるわけでは無い.
                           in std_logic;
     -------------------------------------------------------------------------------
-    -- Status.
+    -- Valve Status Signals.
     -------------------------------------------------------------------------------
         VALVE_OPEN      : --! @brief Valve Open Flag.
                           --! 最初の(REQ_FIRST='1'付き)トランザクション開始時にアサ
@@ -264,11 +264,20 @@ entity  PUMP_CONTROL_REGISTER is
                           --! ネゲートされる.
                           out std_logic;
         VALVE_STOP      : --! @brief Valve Stop Flag.
-                          --! VALVE のオープン中に転送中止の要求が発生したことを示す.
+                          --! VALVE のオープン中にトランザクション中止要求が発生したことを
+                          --! 示す.
                           out std_logic;
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
         TRAN_START      : --! @brief Transaction Start Flag.
                           --! トランザクションを開始したことを示すフラグ.
                           --! トランザクション開始"の直前"に１クロックだけアサート
+                          --! される.
+                          out std_logic;
+        TRAN_STOP       : --! @brief Transaction Stop Flag.
+                          --! トランザクションを中止する要求があったことを示すフラグ.
+                          --! 一度アサートされると、トランザクションが終了するまでアサート
                           --! される.
                           out std_logic;
         TRAN_BUSY       : --! @brief Transaction Busy Flag.
@@ -317,6 +326,7 @@ architecture RTL of PUMP_CONTROL_REGISTER is
     -- Control Signals.
     -------------------------------------------------------------------------------
     signal   transaction_start  : boolean;
+    signal   transaction_stop   : boolean;
     -------------------------------------------------------------------------------
     -- Main State Machine.
     -------------------------------------------------------------------------------
@@ -343,6 +353,10 @@ begin
     -------------------------------------------------------------------------------
     transaction_start <= (curr_state = IDLE_STATE) and
                          (start_bit = '1' or (START_L = '1' and START_D = '1'));
+    -------------------------------------------------------------------------------
+    -- transaction_stop  : トランザクション中止信号.
+    -------------------------------------------------------------------------------
+    transaction_stop  <= (stop_bit  = '1' or (STOP_L  = '1' and STOP_D  = '1'));
     -------------------------------------------------------------------------------
     -- コントロールステータスレジスタとステートマシン
     -------------------------------------------------------------------------------
@@ -560,8 +574,7 @@ begin
                 -------------------------------------------------------------------
                 -- REQ_STOP   : 
                 -------------------------------------------------------------------
-                if    (next_state = REQ_STATE) and
-                      (stop_bit = '1' or (STOP_L = '1' and STOP_D = '1')) then
+                if    (next_state = REQ_STATE and transaction_stop) then
                     request_stop  <= '1';
                 elsif (next_state = DONE_STATE) or
                       (next_state = IDLE_STATE) then
@@ -672,11 +685,15 @@ begin
     MODE_Q       <= mode_regs;
     STAT_Q       <= stat_regs;
     -------------------------------------------------------------------------------
-    -- Status
+    -- Valve Status Signals.
     -------------------------------------------------------------------------------
     VALVE_OPEN   <= tran_state(2);
-    VALVE_STOP   <= '1' when (tran_state(2) = '1' and stop_bit = '1') else '0';
+    VALVE_STOP   <= '1' when (tran_state(2) = '1' and transaction_stop = true) else '0';
+    -------------------------------------------------------------------------------
+    -- Transaction Status Signals.
+    -------------------------------------------------------------------------------
     TRAN_START   <= '1' when (transaction_start = TRUE) else '0';
+    TRAN_STOP    <= '1' when (transaction_stop  = TRUE) else '0';
     TRAN_BUSY    <= start_bit;
     TRAN_DONE    <= '1' when (curr_state = DONE_STATE ) else '0';
     TRAN_NONE    <= none_flag;
