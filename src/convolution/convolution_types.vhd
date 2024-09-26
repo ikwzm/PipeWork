@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    convolution_types.vhd
 --!     @brief   Convolution Engine Types Package.
---!     @version 1.8.0
---!     @date    2019/3/22
+--!     @version 2.2.1
+--!     @date    2024/9/26
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2019 Ichiro Kawazome
+--      Copyright (C) 2019-2024 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -55,8 +55,21 @@ package CONVOLUTION_TYPES is
     -------------------------------------------------------------------------------
     function  NEW_CONVOLUTION_KERNEL_SIZE(X_SIZE   ,Y_SIZE   :integer) return CONVOLUTION_KERNEL_SIZE_TYPE;
     function  NEW_CONVOLUTION_KERNEL_SIZE(X_LO,X_HI,Y_LO,Y_HI:integer) return CONVOLUTION_KERNEL_SIZE_TYPE;
-    constant  CONVOLUTION_KERNEL_SIZE_1x1  :  CONVOLUTION_KERNEL_SIZE_TYPE := NEW_CONVOLUTION_KERNEL_SIZE(1,1);
-    constant  CONVOLUTION_KERNEL_SIZE_3x3  :  CONVOLUTION_KERNEL_SIZE_TYPE := NEW_CONVOLUTION_KERNEL_SIZE(-1,1,-1,1);
+    -------------------------------------------------------------------------------
+    --! @brief Convolution Kernel の大きさを示す定数の例
+    -------------------------------------------------------------------------------
+    constant  CONVOLUTION_KERNEL_SIZE_1x1  :  CONVOLUTION_KERNEL_SIZE_TYPE; 
+                                        -- := NEW_CONVOLUTION_KERNEL_SIZE(1,1);
+                                        -- nvc r13.0 以降は package body に
+                                        -- 実体がある関数は同じ package 宣言部では呼び出せない。
+                                        -- そのため、ここでは定数の型宣言のみにとどめ、
+                                        -- この定数の代入は package body に移動した。
+    constant  CONVOLUTION_KERNEL_SIZE_3x3  :  CONVOLUTION_KERNEL_SIZE_TYPE;
+                                        -- := NEW_CONVOLUTION_KERNEL_SIZE(-1,1,-1,1);
+                                        -- nvc r13.0 以降は package body に
+                                        -- 実体がある関数は同じ package 宣言部では呼び出せない。
+                                        -- そのため、ここでは定数の型宣言のみにとどめ、
+                                        -- この定数の代入は package body に移動した。
 
     -------------------------------------------------------------------------------
     --! @brief Convolution の各種パラメータを定義するレコードタイプ.
@@ -169,6 +182,11 @@ package body CONVOLUTION_TYPES is
         return kernel_size;
     end function;
 
+    -------------------------------------------------------------------------------
+    --! @brief Convolution Kernel の大きさを示す定数の例
+    -------------------------------------------------------------------------------
+    constant  CONVOLUTION_KERNEL_SIZE_1x1  :  CONVOLUTION_KERNEL_SIZE_TYPE := NEW_CONVOLUTION_KERNEL_SIZE(1,1);
+    constant  CONVOLUTION_KERNEL_SIZE_3x3  :  CONVOLUTION_KERNEL_SIZE_TYPE := NEW_CONVOLUTION_KERNEL_SIZE(-1,1,-1,1);
     -------------------------------------------------------------------------------
     --! @brief Convolution Pipeline Data に要素を追加するプロシージャ
     -------------------------------------------------------------------------------
