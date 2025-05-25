@@ -2,12 +2,12 @@
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
 --!     @version 2.2.1                                                           --
---!     @date    2024/09/26                                                      --
+--!     @date    2025/05/25                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2024 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2025 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -2086,6 +2086,8 @@ component FLOAT_INTAKE_VALVE
                           --! 一時停止する/しないを指示するための閾値.
                           --! * フローカウンタの値がこの値以下の時に入力を開始する.
                           --! * フローカウンタの値がこの値を越えた時に入力を一時停止.
+                          --! なお、FLOW_READY_LEVEL の値が２のべき乗値だと
+                          --! フローカウンタ >= FLOW_READY_LEVEL の計算が簡単になる.
                           in  std_logic_vector(COUNT_BITS-1 downto 0);
     -------------------------------------------------------------------------------
     -- Flow Counter Load Signals.
@@ -2165,6 +2167,26 @@ component FLOAT_INTAKE_VALVE
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
                           --! フローカウンタの値が負(<0)になったことを示すフラグ.
+                          out std_logic;
+        FLOW_EQ_LEVEL   : --! @brief FLOW COUNTER = FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値と同じになったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_GT_LEVEL   : --! @brief FLOW COUNTER >  FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値を越えたこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_GE_LEVEL   : --! @brief FLOW COUNTER >= FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値以上になったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_LE_LEVEL   : --! @brief FLOW COUNTER <= FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値以下になったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_LT_LEVEL   : --! @brief FLOW COUNTER <  FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値未満になったこと
+                          --! を示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
@@ -2464,6 +2486,8 @@ component FLOAT_OUTLET_VALVE
                           --! 一時停止する/しないを指示するための閾値.
                           --! * フローカウンタの値がこの値以上の時に出力を開始する.
                           --! * フローカウンタの値がこの値未満の時に出力を一時停止.
+                          --! なお、FLOW_READY_LEVEL の値が２のべき乗値だと
+                          --! フローカウンタ >= FLOW_READY_LEVEL の計算が簡単になる.
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Flow Counter Load Signals.
@@ -2543,6 +2567,26 @@ component FLOAT_OUTLET_VALVE
                           out std_logic;
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
                           --! フローカウンタの値が負(<0)になったことを示すフラグ.
+                          out std_logic;
+        FLOW_EQ_LEVEL   : --! @brief FLOW COUNTER = FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値と同じになったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_GT_LEVEL   : --! @brief FLOW COUNTER >  FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値を越えたこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_GE_LEVEL   : --! @brief FLOW COUNTER >= FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値以上になったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_LE_LEVEL   : --! @brief FLOW COUNTER <= FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値以下になったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_LT_LEVEL   : --! @brief FLOW COUNTER <  FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値未満になったこと
+                          --! を示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
