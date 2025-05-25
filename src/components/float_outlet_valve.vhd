@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_outlet_valve.vhd
 --!     @brief   FLOAT OUTLET VALVE
---!     @version 1.5.4
---!     @date    2014/2/20
+--!     @version 2.3.0
+--!     @date    2025/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2014 Ichiro Kawazome
+--      Copyright (C) 2012-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -83,6 +83,8 @@ entity  FLOAT_OUTLET_VALVE is
                           --! 一時停止する/しないを指示するための閾値.
                           --! * フローカウンタの値がこの値以上の時に出力を開始する.
                           --! * フローカウンタの値がこの値未満の時に出力を一時停止.
+                          --! なお、FLOW_READY_LEVEL の値が２のべき乗値だと
+                          --! フローカウンタ >= FLOW_READY_LEVEL の計算が簡単になる.
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Flow Counter Load Signals.
@@ -163,6 +165,26 @@ entity  FLOAT_OUTLET_VALVE is
         FLOW_NEG        : --! @brief FLOW COUNTER is NEGative :
                           --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
+        FLOW_EQ_LEVEL   : --! @brief FLOW COUNTER = FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値と同じになったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_GT_LEVEL   : --! @brief FLOW COUNTER >  FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値を越えたこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_GE_LEVEL   : --! @brief FLOW COUNTER >= FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値以上になったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_LE_LEVEL   : --! @brief FLOW COUNTER <= FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値以下になったこと
+                          --! を示すフラグ.
+                          out std_logic;
+        FLOW_LT_LEVEL   : --! @brief FLOW COUNTER <  FLOW_READY_LEVEL :
+                          --! フローカウンタの値が FLOW_READY_LEVEL の値未満になったこと
+                          --! を示すフラグ.
+                          out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
                           out std_logic
@@ -179,6 +201,11 @@ architecture RTL of FLOAT_OUTLET_VALVE is
     signal   flow_negative      : boolean;
     signal   flow_positive      : boolean;
     signal   flow_eq_zero       : boolean;
+    signal   flow_eq_ready      : boolean;
+    signal   flow_gt_ready      : boolean;
+    signal   flow_ge_ready      : boolean;
+    signal   flow_le_ready      : boolean;
+    signal   flow_lt_ready      : boolean;
     signal   io_open_req        : boolean;
     signal   io_open            : boolean;
     signal   io_last            : boolean;
@@ -224,62 +251,87 @@ begin
     -- flow_positive : フローカウンタの値が正(>0)になったことを示すフラグ.
     -- flow_negative : フローカウンタの値が負(<0)になったことを示すフラグ.
     -- flow_eq_zero  : フローカウンタの値が0になったことを示すフラグ.
+    -- flow_eq_ready : フローカウンタの値が FLOW_READY_LEVEL と同じになったことを示すフラグ
+    -- flow_gt_ready : フローカウンタの値が FLOW_READY_LEVEL を越えたことを示すフラグ
+    -- flow_ge_ready : フローカウンタの値が FLOW_READY_LEVEL 以上になったことを示すフラグ
+    -- flow_lt_ready : フローカウンタの値が FLOW_READY_LEVEL 未満になったことを示すフラグ
+    -- flow_le_ready : フローカウンタの値が FLOW_READY_LEVEL 以下になったことを示すフラグ
     -------------------------------------------------------------------------------
     process (CLK, RST)
-        variable next_counter : unsigned(COUNT_BITS downto 0);
+        variable calc_counter  : unsigned(COUNT_BITS   downto 0);
+        variable next_counter  : unsigned(COUNT_BITS-1 downto 0);
+        variable next_eq_zero  : boolean;
+        variable next_ge_ready : boolean;
+        variable next_eq_ready : boolean;
     begin
         if    (RST = '1') then
                 flow_counter  <= (others => '0');
                 flow_positive <= FALSE;
                 flow_negative <= FALSE;
                 flow_eq_zero  <= TRUE;
+                flow_eq_ready <= FALSE;
+                flow_ge_ready <= FALSE;
         elsif (CLK'event and CLK = '1') then
             if (CLR   = '1' or RESET = '1') then
                 flow_counter  <= (others => '0');
                 flow_positive <= FALSE;
                 flow_negative <= FALSE;
                 flow_eq_zero  <= TRUE;
+                flow_eq_ready <= FALSE;
+                flow_ge_ready <= FALSE;
             else
                 if (io_open_req) then
                     if (LOAD  = '1') then
-                        next_counter := "0" & unsigned(LOAD_COUNT);
+                        calc_counter := "0" & unsigned(LOAD_COUNT);
                     else
-                        next_counter := "0" & flow_counter;
+                        calc_counter := "0" & flow_counter;
                     end if;
                     if (PUSH_VALID = '1') then
-                        next_counter := next_counter + resize(unsigned(PUSH_SIZE),next_counter'length);
+                        calc_counter := calc_counter + resize(unsigned(PUSH_SIZE),calc_counter'length);
                     end if;
                     if (PULL_VALID = '1') then
-                        next_counter := next_counter - resize(unsigned(PULL_SIZE),next_counter'length);
+                        calc_counter := calc_counter - resize(unsigned(PULL_SIZE),calc_counter'length);
                     end if;
                 else
-                    next_counter := (others => '0');
+                    calc_counter := (others => '0');
                 end if;
-                if    (next_counter(next_counter'high) = '1') then
+                if (calc_counter(calc_counter'high) = '1') then
                     flow_positive <= FALSE;
                     flow_negative <= TRUE;
                     flow_eq_zero  <= FALSE;
-                    next_counter  := (others => '0');
-                elsif (next_counter > 0) then
-                    flow_positive <= TRUE;
-                    flow_negative <= FALSE;
-                    flow_eq_zero  <= FALSE;
+                    flow_eq_ready <= FALSE;
+                    flow_ge_ready <= FALSE;
+                    flow_counter  <= (others => '0');
                 else
-                    flow_positive <= FALSE;
+                    next_counter  := calc_counter(next_counter'range);
+                    next_eq_zero  := (next_counter  = 0);
+                    next_eq_ready := (next_counter  = to_01(unsigned(FLOW_READY_LEVEL)));
+                    next_ge_ready := (next_counter >= to_01(unsigned(FLOW_READY_LEVEL)));
+                    flow_positive <= (next_eq_zero  = FALSE);
                     flow_negative <= FALSE;
-                    flow_eq_zero  <= TRUE;
+                    flow_eq_zero  <= (next_eq_zero  = TRUE );
+                    flow_eq_ready <= (next_eq_ready = TRUE );
+                    flow_ge_ready <= (next_ge_ready = TRUE );
+                    flow_counter  <= next_counter;
                 end if;
-                flow_counter <= next_counter(flow_counter'range);
             end if;
         end if;
     end process;
+    flow_gt_ready <= (flow_ge_ready = TRUE and flow_eq_ready = FALSE);
+    flow_lt_ready <= (flow_ge_ready = FALSE);
+    flow_le_ready <= (flow_lt_ready = TRUE  or flow_eq_ready = TRUE );
     -------------------------------------------------------------------------------
     -- FLOW_COUNT : flow_counter の値を出力.
     -------------------------------------------------------------------------------
-    FLOW_COUNT <= std_logic_vector(flow_counter);
-    FLOW_ZERO  <= '1' when (flow_eq_zero ) else '0';
-    FLOW_POS   <= '1' when (flow_positive) else '0';
-    FLOW_NEG   <= '1' when (flow_negative) else '0';
+    FLOW_COUNT    <= std_logic_vector(flow_counter);
+    FLOW_ZERO     <= '1' when (flow_eq_zero ) else '0';
+    FLOW_POS      <= '1' when (flow_positive) else '0';
+    FLOW_NEG      <= '1' when (flow_negative) else '0';
+    FLOW_EQ_LEVEL <= '1' when (flow_eq_ready) else '0';
+    FLOW_GT_LEVEL <= '1' when (flow_gt_ready) else '0';
+    FLOW_GE_LEVEL <= '1' when (flow_ge_ready) else '0';
+    FLOW_LE_LEVEL <= '1' when (flow_le_ready) else '0';
+    FLOW_LT_LEVEL <= '1' when (flow_lt_ready) else '0';
     -------------------------------------------------------------------------------
     -- FLOW_STOP  : 転送の中止を指示する信号.
     -------------------------------------------------------------------------------
@@ -287,12 +339,16 @@ begin
                            (io_last and flow_negative) else '0';
     -------------------------------------------------------------------------------
     -- FLOW_PAUSE : フローカウンタの状態で、転送を一時的に止めたり、再開することを
-    --              指示する信号.
+    --              指示する信号. 以下の条件の何れかを満したときにアサートされる.
+    --              * PAUSE 信号が '1' のとき
+    --              * io_open = FALSE のとき
+    --              * io_last = TRUE  の時はフローカウンタが 0 になったとき
+    --              * io_last = FALSE の時はフローカウンタが FLOW_OPEN_LEVEL 未満のとき
     -------------------------------------------------------------------------------
     pause_flag <= (PAUSE   = '1'  ) or
                   (io_open = FALSE) or
-                  (io_last = TRUE  and flow_eq_zero) or
-                  (io_last = FALSE and to_01(flow_counter) <  to_01(unsigned(FLOW_READY_LEVEL)));
+                  (io_last = TRUE  and flow_eq_zero  = TRUE) or
+                  (io_last = FALSE and flow_lt_ready = TRUE);
     FLOW_READY <= '1' when (pause_flag = FALSE) else '0';
     FLOW_PAUSE <= '1' when (pause_flag = TRUE ) else '0';
     PAUSED     <= '1' when (pause_flag = TRUE ) else '0';
@@ -301,7 +357,7 @@ begin
     --              ただし、flow_counter の値が FLOW_OPEN_LEVEL 以下である場合のみ、
     --              アサートされる.
     -------------------------------------------------------------------------------
-    last_flag  <= (io_last = TRUE  and to_01(flow_counter) <= to_01(unsigned(FLOW_READY_LEVEL)));
+    last_flag  <= (io_last = TRUE  and flow_le_ready = TRUE);
     FLOW_LAST  <= '1' when (last_flag  = TRUE ) else '0';
     -------------------------------------------------------------------------------
     -- FLOW_SIZE  : 出力可能なバイト数(すなわちflow_counterの値)を出力.
