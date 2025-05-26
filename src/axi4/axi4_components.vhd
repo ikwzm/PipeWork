@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 2.2.1                                                           --
---!     @date    2024/09/26                                                      --
+--!     @version 2.3.0                                                           --
+--!     @date    2025/05/26                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2024 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2025 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
