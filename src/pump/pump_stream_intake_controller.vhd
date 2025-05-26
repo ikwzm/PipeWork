@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
---!     @version 2.2.0
---!     @date    2024/4/8
+--!     @version 2.3.0
+--!     @date    2025/5/25
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2024 Ichiro Kawazome
+--      Copyright (C) 2018-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -804,6 +804,7 @@ begin
         signal    flow_count        :  std_logic_vector(SIZE_BITS      -1 downto 0);
         signal    flow_last         :  std_logic;
         signal    flow_ready        :  std_logic;
+        signal    flow_ge_data_bytes:  std_logic;
         signal    port_reset        :  std_logic;
         signal    port_busy         :  std_logic;
         signal    o_valve_opened    :  std_logic;
@@ -886,7 +887,7 @@ begin
                 STOP            => '0'                 , -- In  :
                 INTAKE_OPEN     => i2o_valve_open      , -- In  :
                 OUTLET_OPEN     => o_valve_open        , -- In  :
-                FLOW_READY_LEVEL=> BUF_DATA_BYTES      , -- In  :
+                FLOW_READY_LEVEL=> BUF_DATA_BYTES      , -- In  : BUF_DATA のバイト数
             ------------------------------------------------------------------------
             -- Flow Counter Load Signals.
             ------------------------------------------------------------------------
@@ -919,6 +920,7 @@ begin
                 FLOW_ZERO       => open                , -- Out :
                 FLOW_POS        => open                , -- Out :
                 FLOW_NEG        => open                , -- Out :
+                FLOW_GE_LEVEL   => flow_ge_data_bytes  , -- Out : flow_count の値が BUF_DATA のバイト数以上
                 PAUSED          => open                  -- Out :
             );
         ---------------------------------------------------------------------------
@@ -934,7 +936,7 @@ begin
                 POOL_PTR_BITS   => BUF_DEPTH           , --   
                 SEL_BITS        => 1                   , --   
                 SIZE_BITS       => SIZE_BITS           , --   
-                POOL_SIZE_VALID => 0                   , --   
+                POOL_SIZE_VALID => 1                   , --   
                 QUEUE_SIZE      => 0                   , --
                 POOL_PIPELINE   => 0                   , --
                 POOL_JUSTIFIED  => 1                     -- 
@@ -995,10 +997,10 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        process (flow_count)
+        process (flow_count, flow_ge_data_bytes)
         begin
-            if (to_01(unsigned(flow_count)) >= BUF_DATA_BITS/8) then
-                pool_size <= std_logic_vector(to_unsigned(BUF_DATA_BITS/8, SIZE_BITS));
+            if (flow_ge_data_bytes = '1') then
+                pool_size <= BUF_DATA_BYTES;
             else
                 pool_size <= flow_count;
             end if;

@@ -14,7 +14,7 @@ ENTITY_FILES = axi4_master_address_channel_controller.vhd \
 axi4_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK AXI4 LIBRARY DESCRIPTION' \
-            --version 2.2.1 \
+            --version 2.3.0 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package AXI4_COMPONENTS \
