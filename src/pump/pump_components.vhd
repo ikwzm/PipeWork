@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 2.3.0                                                           --
---!     @date    2025/05/26                                                      --
+--!     @version 2.4.0                                                           --
+--!     @date    2025/06/12                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -312,11 +312,23 @@ component PUMP_FLOW_SYNCRONIZER
                           --! クロック(O_CLK)との関係を指定する.
                           --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                           integer :=  1;
+        I_CLK_FLOP      : --! @brief INPUT CLOCK FLOPPING :
+                          --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                          --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                          --! 叩く段数を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer range 0 to 31 := 2;
         O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
                           --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
                           --! クロック(O_CLK)との関係を指定する.
                           --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                           integer :=  1;
+        O_CLK_FLOP      : --! @brief OUTPUT CLOCK FLOPPING :
+                          --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                          --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                          --! 叩く段数を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer range 0 to 31 := 2;
         OPEN_INFO_BITS  : --! @brief OPEN INFOMATION BITS :
                           --! I_OPEN_INFO/O_OPEN_INFOのビット数を指定する.
                           integer :=  1;
@@ -970,6 +982,12 @@ component PUMP_CONTROLLER
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        I_CLK_FLOP          : --! @brief INPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         I_REQ_ADDR_VALID    : --! @brief INTAKE REQUEST ADDRESS VALID :
                               --! I_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * I_REQ_ADDR_VALID=0で無効.
@@ -1034,6 +1052,12 @@ component PUMP_CONTROLLER
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        O_CLK_FLOP          : --! @brief OUTPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         O_REQ_ADDR_VALID    : --! @brief OUTLET REQUEST ADDRESS VALID :
                               --! O_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * O_REQ_ADDR_VAL=0で無効.
@@ -1344,6 +1368,12 @@ component PUMP_STREAM_INTAKE_CONTROLLER
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        I_CLK_FLOP          : --! @brief INPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         I_REQ_ADDR_VALID    : --! @brief INTAKE REQUEST ADDRESS VALID :
                               --! I_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * I_REQ_ADDR_VALID=0で無効.
@@ -1403,6 +1433,12 @@ component PUMP_STREAM_INTAKE_CONTROLLER
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        O_CLK_FLOP          : --! @brief OUTPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         O_DATA_BITS         : --! @brief OUTPUT STREAM DATA BITS :
                               --! O_DATA のビット数を指定する.
                               integer := 32;
@@ -1620,6 +1656,12 @@ component PUMP_STREAM_OUTLET_CONTROLLER
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        O_CLK_FLOP          : --! @brief OUTPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         O_REQ_ADDR_VALID    : --! @brief OUTLET REQUEST ADDRESS VALID :
                               --! O_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * O_REQ_ADDR_VALID=0で無効.
@@ -1679,6 +1721,12 @@ component PUMP_STREAM_OUTLET_CONTROLLER
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        I_CLK_FLOP          : --! @brief INPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         I_DATA_BITS         : --! @brief INPUT STREAM DATA BITS :
                               --! I_DATA のビット数を指定する.
                               integer := 32;
@@ -2544,11 +2592,23 @@ component PIPE_REQUESTER_INTERFACE
                               --! エスト側のクロック(M_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        T_CLK_FLOP          : --! @brief RESPONDER CLOCK FLOPPING :
+                              --! レスポンダ側のクロック(T_CLK)とリクエスト側のクロック
+                              --! (M_CLK)が非同期の場合に、リクエスト側のFFからの制御信
+                              --! 号をレスポンダ側のFFで叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         M_CLK_RATE          : --! @brief REQUESTER CLOCK RATE :
                               --! T_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
                               --! エスト側のクロック(M_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        M_CLK_FLOP          : --! @brief REQUESTER CLOCK FLOPPING :
+                              --! レスポンダ側のクロック(T_CLK)とリクエスト側のクロック
+                              --! (M_CLK)が非同期の場合に、レスポンダ側のFFからの制御信
+                              --! 号をリクエスト側のFFで叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                               integer := 32;
@@ -3398,11 +3458,23 @@ component PIPE_CONTROLLER
                               --! エスト側のクロック(M_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        T_CLK_FLOP          : --! @brief RESPONDER CLOCK FLOPPING :
+                              --! レスポンダ側のクロック(T_CLK)とリクエスト側のクロック
+                              --! (M_CLK)が非同期の場合に、リクエスト側のFFからの制御信
+                              --! 号をレスポンダ側のFFで叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         M_CLK_RATE          : --! @brief REQUESTER CLOCK RATE :
                               --! T_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
                               --! エスト側のクロック(M_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        M_CLK_FLOP          : --! @brief REQUESTER CLOCK FLOPPING :
+                              --! レスポンダ側のクロック(T_CLK)とリクエスト側のクロック
+                              --! (M_CLK)が非同期の場合に、レスポンダ側のFFからの制御信
+                              --! 号をリクエスト側のFFで叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                               integer := 32;
