@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
---!     @version 2.2.0
---!     @date    2024/4/8
+--!     @version 2.4.0
+--!     @date    2025/6/12
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2024 Ichiro Kawazome
+--      Copyright (C) 2018-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,12 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        O_CLK_FLOP          : --! @brief OUTPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         O_REQ_ADDR_VALID    : --! @brief OUTLET REQUEST ADDRESS VALID :
                               --! O_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * O_REQ_ADDR_VALID=0で無効.
@@ -105,6 +111,12 @@ entity  PUMP_STREAM_OUTLET_CONTROLLER is
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        I_CLK_FLOP          : --! @brief INPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         I_DATA_BITS         : --! @brief INPUT STREAM DATA BITS :
                               --! I_DATA のビット数を指定する.
                               integer := 32;
@@ -629,7 +641,9 @@ begin
         SYNC: PUMP_FLOW_SYNCRONIZER                      -- 
             generic map (                                --
                 I_CLK_RATE      => O_CLK_RATE          , -- 
+                I_CLK_FLOP      => O_CLK_FLOP          , -- 
                 O_CLK_RATE      => I_CLK_RATE          , --
+                O_CLK_FLOP      => I_CLK_FLOP          , -- 
                 OPEN_INFO_BITS  => O2I_OPEN_INFO_BITS  , --
                 CLOSE_INFO_BITS => O2I_CLOSE_INFO_BITS , --
                 EVENT_SIZE      => 4                   , --
@@ -714,7 +728,9 @@ begin
         SYNC: PUMP_FLOW_SYNCRONIZER                      -- 
             generic map (                                --
                 I_CLK_RATE      => I_CLK_RATE          , -- 
+                I_CLK_FLOP      => I_CLK_FLOP          , -- 
                 O_CLK_RATE      => O_CLK_RATE          , --
+                O_CLK_FLOP      => O_CLK_FLOP          , -- 
                 OPEN_INFO_BITS  => I2O_OPEN_INFO_BITS  , --
                 CLOSE_INFO_BITS => I2O_CLOSE_INFO_BITS , --
                 EVENT_SIZE      => 1                   , --
