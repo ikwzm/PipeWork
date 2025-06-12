@@ -2,12 +2,12 @@
 --!     @file    pump_flow_syncronizer.vhd
 --!     @brief   PUMP FLOW SYNCRONIZER
 --!              PUMPの入力側と出力側の間で各種情報を伝達するモジュール. 
---!     @version 1.8.0
---!     @date    2019/3/25
+--!     @version 2.4.0
+--!     @date    2025/6/12
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -47,11 +47,23 @@ entity  PUMP_FLOW_SYNCRONIZER is
                           --! クロック(O_CLK)との関係を指定する.
                           --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                           integer :=  1;
+        I_CLK_FLOP      : --! @brief INPUT CLOCK FLOPPING :
+                          --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                          --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                          --! 叩く段数を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer range 0 to 31 := 2;
         O_CLK_RATE      : --! @brief OUTPUT CLOCK RATE :
                           --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側の
                           --! クロック(O_CLK)との関係を指定する.
                           --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                           integer :=  1;
+        O_CLK_FLOP      : --! @brief OUTPUT CLOCK FLOPPING :
+                          --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                          --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                          --! 叩く段数を指定する.
+                          --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                          integer range 0 to 31 := 2;
         OPEN_INFO_BITS  : --! @brief OPEN INFOMATION BITS :
                           --! I_OPEN_INFO/O_OPEN_INFOのビット数を指定する.
                           integer :=  1;
@@ -700,8 +712,8 @@ begin
             VAL_BITS    => i_valid'length                         , --
             I_CLK_RATE  => I_CLK_RATE                             , --
             O_CLK_RATE  => O_CLK_RATE                             , --
-            I_CLK_FLOP  => 1                                      , --
-            O_CLK_FLOP  => 1                                      , --
+            I_CLK_FLOP  => I_CLK_FLOP                             , --
+            O_CLK_FLOP  => O_CLK_FLOP                             , --
             I_CLK_FALL  => 0                                      , --
             O_CLK_FALL  => 0                                      , --
             O_CLK_REGS  => 0                                        --
