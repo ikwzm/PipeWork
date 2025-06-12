@@ -2,12 +2,12 @@
 --!     @file    syncronizer.vhd
 --!     @brief   SYNCRONIZER MODULE :
 --!              異なるクロックで動作するパスを継ぐアダプタのクロック同期化モジュール.
---!     @version 1.5.9
---!     @date    2015/12/22
+--!     @version 2.4.0
+--!     @date    2025/6/12
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2015 Ichiro Kawazome
+--      Copyright (C) 2012-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -94,7 +94,7 @@ entity  SYNCRONIZER is
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい。
-                      integer range 0 to 2 := 2;
+                      integer range 0 to 31 := 2;
         O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
@@ -102,7 +102,7 @@ entity  SYNCRONIZER is
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい.
-                      integer range 0 to 2 := 2;
+                      integer range 0 to 31 := 2;
         I_CLK_FALL  : --! @brief USE INPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のクロック(I_CLK)の立ち下がりを使うかどう
@@ -115,6 +115,7 @@ entity  SYNCRONIZER is
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、出力側のクロック(OCLK)の立ち下がりを使うかどう
                       --! かを指定する.
+                      --! * この変数は後方互換性のために存在する. 現在は未使用.
                       --! * O_CLK_FALL = 0 の場合は使わない.
                       --! * O_CLK_FALL = 1 の場合は使う.
                       integer range 0 to 1 :=  0;
@@ -236,8 +237,7 @@ begin
             signal   sync_start     : std_logic;
             signal   sync_ready     : std_logic;
             signal   sync_ack_i     : std_logic;
-            signal   sync_ack_1     : std_logic;
-            signal   sync_ack_2     : std_logic;
+            signal   sync_ack_d     : std_logic_vector(0 to I_CLK_FLOP);
         begin
             -----------------------------------------------------------------------
             -- curr_state : 出力側と同期をとるためのステートマシーン
@@ -259,23 +259,18 @@ begin
             -----------------------------------------------------------------------
             -- sync_ack_i : 出力側からの sync_ack 信号を FF で叩く
             -----------------------------------------------------------------------
-            sync_ack_i <= sync_ack   when (I_CLK_FLOP = 0) else
-                          sync_ack_1 when (I_CLK_FLOP = 1) else
-                          sync_ack_2;
-            process (I_CLK, RST) begin
-                if (RST = '1') then
-                        sync_ack_1 <= '0';
-                        sync_ack_2 <= '0';
-                elsif  (I_CLK'event and I_CLK = '1') then
-                    if (I_CLR = '1') then
-                        sync_ack_1 <= '0';
-                        sync_ack_2 <= '0';
-                    else
-                        sync_ack_1 <= sync_ack;
-                        sync_ack_2 <= sync_ack_1;
+            sync_ack_i    <= sync_ack_d(I_CLK_FLOP);
+            sync_ack_d(0) <= sync_ack;
+            SYNC_ACK_FF: for stage in 1 to I_CLK_FLOP generate
+                process (I_CLK, RST) begin
+                    if     (RST   = '1') then sync_ack_d(stage) <= '0';
+                    elsif  (I_CLK'event and I_CLK = '1') then
+                        if (I_CLR = '1') then sync_ack_d(stage) <= '0';
+                        else                  sync_ack_d(stage) <= sync_ack_d(stage-1);
+                        end if;
                     end if;
-                end if;
-            end process;
+                end process;
+            end generate;
             -----------------------------------------------------------------------
             -- sync_req   : 出力側に送る同期信号
             -----------------------------------------------------------------------
@@ -318,51 +313,19 @@ begin
             signal   curr_state     : std_logic_vector(1 downto 0);
             signal   next_state     : std_logic_vector(1 downto 0);
             signal   sync_req_i     : std_logic;
-            signal   sync_req_1     : std_logic;
-            signal   sync_req_2     : std_logic;
+            signal   sync_req_d     : std_logic_vector(0 to O_CLK_FLOP);
         begin
             -----------------------------------------------------------------------
             -- sync_req_i : 入力側からの sync_req 信号を FF で叩く
             -----------------------------------------------------------------------
-            sync_req_i <= sync_req   when (O_CLK_FLOP = 0) else
-                          sync_req_1 when (O_CLK_FLOP = 1) else
-                          sync_req_2;
-            REQ1F: if (O_CLK_FALL > 0 and O_CLK_FLOP = 1) generate
+            sync_req_i    <= sync_req_d(O_CLK_FLOP);
+            sync_req_d(0) <= sync_req;
+            SYNC_REQ_FF: for stage in 1 to O_CLK_FLOP generate
                 process (O_CLK, RST) begin
-                    if     (RST   = '1') then sync_req_1 <= '0';
-                    elsif  (O_CLK'event and O_CLK = '0') then
-                        if (O_CLR = '1') then sync_req_1 <= '0';
-                        else                  sync_req_1 <= sync_req;
-                        end if;
-                    end if;
-                end process;
-            end generate;
-            REQ1R: if (O_CLK_FALL = 0 or O_CLK_FLOP /= 1) generate
-                process (O_CLK, RST) begin
-                    if     (RST   = '1') then sync_req_1 <= '0';
+                    if     (RST   = '1') then sync_req_d(stage) <= '0';
                     elsif  (O_CLK'event and O_CLK = '1') then
-                        if (O_CLR = '1') then sync_req_1 <= '0';
-                        else                  sync_req_1 <= sync_req;
-                        end if;
-                    end if;
-                end process;
-            end generate;
-            REQ2F: if (O_CLK_FALL > 0) generate
-                process (O_CLK, RST) begin
-                    if     (RST   = '1') then sync_req_2 <= '0';
-                    elsif  (O_CLK'event and O_CLK = '0') then
-                        if (O_CLR = '1') then sync_req_2 <= '0';
-                        else                  sync_req_2 <= sync_req_1;
-                        end if;
-                    end if;
-                end process;
-            end generate;
-            REQ2R: if (O_CLK_FALL = 0) generate
-                process (O_CLK, RST) begin
-                    if     (RST   = '1') then sync_req_2 <= '0';
-                    elsif  (O_CLK'event and O_CLK = '1') then
-                        if (O_CLR = '1') then sync_req_2 <= '0';
-                        else                  sync_req_2 <= sync_req_1;
+                        if (O_CLR = '1') then sync_req_d(stage) <= '0';
+                        else                  sync_req_d(stage) <= sync_req_d(stage-1);
                         end if;
                     end if;
                 end process;
