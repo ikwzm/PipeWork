@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    components.vhd                                                  --
 --!     @brief   PIPEWORK COMPONENT LIBRARY DESCRIPTION                          --
---!     @version 2.3.0                                                           --
---!     @date    2025/05/26                                                      --
+--!     @version 2.4.0                                                           --
+--!     @date    2025/06/12                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -1089,7 +1089,7 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい。
-                      integer range 0 to 2 := 2;
+                      integer range 0 to 31 := 2;
         O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
@@ -1097,7 +1097,7 @@ component SYNCRONIZER
                       --! * FFで叩くのはメタステーブルの発生による誤動作を防ぐため.
                       --!   メタステーブルの意味が分からない人は、この変数を変更す
                       --!   るのはやめたほうがよい.
-                      integer range 0 to 2 := 2;
+                      integer range 0 to 31 := 2;
         I_CLK_FALL  : --! @brief USE INPUT CLOCK FALL :
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、入力側のクロック(I_CLK)の立ち下がりを使うかどう
@@ -1110,6 +1110,7 @@ component SYNCRONIZER
                       --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
                       --! の場合に、出力側のクロック(OCLK)の立ち下がりを使うかどう
                       --! かを指定する.
+                      --! * この変数は後方互換性のために存在する. 現在は未使用.
                       --! * O_CLK_FALL = 0 の場合は使わない.
                       --! * O_CLK_FALL = 1 の場合は使う.
                       integer range 0 to 1 :=  0;
@@ -2918,11 +2919,23 @@ component REGISTER_ACCESS_SYNCRONIZER
                       --! ク(O_CLK)との関係を指定する. 
                       --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
+        I_CLK_FLOP  : --! @brief INPUT CLOCK FLOPPING :
+                      --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
+                      --! の場合に、出力側のFFからの制御信号を入力側のFFで叩く段数
+                      --! を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer range 0 to 31 := 2;
         O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
                       --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
                       --! ク(O_CLK)との関係を指定する.
                       --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
+        O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
+                      --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
+                      --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
+                      --! を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer range 0 to 31 := 2;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_REQ/O_WRITE/O_WDATA/O_BEN)をレジスタ
                       --! 出力するかどうかを指定する.
@@ -3066,11 +3079,23 @@ component REGISTER_ACCESS_ADAPTER
                       --! ク(O_CLK)との関係を指定する. 
                       --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
+        I_CLK_FLOP  : --! @brief INPUT CLOCK FLOPPING :
+                      --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
+                      --! の場合に、出力側のFFからの制御信号を入力側のFFで叩く段数
+                      --! を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer range 0 to 31 := 2;
         O_CLK_RATE  : --! @brief OUTPUT CLOCK RATE :
                       --! I_CLK_RATEとペアで入力側のクロック(I_CLK)と出力側のクロッ
                       --! ク(O_CLK)との関係を指定する.
                       --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                       integer :=  1;
+        O_CLK_FLOP  : --! @brief OUTPUT CLOCK FLOPPING :
+                      --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が非同期
+                      --! の場合に、入力側のFFからの制御信号を出力側のFFで叩く段数
+                      --! を指定する.
+                      --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                      integer range 0 to 31 := 2;
         O_CLK_REGS  : --! @brief REGISTERD OUTPUT :
                       --! 出力側の各種信号(O_REQ/O_WRITE/O_WDATA/O_BEN)をレジスタ
                       --! 出力するかどうかを指定する.

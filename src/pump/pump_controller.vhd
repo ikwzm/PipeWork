@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller.vhd
 --!     @brief   PUMP CONTROLLER
---!     @version 2.2.0
---!     @date    2024/4/8
+--!     @version 2.4.0
+--!     @date    2025/6/12
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,12 @@ entity  PUMP_CONTROLLER is
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        I_CLK_FLOP          : --! @brief INPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、出力側のFFからの制御信号を入力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         I_REQ_ADDR_VALID    : --! @brief INTAKE REQUEST ADDRESS VALID :
                               --! I_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * I_REQ_ADDR_VALID=0で無効.
@@ -110,6 +116,12 @@ entity  PUMP_CONTROLLER is
                               --! のクロック(O_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        O_CLK_FLOP          : --! @brief OUTPUT CLOCK FLOPPING :
+                              --! 入力側のクロック(I_CLK)と出力側のクロック(O_CLK)が
+                              --! 非同期の場合に、入力側のFFからの制御信号を出力側のFFで
+                              --! 叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         O_REQ_ADDR_VALID    : --! @brief OUTLET REQUEST ADDRESS VALID :
                               --! O_REQ_ADDR信号を有効にするか否かを指示する.
                               --! * O_REQ_ADDR_VAL=0で無効.
@@ -791,7 +803,9 @@ begin
         SYNC: PUMP_FLOW_SYNCRONIZER                      -- 
             generic map (                                --
                 I_CLK_RATE      => I_CLK_RATE          , -- 
+                I_CLK_FLOP      => I_CLK_FLOP          , -- 
                 O_CLK_RATE      => O_CLK_RATE          , --
+                O_CLK_FLOP      => O_CLK_FLOP          , --
                 OPEN_INFO_BITS  => i_open_info'length  , --
                 CLOSE_INFO_BITS => i_close_info'length , --
                 EVENT_SIZE      => i_event'length      , --
@@ -910,7 +924,9 @@ begin
         SYNC: PUMP_FLOW_SYNCRONIZER                      -- 
             generic map (                                --
                 I_CLK_RATE      => O_CLK_RATE          , -- 
+                I_CLK_FLOP      => O_CLK_FLOP          , -- 
                 O_CLK_RATE      => I_CLK_RATE          , --
+                O_CLK_FLOP      => I_CLK_FLOP          , -- 
                 OPEN_INFO_BITS  => o_open_info'length  , --
                 CLOSE_INFO_BITS => o_close_info'length , --
                 EVENT_SIZE      => o_event'length      , --

@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pipe_requester_interface.vhd
 --!     @brief   PIPE REQUESTER INTERFACE
---!     @version 1.8.0
---!     @date    2019/3/25
+--!     @version 2.4.0
+--!     @date    2025/6/12
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2019 Ichiro Kawazome
+--      Copyright (C) 2012-2025 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -58,11 +58,23 @@ entity  PIPE_REQUESTER_INTERFACE is
                               --! エスト側のクロック(M_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        T_CLK_FLOP          : --! @brief RESPONDER CLOCK FLOPPING :
+                              --! レスポンダ側のクロック(T_CLK)とリクエスト側のクロック
+                              --! (M_CLK)が非同期の場合に、リクエスト側のFFからの制御信
+                              --! 号をレスポンダ側のFFで叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         M_CLK_RATE          : --! @brief REQUESTER CLOCK RATE :
                               --! T_CLK_RATEとペアでレスポンダ側のクロック(T_CLK)とリク
                               --! エスト側のクロック(M_CLK)との関係を指定する.
                               --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
                               integer :=  1;
+        M_CLK_FLOP          : --! @brief REQUESTER CLOCK FLOPPING :
+                              --! レスポンダ側のクロック(T_CLK)とリクエスト側のクロック
+                              --! (M_CLK)が非同期の場合に、レスポンダ側のFFからの制御信
+                              --! 号をリクエスト側のFFで叩く段数を指定する.
+                              --! 詳細は PipeWork.Components の SYNCRONIZER を参照.
+                              integer range 0 to 31 := 2;
         ADDR_BITS           : --! @brief Request Address Bits :
                               --! REQ_ADDR信号のビット数を指定する.
                               integer := 32;
@@ -666,7 +678,9 @@ begin
         SYNC: PUMP_FLOW_SYNCRONIZER
             generic map (
                 I_CLK_RATE          => T_CLK_RATE                  , -- 
+                I_CLK_FLOP          => T_CLK_FLOP                  , -- 
                 O_CLK_RATE          => M_CLK_RATE                  , --
+                O_CLK_FLOP          => M_CLK_FLOP                  , --
                 OPEN_INFO_BITS      => OPEN_INFO_RANGE.BITS        , --
                 CLOSE_INFO_BITS     => CLOSE_INFO_BITS             , --
                 XFER_SIZE_BITS      => XFER_SIZE_BITS              , --
@@ -815,7 +829,9 @@ begin
         SYNC: PUMP_FLOW_SYNCRONIZER                                  -- 
             generic map (                                            -- 
                 I_CLK_RATE          => M_CLK_RATE                  , -- 
+                I_CLK_FLOP          => M_CLK_FLOP                  , -- 
                 O_CLK_RATE          => T_CLK_RATE                  , --
+                O_CLK_FLOP          => T_CLK_FLOP                  , --
                 OPEN_INFO_BITS      => 1                           , --
                 CLOSE_INFO_BITS     => 1                           , --
                 XFER_SIZE_BITS      => XFER_SIZE_BITS              , --
