@@ -9,12 +9,13 @@ ENTITY_FILES = axi4_master_address_channel_controller.vhd \
                axi4_register_interface.vhd                \
                axi4_data_port.vhd                         \
                axi4_data_outlet_port.vhd                  \
+               axi4_traffic_monitor.vhd                   \
                ${ENDLIST}
 
 axi4_components.vhd : ${ENTITY_FILES}
 	../../tools/MakeComponentPackage.rb --verbose \
             --brief   'PIPEWORK AXI4 LIBRARY DESCRIPTION' \
-            --version 2.3.0 \
+            --version 2.5.0-RC1 \
             --author  'Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>' \
             --library PIPEWORK \
             --package AXI4_COMPONENTS \

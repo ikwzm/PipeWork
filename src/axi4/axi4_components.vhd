@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 2.3.0                                                           --
---!     @date    2025/05/26                                                      --
+--!     @version 2.5.0-RC1                                                       --
+--!     @date    2025/11/17                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
@@ -2590,6 +2590,124 @@ component AXI4_DATA_OUTLET_PORT
                           --! * 最初にデータが入力されたときにアサートされる.
                           --! * 最後のデータが出力し終えたらネゲートされる.
                           out  std_logic
+    );
+end component;
+-----------------------------------------------------------------------------------
+--! @brief AXI4_TRAFFIC_MONITOR                                                  --
+-----------------------------------------------------------------------------------
+component AXI4_TRAFFIC_MONITOR
+    -------------------------------------------------------------------------------
+    -- ジェネリック変数.
+    -------------------------------------------------------------------------------
+    generic (
+        ENABLE          : --! @brief ENABLE :
+                          --! モニターを行うか否かを指定.
+                          --! * ENABLE=1 で有効. 出力レジスタに各種カウンタの値を出力.
+                          --! * ENABLE=0 で無効. 出力レジスタにALL-0を出力.
+                          integer range 0 to 1:= 1;
+        COUNT_BITS      : --! @brief COUNT_BITS :
+                          --! モニターカウンタのビット幅.
+                          integer := 64;
+        REGS_BITS       : --! @brief MONITOR REGISTER BITS :
+                          --! モニター出力レジスタのビット幅.
+                          integer := 64
+    );
+    port(
+    ------------------------------------------------------------------------------
+    -- Clock and Reset Signals.
+    ------------------------------------------------------------------------------
+        CLK             : --! @brief Global clock signal.  
+                          in    std_logic;
+        RST             : --! @brief Global asyncrounos reset signal, active HIGH.
+                          in    std_logic;
+        CLR             : --! @brief Global syncrounos reset signal, active HIGH.
+                          in    std_logic;
+    -------------------------------------------------------------------------------
+    -- RESET Bit        : カウンタをリセットする.
+    -------------------------------------------------------------------------------
+    -- * RESET_L='1' and RESET_D='1' でリセット開始.
+    -- * RESET_L='1' and RESET_D='0' でリセット解除.
+    -- * RESET_Q は現在のリセット状態を返す.
+    -- * RESET_Q='1' で現在リセット中であることを示す.
+    -------------------------------------------------------------------------------
+        RESET_L         : in  std_logic := '0';
+        RESET_D         : in  std_logic := '0';
+        RESET_Q         : out std_logic;
+    -------------------------------------------------------------------------------
+    -- START Bit        : モニターの開始を指示する.
+    -------------------------------------------------------------------------------
+    -- * START_L='1' and START_D='1' でモニター開始.
+    -- * START_L='1' and START_D='0' の場合は無視される.
+    -- * START_Q は現在の状態を返す.
+    -- * START_Q='1' でモニター中であることを示す.
+    -- * START_Q='0 'でモニターは行われていないことを示す.
+    -------------------------------------------------------------------------------
+        START_L         : in  std_logic := '0';
+        START_D         : in  std_logic := '0';
+        START_Q         : out std_logic;
+    -------------------------------------------------------------------------------
+    -- STOP Bit         : モニターの中止を指示する.
+    -------------------------------------------------------------------------------
+    -- * STOP_L='1' and STOP_D='1' でモニターの中止処理開始.
+    -- * STOP_L='1' and STOP_D='0' の場合は無視される.
+    -- * STOP_Q は現在の状態を返す.
+    -- * STOP_Q='1' でモニターの中止処理中であることを示す.
+    -- * STOP_Q='0' でモニターの中止処理が完了していることを示す.
+    -------------------------------------------------------------------------------
+        STOP_L          : in  std_logic := '0';
+        STOP_D          : in  std_logic := '0';
+        STOP_Q          : out std_logic;
+    -------------------------------------------------------------------------------
+    -- PAUSE Bit        : モニターの中断を指示する.
+    -------------------------------------------------------------------------------
+    -- * PAUSE_L='1' and PAUSE_D='1' でモニター中断.
+    -- * PAUSE_L='1' and PAUSE_D='0' でモニター再開.
+    -- * PAUSE_Q は現在中断中か否かを返す.
+    -- * PAUSE_Q='1' で現在モニターを中断していることを示す.
+    -- * PAUSE_Q='0' で現在モニターを再開していることを示す.
+    -------------------------------------------------------------------------------
+        PAUSE_L         : in  std_logic := '0';
+        PAUSE_D         : in  std_logic := '0';
+        PAUSE_Q         : out std_logic;
+    ------------------------------------------------------------------------------
+    -- AXI4 Address Channel Signals.
+    ------------------------------------------------------------------------------
+        AVALID          : --! @brief Address Valid.
+                          --! This signal indicates that the channel is signaling
+                          --! valid read/write address and control infomation.
+                          in    std_logic;
+        AREADY          : --! @brief Address Ready.
+                          --! This signal indicates that the slave is ready to
+                          --! accept and associated control signals.
+                          in    std_logic;
+    ------------------------------------------------------------------------------
+    -- AXI4 Data Channel Signals.
+    ------------------------------------------------------------------------------
+        DVALID          : --! @brief data valid.
+                          --! This signal indicates that the channel is signaling
+                          --! the required read/write data.
+                          in    std_logic;
+        DREADY          : --! @brief data ready.
+                          --! This signal indicates that the master can accept the
+                          --! read/write data and response information.
+                          in    std_logic;
+    ------------------------------------------------------------------------------
+    -- Monitor Output Registers.
+    ------------------------------------------------------------------------------
+        TOTAL_REGS      : --! @brief Monitor Total Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0);
+        ADDR_REGS       : --! @brief Monitor Address Valid and Ready Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0);
+        AVALID_REGS     : --! @brief Monitor Address Valid Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0);
+        AREADY_REGS     : --! @brief Monitor Address Ready Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0);
+        DATA_REGS       : --! @brief Monitor Data Valid and Ready Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0);
+        DVALID_REGS     : --! @brief Monitor Data Valid Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0);
+        DREADY_REGS     : --! @brief Monitor Data Ready Count.
+                          out   std_logic_vector(REGS_BITS-1 downto 0)
     );
 end component;
 end AXI4_COMPONENTS;
