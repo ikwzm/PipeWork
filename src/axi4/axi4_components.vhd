@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 2.5.0-RC1                                                       --
+--!     @version 2.5.0                                                           --
 --!     @date    2025/11/17                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
