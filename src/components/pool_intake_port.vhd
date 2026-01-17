@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_intake_port.vhd
 --!     @brief   POOL INTAKE PORT
---!     @version 2.0.0
---!     @date    2024/2/19
+--!     @version 2.6.0
+--!     @date    2026/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -71,6 +71,18 @@ entity  POOL_INTAKE_PORT is
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        POOL_PTR_STRIDE : --! @brief POOL PTR STRIDE VALUE :
+                          --! データを書き込んだ時にバッファの位置を更新する値を指定する.
+                          --! * POOL_PTR_STRIDE=0を指定した場合は、PORT_DVAL信号(ポー
+                          --!   トからデータを入力する際のユニット単位での有効信号)のビ
+                          --!   ットが１の数を数えて、その値をバッファの位置に加算する.
+                          --! * POOL_PTR_STRIDE>0の値を指定した場合は、常にその値をバ
+                          --!   ッファの位置に加算する.
+                          --!   常に固定値を加算するほうが回路が簡単になるが、端数処理
+                          --!   には注意が必要.
+                          --!   固定値を指定する場合は POOL_DATA_BITS/UNIT_BITSを
+                          --!   指定すると良い. 
+                          integer := 0;
         PORT_PIPELINE   : --! @brief PORT PIPELINE STAGE SIZE :
                           --! 入力 PORT 側のパイプラインの段数を指定する.
                           --! * 後述の PORT_JUSTIFIED が 0 の場合は、入力 PORT 側
@@ -108,19 +120,19 @@ entity  POOL_INTAKE_PORT is
                           --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
                           --!   してこのモジュールを初期化しする.
                           --! * 最初にデータ入力と同時にアサートしても構わない.
-                          in  std_logic;
+                          in  std_logic := '0';
         START_PTR       : --! @brief START POOL BUFFER POINTER :
                           --! 書き込み開始ポインタ.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic_vector(PTR_BITS-1 downto 0);
+                          in  std_logic_vector(PTR_BITS-1 downto 0) := (others => '0');
         XFER_LAST       : --! @brief TRANSFER LAST :
                           --! 最後のトランザクションであることを示すフラグ.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic;
+                          in  std_logic := '0';
         XFER_SEL        : --! @brief TRANSFER SELECT :
                           --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic_vector(SEL_BITS-1 downto 0);
+                          in  std_logic_vector(SEL_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Intake Port Signals.
     -------------------------------------------------------------------------------
@@ -136,14 +148,14 @@ entity  POOL_INTAKE_PORT is
                           in  std_logic_vector(PORT_DATA_BITS-1 downto 0);
         PORT_DVAL       : --! @brief INTAKE PORT DATA VALID :
                           --! ポートからデータを入力する際のユニット単位での有効信号.
-                          in  std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0);
+                          in  std_logic_vector(PORT_DATA_BITS/UNIT_BITS-1 downto 0) := (others => '1');
         PORT_ERROR      : --! @brief INTAKE PORT ERROR :
                           --! データ入力中にエラーが発生したことを示すフラグ.
-                          in  std_logic;
+                          in  std_logic := '0';
         PORT_LAST       : --! @brief INTAKE DATA LAST :
                           --! 最終ワード信号入力.
                           --! * 最後のワードデータ入力であることを示すフラグ.
-                          in  std_logic;
+                          in  std_logic := '0';
         PORT_VAL        : --! @brief INTAKE PORT VALID :
                           --! 入力ワード有効信号.
                           --! * PORT_DATA/PORT_DVAL/PORT_LAST/PORT_ERRが有効であることを示す.
@@ -200,6 +212,9 @@ entity  POOL_INTAKE_PORT is
     -------------------------------------------------------------------------------
     -- Status Signals.
     -------------------------------------------------------------------------------
+        CURR_PTR        : --! @brief CURRENT POOL BUFFER POINTER :
+                          --! 現在のバッファの書き込む位置を出力する.
+                          out std_logic_vector(PTR_BITS-1 downto 0);
         BUSY            : --! @brief QUEUE BUSY :
                           --! キューが動作中であることを示す信号.
                           --! * 最初にデータが入力されたときにアサートされる.
@@ -549,11 +564,16 @@ begin
             elsif (START = '1') then
                 write_ptr <= unsigned(START_PTR);
             elsif (o_valid = '1' and o_ready = '1') then
-                write_ptr <= write_ptr + RESIZE(unsigned(o_size), write_ptr'length);
+                if (POOL_PTR_STRIDE > 0) then
+                    write_ptr <= write_ptr + POOL_PTR_STRIDE;
+                else
+                    write_ptr <= write_ptr + RESIZE(unsigned(o_size), write_ptr'length);
+                end if;
             end if;
         end if;
     end process;
     POOL_PTR <= std_logic_vector(write_ptr);
+    CURR_PTR <= std_logic_vector(write_ptr);
     -------------------------------------------------------------------------------
     -- BUSY       : 
     -------------------------------------------------------------------------------
