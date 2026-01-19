@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_intake_controller.vhd
 --!     @brief   PUMP STREAM INTAKE CONTROLLER
---!     @version 2.4.0
---!     @date    2025/6/12
+--!     @version 2.6.0
+--!     @date    2026/1/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2025 Ichiro Kawazome
+--      Copyright (C) 2018-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -340,6 +340,11 @@ architecture RTL of PUMP_STREAM_INTAKE_CONTROLLER is
     -- 各種サイズカウンタのビット数.
     ------------------------------------------------------------------------------
     constant  SIZE_BITS             :  integer := BUF_DEPTH+1;
+    ------------------------------------------------------------------------------
+    -- バッファポインタの初期値
+    ------------------------------------------------------------------------------
+    constant  BUF_INIT_PTR          :  std_logic_vector(BUF_DEPTH-1 downto 0)
+                                    := (others => '0');
     -------------------------------------------------------------------------------
     -- 入力側の各種信号群.
     -------------------------------------------------------------------------------
@@ -414,7 +419,8 @@ begin
             REQ_SIZE_BITS       => I_REQ_SIZE_BITS     , --   
             REG_SIZE_BITS       => I_REG_SIZE_BITS     , --   
             REG_MODE_BITS       => I_REG_MODE_BITS     , --   
-            REG_STAT_BITS       => I_STAT_BITS         , --   
+            REG_STAT_BITS       => I_STAT_BITS         , --
+            BUF_PTR_L_VALID     => 0                   , --
             FIXED_FLOW_OPEN     => I_FIXED_FLOW_OPEN   , --   
             FIXED_POOL_OPEN     => I_FIXED_POOL_OPEN   , --   
             USE_PUSH_BUF_SIZE   => I_USE_PUSH_BUF_SIZE , --   
@@ -471,6 +477,7 @@ begin
             REG_ERR_ST_L        => I_ERR_ST_L          , -- In  :
             REG_ERR_ST_D        => I_ERR_ST_D          , -- In  :
             REG_ERR_ST_Q        => I_ERR_ST_Q          , -- Out :
+            BUF_PTR_D           => BUF_INIT_PTR        , -- In  :
         ---------------------------------------------------------------------------
         -- Intake Configuration Signals.
         ---------------------------------------------------------------------------
@@ -806,8 +813,6 @@ begin
     --
     -------------------------------------------------------------------------------
     O_SIDE: block
-        constant  null_buf_ptr      :  std_logic_vector(BUF_DEPTH      -1 downto 0) := (others => '0');
-        constant  null_size         :  std_logic_vector(SIZE_BITS      -1 downto 0) := (others => '0');
         constant  BUF_DATA_BYTES    :  std_logic_vector(SIZE_BITS      -1 downto 0) := std_logic_vector(to_unsigned(BUF_DATA_BITS/8, SIZE_BITS));
         signal    pool_valid        :  std_logic;
         signal    pool_ready        :  std_logic;
@@ -899,8 +904,6 @@ begin
             -- Control Signals.
             ------------------------------------------------------------------------
                 RESET           => i2o_reset_valid     , -- In  :
-                PAUSE           => '0'                 , -- In  :
-                STOP            => '0'                 , -- In  :
                 INTAKE_OPEN     => i2o_valve_open      , -- In  :
                 OUTLET_OPEN     => o_valve_open        , -- In  :
                 FLOW_READY_LEVEL=> BUF_DATA_BYTES      , -- In  : BUF_DATA のバイト数
@@ -908,7 +911,6 @@ begin
             -- Flow Counter Load Signals.
             ------------------------------------------------------------------------
                 LOAD            => i2o_open_valid      , -- In  :
-                LOAD_COUNT      => null_size           , -- In  :
             ------------------------------------------------------------------------
             -- Push Size Signals.
             ------------------------------------------------------------------------
@@ -954,6 +956,7 @@ begin
                 SIZE_BITS       => SIZE_BITS           , --   
                 POOL_SIZE_VALID => 1                   , --   
                 QUEUE_SIZE      => 0                   , --
+                POOL_PTR_STRIDE => BUF_DATA_BITS/8     , --
                 POOL_PIPELINE   => 0                   , --
                 POOL_JUSTIFIED  => 1                     -- 
             )                                            -- 
@@ -968,18 +971,14 @@ begin
             -- Control Signals.
             -----------------------------------------------------------------------
                 START           => i2o_open_valid      , -- In  :
-                START_POOL_PTR  => null_buf_ptr        , -- In  :
-                START_PORT_PTR  => null_buf_ptr        , -- In  :
-                XFER_LAST       => '0'                 , -- In  :
-                XFER_SEL        => "1"                 , -- In  :
+                START_POOL_PTR  => BUF_INIT_PTR        , -- In  :
+                START_PORT_PTR  => BUF_INIT_PTR        , -- In  :
             -----------------------------------------------------------------------
             -- Outlet Port Signals.
             -----------------------------------------------------------------------
                 PORT_DATA       => O_DATA              , -- Out :
                 PORT_DVAL       => O_STRB              , -- Out :
                 PORT_LAST       => O_LAST              , -- Out :
-                PORT_ERROR      => open                , -- Out :
-                PORT_SIZE       => open                , -- Out :
                 PORT_VAL        => O_VALID             , -- Out :
                 PORT_RDY        => O_READY             , -- In  :
             -----------------------------------------------------------------------
@@ -987,9 +986,6 @@ begin
             -----------------------------------------------------------------------
                 PULL_VAL(0)     => o_pull_fin_valid    , -- Out :
                 PULL_LAST       => o_pull_fin_last     , -- Out :
-                PULL_XFER_LAST  => open                , -- Out :
-                PULL_XFER_DONE  => open                , -- Out :
-                PULL_ERROR      => open                , -- Out :
                 PULL_SIZE       => o_pull_fin_size     , -- Out :
             -----------------------------------------------------------------------
             -- Pool Buffer Interface Signals.
