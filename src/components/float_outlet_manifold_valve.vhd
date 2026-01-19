@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_outlet_manifold_valve.vhd
 --!     @brief   FLOAT OUTLET MANIFOLD VALVE
---!     @version 2.2.0
---!     @date    2024/4/7
+--!     @version 2.6.0
+--!     @date    2026/1/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -118,12 +118,28 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           in  std_logic;
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以上の時に転送を開始する.
-                          --! フローカウンタの値がこの値未満の時に転送を一時停止.
+                          --! フローカウンタの値+パディングサイズがこの値以上の時に
+                          --! 転送を開始する.
+                          --! フローカウンタの値+パディングサイズがこの値未満の時に
+                          --! 転送を一時停止する.
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
         POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
                           --! PUSH_FIN_SIZEによるフローカウンタの加算結果が、この値
                           --! 以上の時にPOOL_READY 信号をアサートする.
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
+        PADDING_SIZE    : --! @brief PADDING SIZE :
+                          --! 一時停止する/しないを指示するために閾値と比較する際に、
+                          --! 加算する値.
+                          --! 主に境界合わせが必要な場合に使用する.
+                          in  std_logic_vector(SIZE_BITS -1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_COUNT      : --! @brief LOAD FLOW COUNTER VALUE :
+                          --! LOAD='1'にフローカウンタにロードする値.
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Push Final Size Signals.
@@ -182,10 +198,10 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は PAUSE 信号の
                           --!   否定を出力する.
                           --! * FIXED_FLOW_OPEN=0 の時はフローカウンタの値に依存する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
-                          --!     '1'を出力する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
-                          --!     '0'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --!     以上の時に'1'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --!     未満の時に'0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW OUTLET PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
@@ -196,10 +212,10 @@ entity  FLOAT_OUTLET_MANIFOLD_VALVE is
                           --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は PAUSE 信号
                           --!   の値を出力する.
                           --! * FIXED_FLOW_OPEN=0 の時はフローカウンタの値に依存する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL 以上の時に
-                          --!     '0'を出力する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL 未満の時に
-                          --!     '1'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --!     以上の時に'0'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --!     未満の時に'1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW OUTLET STOP :
                           --! 転送の中止を指示する信号.
@@ -298,8 +314,6 @@ architecture RTL of FLOAT_OUTLET_MANIFOLD_VALVE is
     signal    outlet_pos    : std_logic;
     signal    outlet_neg    : std_logic;
     signal    outlet_paused : std_logic;
-    constant  NULL_LOAD     : std_logic := '0';
-    constant  NULL_COUNT    : std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
 begin
     -------------------------------------------------------------------------------
     --
@@ -367,11 +381,12 @@ begin
                 INTAKE_OPEN     => INTAKE_OPEN     , -- In :
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 FLOW_READY_LEVEL=> FLOW_READY_LEVEL, -- In :
+                PADDING_SIZE    => PADDING_SIZE    , -- In :
             -----------------------------------------------------------------------
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
-                LOAD            => NULL_LOAD       , -- In :
-                LOAD_COUNT      => NULL_COUNT      , -- In :
+                LOAD            => LOAD            , -- In :
+                LOAD_COUNT      => LOAD_COUNT      , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -444,11 +459,12 @@ begin
                 INTAKE_OPEN     => INTAKE_OPEN     , -- In :
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 FLOW_READY_LEVEL=> FLOW_READY_LEVEL, -- In :
+                PADDING_SIZE    => PADDING_SIZE    , -- In :
             -----------------------------------------------------------------------
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
-                LOAD            => NULL_LOAD       , -- In :
-                LOAD_COUNT      => NULL_COUNT      , -- In :
+                LOAD            => LOAD            , -- In :
+                LOAD_COUNT      => LOAD_COUNT      , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -506,6 +522,7 @@ begin
                 INTAKE_OPEN     => INTAKE_OPEN     , -- In :
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 FLOW_READY_LEVEL=> POOL_READY_LEVEL, -- In :
+                PADDING_SIZE    => PADDING_SIZE    , -- In :
             -----------------------------------------------------------------------
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
