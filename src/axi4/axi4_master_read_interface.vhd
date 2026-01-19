@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 2.2.0
---!     @date    2024/4/7
+--!     @version 2.6.0
+--!     @date    2026/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -1140,6 +1140,7 @@ begin
             SIZE_BITS       => XFER_SIZE_BITS      , --
             PTR_BITS        => BUF_PTR_BITS        , -- 
             QUEUE_SIZE      => 0                   , --
+            POOL_PTR_STRIDE => 0                   , --
             PORT_PIPELINE   => RDATA_PIPELINE        -- 
         )                                            -- 
         port map (                                   -- 
