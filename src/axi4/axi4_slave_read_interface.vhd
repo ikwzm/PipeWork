@@ -298,7 +298,9 @@ entity  AXI4_SLAVE_READ_INTERFACE is
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
                           --! バッファからデータを読み出し可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファからデータを読み出し可能な状態でなければ、
+                          --! PULL_BUF_VAL がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -610,7 +612,7 @@ begin
             POOL_DATA       => BUF_DATA        , -- In  :
             POOL_ERROR      => intake_error    , -- In  :
             POOL_VAL        => intake_valid    , -- In  :
-            POOL_RDY        => intake_ready    , -- Out :
+            POOL_RDY        => intake_ready    , -- Out : 未使用
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
