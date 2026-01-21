@@ -2,7 +2,7 @@
 --!     @file    axi4_master_write_interface.vhd
 --!     @brief   AXI4 Master Write Interface
 --!     @version 2.6.0
---!     @date    2026/1/19
+--!     @date    2026/1/21
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -57,7 +57,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! ID信号のビット幅.
                           integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
-                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          --! REQ_VAL、ACK_VAL、Transfer Status Signals、PULL_RSV_VAL、
+                          --! PULL_FIN_VAL、PULL_BUF_RESET、PULL_BUF_VAL、PULL_BUF_RDY、
+                          --! BUF_REN のビット数を指定する.
                           integer := 1;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
@@ -361,7 +363,7 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           --! れるバイト数分を加算/減算すると良い.
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
-    -- Transfer Status Signal.
+    -- Transfer Status Signals.
     -------------------------------------------------------------------------------
         XFER_BUSY       : --! @brief Transfer Busy.
                           --! このモジュールが未だデータの転送中であることを示す.
@@ -473,7 +475,9 @@ entity  AXI4_MASTER_WRITE_INTERFACE is
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
                           --! バッファからデータを読み出し可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファからデータを読み出し可能な状態でなければ、
+                          --! PULL_BUF_VAL がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -922,25 +926,25 @@ begin
             START_PTR       => req_queue_ptr     , -- In  :
             TRAN_LAST       => req_queue_last    , -- In  :
             TRAN_SEL        => req_queue_select  , -- In  :
-            XFER_VAL        => open              , -- Out :
-            XFER_DVAL       => open              , -- Out :
-            XFER_LAST       => open              , -- Out :
-            XFER_NONE       => open              , -- Out :
+            XFER_VAL        => open              , -- Out : 未使用
+            XFER_DVAL       => open              , -- Out : 未使用
+            XFER_LAST       => open              , -- Out : 未使用
+            XFER_NONE       => open              , -- Out : 未使用
         ---------------------------------------------------------------------------
         -- AXI4 Outlet Port Signals.
         ---------------------------------------------------------------------------
             PORT_DATA       => WDATA             , -- Out :
             PORT_STRB       => WSTRB             , -- Out :
             PORT_LAST       => WLAST             , -- Out :
-            PORT_ERROR      => open              , -- Out :
+            PORT_ERROR      => open              , -- Out : 未使用
             PORT_VAL        => WVALID            , -- Out :
             PORT_RDY        => WREADY            , -- In  :
         ---------------------------------------------------------------------------
         -- Pull Size Signals.
         ---------------------------------------------------------------------------
             PULL_VAL        => PULL_BUF_VAL      , -- Out :
-            PULL_LAST       => open              , -- Out :
-            PULL_XFER_LAST  => open              , -- Out :
+            PULL_LAST       => open              , -- Out : 未使用
+            PULL_XFER_LAST  => open              , -- Out : 未使用
             PULL_XFER_DONE  => PULL_BUF_LAST     , -- Out :
             PULL_ERROR      => PULL_BUF_ERROR    , -- Out :
             PULL_SIZE       => PULL_BUF_SIZE     , -- Out :
@@ -949,10 +953,10 @@ begin
         ---------------------------------------------------------------------------
             EXIT_VAL        => port_exit_valid   , -- Out :
             EXIT_LAST       => port_exit_last    , -- Out :
-            EXIT_XFER_LAST  => open              , -- Out :
-            EXIT_XFER_DONE  => open              , -- Out :
-            EXIT_ERROR      => open              , -- Out :
-            EXIT_SIZE       => open              , -- Out :
+            EXIT_XFER_LAST  => open              , -- Out : 未使用
+            EXIT_XFER_DONE  => open              , -- Out : 未使用
+            EXIT_ERROR      => open              , -- Out : 未使用
+            EXIT_SIZE       => open              , -- Out : 未使用
         ---------------------------------------------------------------------------
         -- Pool Buffer Interface Signals.
         ---------------------------------------------------------------------------
@@ -961,12 +965,12 @@ begin
             POOL_DATA       => BUF_DATA          , -- In  :
             POOL_ERROR      => port_push_error   , -- In  :
             POOL_VAL        => port_push_valid   , -- In  :
-            POOL_RDY        => port_push_ready   , -- Out :
+            POOL_RDY        => port_push_ready   , -- Out : 未使用
         ---------------------------------------------------------------------------
         -- Status Signals.
         ---------------------------------------------------------------------------
             POOL_BUSY       => port_push_enable  , -- Out :
-            POOL_DONE       => port_push_done    , -- Out :
+            POOL_DONE       => port_push_done    , -- Out : 未使用
             BUSY            => port_busy           -- Out :
         );                                         -- 
     -------------------------------------------------------------------------------
