@@ -311,7 +311,9 @@ entity  AXI4_SLAVE_WRITE_INTERFACE is
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
                           --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファにデータを書き込み可能な状態でなければ、
+                          --! PUSH_BUF_VAL、BUF_WEN がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
