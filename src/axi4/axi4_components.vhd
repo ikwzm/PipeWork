@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_components.vhd                                             --
 --!     @brief   PIPEWORK AXI4 LIBRARY DESCRIPTION                               --
---!     @version 2.5.0                                                           --
---!     @date    2025/11/17                                                      --
+--!     @version 2.6.0                                                           --
+--!     @date    2026/01/21                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2025 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2026 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -274,6 +274,9 @@ component AXI4_MASTER_READ_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL、Transfer Status Signals、PUSH_RSV_VAL、
+                          --! PUSH_FIN_VAL、PUSH_BUF_RESET、PUSH_BUF_VAL、PUSH_BUF_RDY、
+                          --! BUF_WEN のビット数を指定する.
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
@@ -548,7 +551,7 @@ component AXI4_MASTER_READ_INTERFACE
                           --! れるバイト数分を加算/減算すると良い.
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
-    -- Transfer Status Signal.
+    -- Transfer Status Signals.
     -------------------------------------------------------------------------------
         XFER_BUSY       : --! @brief Transfer Busy.
                           --! このモジュールが未だデータの転送中であることを示す.
@@ -658,7 +661,9 @@ component AXI4_MASTER_READ_INTERFACE
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
                           --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファにデータを書き込み可能な状態でなければ、
+                          --! PUSH_BUF_VAL、BUF_WEN がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -697,7 +702,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! ID信号のビット幅.
                           integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
-                          --! REQ_VAL、ACK_VAL のビット数を指定する.
+                          --! REQ_VAL、ACK_VAL、Transfer Status Signals、PULL_RSV_VAL、
+                          --! PULL_FIN_VAL、PULL_BUF_RESET、PULL_BUF_VAL、PULL_BUF_RDY、
+                          --! BUF_REN のビット数を指定する.
                           integer := 1;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
                           --! REQ_SIZE信号のビット数を指定する.
@@ -1001,7 +1008,7 @@ component AXI4_MASTER_WRITE_INTERFACE
                           --! れるバイト数分を加算/減算すると良い.
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
-    -- Transfer Status Signal.
+    -- Transfer Status Signals.
     -------------------------------------------------------------------------------
         XFER_BUSY       : --! @brief Transfer Busy.
                           --! このモジュールが未だデータの転送中であることを示す.
@@ -1113,7 +1120,9 @@ component AXI4_MASTER_WRITE_INTERFACE
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
                           --! バッファからデータを読み出し可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファからデータを読み出し可能な状態でなければ、
+                          --! PULL_BUF_VAL がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -1390,7 +1399,9 @@ component AXI4_SLAVE_READ_INTERFACE
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PULL_BUF_RDY    : --! @brief Pull Buffer Valid.
                           --! バッファからデータを読み出し可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファからデータを読み出し可能な状態でなければ、
+                          --! PULL_BUF_VAL がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -1678,7 +1689,9 @@ component AXI4_SLAVE_WRITE_INTERFACE
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
                           --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファにデータを書き込み可能な状態でなければ、
+                          --! PUSH_BUF_VAL、BUF_WEN がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
