@@ -1,13 +1,13 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_components.vhd                                             --
 --!     @brief   PIPEWORK PUMP COMPONENTS LIBRARY DESCRIPTION                    --
---!     @version 2.5.0                                                           --
---!     @date    2025/11/17                                                      --
+--!     @version 2.6.0                                                           --
+--!     @date    2026/01/19                                                      --
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>                     --
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 --                                                                               --
---      Copyright (C) 2025 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
+--      Copyright (C) 2026 Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>           --
 --      All rights reserved.                                                     --
 --                                                                               --
 --      Redistribution and use in source and binary forms, with or without       --
@@ -611,6 +611,16 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         REG_STAT_BITS       : --! @brief STATUS REGISTER BITS :
                               --! REG_STAT_L/REG_STAT_D/REG_STAT_Qのビット数を指定する.
                               integer := 32;
+        BUF_PTR_L_VALID     : --! @brief BUFFER POINTER LOAD VALID :
+                              --! BUF_PTR_L 信号によるBUF_PTRレジスタの初期化を有効にす
+                              --! るか否かを指示する.
+                              --! * BUF_PTR_L_VALID=0で無効.
+                              --!   この場合は、このモジュール内のvalve_open信号が'0'の
+                              --!   時にBUF_PTRレジスタをBUF_PTR_Dの値で初期化する.
+                              --! * BUF_PTR_L_VALID=1で有効.
+                              --!   この場合は、BUF_PTR_L信号が'1'の時にBUF_PTRレジスタ
+                              --!   をBUF_PTR_Dの値で初期化する.
+                              integer range 0 to 1 := 0;
         FIXED_FLOW_OPEN     : --! @brief FIXED VALVE FLOE OPEN :
                               --! フローカウンタによるフロー制御を行うか否かを指定する.
                               --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
@@ -688,6 +698,9 @@ component PUMP_CONTROLLER_INTAKE_SIDE
         REG_ERR_ST_L        : in  std_logic := '0';
         REG_ERR_ST_D        : in  std_logic := '0';
         REG_ERR_ST_Q        : out std_logic;
+        BUF_PTR_L           : in  std_logic := '0';
+        BUF_PTR_D           : in  std_logic_vector(BUF_DEPTH    -1 downto 0) := (others => '0');
+        BUF_PTR_Q           : out std_logic_vector(BUF_DEPTH    -1 downto 0);
     -------------------------------------------------------------------------------
     -- Configuration Signals.
     -------------------------------------------------------------------------------
@@ -812,6 +825,16 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         REG_STAT_BITS       : --! @brief STATUS REGISTER BITS :
                               --! REG_STAT_L/REG_STAT_D/REG_STAT_Qのビット数を指定する.
                               integer := 32;
+        BUF_PTR_L_VALID     : --! @brief BUFFER POINTER LOAD VALID :
+                              --! BUF_PTR_L 信号によるBUF_PTRレジスタの初期化を有効にす
+                              --! るか否かを指示する.
+                              --! * BUF_PTR_L_VALID=0で無効.
+                              --!   この場合は、このモジュール内のvalve_open信号が'0'の
+                              --!   時にBUF_PTRレジスタをBUF_PTR_Dの値で初期化する.
+                              --! * BUF_PTR_L_VALID=1で有効.
+                              --!   この場合は、BUF_PTR_L信号が'1'の時にBUF_PTRレジスタ
+                              --!   をBUF_PTR_Dの値で初期化する.
+                              integer range 0 to 1 := 0;
         FIXED_FLOW_OPEN     : --! @brief FIXED VALVE FLOE OPEN :
                               --! フローカウンタによるフロー制御を行うか否かを指定する.
                               --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
@@ -889,6 +912,9 @@ component PUMP_CONTROLLER_OUTLET_SIDE
         REG_ERR_ST_L        : in  std_logic := '0';
         REG_ERR_ST_D        : in  std_logic := '0';
         REG_ERR_ST_Q        : out std_logic;
+        BUF_PTR_L           : in  std_logic := '0';
+        BUF_PTR_D           : in  std_logic_vector(BUF_DEPTH    -1 downto 0) := (others => '0');
+        BUF_PTR_Q           : out std_logic_vector(BUF_DEPTH    -1 downto 0);
     -------------------------------------------------------------------------------
     -- Configuration Signals.
     -------------------------------------------------------------------------------
