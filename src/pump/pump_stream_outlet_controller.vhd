@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_stream_outlet_controller.vhd
 --!     @brief   PUMP STREAM OUTLET CONTROLLER
---!     @version 2.4.0
---!     @date    2025/6/12
+--!     @version 2.6.0
+--!     @date    2026/1/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2025 Ichiro Kawazome
+--      Copyright (C) 2018-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -352,6 +352,11 @@ architecture RTL of PUMP_STREAM_OUTLET_CONTROLLER is
     -- 各種サイズカウンタのビット数.
     ------------------------------------------------------------------------------
     constant  SIZE_BITS             :  integer := BUF_DEPTH+1;
+    ------------------------------------------------------------------------------
+    -- バッファポインタの初期値
+    ------------------------------------------------------------------------------
+    constant  BUF_INIT_PTR          :  std_logic_vector(BUF_DEPTH-1 downto 0)
+                                    := (others => '0');
     -------------------------------------------------------------------------------
     -- 出力側の各種信号群.
     -------------------------------------------------------------------------------
@@ -431,6 +436,7 @@ begin
             REG_SIZE_BITS       => O_REG_SIZE_BITS     , --   
             REG_MODE_BITS       => O_REG_MODE_BITS     , --   
             REG_STAT_BITS       => O_STAT_BITS         , --   
+            BUF_PTR_L_VALID     => 0                   , --
             FIXED_FLOW_OPEN     => O_FIXED_FLOW_OPEN   , --   
             FIXED_POOL_OPEN     => O_FIXED_POOL_OPEN   , --   
             USE_PULL_BUF_SIZE   => O_USE_PULL_BUF_SIZE , --   
@@ -487,6 +493,7 @@ begin
             REG_ERR_ST_L        => O_ERR_ST_L          , -- In  :
             REG_ERR_ST_D        => O_ERR_ST_D          , -- In  :
             REG_ERR_ST_Q        => O_ERR_ST_Q          , -- Out :
+            BUF_PTR_D           => BUF_INIT_PTR        , -- In  :
         ---------------------------------------------------------------------------
         -- Outlet Configuration Signals.
         ---------------------------------------------------------------------------
@@ -822,8 +829,6 @@ begin
     --
     -------------------------------------------------------------------------------
     I_SIDE: block
-        constant  null_buf_ptr      :  std_logic_vector(BUF_DEPTH-1 downto 0) := (others => '0');
-        constant  null_size         :  std_logic_vector(SIZE_BITS-1 downto 0) := (others => '0');
         constant  BUF_DATA_BYTES    :  integer := BUF_DATA_BITS/8;
         constant  BUF_SIZE          :  integer := 2**BUF_DEPTH;
         constant  POOL_SIZE         :  std_logic_vector(SIZE_BITS-1 downto 0) := std_logic_vector(to_unsigned(BUF_SIZE               , SIZE_BITS));
@@ -928,8 +933,6 @@ begin
             -- Control Signals.
             -----------------------------------------------------------------------
                 RESET           => o2i_reset_valid     , -- In  :
-                PAUSE           => '0'                 , -- In  :
-                STOP            => '0'                 , -- In  :
                 INTAKE_OPEN     => o2i_valve_open      , -- In  :
                 OUTLET_OPEN     => i_valve_open        , -- In  :
                 POOL_SIZE       => POOL_SIZE           , -- In  :
@@ -938,7 +941,6 @@ begin
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
                 LOAD            => i_open_valid        , -- In  :
-                LOAD_COUNT      => null_size           , -- In  :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -981,6 +983,7 @@ begin
                 SIZE_BITS       => SIZE_BITS           , --   
                 PTR_BITS        => BUF_DEPTH           , --   
                 QUEUE_SIZE      => 0                   , --
+                POOL_PTR_STRIDE => BUF_DATA_BYTES      , --
                 PORT_PIPELINE   => I_PIPELINE          , -- 
                 PORT_JUSTIFIED  => I_JUSTIFIED           -- 
             )                                            -- 
@@ -995,16 +998,13 @@ begin
             -- Control Signals.
             -----------------------------------------------------------------------
                 START           => i_open_valid        , -- In  :
-                START_PTR       => null_buf_ptr        , -- In  :
-                XFER_LAST       => '0'                 , -- In  :
-                XFER_SEL        => "1"                 , -- In  :
+                START_PTR       => BUF_INIT_PTR        , -- In  :
             -----------------------------------------------------------------------
             -- Intake Port Signals.
             -----------------------------------------------------------------------
                 PORT_ENABLE     => i_valve_open        , -- In  :
                 PORT_DATA       => I_DATA              , -- In  :
                 PORT_DVAL       => I_STRB              , -- In  :
-                PORT_ERROR      => '0'                 , -- In  :
                 PORT_LAST       => I_LAST              , -- In  :
                 PORT_VAL        => I_VALID             , -- In  :
                 PORT_RDY        => I_READY             , -- Out :

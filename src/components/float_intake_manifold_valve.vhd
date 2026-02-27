@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_intake_manifold_valve.vhd
 --!     @brief   FLOAT INTAKE MANIFOLD VALVE
---!     @version 2.2.0
---!     @date    2024/4/7
+--!     @version 2.6.0
+--!     @date    2026/1/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -121,13 +121,29 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '1');
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! フローカウンタの値がこの値以下の時に入力を開始する.
-                          --! フローカウンタの値がこの値を越えた時に入力を一時停止.
+                          --! * フローカウンタの値+パディングサイズがこの値以下の時に
+                          --!   入力を開始する.
+                          --! * フローカウンタの値+パディングサイズがこの値を越えた時
+                          --!   に入力を一時停止.
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '1');
         POOL_READY_LEVEL: --! @brief POOL READY LEVEL :
                           --! PULL_FIN_SIZEによるプールカウンタの減算結果が、この値
                           --! 以下の時にPOOL_READY 信号をアサートする.
                           in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '1');
+        PADDING_SIZE    : --! @brief PADDING SIZE :
+                          --! 一時停止する/しないを指示するために閾値と比較する際に、
+                          --! 加算する値.
+                          --! 主に境界合わせが必要な場合に使用する.
+                          in  std_logic_vector(SIZE_BITS -1 downto 0) := (others => '0');
+    -------------------------------------------------------------------------------
+    -- Flow Counter Load Signals.
+    -------------------------------------------------------------------------------
+        LOAD            : --! @breif LOAD FLOW COUNTER :
+                          --! フローカウンタに値をロードする事を指示する信号.
+                          in  std_logic := '0';
+        LOAD_COUNT      : --! @brief LOAD FLOW COUNTER VALUE :
+                          --! LOAD='1'にフローカウンタにロードする値.
+                          in  std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Pull Final Size Signals.
     -------------------------------------------------------------------------------
@@ -185,10 +201,10 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
                           --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は PAUSE 信号の
                           --!   否定を出力する.
                           --! * FIXED_FLOW_OPEN=0 の時はフローカウンタの値に依存する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
-                          --!     '1'を出力する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
-                          --!     '0'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --!     以下の時に'1'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --!     を越えた時に'0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
@@ -199,10 +215,10 @@ entity  FLOAT_INTAKE_MANIFOLD_VALVE is
                           --! * バルブが開固定(FIXED_FLOW_OPEN=1)の時は PAUSE 信号
                           --!   の値を出力する.
                           --! * FIXED_FLOW_OPEN=0 の時はフローカウンタの値に依存する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
-                          --!     '0'を出力する.
-                          --!   * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
-                          --!     '1'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --!     以下の時に'0'を出力する.
+                          --!   * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --!     を越えた時に'1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
@@ -301,8 +317,6 @@ architecture RTL of FLOAT_INTAKE_MANIFOLD_VALVE is
     signal    intake_pos    : std_logic;
     signal    intake_neg    : std_logic;
     signal    intake_paused : std_logic;
-    constant  NULL_LOAD     : std_logic := '0';
-    constant  NULL_COUNT    : std_logic_vector(COUNT_BITS-1 downto 0) := (others => '0');
 begin
     -------------------------------------------------------------------------------
     --
@@ -371,11 +385,12 @@ begin
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 POOL_SIZE       => POOL_SIZE       , -- In :
                 FLOW_READY_LEVEL=> FLOW_READY_LEVEL, -- In :
+                PADDING_SIZE    => PADDING_SIZE    , -- In :
             -----------------------------------------------------------------------
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
-                LOAD            => NULL_LOAD       , -- In :
-                LOAD_COUNT      => NULL_COUNT      , -- In :
+                LOAD            => LOAD            , -- In :
+                LOAD_COUNT      => LOAD_COUNT      , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -427,7 +442,7 @@ begin
     --
     -------------------------------------------------------------------------------
     GEN_NON_FIXED_CLOSE : if (FIXED_CLOSE = 0) generate
-        VALVE: FLOAT_INTAKE_VALVE                        -- 
+        VALVE: FLOAT_INTAKE_VALVE                    -- 
             generic map (                            -- 
                 COUNT_BITS      => COUNT_BITS      , -- 
                 SIZE_BITS       => SIZE_BITS         -- 
@@ -449,11 +464,12 @@ begin
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 POOL_SIZE       => POOL_SIZE       , -- In :
                 FLOW_READY_LEVEL=> FLOW_READY_LEVEL, -- In :
+                PADDING_SIZE    => PADDING_SIZE    , -- In :
             -----------------------------------------------------------------------
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
-                LOAD            => NULL_LOAD       , -- In :
-                LOAD_COUNT      => NULL_COUNT      , -- In :
+                LOAD            => LOAD            , -- In :
+                LOAD_COUNT      => LOAD_COUNT      , -- In :
             -----------------------------------------------------------------------
             -- Push Size Signals.
             -----------------------------------------------------------------------
@@ -490,7 +506,7 @@ begin
     GEN_USE_POOL_PUSH   : if (FIXED_CLOSE      = 0) and
                              (FIXED_POOL_OPEN  = 0) and
                              (USE_POOL_PUSH   /= 0) generate
-        VALVE: FLOAT_INTAKE_VALVE                   -- 
+        VALVE: FLOAT_INTAKE_VALVE                    -- 
             generic map (                            -- 
                 COUNT_BITS      => COUNT_BITS      , -- 
                 SIZE_BITS       => SIZE_BITS         -- 
@@ -512,6 +528,7 @@ begin
                 OUTLET_OPEN     => OUTLET_OPEN     , -- In :
                 POOL_SIZE       => POOL_SIZE       , -- In :
                 FLOW_READY_LEVEL=> POOL_READY_LEVEL, -- In :
+                PADDING_SIZE    => PADDING_SIZE    , -- In :
             -----------------------------------------------------------------------
             -- Flow Counter Load Signals.
             -----------------------------------------------------------------------
