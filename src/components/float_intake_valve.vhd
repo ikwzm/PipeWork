@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    float_intake_valve.vhd
 --!     @brief   FLOAT INTAKE VALVE
---!     @version 2.3.0
---!     @date    2025/5/25
+--!     @version 2.6.0
+--!     @date    2026/1/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2025 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -84,11 +84,18 @@ entity  FLOAT_INTAKE_VALVE is
                           in  std_logic_vector(COUNT_BITS-1 downto 0);
         FLOW_READY_LEVEL: --! @brief FLOW READY LEVEL :
                           --! 一時停止する/しないを指示するための閾値.
-                          --! * フローカウンタの値がこの値以下の時に入力を開始する.
-                          --! * フローカウンタの値がこの値を越えた時に入力を一時停止.
+                          --! * フローカウンタの値+パディングサイズがこの値以下の時に
+                          --!   入力を開始する.
+                          --! * フローカウンタの値+パディングサイズがこの値を越えた時
+                          --!   に入力を一時停止する.
                           --! なお、FLOW_READY_LEVEL の値が２のべき乗値だと
                           --! フローカウンタ >= FLOW_READY_LEVEL の計算が簡単になる.
                           in  std_logic_vector(COUNT_BITS-1 downto 0);
+        PADDING_SIZE    : --! @brief PADDING SIZE :
+                          --! 一時停止する/しないを指示するために閾値と比較する際に、
+                          --! 加算する値.
+                          --! 主に境界合わせが必要な場合に使用する.
+                          in  std_logic_vector(SIZE_BITS -1 downto 0) := (others => '0');
     -------------------------------------------------------------------------------
     -- Flow Counter Load Signals.
     -------------------------------------------------------------------------------
@@ -129,19 +136,19 @@ entity  FLOAT_INTAKE_VALVE is
                           --! 転送を一時的に止めたり、再開することを指示する信号.
                           --! * FLOW_READY='1' : 再開.
                           --! * FLOW_PAUSE='0' : 一時停止.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
-                          --!   '1'を出力する.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
-                          --!   '0'を出力する.
+                          --! * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --!   以下の時に'1'を出力する.
+                          --! * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --!   を越えた時に'0'を出力する.
                           out std_logic;
         FLOW_PAUSE      : --! @brief FLOW INTAKE PAUSE :
                           --! 転送を一時的に止めたり、再開することを指示する信号.
                           --! * FLOW_PAUSE='0' : 再開.
                           --! * FLOW_PAUSE='1' : 一時停止.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL 以下の時に
-                          --!   '0'を出力する.
-                          --! * フローカウンタの値が FLOW_READY_LEVEL を越えた時に
-                          --!   '1'を出力する.
+                          --! * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --!   以下の時に'0'を出力する.
+                          --! * フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --!   を越えた時に'1'を出力する.
                           out std_logic;
         FLOW_STOP       : --! @brief FLOW INTAKE STOP :
                           --! 転送の中止を指示する信号.
@@ -169,24 +176,24 @@ entity  FLOAT_INTAKE_VALVE is
                           --! フローカウンタの値が負(<0)になったことを示すフラグ.
                           out std_logic;
         FLOW_EQ_LEVEL   : --! @brief FLOW COUNTER = FLOW_READY_LEVEL :
-                          --! フローカウンタの値が FLOW_READY_LEVEL の値と同じになったこと
-                          --! を示すフラグ.
+                          --! フローカウンタの値+パディングサイズが FLOW_READY_LEVEL 
+                          --! の値と同じになったことを示すフラグ.
                           out std_logic;
         FLOW_GT_LEVEL   : --! @brief FLOW COUNTER >  FLOW_READY_LEVEL :
-                          --! フローカウンタの値が FLOW_READY_LEVEL の値を越えたこと
-                          --! を示すフラグ.
+                          --! フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --! の値を越えたことを示すフラグ.
                           out std_logic;
         FLOW_GE_LEVEL   : --! @brief FLOW COUNTER >= FLOW_READY_LEVEL :
-                          --! フローカウンタの値が FLOW_READY_LEVEL の値以上になったこと
-                          --! を示すフラグ.
+                          --! フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --! の値以上になったことを示すフラグ.
                           out std_logic;
         FLOW_LE_LEVEL   : --! @brief FLOW COUNTER <= FLOW_READY_LEVEL :
-                          --! フローカウンタの値が FLOW_READY_LEVEL の値以下になったこと
-                          --! を示すフラグ.
+                          --! フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --! の値以下になったことを示すフラグ.
                           out std_logic;
         FLOW_LT_LEVEL   : --! @brief FLOW COUNTER <  FLOW_READY_LEVEL :
-                          --! フローカウンタの値が FLOW_READY_LEVEL の値未満になったこと
-                          --! を示すフラグ.
+                          --! フローカウンタの値+パディングサイズが FLOW_READY_LEVEL
+                          --! の値未満になったことを示すフラグ.
                           out std_logic;
         PAUSED          : --! @brief PAUSE FLAG :
                           --! 現在一時停止中であることを示すフラグ.
@@ -245,10 +252,10 @@ begin
     -------------------------------------------------------------------------------
     process (CLK, RST)
         variable calc_counter  : unsigned(COUNT_BITS   downto 0);
+        variable calc_level    : unsigned(COUNT_BITS   downto 0);
         variable next_counter  : unsigned(COUNT_BITS-1 downto 0);
+        variable next_level    : unsigned(COUNT_BITS-1 downto 0);
         variable next_eq_zero  : boolean;
-        variable next_ge_ready : boolean;
-        variable next_eq_ready : boolean;
     begin
         if    (RST = '1') then
                 flow_counter  <= (others => '0');
@@ -278,8 +285,10 @@ begin
                     if (PULL_VALID = '1') then
                         calc_counter := calc_counter - resize(unsigned(PULL_SIZE),calc_counter'length);
                     end if;
+                    calc_level   := calc_counter + resize(unsigned(PADDING_SIZE),calc_level'length);
                 else
                     calc_counter := (others => '0');
+                    calc_level   := (others => '0');
                 end if;
                 if (calc_counter(calc_counter'high) = '1') then
                     flow_positive <= FALSE;
@@ -290,15 +299,14 @@ begin
                     flow_counter  <= (others => '0');
                 else
                     next_counter  := calc_counter(next_counter'range);
-                    next_eq_zero  := (next_counter  = 0);
-                    next_eq_ready := (next_counter  = to_01(unsigned(FLOW_READY_LEVEL)));
-                    next_ge_ready := (next_counter >= to_01(unsigned(FLOW_READY_LEVEL)));
-                    flow_positive <= (next_eq_zero  = FALSE);
+                    next_eq_zero  := (next_counter = 0);
+                    flow_positive <= (next_eq_zero = FALSE);
                     flow_negative <= FALSE;
-                    flow_eq_zero  <= (next_eq_zero  = TRUE );
-                    flow_eq_ready <= (next_eq_ready = TRUE );
-                    flow_ge_ready <= (next_ge_ready = TRUE );
+                    flow_eq_zero  <= (next_eq_zero = TRUE );
                     flow_counter  <= next_counter;
+                    next_level    := calc_level(next_level'range);
+                    flow_eq_ready <= (next_level  = to_01(unsigned(FLOW_READY_LEVEL)));
+                    flow_ge_ready <= (next_level >= to_01(unsigned(FLOW_READY_LEVEL)));
                 end if;
             end if;
         end if;

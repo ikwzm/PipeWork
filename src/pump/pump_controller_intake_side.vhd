@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pump_controller_intake_side.vhd
 --!     @brief   PUMP CONTROLLER INTAKE SIDE
---!     @version 2.2.0
---!     @date    2024/4/9
+--!     @version 2.6.0
+--!     @date    2026/1/19
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2018-2024 Ichiro Kawazome
+--      Copyright (C) 2018-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -77,6 +77,16 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
         REG_STAT_BITS       : --! @brief STATUS REGISTER BITS :
                               --! REG_STAT_L/REG_STAT_D/REG_STAT_Qのビット数を指定する.
                               integer := 32;
+        BUF_PTR_L_VALID     : --! @brief BUFFER POINTER LOAD VALID :
+                              --! BUF_PTR_L 信号によるBUF_PTRレジスタの初期化を有効にす
+                              --! るか否かを指示する.
+                              --! * BUF_PTR_L_VALID=0で無効.
+                              --!   この場合は、このモジュール内のvalve_open信号が'0'の
+                              --!   時にBUF_PTRレジスタをBUF_PTR_Dの値で初期化する.
+                              --! * BUF_PTR_L_VALID=1で有効.
+                              --!   この場合は、BUF_PTR_L信号が'1'の時にBUF_PTRレジスタ
+                              --!   をBUF_PTR_Dの値で初期化する.
+                              integer range 0 to 1 := 0;
         FIXED_FLOW_OPEN     : --! @brief FIXED VALVE FLOE OPEN :
                               --! フローカウンタによるフロー制御を行うか否かを指定する.
                               --! FIXED_CLOSE=1 の場合は常に栓が閉じた状態にする.
@@ -154,6 +164,9 @@ entity  PUMP_CONTROLLER_INTAKE_SIDE is
         REG_ERR_ST_L        : in  std_logic := '0';
         REG_ERR_ST_D        : in  std_logic := '0';
         REG_ERR_ST_Q        : out std_logic;
+        BUF_PTR_L           : in  std_logic := '0';
+        BUF_PTR_D           : in  std_logic_vector(BUF_DEPTH    -1 downto 0) := (others => '0');
+        BUF_PTR_Q           : out std_logic_vector(BUF_DEPTH    -1 downto 0);
     -------------------------------------------------------------------------------
     -- Configuration Signals.
     -------------------------------------------------------------------------------
@@ -261,13 +274,13 @@ architecture RTL of PUMP_CONTROLLER_INTAKE_SIDE is
     ------------------------------------------------------------------------------
     -- バッファへのアクセス用信号群.
     ------------------------------------------------------------------------------
-    constant BUF_INIT_PTR       :  std_logic_vector(BUF_DEPTH    -1 downto 0) := (others => '0');
-    constant BUF_UP_BEN         :  std_logic_vector(BUF_DEPTH    -1 downto 0) := (others => '1');
+    constant BUF_PTR_UP_BEN     :  std_logic_vector(BUF_DEPTH-1 downto 0) := (others => '1');
+    signal   buf_ptr_regs       :  std_logic_vector(BUF_DEPTH-1 downto 0);
+    signal   buf_ptr_init       :  std_logic_vector(BUF_DEPTH-1 downto 0);
     -------------------------------------------------------------------------------
     -- 各種信号群.
     -------------------------------------------------------------------------------
     signal   addr_up_ben        :  std_logic_vector(REQ_ADDR_BITS-1 downto 0);
-    signal   buf_ptr_init       :  std_logic_vector(BUF_DEPTH    -1 downto 0);
     signal   reg_reset          :  std_logic;
     signal   reg_pause          :  std_logic;
     signal   reg_stop           :  std_logic;
@@ -338,15 +351,19 @@ begin
             RST             => RST                 , -- In  :
             CLR             => CLR                 , -- In  :
             REGS_WEN        => buf_ptr_init        , -- In  :
-            REGS_WDATA      => BUF_INIT_PTR        , -- In  :
+            REGS_WDATA      => BUF_PTR_D           , -- In  :
             REGS_RDATA      => open                , -- Out :
             UP_ENA          => transaction_busy    , -- In  :
             UP_VAL          => ACK_VALID           , -- In  :
-            UP_BEN          => BUF_UP_BEN          , -- In  :
+            UP_BEN          => BUF_PTR_UP_BEN      , -- In  :
             UP_SIZE         => ACK_SIZE            , -- In  :
-            COUNTER         => REQ_BUF_PTR           -- Out :
+            COUNTER         => buf_ptr_regs          -- Out :
        );                                            -- 
-    buf_ptr_init <= (others => '1') when (valve_open = '0') else (others => '0');
+    buf_ptr_init <= (others => '1') when (BUF_PTR_L_VALID = 0 and valve_open = '0') or
+                                         (BUF_PTR_L_VALID = 1 and BUF_PTR_L  = '1') else
+                    (others => '0');
+    BUF_PTR_Q    <= buf_ptr_regs;
+    REQ_BUF_PTR  <= buf_ptr_regs;
     -------------------------------------------------------------------------------
     -- 制御レジスタ
     -------------------------------------------------------------------------------

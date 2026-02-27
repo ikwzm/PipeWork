@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    axi4_master_read_interface.vhd
 --!     @brief   AXI4 Master Read Interface
---!     @version 2.2.0
---!     @date    2024/4/7
+--!     @version 2.6.0
+--!     @date    2026/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -57,6 +57,9 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! ID信号のビット幅.
                           integer := 4;
         VAL_BITS        : --! @brief VALID BITS :
+                          --! REQ_VAL、ACK_VAL、Transfer Status Signals、PUSH_RSV_VAL、
+                          --! PUSH_FIN_VAL、PUSH_BUF_RESET、PUSH_BUF_VAL、PUSH_BUF_RDY、
+                          --! BUF_WEN のビット数を指定する.
                           --! REQ_VAL、ACK_VAL のビット数を指定する.
                           integer := 1;
         REQ_SIZE_BITS   : --! @brief REQUEST SIZE BITS:
@@ -331,7 +334,7 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           --! れるバイト数分を加算/減算すると良い.
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
     -------------------------------------------------------------------------------
-    -- Transfer Status Signal.
+    -- Transfer Status Signals.
     -------------------------------------------------------------------------------
         XFER_BUSY       : --! @brief Transfer Busy.
                           --! このモジュールが未だデータの転送中であることを示す.
@@ -441,7 +444,9 @@ entity  AXI4_MASTER_READ_INTERFACE is
                           out   std_logic_vector(XFER_SIZE_BITS   -1 downto 0);
         PUSH_BUF_RDY    : --! @brief Push Buffer Ready.
                           --! バッファにデータを書き込み可能な事をを示す.
-                          in    std_logic_vector(VAL_BITS         -1 downto 0);
+                          --! バッファにデータを書き込み可能な状態でなければ、
+                          --! PUSH_BUF_VAL、BUF_WEN がアサートされないことに注意.
+                          in    std_logic_vector(VAL_BITS         -1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Read Buffer Interface Signals.
     -------------------------------------------------------------------------------
@@ -1140,6 +1145,7 @@ begin
             SIZE_BITS       => XFER_SIZE_BITS      , --
             PTR_BITS        => BUF_PTR_BITS        , -- 
             QUEUE_SIZE      => 0                   , --
+            POOL_PTR_STRIDE => 0                   , --
             PORT_PIPELINE   => RDATA_PIPELINE        -- 
         )                                            -- 
         port map (                                   -- 

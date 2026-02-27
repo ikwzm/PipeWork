@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------------
 --!     @file    pool_outlet_port.vhd
 --!     @brief   POOL OUTLET PORT
---!     @version 2.0.0
---!     @date    2024/2/19
+--!     @version 2.6.0
+--!     @date    2026/1/17
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
---      Copyright (C) 2012-2024 Ichiro Kawazome
+--      Copyright (C) 2012-2026 Ichiro Kawazome
 --      All rights reserved.
 --
 --      Redistribution and use in source and binary forms, with or without
@@ -82,6 +82,18 @@ entity  POOL_OUTLET_PORT is
                           --!   (PORT_DATA_BITS/WORD_BITS)+(POOL_DATA_BITS/WORD_BITS)
                           --!   に設定される.
                           integer := 0;
+        POOL_PTR_STRIDE : --! @brief POOL PTR STRIDE VALUE :
+                          --! データを書き込んだ時にバッファの位置を更新する値を指定する.
+                          --! * POOL_PTR_STRIDE=0を指定した場合は、PORT_DVAL信号(ポー
+                          --!   トからデータを入力する際のユニット単位での有効信号)のビ
+                          --!   ットが１の数を数えて、その値をバッファの位置に加算する.
+                          --! * POOL_PTR_STRIDE>0の値を指定した場合は、常にその値をバ
+                          --!   ッファの位置に加算する.
+                          --!   常に固定値を加算するほうが回路が簡単になるが、端数処理
+                          --!   には注意が必要.
+                          --!   固定値を指定する場合は POOL_DATA_BITS/UNIT_BITSを
+                          --!   指定すると良い. 
+                          integer := 0;
         POOL_PIPELINE   : --! @brief POOL PIPELINE STAGE SIZE :
                           --! 入力 POOL 側のパイプラインの段数を指定する.
                           --! * 後述の POOL_JUSTIFIED が 0 の場合は、入力 POOL 側
@@ -119,23 +131,23 @@ entity  POOL_OUTLET_PORT is
                           --! * この信号はSTART_PTR/XFER_LAST/XFER_SELを内部に設定
                           --!   してこのモジュールを初期化しする.
                           --! * 最初にデータ入力と同時にアサートしても構わない.
-                          in  std_logic;
+                          in  std_logic := '0';
         START_POOL_PTR  : --! @brief START POOL BUFFER POINTER :
                           --! 書き込み開始ポインタ.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic_vector(POOL_PTR_BITS-1 downto 0);
+                          in  std_logic_vector(POOL_PTR_BITS-1 downto 0) := (others => '0');
         START_PORT_PTR  : --! @brief START PORT POINTER :
                           --! 書き込み開始ポインタ.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic_vector(PORT_PTR_BITS-1 downto 0);
+                          in  std_logic_vector(PORT_PTR_BITS-1 downto 0) := (others => '0');
         XFER_LAST       : --! @brief TRANSFER LAST :
                           --! 最後のトランザクションであることを示すフラグ.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic;
+                          in  std_logic := '0';
         XFER_SEL        : --! @brief TRANSFER SELECT :
                           --! 選択信号. PUSH_VAL、POOL_WENの生成に使う.
                           --! START 信号により内部に取り込まれる.
-                          in  std_logic_vector(SEL_BITS-1 downto 0);
+                          in  std_logic_vector(SEL_BITS-1 downto 0) := (others => '1');
     -------------------------------------------------------------------------------
     -- Outlet Port Signals.
     -------------------------------------------------------------------------------
@@ -202,17 +214,17 @@ entity  POOL_OUTLET_PORT is
         POOL_DVAL       : --! @brief POOL BUFFER DATA VALID :
                           --! バッファからデータをリードする際のユニット単位での
                           --! 有効信号.
-                          in  std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0);
+                          in  std_logic_vector(POOL_DATA_BITS/UNIT_BITS-1 downto 0) := (others => '1');
         POOL_SIZE       : --! @brief POOL BUFFER DATA SIZE :
                           --! 入力バイト数
                           --! * バッファからのデータの入力ユニット数.
                           in  std_logic_vector(SIZE_BITS-1 downto 0);
         POOL_ERROR      : --! @brief POOL BUFFER ERROR :
                           --! データ転送中にエラーが発生したことを示すフラグ.
-                          in  std_logic;
+                          in  std_logic := '0';
         POOL_LAST       : --! @brief POOL BUFFER DATA LAST :
                           --! 最後の入力データであることを示す.
-                          in  std_logic;
+                          in  std_logic := '0';
         POOL_VAL        : --! @brief POOL BUFFER DATA VALID :
                           --! バッファからリードしたデータが有効である事を示す信号.
                           in  std_logic;
@@ -230,6 +242,9 @@ entity  POOL_OUTLET_PORT is
         POOL_DONE       : --! @brief POOL BUFFER DONE :
                           --! 次のクロックで POOL_BUSY がネゲートされることを示す.
                           out std_logic;
+        CURR_PTR        : --! @brief CURRENT POOL BUFFER POINTER :
+                          --! 現在のバッファの読み出し位置を出力する.
+                          out std_logic_vector(POOL_PTR_BITS-1 downto 0);
         BUSY            : --! @brief QUEUE BUSY :
                           --! キューが動作中であることを示す信号.
                           --! * START信号がアサートされたときにアサートされる.
@@ -349,16 +364,28 @@ begin
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
-        process (curr_read_ptr, intake_size)
-            variable u_intake_size   : unsigned(  intake_size'range);
-            variable u_add_ptr       : unsigned(next_read_ptr'range);
-            variable u_curr_read_ptr : unsigned(next_read_ptr'range);
-        begin
-            u_curr_read_ptr := to_01(unsigned(curr_read_ptr));
-            u_intake_size   := to_01(unsigned(intake_size  ));
-            u_add_ptr       := resize(u_intake_size, u_add_ptr'length);
-            next_read_ptr   <= std_logic_vector(u_curr_read_ptr + u_add_ptr);
-        end process;
+        POOL_PTR_STRIDE_EQ_0: if POOL_PTR_STRIDE = 0 generate
+            process (curr_read_ptr, intake_size)
+                variable u_intake_size   : unsigned(  intake_size'range);
+                variable u_ptr_stride    : unsigned(next_read_ptr'range);
+                variable u_curr_read_ptr : unsigned(next_read_ptr'range);
+            begin
+                u_curr_read_ptr := to_01(unsigned(curr_read_ptr));
+                u_intake_size   := to_01(unsigned(intake_size  ));
+                u_ptr_stride    := resize(u_intake_size, u_ptr_stride'length);
+                next_read_ptr   <= std_logic_vector(u_curr_read_ptr + u_ptr_stride);
+            end process;
+        end generate;
+        POOL_PTR_STRIDE_GT_0: if POOL_PTR_STRIDE > 0 generate
+            process (curr_read_ptr)
+                variable u_ptr_stride    : unsigned(next_read_ptr'range);
+                variable u_curr_read_ptr : unsigned(next_read_ptr'range);
+            begin
+                u_curr_read_ptr := to_01(unsigned(curr_read_ptr));
+                u_ptr_stride    := to_unsigned(POOL_PTR_STRIDE, u_ptr_stride'length);
+                next_read_ptr   <= std_logic_vector(u_curr_read_ptr + u_ptr_stride);
+            end process;
+        end generate;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
@@ -404,6 +431,7 @@ begin
                      intake_select  when (intake_continue = '1'       ) else
                      SEL_ALL0;
         POOL_RDY  <= intake_ready;
+        CURR_PTR  <= curr_read_ptr;
         ---------------------------------------------------------------------------
         --
         ---------------------------------------------------------------------------
