@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #---------------------------------------------------------------------------------
 #
-#       Version     :   0.0.6
-#       Created     :   2016/1/5
+#       Version     :   0.0.7
+#       Created     :   2026/5/10
 #       File name   :   MakeComponentPackage.rb
 #       Author      :   Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 #       Description :   VHDLのソースコードから entity 宣言している部分を
@@ -14,7 +14,7 @@
 #
 #---------------------------------------------------------------------------------
 #
-#       Copyright (C) 2012-2016 Ichiro Kawazome
+#       Copyright (C) 2012-2026 Ichiro Kawazome
 #       All rights reserved.
 # 
 #       Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@ require 'optparse'
 class ComponentPackage
   def initialize
     @program_name      = "MakeComponentPackage"
-    @program_version   = "0.0.6"
+    @program_version   = "0.0.7"
     @program_id        = @program_name + " " + @program_version
     @line_width        = 83
     @components        = Hash.new
@@ -169,7 +169,7 @@ class ComponentPackage
   #-------------------------------------------------------------------------------
   def read_entity(file, file_name)
     line_number    = 0
-    component_name = String.new
+    component_name = nil
     component_line = String.new
     library_lines  = Array.new
     use_lines      = Array.new
