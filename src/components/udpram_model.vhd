@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------
 --!     @file    udpram_model.vhd
---!     @brief   Univeral Dual Port RAM Architecture (Simple Model)
+--!     @brief   Universal Dual Port RAM Architecture (Simple Model)
 --!     @version 2.7.0
 --!     @date    2026/5/10
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
