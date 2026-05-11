@@ -27,6 +27,8 @@ ENTITY_FILES = chopper.vhd                             \
                unrolled_loop_counter.vhd               \
                udpram.vhd                              \
                udpram_model.vhd                        \
+               uspram.vhd                              \
+               uspram_model.vhd                        \
                ${ENDLIST}
 
 components.vhd : ${ENTITY_FILES}
