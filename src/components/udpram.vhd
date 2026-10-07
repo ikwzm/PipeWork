@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    udpram.vhd
 --!     @brief   Universal Dual Port RAM Entity.
---!     @version 2.7.0
---!     @date    2026/5/10
+--!     @version 2.7.1
+--!     @date    2026/10/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -52,6 +52,16 @@ entity  UDPRAM is
                       --! アドレス信号(WADDR/RADDR)のビット数を指定する.
                       --! アドレスの単位はワード.
                       integer :=  4;
+        DEPTH       : --! @brief RAM DEPTH :
+                      --! RAM の深さを２のべき乗値で指定する.
+                      --! 深さの単位はワード.
+                      --! この値が 0 の場合 RAMの深さは 1word(2**0=1).
+                      --! この値が負の場合 RAM の深さは ADDR_BITS の値を使用する.
+                      --! デフォルト値が -1 なのは後方互換性を維持するため.
+                      --! この定数の目的は、RAM の深さを1word(ADDR_BITS=0) にした時に、
+                      --! アドレス信号の型が std_logic_vector(-1 downto 0) になるので
+                      --! アドレス信号の幅とは別に RAM の深さを別途指定するため.
+                      integer := -1;
         WN          : --! @brief WRITE WORD COUNT :
                       --! ライトデータ(WDATA)のワード数を指定する.
                       --! ライトイネーブル信号(WE)のビット数でもある.
@@ -87,7 +97,7 @@ entity  UDPRAM is
         WADDR       : --! @brief WRITE ADDRESS :
                       --! ライトアドレス信号
                       --! ライトするワードの位置を指定する.
-                      in  std_logic_vector(ADDR_BITS   -1 downto 0);
+                      in  std_logic_vector(ADDR_BITS   -1 downto 0) := (others => '0');
         WDATA       : --! @brief WRITE DATA :
                       --! ライトデータ信号
                       in  std_logic_vector(WN*DATA_BITS-1 downto 0);
@@ -105,7 +115,7 @@ entity  UDPRAM is
         RADDR       : --! @brief READ ADDRESS :
                       --! リードアドレス信号
                       --! リードするワードの位置を指定する.
-                      in  std_logic_vector(   ADDR_BITS-1 downto 0);
+                      in  std_logic_vector(   ADDR_BITS-1 downto 0) := (others => '0');
         RDATA       : --! @brief READ DATA :
                       --! リードデータ信号
                       out std_logic_vector(RN*DATA_BITS-1 downto 0)
