@@ -98,7 +98,7 @@ entity  USPRAM is
                       --! アドレス信号
                       --! ライトするワードの位置を指定する.
                       --! リードするワードの位置を指定する.
-                      in  std_logic_vector(ADDR_BITS   -1 downto 0);
+                      in  std_logic_vector(ADDR_BITS   -1 downto 0) := (others => '0');
         WDATA       : --! @brief WRITE DATA :
                       --! ライトデータ信号
                       in  std_logic_vector(WN*DATA_BITS-1 downto 0);
