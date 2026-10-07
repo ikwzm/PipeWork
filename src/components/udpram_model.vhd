@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------
 --!     @file    udpram_model.vhd
 --!     @brief   Universal Dual Port RAM Architecture (Simple Model)
---!     @version 2.7.0
---!     @date    2026/5/10
+--!     @version 2.7.1
+--!     @date    2026/10/7
 --!     @author  Ichiro Kawazome <ichiro_k@ca2.so-net.ne.jp>
 -----------------------------------------------------------------------------------
 --
@@ -112,6 +112,18 @@ architecture MODEL of UDPRAM is
     -------------------------------------------------------------------------------
     constant  WORD_WIDTH    :  integer := calc_width(NUM_WORDS);
     -------------------------------------------------------------------------------
+    -- RAM_DEPTH  : RAM の深さ(単位はワード)の２のべき乗値.
+    -------------------------------------------------------------------------------
+    function  calc_ram_depth return integer is
+    begin
+        if DEPTH < 0 or DEPTH > ADDR_BITS then
+            return ADDR_BITS;
+        else
+            return DEPTH;
+        end if;
+    end function;
+    constant  RAM_DEPTH     :  integer := calc_ram_depth;
+    -------------------------------------------------------------------------------
     -- w_ena   : 書き込み時の書き込みイネーブル信号
     -------------------------------------------------------------------------------
     signal    w_ena         :  std_logic_vector(NUM_WORDS-1 downto 0);
@@ -181,13 +193,13 @@ begin
         -- INDEX_TYPE  : RAM のインデックスを表す形(整数).
         ---------------------------------------------------------------------------
         constant  INDEX_MIN     :  integer := 0;
-        constant  INDEX_MAX     :  integer := 2**(ADDR_BITS-WORD_WIDTH)-1;
+        constant  INDEX_MAX     :  integer := 2**(RAM_DEPTH-WORD_WIDTH)-1;
         subtype   INDEX_TYPE    is integer range INDEX_MIN to INDEX_MAX;
         ---------------------------------------------------------------------------
         -- addr_to_index : ADDR から index を得る関数.
         ---------------------------------------------------------------------------
         function  addr_to_index(ADDR: std_logic_vector) return INDEX_TYPE is
-            constant  BITS      :  integer := ADDR_BITS-WORD_WIDTH;
+            constant  BITS      :  integer := RAM_DEPTH-WORD_WIDTH;
             constant  POS       :  integer := WORD_WIDTH;
             variable  index     :  std_logic_vector(BITS downto 0);
         begin
