@@ -97,7 +97,7 @@ entity  UDPRAM is
         WADDR       : --! @brief WRITE ADDRESS :
                       --! ライトアドレス信号
                       --! ライトするワードの位置を指定する.
-                      in  std_logic_vector(ADDR_BITS   -1 downto 0);
+                      in  std_logic_vector(ADDR_BITS   -1 downto 0) := (others => '0');
         WDATA       : --! @brief WRITE DATA :
                       --! ライトデータ信号
                       in  std_logic_vector(WN*DATA_BITS-1 downto 0);
@@ -115,7 +115,7 @@ entity  UDPRAM is
         RADDR       : --! @brief READ ADDRESS :
                       --! リードアドレス信号
                       --! リードするワードの位置を指定する.
-                      in  std_logic_vector(   ADDR_BITS-1 downto 0);
+                      in  std_logic_vector(   ADDR_BITS-1 downto 0) := (others => '0');
         RDATA       : --! @brief READ DATA :
                       --! リードデータ信号
                       out std_logic_vector(RN*DATA_BITS-1 downto 0)
